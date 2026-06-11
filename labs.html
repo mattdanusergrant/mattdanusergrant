@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Labs — Matt Danuser-Grant</title>
+<meta name="description" content="A workbench of game prototypes by Matt Danuser-Grant. Small games, made out loud." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<!-- #LLM-generated — Matt Danuser-Grant Labs (game prototypes hub) -->
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --paper:#FFFFFF;
+    --ink:#15161C;
+    --ink-2:#2A2A2A;
+    --muted:#6A6A6A;
+    --line:#E5E0D2;
+    --line-2:#CBC4B2;
+    --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+    --shadow-hover:0 18px 48px rgba(15,16,28,.10);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:17px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+
+  .wrap{max-width:960px;margin:0 auto;padding:0 28px 80px}
+
+  /* ── Top nav ───────────────────────────── */
+  .nav{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:24px 0 0;font-size:14px;color:var(--muted);
+    letter-spacing:.04em;
+  }
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+
+  /* ── Header ───────────────────────────── */
+  .head{padding:64px 0 36px;max-width:640px}
+  .head .eyebrow{
+    font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px;font-weight:500;
+  }
+  .head h1{
+    font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(36px,6vw,52px);
+    line-height:1.1;letter-spacing:-0.02em;margin:0 0 18px;
+  }
+  .head h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .head .lede{color:var(--muted);font-size:17px;line-height:1.6;margin:0}
+
+  /* ── Grid of prototypes ───────────────────────────── */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  @media (max-width:680px){.grid{grid-template-columns:1fr;gap:16px}}
+
+  .card{
+    background:var(--paper);
+    border:1.5px solid var(--line);border-radius:14px;
+    padding:24px 24px 22px;
+    display:flex;flex-direction:column;
+    box-shadow:var(--shadow);
+    transition:transform .18s,border-color .18s,box-shadow .18s;
+    position:relative;
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    border-color:var(--line-2);
+    box-shadow:var(--shadow-hover);
+  }
+  .card .num{
+    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin:0 0 8px;
+  }
+  .card h2{
+    font-family:'Fraunces',serif;font-weight:500;font-size:24px;
+    margin:0 0 8px;letter-spacing:-0.01em;line-height:1.2;
+  }
+  .card p{margin:0 0 18px;color:var(--muted);font-size:14.5px;line-height:1.55;flex:1}
+
+  .btn{
+    font-family:'Fraunces',serif;font-size:14px;font-weight:500;
+    color:var(--ink);
+    display:inline-flex;align-items:center;gap:6px;
+    align-self:flex-start;
+    border-bottom:1px solid var(--line-2);
+    padding-bottom:2px;
+    transition:border-color .15s,gap .15s;
+    letter-spacing:.01em;
+  }
+  .btn:hover{border-color:var(--ink);gap:9px}
+
+  /* ── Footer ───────────────────────────── */
+  .foot{
+    margin:72px 0 0;padding-top:28px;
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    color:var(--muted);font-size:14px;
+  }
+  .foot a{
+    color:var(--ink-2);
+    border-bottom:1px solid transparent;transition:border-color .15s;
+  }
+  .foot a:hover{border-color:var(--ink-2)}
+
+  @media (max-width:480px){
+    .wrap{padding:0 22px 60px}
+    .head{padding:40px 0 32px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links">
+      <a href="/resume.html">Resume</a>
+      <a class="active" href="/labs.html">Labs</a>
+    </div>
+  </nav>
+
+  <header class="head">
+    <p class="eyebrow">Labs</p>
+    <h1>Small games, <em>made out loud.</em></h1>
+    <p class="lede">A workbench of game prototypes. Browser-playable, one-shot ideas, no monetisation. Every push goes live in seconds.</p>
+  </header>
+
+  <div class="grid">
+
+    <article class="card">
+      <p class="num">01</p>
+      <h2>Sigil Tactics</h2>
+      <p>Mobile-web tactical card-battler. Two sides, three heroes each, on a small grid. Cards add sidekicks, spells, and battlefield effects.</p>
+      <a class="btn" href="https://mattdanusergrant.github.io/sigil-tactics/" target="_blank" rel="noopener">Play <span>→</span></a>
+    </article>
+
+    <article class="card">
+      <p class="num">02</p>
+      <h2>Ronin Survivor</h2>
+      <p>Horde-survival auto-battler in the spirit of Vampire Survivors. A lone afro'd swordsman holds his ground on a blood-red road — you only move, the blade swings itself.</p>
+      <a class="btn" href="https://mattdanusergrant.github.io/ronin-survivor/" target="_blank" rel="noopener">Play <span>→</span></a>
+    </article>
+
+    <article class="card">
+      <p class="num">03</p>
+      <h2>Ripping Packs</h2>
+      <p>Incremental clicker about cracking trading-card boosters, sorting the spill, and selling sets on a live market across thirty years of a fictional cryptid TCG.</p>
+      <a class="btn" href="https://mattdanusergrant.github.io/ripping-packs/" target="_blank" rel="noopener">Play <span>→</span></a>
+    </article>
+
+    <article class="card">
+      <p class="num">04</p>
+      <h2>Switchback TD</h2>
+      <p>Maze-building tower defence. Wind the path, hold the wave.</p>
+      <a class="btn" href="https://mattdanusergrant.github.io/switchback-td/" target="_blank" rel="noopener">Play <span>→</span></a>
+    </article>
+
+    <article class="card">
+      <p class="num">05</p>
+      <h2>Bloom Again</h2>
+      <p>Touch-first puzzle box. You can't move the figure — only change how the world is drawn until it carries itself home.</p>
+      <a class="btn" href="https://mattdanusergrant.github.io/bloom-again/" target="_blank" rel="noopener">Play <span>→</span></a>
+    </article>
+
+    <article class="card">
+      <p class="num">06</p>
+      <h2>Baduk Blitz</h2>
+      <p>High-stakes parimutuel betting on auto-playing Go boards. Read the position, bet the winner before the 30-second clock runs out.</p>
+      <a class="btn" href="https://mattdanusergrant.github.io/baduk-blitz/" target="_blank" rel="noopener">Play <span>→</span></a>
+    </article>
+
+    <article class="card">
+      <p class="num">07</p>
+      <h2>Prism Pond</h2>
+      <p>A koi pond exploration game with rainbow trails. Swim across themed zones — sunlit shallows, coral garden, kelp forest, glowy cave.</p>
+      <a class="btn" href="https://mattdanusergrant.github.io/prism-pond/" target="_blank" rel="noopener">Play <span>→</span></a>
+    </article>
+
+    <article class="card">
+      <p class="num">08</p>
+      <h2>Mosslings</h2>
+      <p>Tamagotchi-cozy virtual pets in a moss-and-firefly world. Feed, play, explore. Multiple pets, XP and levels, a world map of places to visit.</p>
+      <a class="btn" href="https://mattdanusergrant.github.io/mosslings/" target="_blank" rel="noopener">Play <span>→</span></a>
+    </article>
+
+  </div>
+
+  <footer class="foot">
+    <div>Made by <a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">Matt Danuser-Grant</a></div>
+    <div><a href="/">← Home</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
