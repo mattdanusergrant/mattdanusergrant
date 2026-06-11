@@ -147,9 +147,50 @@
     .wrap{padding:0 22px 60px}
     .hero{padding:48px 0 36px}
   }
+
+  /* ── Intro puzzle ───────────────────────────── */
+  #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease}
+  .i-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px}
+  .i-words{display:flex;flex-direction:column;align-items:center}
+  .i-word{
+    cursor:pointer;user-select:none;
+    font-family:'Fraunces',serif;font-weight:700;
+    font-size:clamp(60px,15vw,120px);
+    letter-spacing:-0.025em;line-height:.95;
+    color:var(--ink);transition:color .3s,opacity .2s;
+  }
+  .i-word:hover:not(.solved){opacity:.65}
+  .i-txt{display:inline-block;transition:transform .25s}
+  .i-word.glitching .i-txt{animation:i-shake .09s steps(1) infinite}
+  .i-word.solved{color:var(--muted)}
+  .i-hint{
+    font-family:'Inter',sans-serif;font-size:12px;
+    letter-spacing:.2em;text-transform:uppercase;
+    color:var(--muted);margin-top:48px;
+  }
+  @keyframes i-shake{
+    0%  {transform:translate(0,0)}
+    14% {transform:translate(-4px,1px)}
+    28% {transform:translate(3px,-2px)}
+    42% {transform:translate(-2px,3px)}
+    57% {transform:translate(4px,-1px)}
+    71% {transform:translate(-3px,-2px)}
+    85% {transform:translate(2px,2px)}
+    100%{transform:translate(-1px,-1px)}
+  }
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true">
+  <div class="i-inner">
+    <div class="i-words">
+      <div class="i-word" data-to="MUST"><span class="i-txt">MATT</span></div>
+      <div class="i-word" data-to="DESIGN"><span class="i-txt">DANUSER</span></div>
+      <div class="i-word" data-to="GAMES"><span class="i-txt">GRANT</span></div>
+    </div>
+    <p class="i-hint">click</p>
+  </div>
+</div>
 <div class="wrap">
 
   <nav class="nav">
@@ -196,6 +237,81 @@
   </footer>
 
 </div>
+<script>
+(function(){
+  var intro=document.getElementById('intro');
+  if(!intro)return;
+  if(sessionStorage.getItem('mdg-intro')){intro.remove();return;}
+
+  var CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var HINTS=['click','keep going','one more'];
+  var solvedCount=0;
+  var hint=document.querySelector('.i-hint');
+
+  function rnd(){return CHARS[Math.floor(Math.random()*CHARS.length)];}
+  function scramble(n){var s='';for(var i=0;i<n;i++)s+=rnd();return s;}
+
+  document.querySelectorAll('.i-word').forEach(function(word){
+    var txt=word.querySelector('.i-txt');
+    var from=txt.textContent;
+    var to=word.dataset.to;
+    var clicks=0;
+    var iv=null;
+
+    word.addEventListener('click',function(){
+      if(word.classList.contains('solved'))return;
+      if(iv){clearInterval(iv);iv=null;word.classList.remove('glitching');txt.textContent=from;}
+      clicks++;
+      var isFinal=clicks>=3;
+      var duration=isFinal?1400:480;
+      var frames=Math.round(duration/30);
+      var frame=0;
+      word.classList.add('glitching');
+
+      iv=setInterval(function(){
+        frame++;
+        var p=frame/frames;
+        if(isFinal&&p>0.55){
+          var resolved=Math.floor(((p-0.55)/0.45)*to.length);
+          txt.textContent=to.slice(0,resolved)+scramble(to.length-resolved);
+        } else {
+          txt.textContent=scramble(Math.max(from.length,to.length));
+        }
+        if(frame>=frames){
+          clearInterval(iv);iv=null;
+          word.classList.remove('glitching');
+          if(isFinal){
+            txt.textContent=to;
+            word.classList.add('solved');
+            solvedCount++;
+            if(hint)hint.textContent=solvedCount<3?HINTS[solvedCount]:'';
+            if(solvedCount===3)celebrate();
+          } else {
+            txt.textContent=from;
+          }
+        }
+      },30);
+    });
+  });
+
+  function celebrate(){
+    document.querySelectorAll('.i-word').forEach(function(w){w.style.color='var(--ink)';});
+    document.querySelectorAll('.i-word .i-txt').forEach(function(t,i){
+      setTimeout(function(){
+        t.style.transform='scale(1.1)';
+        setTimeout(function(){t.style.transform='';},220);
+      },i*110);
+    });
+    setTimeout(function(){
+      intro.style.opacity='0';
+      setTimeout(function(){
+        intro.remove();
+        sessionStorage.setItem('mdg-intro','1');
+      },650);
+    },900);
+  }
+})();
+</script>
 <script>
 (function(){
   var btn=document.getElementById('theme-toggle');
