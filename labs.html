@@ -87,17 +87,18 @@
   }
   .card p{margin:0 0 18px;color:var(--muted);font-size:14.5px;line-height:1.55;flex:1}
 
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
   .btn{
-    font-family:'Fraunces',serif;font-size:14px;font-weight:500;
-    color:var(--ink);
-    display:inline-flex;align-items:center;gap:6px;
-    align-self:flex-start;
-    border-bottom:1px solid var(--line-2);
-    padding-bottom:2px;
-    transition:border-color .15s,gap .15s;
-    letter-spacing:.01em;
+    font-family:'Fraunces',serif;font-size:13.5px;font-weight:500;
+    display:inline-flex;align-items:center;
+    border-radius:999px;padding:6px 15px 7px;
+    transition:border-color .15s,background .15s,color .15s;
+    letter-spacing:.01em;white-space:nowrap;
   }
-  .btn:hover{border-color:var(--ink);gap:9px}
+  .btn-play{background:var(--ink);color:#fff;border:1.5px solid var(--ink)}
+  .btn-play:hover{background:var(--ink-2);border-color:var(--ink-2)}
+  .btn-edge{background:transparent;color:var(--muted);border:1.5px solid var(--line-2)}
+  .btn-edge:hover{border-color:var(--ink);color:var(--ink)}
 
   /* ── Footer ───────────────────────────── */
   .foot{
@@ -141,56 +142,80 @@
       <p class="num">01</p>
       <h2>Sigil Tactics</h2>
       <p>Mobile-web tactical card-battler. Two sides, three heroes each, on a small grid. Cards add sidekicks, spells, and battlefield effects.</p>
-      <a class="btn" href="https://mattdanusergrant.github.io/sigil-tactics/" target="_blank" rel="noopener">Play <span>→</span></a>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/sigil-tactics/" target="_blank" rel="noopener">Edge</a>
+      </div>
     </article>
 
     <article class="card">
       <p class="num">02</p>
       <h2>Ronin Survivor</h2>
       <p>Horde-survival auto-battler in the spirit of Vampire Survivors. A lone afro'd swordsman holds his ground on a blood-red road — you only move, the blade swings itself.</p>
-      <a class="btn" href="https://mattdanusergrant.github.io/ronin-survivor/" target="_blank" rel="noopener">Play <span>→</span></a>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/ronin-survivor/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/ronin-survivor/" target="_blank" rel="noopener">Edge</a>
+      </div>
     </article>
 
     <article class="card">
       <p class="num">03</p>
       <h2>Ripping Packs</h2>
       <p>Incremental clicker about cracking trading-card boosters, sorting the spill, and selling sets on a live market across thirty years of a fictional cryptid TCG.</p>
-      <a class="btn" href="https://mattdanusergrant.github.io/ripping-packs/" target="_blank" rel="noopener">Play <span>→</span></a>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/ripping-packs/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/ripping-packs/" target="_blank" rel="noopener">Edge</a>
+      </div>
     </article>
 
     <article class="card">
       <p class="num">04</p>
       <h2>Switchback TD</h2>
       <p>Maze-building tower defence. Wind the path, hold the wave.</p>
-      <a class="btn" href="https://mattdanusergrant.github.io/switchback-td/" target="_blank" rel="noopener">Play <span>→</span></a>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/switchback-td/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/switchback-td/" target="_blank" rel="noopener">Edge</a>
+      </div>
     </article>
 
     <article class="card">
       <p class="num">05</p>
       <h2>Bloom Again</h2>
       <p>Touch-first puzzle box. You can't move the figure — only change how the world is drawn until it carries itself home.</p>
-      <a class="btn" href="https://mattdanusergrant.github.io/bloom-again/" target="_blank" rel="noopener">Play <span>→</span></a>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/bloom-again/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/bloom-again/" target="_blank" rel="noopener">Edge</a>
+      </div>
     </article>
 
     <article class="card">
       <p class="num">06</p>
       <h2>Baduk Blitz</h2>
       <p>High-stakes parimutuel betting on auto-playing Go boards. Read the position, bet the winner before the 30-second clock runs out.</p>
-      <a class="btn" href="https://mattdanusergrant.github.io/baduk-blitz/" target="_blank" rel="noopener">Play <span>→</span></a>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/baduk-blitz/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/baduk-blitz/" target="_blank" rel="noopener">Edge</a>
+      </div>
     </article>
 
     <article class="card">
       <p class="num">07</p>
       <h2>Prism Pond</h2>
       <p>A koi pond exploration game with rainbow trails. Swim across themed zones — sunlit shallows, coral garden, kelp forest, glowy cave.</p>
-      <a class="btn" href="https://mattdanusergrant.github.io/prism-pond/" target="_blank" rel="noopener">Play <span>→</span></a>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/prism-pond/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/prism-pond/" target="_blank" rel="noopener">Edge</a>
+      </div>
     </article>
 
     <article class="card">
       <p class="num">08</p>
       <h2>Mosslings</h2>
       <p>Tamagotchi-cozy virtual pets in a moss-and-firefly world. Feed, play, explore. Multiple pets, XP and levels, a world map of places to visit.</p>
-      <a class="btn" href="https://mattdanusergrant.github.io/mosslings/" target="_blank" rel="noopener">Play <span>→</span></a>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/mosslings/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/mosslings/" target="_blank" rel="noopener">Edge</a>
+      </div>
     </article>
 
   </div>
