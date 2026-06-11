@@ -186,9 +186,9 @@
 <div id="intro" aria-hidden="true">
   <div class="i-inner">
     <div class="i-words">
-      <div class="i-word" data-to="MUST"><span class="i-txt">MATT</span></div>
-      <div class="i-word" data-to="DESIGN"><span class="i-txt">DANUSER</span></div>
-      <div class="i-word" data-to="GAMES"><span class="i-txt">GRANT</span></div>
+      <div class="i-word" data-stages="MAKE,MUST"><span class="i-txt">MATT</span></div>
+      <div class="i-word" data-stages="DOPE,DESIGN"><span class="i-txt">DANUSER</span></div>
+      <div class="i-word" data-stages="GROOVES,GAMES"><span class="i-txt">GRANT</span></div>
     </div>
     <p class="i-hint">click</p>
   </div>
@@ -256,7 +256,8 @@
   document.querySelectorAll('.i-word').forEach(function(word){
     var txt=word.querySelector('.i-txt');
     var from=txt.textContent;
-    var to=word.dataset.to;
+    var stages=word.dataset.stages.split(',');
+    var stageIdx=0;
     var clicks=0;
     var iv=null;
 
@@ -264,8 +265,9 @@
       if(word.classList.contains('solved'))return;
       if(iv){clearInterval(iv);iv=null;word.classList.remove('glitching');txt.textContent=from;}
       clicks++;
-      var isFinal=clicks>=3;
-      var duration=isFinal?1400:480;
+      var isStageFinal=clicks>=3;
+      var to=stages[stageIdx];
+      var duration=isStageFinal?1400:480;
       var frames=Math.round(duration/30);
       var frame=0;
       word.classList.add('glitching');
@@ -273,7 +275,7 @@
       iv=setInterval(function(){
         frame++;
         var p=frame/frames;
-        if(isFinal&&p>0.55){
+        if(isStageFinal&&p>0.55){
           var resolved=Math.floor(((p-0.55)/0.45)*to.length);
           txt.textContent=to.slice(0,resolved)+scramble(to.length-resolved);
         } else {
@@ -282,12 +284,17 @@
         if(frame>=frames){
           clearInterval(iv);iv=null;
           word.classList.remove('glitching');
-          if(isFinal){
+          if(isStageFinal){
             txt.textContent=to;
-            word.classList.add('solved');
-            solvedCount++;
-            if(hint)hint.textContent=solvedCount<3?HINTS[solvedCount]:'';
-            if(solvedCount===3)celebrate();
+            from=to;
+            stageIdx++;
+            clicks=0;
+            if(stageIdx>=stages.length){
+              word.classList.add('solved');
+              solvedCount++;
+              if(hint)hint.textContent=solvedCount<3?HINTS[solvedCount]:'';
+              if(solvedCount===3)celebrate();
+            }
           } else {
             txt.textContent=from;
           }
