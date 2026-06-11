@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Resume — Matt Danuser-Grant</title>
 <meta name="description" content="Matt Danuser-Grant — Principal Game Designer. 10+ years in mobile F2P. Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer's Arena." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -18,6 +19,18 @@
     --muted:#6A6A6A;
     --line:#E5E0D2;
     --line-2:#CBC4B2;
+  }
+  [data-theme="dark"]{
+    --bg:#13110E;--paper:#1D1A16;
+    --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+    --line:#2C2924;--line-2:#3C3830;
+  }
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#13110E;--paper:#1D1A16;
+      --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+      --line:#2C2924;--line-2:#3C3830;
+    }
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -113,6 +126,13 @@
   .qa-block{margin-bottom:.07in}
   .qa-titles{font-size:9pt;color:var(--muted);font-style:italic;padding-left:1em;line-height:1.4}
 
+  /* ── Theme toggle ───────────────────────────── */
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:34px;height:20px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:14px;height:14px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;display:block;transition:transform .2s,background .2s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
+
   /* ── Footer ───────────────────────────── */
   .foot{
     margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);
@@ -125,7 +145,8 @@
   /* ── Print styles ───────────────────────────── */
   @media print{
     @page{margin:.55in .7in;size:letter}
-    body{background:#fff;font-size:10pt}
+    :root,[data-theme="dark"]{--ink:#000;--ink-2:#222;--muted:#555;--line:#ddd;--line-2:#ccc;--bg:#fff;--paper:#fff}
+    body{background:#fff;color:#000;font-size:10pt}
     .site-wrap{max-width:none;padding:0;margin:0}
     .nav,.print-hint,.foot,.no-print{display:none !important}
     .sheet{
@@ -146,6 +167,7 @@
       <a class="active" href="/resume.html">Resume</a>
       <a href="/labs.html">Labs</a>
     </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
   </nav>
 
   <div class="print-hint no-print">
@@ -320,5 +342,15 @@
   </footer>
 
 </div>
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+  });
+})();
+</script>
 </body>
 </html>

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Labs — Matt Danuser-Grant</title>
 <meta name="description" content="A workbench of game prototypes by Matt Danuser-Grant. Small games, made out loud." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -20,6 +21,22 @@
     --line-2:#CBC4B2;
     --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
     --shadow-hover:0 18px 48px rgba(15,16,28,.10);
+  }
+  [data-theme="dark"]{
+    --bg:#13110E;--paper:#1D1A16;
+    --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+    --line:#2C2924;--line-2:#3C3830;
+    --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+    --shadow-hover:0 18px 48px rgba(0,0,0,.5);
+  }
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#13110E;--paper:#1D1A16;
+      --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+      --line:#2C2924;--line-2:#3C3830;
+      --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+      --shadow-hover:0 18px 48px rgba(0,0,0,.5);
+    }
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -95,10 +112,17 @@
     transition:border-color .15s,background .15s,color .15s;
     letter-spacing:.01em;white-space:nowrap;
   }
-  .btn-play{background:var(--ink);color:#fff;border:1.5px solid var(--ink)}
+  .btn-play{background:var(--ink);color:var(--bg);border:1.5px solid var(--ink)}
   .btn-play:hover{background:var(--ink-2);border-color:var(--ink-2)}
   .btn-edge{background:transparent;color:var(--muted);border:1.5px solid var(--line-2)}
   .btn-edge:hover{border-color:var(--ink);color:var(--ink)}
+
+  /* ── Theme toggle ───────────────────────────── */
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:34px;height:20px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:14px;height:14px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;display:block;transition:transform .2s,background .2s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
 
   /* ── Footer ───────────────────────────── */
   .foot{
@@ -128,6 +152,7 @@
       <a href="/resume.html">Resume</a>
       <a class="active" href="/labs.html">Labs</a>
     </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
   </nav>
 
   <header class="head">
@@ -226,5 +251,15 @@
   </footer>
 
 </div>
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+  });
+})();
+</script>
 </body>
 </html>
