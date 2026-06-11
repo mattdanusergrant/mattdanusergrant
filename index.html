@@ -248,6 +248,7 @@
   var CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   var HINTS=['click','keep going','one more'];
   var solvedCount=0;
+  var phase1Count=0;
   var hint=document.querySelector('.i-hint');
 
   function rnd(){return CHARS[Math.floor(Math.random()*CHARS.length)];}
@@ -258,10 +259,12 @@
     var from=txt.textContent;
     var stages=word.dataset.stages.split(',');
     var stageIdx=0;
+    word._stageIdx=0;
 
     function trigger(){
       if(word.classList.contains('solved'))return;
       if(word._iv)return;
+      if(stageIdx>=1&&phase1Count<3)return;
       var to=stages[stageIdx];
       var frames=Math.round(1400/30);
       var frame=0;
@@ -281,7 +284,11 @@
           txt.textContent=to;
           from=to;
           stageIdx++;
-          if(stageIdx>=stages.length){
+          word._stageIdx=stageIdx;
+          if(stageIdx===1){
+            phase1Count++;
+            if(hint)hint.textContent=phase1Count<3?HINTS[phase1Count]:'click';
+          } else if(stageIdx>=stages.length){
             word.classList.add('solved');
             solvedCount++;
             if(hint)hint.textContent=solvedCount<3?HINTS[solvedCount]:'';
@@ -297,7 +304,8 @@
 
   intro.addEventListener('click',function(){
     var eligible=Array.from(document.querySelectorAll('.i-word')).filter(function(w){
-      return !w.classList.contains('solved')&&!w._iv;
+      return !w.classList.contains('solved')&&!w._iv&&
+             (w._stageIdx===0||phase1Count>=3);
     });
     if(!eligible.length)return;
     eligible[Math.floor(Math.random()*eligible.length)]._trigger();
