@@ -258,24 +258,20 @@
     var from=txt.textContent;
     var stages=word.dataset.stages.split(',');
     var stageIdx=0;
-    var clicks=0;
     var iv=null;
 
     word.addEventListener('click',function(){
       if(word.classList.contains('solved'))return;
-      if(iv){clearInterval(iv);iv=null;word.classList.remove('glitching');txt.textContent=from;}
-      clicks++;
-      var isStageFinal=clicks>=3;
+      if(iv)return;
       var to=stages[stageIdx];
-      var duration=isStageFinal?1400:480;
-      var frames=Math.round(duration/30);
+      var frames=Math.round(1400/30);
       var frame=0;
       word.classList.add('glitching');
 
       iv=setInterval(function(){
         frame++;
         var p=frame/frames;
-        if(isStageFinal&&p>0.55){
+        if(p>0.55){
           var resolved=Math.floor(((p-0.55)/0.45)*to.length);
           txt.textContent=to.slice(0,resolved)+scramble(to.length-resolved);
         } else {
@@ -284,19 +280,14 @@
         if(frame>=frames){
           clearInterval(iv);iv=null;
           word.classList.remove('glitching');
-          if(isStageFinal){
-            txt.textContent=to;
-            from=to;
-            stageIdx++;
-            clicks=0;
-            if(stageIdx>=stages.length){
-              word.classList.add('solved');
-              solvedCount++;
-              if(hint)hint.textContent=solvedCount<3?HINTS[solvedCount]:'';
-              if(solvedCount===3)celebrate();
-            }
-          } else {
-            txt.textContent=from;
+          txt.textContent=to;
+          from=to;
+          stageIdx++;
+          if(stageIdx>=stages.length){
+            word.classList.add('solved');
+            solvedCount++;
+            if(hint)hint.textContent=solvedCount<3?HINTS[solvedCount]:'';
+            if(solvedCount===3)celebrate();
           }
         }
       },30);
