@@ -142,6 +142,8 @@
   }
   .foot .contact a:hover{border-color:var(--ink-2)}
   .foot .contact span + span::before{content:' · ';color:var(--line-2);margin:0 .4em}
+  .replay-btn{background:none;border:none;cursor:pointer;padding:0;color:var(--muted);font-size:inherit;font-family:inherit;transition:color .15s}
+  .replay-btn:hover{color:var(--ink)}
 
   @media (max-width:480px){
     .wrap{padding:0 22px 60px}
@@ -233,7 +235,7 @@
       <span><a href="https://linkedin.com/in/mattdanusergrant" target="_blank" rel="noopener">LinkedIn</a></span>
       <span><a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">GitHub</a></span>
     </div>
-    <div>Newark, CA</div>
+    <div>Newark, CA · <button class="replay-btn" type="button" onclick="sessionStorage.removeItem('mdg-intro');location.reload()">Replay intro</button></div>
   </footer>
 
 </div>
