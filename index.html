@@ -258,17 +258,15 @@
     var from=txt.textContent;
     var stages=word.dataset.stages.split(',');
     var stageIdx=0;
-    var iv=null;
 
-    word.addEventListener('click',function(){
+    function trigger(){
       if(word.classList.contains('solved'))return;
-      if(iv)return;
+      if(word._iv)return;
       var to=stages[stageIdx];
       var frames=Math.round(1400/30);
       var frame=0;
       word.classList.add('glitching');
-
-      iv=setInterval(function(){
+      word._iv=setInterval(function(){
         frame++;
         var p=frame/frames;
         if(p>0.55){
@@ -278,7 +276,7 @@
           txt.textContent=scramble(Math.max(from.length,to.length));
         }
         if(frame>=frames){
-          clearInterval(iv);iv=null;
+          clearInterval(word._iv);word._iv=null;
           word.classList.remove('glitching');
           txt.textContent=to;
           from=to;
@@ -291,7 +289,18 @@
           }
         }
       },30);
+    }
+
+    word._trigger=trigger;
+    word.addEventListener('click',function(e){e.stopPropagation();trigger();});
+  });
+
+  intro.addEventListener('click',function(){
+    var eligible=Array.from(document.querySelectorAll('.i-word')).filter(function(w){
+      return !w.classList.contains('solved')&&!w._iv;
     });
+    if(!eligible.length)return;
+    eligible[Math.floor(Math.random()*eligible.length)]._trigger();
   });
 
   function celebrate(){
