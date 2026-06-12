@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>The Lab &mdash; Matt Danuser-Grant</title>
+<meta name="description" content="Game prototypes by Matt Danuser-Grant." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<!-- #LLM-generated — Variant A: Quiet Confidence — Labs -->
+<style>
+  :root{--bg:#FBF8F2;--paper:#FFFFFF;--ink:#15161C;--ink-2:#2A2A2A;--muted:#6A6A6A;--line:#E5E0D2;--line-2:#CBC4B2;--shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);--shadow-hover:0 18px 48px rgba(15,16,28,.10)}
+  [data-theme="dark"]{--bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;--line:#2C2924;--line-2:#3C3830;--shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);--shadow-hover:0 18px 48px rgba(0,0,0,.5)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;--line:#2C2924;--line-2:#3C3830;--shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);--shadow-hover:0 18px 48px rgba(0,0,0,.5)}}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh;padding-top:38px}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 28px 80px}
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+  .head{padding:64px 0 36px;max-width:640px}
+  .head .eyebrow{font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;font-weight:500}
+  .head h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(36px,6vw,52px);line-height:1.1;letter-spacing:-0.02em;margin:0 0 18px}
+  .head .lede{color:var(--muted);font-size:18px;line-height:1.6;margin:0}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+  @media(max-width:760px){.cols{grid-template-columns:1fr;gap:48px}}
+  .col-head{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:-0.01em;color:var(--ink);margin:0 0 20px;padding-bottom:14px;border-bottom:1.5px solid var(--line)}
+  .grid{display:grid;grid-template-columns:1fr;gap:18px}
+  .card{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:24px 24px 22px;display:flex;flex-direction:column;box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s}
+  .card:hover{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow-hover)}
+  .card h2{font-family:'Fraunces',serif;font-weight:500;font-size:24px;margin:0 0 8px;letter-spacing:-0.01em;line-height:1.2}
+  .card p{margin:0 0 18px;color:var(--muted);font-size:15.5px;line-height:1.55;flex:1}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+  .btn{font-family:'Fraunces',serif;font-size:13.5px;font-weight:500;display:inline-flex;align-items:center;border-radius:999px;padding:6px 15px 7px;transition:border-color .15s,background .15s,color .15s;letter-spacing:.01em;white-space:nowrap}
+  .btn-play{background:var(--ink);color:var(--bg);border:1.5px solid var(--ink)}
+  .btn-play:hover{background:var(--ink-2);border-color:var(--ink-2)}
+  .btn-edge{background:transparent;color:var(--muted);border:1.5px solid var(--line-2)}
+  .btn-edge:hover{border-color:var(--ink);color:var(--ink)}
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:34px;height:20px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:14px;height:14px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;display:block;transition:transform .2s,background .2s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
+  .foot{margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
+  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot a:hover{border-color:var(--ink-2)}
+  @media (max-width:480px){.wrap{padding:0 22px 60px}.head{padding:40px 0 32px}}
+</style>
+</head>
+<body>
+<div style="position:fixed;top:0;left:0;right:0;z-index:10000;background:rgba(219,234,254,.97);color:#1e3a5f;font-size:12.5px;padding:8px 20px;display:flex;gap:16px;align-items:center;font-family:'Inter',sans-serif;backdrop-filter:blur(4px);border-bottom:1px solid rgba(30,58,95,.15)">
+  <a href="index.html" style="color:#1e3a5f;text-decoration:underline;white-space:nowrap">&larr; All variants</a>
+  <strong>A &mdash; Quiet Confidence &nbsp;&middot;&nbsp; labs</strong>
+  <span style="margin-left:auto;opacity:.75;white-space:nowrap">
+    <a href="a-index.html" style="color:#1e3a5f">index</a> &middot;
+    <a href="a-resume.html" style="color:#1e3a5f">resume</a>
+    &nbsp;|&nbsp;
+    <a href="b-labs.html" style="color:#1e3a5f">B</a> &middot;
+    <a href="c-labs.html" style="color:#1e3a5f">C</a>
+  </span>
+</div>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="a-index.html">Matt Danuser-Grant</a>
+    <div class="links"><a href="a-resume.html">Resume</a><a class="active" href="a-labs.html">Labs</a></div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+  </nav>
+  <header class="head">
+    <p class="eyebrow">Labs</p>
+    <h1>The Lab</h1>
+    <p class="lede">Prototypes and small games, made in the open. Some are experiments. Some are almost something.</p>
+  </header>
+  <div class="cols">
+    <section>
+      <h2 class="col-head">Apps</h2>
+      <div class="grid">
+        <article class="card"><h2>Invisible Ink</h2><p>A writing app with one idea: your words disappear into the page. Still there. Just hidden. Type without looking back.</p><div class="btn-row"><a class="btn btn-play" href="https://itsinvisible.ink" target="_blank" rel="noopener">Open</a></div></article>
+        <article class="card"><h2>Scheduler</h2><p>A weekly planner. Block your time, name what matters, see the week clearly.</p><div class="btn-row"><a class="btn btn-play" href="https://mattdanusergrant.github.io/scheduler/" target="_blank" rel="noopener">Open</a></div></article>
+      </div>
+    </section>
+    <section>
+      <h2 class="col-head">Games</h2>
+      <div class="grid">
+        <article class="card"><h2>Sigil Tactics</h2><p>A tactical card-battler built for mobile web. Collect sigils, build a hand, fight in turn-based skirmishes where positioning and combo sequencing decide it.</p><div class="btn-row"><a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a><a class="btn btn-edge" href="https://mattdanusergrant.github.io/sigil-tactics/" target="_blank" rel="noopener">Experimental</a></div></article>
+        <article class="card"><h2>Ronin Survivor</h2><p>A survivor-like where you play a ronin and the screen fills with enemies. Upgrade between waves. Find the run that goes the distance.</p><div class="btn-row"><a class="btn btn-play" href="/games/ronin-survivor/" target="_blank" rel="noopener">Play</a><a class="btn btn-edge" href="https://mattdanusergrant.github.io/ronin-survivor/" target="_blank" rel="noopener">Experimental</a></div></article>
+        <article class="card"><h2>Ripping Packs</h2><p>The part of card games everyone secretly loves most. Open packs. Chase the rare. Nothing else.</p><div class="btn-row"><a class="btn btn-play" href="/games/ripping-packs/" target="_blank" rel="noopener">Play</a><a class="btn btn-edge" href="https://mattdanusergrant.github.io/ripping-packs/" target="_blank" rel="noopener">Experimental</a></div></article>
+        <article class="card"><h2>Switchback TD</h2><p>A tower defence where the path folds back on itself. You&rsquo;re defending both sides of the same corridor.</p><div class="btn-row"><a class="btn btn-play" href="/games/switchback-td/" target="_blank" rel="noopener">Play</a><a class="btn btn-edge" href="https://mattdanusergrant.github.io/switchback-td/" target="_blank" rel="noopener">Experimental</a></div></article>
+        <article class="card"><h2>Baduk Blitz</h2><p>Go, played fast. Timed turns, smaller board. The strategy stays; the anxiety compounds.</p><div class="btn-row"><a class="btn btn-play" href="/games/baduk-blitz/" target="_blank" rel="noopener">Play</a><a class="btn btn-edge" href="https://mattdanusergrant.github.io/baduk-blitz/" target="_blank" rel="noopener">Experimental</a></div></article>
+        <article class="card"><h2>Mosslings</h2><p>Virtual pets that live in the moss. Low friction, low stakes. Check in, feed them, watch them exist.</p><div class="btn-row"><a class="btn btn-play" href="/games/mosslings/" target="_blank" rel="noopener">Play</a><a class="btn btn-edge" href="https://mattdanusergrant.github.io/mosslings/" target="_blank" rel="noopener">Experimental</a></div></article>
+      </div>
+    </section>
+  </div>
+  <footer class="foot"><div>Made by <a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">Matt Danuser-Grant</a></div><div><a href="a-index.html">&larr; Home</a></div></footer>
+</div>
+<script>(function(){var btn=document.getElementById('theme-toggle');btn.addEventListener('click',function(){var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',next);localStorage.setItem('theme',next);});})();</script>
+</body>
+</html>

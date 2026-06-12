@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Landing Page Variants — Matt Danuser-Grant</title>
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<!-- #LLM-generated — Variant selector index -->
+<style>
+  :root{--bg:#FBF8F2;--paper:#FFFFFF;--ink:#15161C;--ink-2:#2A2A2A;--muted:#6A6A6A;--line:#E5E0D2;--line-2:#CBC4B2;--shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);--shadow-hover:0 18px 48px rgba(15,16,28,.10)}
+  [data-theme="dark"]{--bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;--line:#2C2924;--line-2:#3C3830;--shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);--shadow-hover:0 18px 48px rgba(0,0,0,.5)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;--line:#2C2924;--line-2:#3C3830;--shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);--shadow-hover:0 18px 48px rgba(0,0,0,.5)}}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:820px;margin:0 auto;padding:0 28px 80px}
+  .head{padding:72px 0 52px}
+  .head .eyebrow{font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;font-weight:500}
+  .head h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(36px,6vw,52px);line-height:1.1;letter-spacing:-0.02em;margin:0 0 16px}
+  .head .lede{color:var(--muted);font-size:17px;line-height:1.6;margin:0;max-width:520px}
+  .variants{display:flex;flex-direction:column;gap:28px}
+  .v-card{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;padding:32px 30px 28px;box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s}
+  .v-card:hover{transform:translateY(-2px);border-color:var(--line-2);box-shadow:var(--shadow-hover)}
+  .v-header{display:flex;align-items:baseline;gap:16px;margin-bottom:10px}
+  .v-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .v-label.a{background:rgba(219,234,254,.6);color:#1e3a5f}
+  .v-label.b{background:rgba(254,243,199,.6);color:#78350f}
+  .v-label.c{background:rgba(209,250,229,.6);color:#064e3b}
+  [data-theme="dark"] .v-label.a{background:rgba(30,58,95,.4);color:#93c5fd}
+  [data-theme="dark"] .v-label.b{background:rgba(120,53,15,.3);color:#fcd34d}
+  [data-theme="dark"] .v-label.c{background:rgba(6,78,59,.3);color:#6ee7b7}
+  .v-name{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:-0.01em}
+  .v-desc{color:var(--muted);font-size:15px;line-height:1.6;margin:0 0 22px;max-width:560px}
+  .v-hero{font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:var(--ink-2);margin:0 0 8px;padding:14px 16px;background:var(--bg);border-radius:8px;border-left:3px solid var(--line-2)}
+  .v-hero em{font-style:italic}
+  .v-links{display:flex;gap:10px;flex-wrap:wrap}
+  .v-link{font-family:'Fraunces',serif;font-size:13.5px;font-weight:500;display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:7px 16px 8px;transition:border-color .15s,background .15s,color .15s;letter-spacing:.01em;white-space:nowrap;border:1.5px solid var(--line-2);color:var(--ink)}
+  .v-link:hover{border-color:var(--ink)}
+  .v-link.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .v-link.primary:hover{background:var(--ink-2);border-color:var(--ink-2)}
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center}
+  .toggle-track{width:34px;height:20px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:14px;height:14px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;display:block;transition:transform .2s,background .2s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
+  .nav-row{display:flex;justify-content:space-between;align-items:center;padding:24px 0 0}
+  .nav-row .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav-row .right{display:flex;align-items:center;gap:18px;font-size:14px;color:var(--muted)}
+  .nav-row .right a{transition:color .15s}
+  .nav-row .right a:hover{color:var(--ink)}
+  .foot{margin:72px 0 0;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+  @media(max-width:480px){.wrap{padding:0 22px 60px}.head{padding:48px 0 36px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="nav-row">
+    <span class="brand">Matt Danuser-Grant</span>
+    <div class="right">
+      <a href="../index.html">&larr; Live site</a>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+    </div>
+  </div>
+
+  <header class="head">
+    <p class="eyebrow">Landing Page Tournament &mdash; Results</p>
+    <h1>Three executions.<br>Pick one.</h1>
+    <p class="lede">All three use the same formula: V8 hero headline, front-loaded credits, V3 craft voice on project descriptions. They vary in how terse vs. warm vs. precise the copy runs.</p>
+  </header>
+
+  <div class="variants">
+
+    <div class="v-card">
+      <div class="v-header">
+        <span class="v-label a">Variant A</span>
+        <span class="v-name">Quiet Confidence</span>
+      </div>
+      <p class="v-desc">Terse. High signal. Short sentences. The credits speak for themselves; the copy doesn&rsquo;t linger. Project descriptions are clean and precise &mdash; one idea each, done fast.</p>
+      <div class="v-hero"><em>Marvel Strike Force. Star Wars: Galaxy of Heroes. Disney Sorcerer&rsquo;s Arena.</em> A decade of mobile F2P, owning character and combat design on titles that held millions of players.</div>
+      <div class="v-links">
+        <a class="v-link primary" href="a-index.html">Index &rarr;</a>
+        <a class="v-link" href="a-labs.html">Labs</a>
+        <a class="v-link" href="a-resume.html">Resume</a>
+      </div>
+    </div>
+
+    <div class="v-card">
+      <div class="v-header">
+        <span class="v-label b">Variant B</span>
+        <span class="v-name">Warm Authority</span>
+      </div>
+      <p class="v-desc">Confident but conversational. Credits still lead, lede has room to breathe. Project descriptions make the games feel playable &mdash; you sense a person who enjoys what they&rsquo;re building.</p>
+      <div class="v-hero"><em>Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer&rsquo;s Arena</em> &mdash; a decade in mobile F2P, owning character and combat design on some of the biggest rosters in the genre.</div>
+      <div class="v-links">
+        <a class="v-link primary" href="b-index.html">Index &rarr;</a>
+        <a class="v-link" href="b-labs.html">Labs</a>
+        <a class="v-link" href="b-resume.html">Resume</a>
+      </div>
+    </div>
+
+    <div class="v-card">
+      <div class="v-header">
+        <span class="v-label c">Variant C</span>
+        <span class="v-name">The Practitioner</span>
+      </div>
+      <p class="v-desc">Design-vocabulary forward. Reads like a designer who thinks in problems and solutions. Project descriptions frame each game as an answered design question. Warm but precise.</p>
+      <div class="v-hero">Principal designer on <em>Marvel Strike Force, Star Wars: Galaxy of Heroes,</em> and <em>Disney Sorcerer&rsquo;s Arena</em> &mdash; a decade building character and combat systems for mobile F2P titles at scale.</div>
+      <div class="v-links">
+        <a class="v-link primary" href="c-index.html">Index &rarr;</a>
+        <a class="v-link" href="c-labs.html">Labs</a>
+        <a class="v-link" href="c-resume.html">Resume</a>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="foot">
+    Landing Page Tournament &middot; June 2026 &middot; All variants share the same H1: &ldquo;I design characters. You&rsquo;ve probably played them.&rdquo;
+  </footer>
+
+</div>
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+  });
+})();
+</script>
+</body>
+</html>

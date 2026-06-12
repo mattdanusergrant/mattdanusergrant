@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Matt Danuser-Grant &mdash; Game Designer</title>
+<meta name="description" content="Principal game designer. Character and combat design on Marvel Strike Force, Star Wars: Galaxy of Heroes, and Disney Sorcerer's Arena." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<!-- #LLM-generated — Variant A: Quiet Confidence -->
+<style>
+  :root{--bg:#FBF8F2;--paper:#FFFFFF;--ink:#15161C;--ink-2:#2A2A2A;--muted:#6A6A6A;--line:#E5E0D2;--line-2:#CBC4B2;--accent:#1A1A1A;--shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);--shadow-hover:0 18px 48px rgba(15,16,28,.10)}
+  [data-theme="dark"]{--bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;--line:#2C2924;--line-2:#3C3830;--accent:#EDE8DF;--shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);--shadow-hover:0 18px 48px rgba(0,0,0,.5)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;--line:#2C2924;--line-2:#3C3830;--accent:#EDE8DF;--shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);--shadow-hover:0 18px 48px rgba(0,0,0,.5)}}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh;padding-top:38px}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:760px;margin:0 auto;padding:0 28px 80px}
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .hero{padding:72px 0 48px}
+  .hero .eyebrow{font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;font-weight:500}
+  .hero h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(40px,7vw,64px);line-height:1.05;letter-spacing:-0.02em;margin:0 0 24px;color:var(--ink)}
+  .hero h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .hero .lede{font-size:20px;line-height:1.6;color:var(--ink-2);max-width:600px;margin:0 0 18px}
+  .hero .lede + .lede{color:var(--muted);font-size:18.5px}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin:48px 0 0}
+  @media (max-width:560px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:28px 26px;display:flex;flex-direction:column;box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s;position:relative}
+  .card:hover{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow-hover)}
+  .card .label{font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+  .card h2{font-family:'Fraunces',serif;font-weight:500;font-size:28px;margin:0 0 8px;letter-spacing:-0.01em;line-height:1.15}
+  .card p{margin:0 0 22px;color:var(--muted);font-size:15.5px;line-height:1.55;flex:1}
+  .card .arrow{font-family:'Fraunces',serif;font-size:14px;font-weight:500;color:var(--ink);display:inline-flex;align-items:center;gap:6px;margin-top:auto;letter-spacing:.01em}
+  .card:hover .arrow span{transform:translateX(3px)}
+  .card .arrow span{transition:transform .18s}
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:34px;height:20px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:14px;height:14px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;display:block;transition:transform .2s,background .2s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
+  .foot{margin:80px 0 0;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
+  .foot .contact a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot .contact a:hover{border-color:var(--ink-2)}
+  .foot .contact span + span::before{content:' &middot; ';color:var(--line-2);margin:0 .4em}
+  @media (max-width:480px){.wrap{padding:0 22px 60px}.hero{padding:48px 0 36px}}
+</style>
+</head>
+<body>
+<div style="position:fixed;top:0;left:0;right:0;z-index:10000;background:rgba(219,234,254,.97);color:#1e3a5f;font-size:12.5px;padding:8px 20px;display:flex;gap:16px;align-items:center;font-family:'Inter',sans-serif;backdrop-filter:blur(4px);border-bottom:1px solid rgba(30,58,95,.15)">
+  <a href="index.html" style="color:#1e3a5f;text-decoration:underline;white-space:nowrap">&larr; All variants</a>
+  <strong>A &mdash; Quiet Confidence &nbsp;&middot;&nbsp; index</strong>
+  <span style="margin-left:auto;opacity:.75;white-space:nowrap">
+    <a href="a-labs.html" style="color:#1e3a5f">labs</a> &middot;
+    <a href="a-resume.html" style="color:#1e3a5f">resume</a>
+    &nbsp;|&nbsp;
+    <a href="b-index.html" style="color:#1e3a5f">B</a> &middot;
+    <a href="c-index.html" style="color:#1e3a5f">C</a>
+  </span>
+</div>
+<div class="wrap">
+
+  <nav class="nav">
+    <a class="brand" href="a-index.html">Matt Danuser-Grant</a>
+    <div class="links">
+      <a href="a-resume.html">Resume</a>
+      <a href="a-labs.html">Labs</a>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+  </nav>
+
+  <section class="hero">
+    <p class="eyebrow">Principal Game Designer</p>
+    <h1>I design characters. <em>You&rsquo;ve probably played them.</em></h1>
+    <p class="lede">Marvel Strike Force. Star Wars: Galaxy of Heroes. Disney Sorcerer&rsquo;s Arena. A decade of mobile F2P, owning character and combat design on titles that held millions of players.</p>
+    <p class="lede">Most recently Principal Designer at Scopely. Now building small games in the open while I look for the next big one.</p>
+  </section>
+
+  <div class="cards">
+    <a class="card" href="a-resume.html">
+      <p class="label">01 &mdash; Resume</p>
+      <h2>Full career, one page.</h2>
+      <p>Scopely, EA, Glu, MZ, Behaviour, Gazillion, Cryptic. Online or PDF.</p>
+      <span class="arrow">View resume <span>&rarr;</span></span>
+    </a>
+    <a class="card" href="a-labs.html">
+      <p class="label">02 &mdash; Labs</p>
+      <h2>Small games, made out loud.</h2>
+      <p>Personal prototypes &mdash; tactics, survivors, pack openers, tower defence, a Go variant, a virtual pet. The workbench.</p>
+      <span class="arrow">Explore the labs <span>&rarr;</span></span>
+    </a>
+  </div>
+
+  <footer class="foot">
+    <div class="contact">
+      <span><a href="mailto:hello@mattdanusergrant.com">hello@mattdanusergrant.com</a></span>
+      <span><a href="https://linkedin.com/in/mattdanusergrant" target="_blank" rel="noopener">LinkedIn</a></span>
+      <span><a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">GitHub</a></span>
+    </div>
+    <div>Newark, CA</div>
+  </footer>
+
+</div>
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+  });
+})();
+</script>
+</body>
+</html>
