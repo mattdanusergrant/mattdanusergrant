@@ -357,12 +357,13 @@
         var chars=flavor.chars;
         if(p>flavor.revealAt){
           var prog=(p-flavor.revealAt)/(1-flavor.revealAt);
-          var resolved=Math.floor(prog*to.length);
+          var rest=to.slice(1);
+          var resolved=Math.floor(prog*rest.length);
           txt.textContent=flavor.rtl
-            ? scramble(to.length-resolved,chars)+to.slice(to.length-resolved)
-            : to.slice(0,resolved)+scramble(to.length-resolved,chars);
+            ? to[0]+scramble(rest.length-resolved,chars)+rest.slice(rest.length-resolved)
+            : to[0]+rest.slice(0,resolved)+scramble(rest.length-resolved,chars);
         }else{
-          txt.textContent=scramble(Math.max(from.length,to.length),chars);
+          txt.textContent=to[0]+scramble(Math.max(from.length,to.length)-1,chars);
         }
         if(frame>=frames){
           clearInterval(iv);
