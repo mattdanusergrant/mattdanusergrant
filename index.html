@@ -162,7 +162,9 @@
     color:var(--ink);
   }
   .i-txt{display:inline-block;transition:transform .25s}
-  .i-word.glitching .i-txt{animation:i-shake .09s steps(1) infinite}
+  .i-word.glitching       .i-txt{animation:i-shake       .09s steps(1) infinite}
+  .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite}
+  .i-word.glitching-micro .i-txt{animation:i-shake-micro .05s steps(1) infinite}
   .i-hint{
     font-family:'Inter',sans-serif;font-size:12px;
     letter-spacing:.2em;text-transform:uppercase;
@@ -177,6 +179,23 @@
     71% {transform:translate(-3px,-2px)}
     85% {transform:translate(2px,2px)}
     100%{transform:translate(-1px,-1px)}
+  }
+  @keyframes i-shake-heavy{
+    0%  {transform:translate(0,0)}
+    14% {transform:translate(-8px,3px)}
+    28% {transform:translate(7px,-5px)}
+    42% {transform:translate(-5px,7px)}
+    57% {transform:translate(9px,-3px)}
+    71% {transform:translate(-7px,-5px)}
+    85% {transform:translate(5px,5px)}
+    100%{transform:translate(-3px,-3px)}
+  }
+  @keyframes i-shake-micro{
+    0%  {transform:translate(0,0)}
+    25% {transform:translate(-2px,1px)}
+    50% {transform:translate(2px,-1px)}
+    75% {transform:translate(-1px,2px)}
+    100%{transform:translate(1px,-1px)}
   }
 </style>
 </head>
@@ -244,53 +263,58 @@
   if(sessionStorage.getItem('mdg-intro')){intro.remove();return;}
 
   var STAGES=[
-    {end:'MUST', mid:['MAKE','MELD','MESH','MINT','MOVE','MASH','MUSE','MAZE','MARK','MILL','MIND','MOAN','MEAT','MELT','MOAT','MOPE']},
-    {end:'DESIGN', mid:['DOPE','DARE','DASH','DIVE','DARK','DEFT','DUEL','DOOM','DUSK','DUST','DECK','DICE','DROP','DRUM','DRAG','DREW']},
-    {end:'GAMES', mid:['GRIND','GRABS','GROWS','GRIPS','GRAND','GRADE','GRACE','GRAIN','GRAFT','GRAPH','GROANS','GROOMS']}
+    ['MATT','MAKE','MUST'],
+    ['DANUSER','DOPE','DESIGN'],
+    ['GRANT','GROOVES','GAMES']
   ];
+
+  // Glitch visual flavors — vary char set, reveal direction, shake style
+  var FLAVORS=[
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:false, cls:'glitching'},
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', revealAt:0.55, rtl:false, cls:'glitching-heavy'},
+    {chars:'!@#$%&*?<>~^|ABCDEFGHIJKLMNOPQRSTUVWXYZ', revealAt:0.60, rtl:false, cls:'glitching-micro'},
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:true,  cls:'glitching'},
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.30, rtl:false, cls:'glitching-heavy'},
+    {chars:'!@#$%&*?<>~^|',                     revealAt:0.65, rtl:false, cls:'glitching-micro'}
+  ];
+  var lastFlavor=-1;
+  function pickFlavor(){
+    var idx;
+    do{idx=Math.floor(Math.random()*FLAVORS.length);}while(idx===lastFlavor);
+    lastFlavor=idx;
+    return FLAVORS[idx];
+  }
 
   var wordEls=Array.from(document.querySelectorAll('.i-word'));
   var hint=document.querySelector('.i-hint');
   var step=0;
   var animating=false;
 
-  var USED_KEY='mdg-used-mid';
-  var usedAll=JSON.parse(localStorage.getItem(USED_KEY)||'[[],[],[]]');
+  function scramble(n,chars){var s='';for(var i=0;i<n;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
 
-  function pickMid(i){
-    var pool=STAGES[i].mid;
-    var used=usedAll[i];
-    var avail=pool.filter(function(w){return used.indexOf(w)===-1;});
-    if(!avail.length){usedAll[i]=[];avail=pool.slice();}
-    var pick=avail[Math.floor(Math.random()*avail.length)];
-    usedAll[i].push(pick);
-    localStorage.setItem(USED_KEY,JSON.stringify(usedAll));
-    return pick;
-  }
-
-  var CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  function rnd(){return CHARS[Math.floor(Math.random()*CHARS.length)];}
-  function scramble(n){var s='';for(var i=0;i<n;i++)s+=rnd();return s;}
-
-  function glitch(el,to,delay,cb){
+  function glitch(el,to,delay,flavor,cb){
     setTimeout(function(){
       var txt=el.querySelector('.i-txt');
       var from=txt.textContent;
       var frames=Math.round(700/30);
       var frame=0;
-      el.classList.add('glitching');
+      el.classList.add(flavor.cls);
       var iv=setInterval(function(){
         frame++;
         var p=frame/frames;
-        if(p>0.55){
-          var resolved=Math.floor(((p-0.55)/0.45)*to.length);
-          txt.textContent=to.slice(0,resolved)+scramble(to.length-resolved);
+        var chars=flavor.chars;
+        if(p>flavor.revealAt){
+          var prog=(p-flavor.revealAt)/(1-flavor.revealAt);
+          var resolved=Math.floor(prog*to.length);
+          txt.textContent=flavor.rtl
+            ? scramble(to.length-resolved,chars)+to.slice(to.length-resolved)
+            : to.slice(0,resolved)+scramble(to.length-resolved,chars);
         }else{
-          txt.textContent=scramble(Math.max(from.length,to.length));
+          txt.textContent=scramble(Math.max(from.length,to.length),chars);
         }
         if(frame>=frames){
           clearInterval(iv);
-          el.classList.remove('glitching');
+          el.classList.remove(flavor.cls);
           txt.textContent=to;
           if(cb)cb();
         }
@@ -303,12 +327,11 @@
     if(animating)return;
     animating=true;
     step++;
-    var targets=step===1
-      ? STAGES.map(function(_,i){return pickMid(i);})
-      : STAGES.map(function(s){return s.end;});
+    var targets=STAGES.map(function(s){return s[step];});
+    var flavor=pickFlavor();
     var pending=wordEls.length;
     wordEls.forEach(function(el,i){
-      glitch(el,targets[i],i*80,function(){
+      glitch(el,targets[i],i*80,flavor,function(){
         if(--pending===0){
           animating=false;
           if(step===2)celebrate();
