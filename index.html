@@ -312,20 +312,38 @@
   });
 
   function celebrate(){
+    var txts=Array.from(document.querySelectorAll('.i-word .i-txt'));
     document.querySelectorAll('.i-word').forEach(function(w){w.style.color='var(--ink)';});
-    document.querySelectorAll('.i-word .i-txt').forEach(function(t,i){
+    if(hint)hint.textContent='';
+
+    // Big staggered bounce with overshoot
+    txts.forEach(function(t,i){
       setTimeout(function(){
-        t.style.transform='scale(1.1)';
-        setTimeout(function(){t.style.transform='';},220);
-      },i*110);
+        t.style.transition='transform .3s cubic-bezier(.17,.67,.35,1.5)';
+        t.style.transform='scale(1.2)';
+        setTimeout(function(){
+          t.style.transition='transform .22s ease';
+          t.style.transform='';
+        },300);
+      },i*150);
     });
+
+    // Synchronized second pulse — all three at once
+    setTimeout(function(){
+      txts.forEach(function(t){
+        t.style.transition='transform .2s ease';
+        t.style.transform='scale(1.07)';
+        setTimeout(function(){t.style.transform='';},200);
+      });
+    },950);
+
     setTimeout(function(){
       intro.style.opacity='0';
       setTimeout(function(){
         intro.remove();
         sessionStorage.setItem('mdg-intro','1');
       },650);
-    },900);
+    },2500);
   }
 })();
 </script>
