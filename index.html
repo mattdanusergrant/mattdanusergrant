@@ -162,11 +162,13 @@
     color:var(--ink);
   }
   .i-txt{display:inline-block;transition:transform .25s}
-  .i-word.glitching       .i-txt{animation:i-shake .09s steps(1) infinite,i-chroma .13s steps(1) infinite}
-  .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite,i-chroma-heavy .10s steps(1) infinite}
-  .i-word.glitching-micro .i-txt{animation:i-shake-micro .05s steps(1) infinite,i-chroma-micro .08s steps(1) infinite}
-  .i-word.glitching-mirror .i-txt{animation:i-shake .09s steps(1) infinite,i-chroma .13s steps(1) infinite}
-  .i-word.glitching-mirror{animation:i-mirror .72s steps(1) 1 forwards}
+  .i-word.glitching       .i-txt{animation:i-shake .09s steps(1) infinite}
+  .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite}
+  .i-word.glitching-micro .i-txt{animation:i-shake-micro .05s steps(1) infinite}
+  #intro.vfx-chroma .i-word.glitching       .i-txt{animation:i-shake .09s steps(1) infinite,i-chroma .13s steps(1) infinite}
+  #intro.vfx-chroma .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite,i-chroma-heavy .10s steps(1) infinite}
+  #intro.vfx-chroma .i-word.glitching-micro .i-txt{animation:i-shake-micro .05s steps(1) infinite,i-chroma-micro .08s steps(1) infinite}
+  #intro.vfx-mirror .i-word{animation:i-mirror .72s steps(1) 1 forwards}
   .i-hint{
     font-family:'Inter',sans-serif;font-size:12px;
     letter-spacing:.2em;text-transform:uppercase;
@@ -313,8 +315,7 @@
     {chars:'!@#$%&*?<>~^|ABCDEFGHIJKLMNOPQRSTUVWXYZ', revealAt:0.60, rtl:false, cls:'glitching-micro'},
     {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:true,  cls:'glitching'},
     {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.30, rtl:false, cls:'glitching-heavy'},
-    {chars:'!@#$%&*?<>~^|',                     revealAt:0.65, rtl:false, cls:'glitching-micro'},
-    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:false, cls:'glitching-mirror'}
+    {chars:'!@#$%&*?<>~^|',                     revealAt:0.65, rtl:false, cls:'glitching-micro'}
   ];
   var lastFlavor=-1;
   function pickFlavor(){
@@ -322,6 +323,15 @@
     do{idx=Math.floor(Math.random()*FLAVORS.length);}while(idx===lastFlavor);
     lastFlavor=idx;
     return FLAVORS[idx];
+  }
+
+  var VFXPOOL=['flash','scanlines','chroma','mirror'];
+  var lastVfx=-1;
+  function pickVfx(){
+    var idx;
+    do{idx=Math.floor(Math.random()*VFXPOOL.length);}while(idx===lastVfx);
+    lastVfx=idx;
+    return VFXPOOL[idx];
   }
 
   var wordEls=Array.from(document.querySelectorAll('.i-word'));
@@ -368,14 +378,23 @@
     step++;
     var targets=STAGES.map(function(s){return s[step];});
     var flavor=pickFlavor();
+    var vfx=pickVfx();
     var pending=wordEls.length;
-    intro.classList.add('vfx-active','vfx-flash');
-    setTimeout(function(){intro.classList.remove('vfx-flash');},120);
+    if(vfx==='flash'){
+      intro.classList.add('vfx-flash');
+      setTimeout(function(){intro.classList.remove('vfx-flash');},120);
+    }else if(vfx==='scanlines'){
+      intro.classList.add('vfx-active');
+    }else if(vfx==='chroma'){
+      intro.classList.add('vfx-chroma');
+    }else if(vfx==='mirror'){
+      intro.classList.add('vfx-mirror');
+    }
     wordEls.forEach(function(el,i){
       glitch(el,targets[i],i*80,flavor,function(){
         if(--pending===0){
           animating=false;
-          intro.classList.remove('vfx-active');
+          intro.classList.remove('vfx-active','vfx-chroma','vfx-mirror');
           if(step===2)celebrate();
           else if(hint)hint.textContent='click';
         }
