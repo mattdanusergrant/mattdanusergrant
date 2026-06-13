@@ -20,7 +20,8 @@
   a{color:inherit;text-decoration:none}
   .site-wrap{max-width:960px;margin:0 auto;padding:0 28px}
   .nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em}
-  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(13px,3.8vw,17px);color:var(--ink);letter-spacing:-0.01em;white-space:nowrap}
+  .nav .links{display:flex;align-items:center;white-space:nowrap}
   .nav .links a{margin-left:22px;transition:color .15s}
   .nav .links a:hover{color:var(--ink)}
   .nav .links a.active{color:var(--ink);font-weight:600}
@@ -58,6 +59,7 @@
   .foot{margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
   .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
   .foot a:hover{border-color:var(--ink-2)}
+  @media (max-width:480px){.nav .links a{margin-left:14px;font-size:13px}.theme-toggle{margin-left:10px}}
   @media screen{.sheet{font-size:14pt}.r-header h1{font-size:40pt}.r-header .tagline{font-size:14pt}.contact{font-size:13pt}.section-label{font-size:12pt}.summary,.company,.job-title{font-size:14pt}.dates,.game-credit,.qa-titles{font-size:12pt}ul.bullets li{font-size:13pt}}
   @media print{@page{margin:.55in .7in;size:letter}:root,[data-theme="dark"]{--ink:#000;--ink-2:#222;--muted:#555;--line:#ddd;--line-2:#ccc;--bg:#fff;--paper:#fff}body{background:#fff;color:#000;font-size:10pt}.site-wrap{max-width:none;padding:0;margin:0}.nav,.print-hint,.foot,.no-print{display:none !important}.sheet{background:transparent;border:none;border-radius:0;padding:0;box-shadow:none}.job,.no-break{page-break-inside:avoid}a{color:inherit;text-decoration:none}}
 </style>
@@ -107,7 +109,7 @@
     <div class="section-label">Summary</div>
     <div class="summary no-break">
       <p>Principal Game Designer. Over a decade in mobile F2P — Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer's Arena — owning character and combat design on titles with hundreds of millions of installs.</p>
-      <p>The thing I'm solving for is feel: the character kit that clicks, the event that pulls someone back after weeks away, the roster depth that keeps veterans engaged without losing newcomers. I reach for systems because they're how you build that experience at scale, and I reach for data because it's how you know it's working.</p>
+      <p>The thing I’m solving for is feel: the character kit that clicks, the event that pulls someone back after weeks away, the roster depth that keeps veterans engaged without losing newcomers. I reach for systems because they’re how you build that experience at scale, and I reach for data because it’s how you know it’s working.</p>
     </div>
 
     <div class="section-label">Experience</div>
@@ -129,7 +131,7 @@
       </div>
       <div class="game-credit">Marvel Strike Force &nbsp;·&nbsp; $300M+ lifetime revenue &nbsp;·&nbsp; 200+ character roster</div>
       <ul class="bullets">
-        <li>Owned character and combat design for one of mobile's top-grossing live games, shipping new playable characters on a monthly cadence.</li>
+        <li>Owned character and combat design for one of mobile’s top-grossing live games, shipping new playable characters on a monthly cadence.</li>
         <li>Designed kits, abilities, and combat systems balanced for both PvE and competitive PvP play.</li>
         <li>Mentored and gave design direction to other designers, raising the bar on kit quality and design consistency across the team.</li>
         <li>Partnered across production, engineering, and live ops to land content that drove player engagement and retention.</li>
@@ -141,7 +143,7 @@
         <div><span class="company">Glu Mobile</span><span class="job-title"> — Sr. Game Designer</span></div>
         <span class="dates">Mar 2020 – Aug 2021</span>
       </div>
-      <div class="game-credit">Disney Sorcerer's Arena &nbsp;·&nbsp; $22M+ in launch-quarter bookings</div>
+      <div class="game-credit">Disney Sorcerer’s Arena &nbsp;·&nbsp; $22M+ in launch-quarter bookings</div>
       <ul class="bullets">
         <li>Designed characters and combat systems for a Disney/Pixar collectible RPG.</li>
         <li>Translated beloved Disney and Pixar characters into distinct, satisfying kits across an expanding PvE and PvP roster.</li>
