@@ -244,14 +244,29 @@
   if(sessionStorage.getItem('mdg-intro')){intro.remove();return;}
 
   var STAGES=[
-    ['MATT','MAKE','MUST'],
-    ['DANUSER','DOPE','DESIGN'],
-    ['GRANT','GROOVES','GAMES']
+    {end:'MUST', mid:['MAKE','MELD','MESH','MINT','MOVE','MASH','MUSE','MAZE','MARK','MILL','MIND','MOAN','MEAT','MELT','MOAT','MOPE']},
+    {end:'DESIGN', mid:['DOPE','DARE','DASH','DIVE','DARK','DEFT','DUEL','DOOM','DUSK','DUST','DECK','DICE','DROP','DRUM','DRAG','DREW']},
+    {end:'GAMES', mid:['GRIND','GRABS','GROWS','GRIPS','GRAND','GRADE','GRACE','GRAIN','GRAFT','GRAPH','GROANS','GROOMS']}
   ];
+
   var wordEls=Array.from(document.querySelectorAll('.i-word'));
   var hint=document.querySelector('.i-hint');
   var step=0;
   var animating=false;
+
+  var USED_KEY='mdg-used-mid';
+  var usedAll=JSON.parse(localStorage.getItem(USED_KEY)||'[[],[],[]]');
+
+  function pickMid(i){
+    var pool=STAGES[i].mid;
+    var used=usedAll[i];
+    var avail=pool.filter(function(w){return used.indexOf(w)===-1;});
+    if(!avail.length){usedAll[i]=[];avail=pool.slice();}
+    var pick=avail[Math.floor(Math.random()*avail.length)];
+    usedAll[i].push(pick);
+    localStorage.setItem(USED_KEY,JSON.stringify(usedAll));
+    return pick;
+  }
 
   var CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   function rnd(){return CHARS[Math.floor(Math.random()*CHARS.length)];}
@@ -261,7 +276,7 @@
     setTimeout(function(){
       var txt=el.querySelector('.i-txt');
       var from=txt.textContent;
-      var frames=Math.round(1400/30);
+      var frames=Math.round(700/30);
       var frame=0;
       el.classList.add('glitching');
       var iv=setInterval(function(){
@@ -288,9 +303,12 @@
     if(animating)return;
     animating=true;
     step++;
+    var targets=step===1
+      ? STAGES.map(function(_,i){return pickMid(i);})
+      : STAGES.map(function(s){return s.end;});
     var pending=wordEls.length;
     wordEls.forEach(function(el,i){
-      glitch(el,STAGES[i][step],i*80,function(){
+      glitch(el,targets[i],i*80,function(){
         if(--pending===0){
           animating=false;
           if(step===2)celebrate();
@@ -325,7 +343,14 @@
       });
     },950);
 
-    setTimeout(function(){if(step===2)dismiss();},2500);
+    // Words fade during the last half second
+    setTimeout(function(){
+      var wordsEl=document.querySelector('.i-words');
+      wordsEl.style.transition='opacity .5s ease';
+      wordsEl.style.opacity='0';
+    },1500);
+
+    setTimeout(function(){if(step===2)dismiss();},2000);
   }
 
   function dismiss(){
