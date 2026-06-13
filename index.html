@@ -151,20 +151,18 @@
   }
 
   /* ── Intro puzzle ───────────────────────────── */
-  #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease}
+  #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
   .i-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px}
   .i-words{display:flex;flex-direction:column;align-items:center}
   .i-word{
-    cursor:pointer;user-select:none;
+    user-select:none;
     font-family:'Fraunces',serif;font-weight:700;
     font-size:clamp(60px,15vw,120px);
     letter-spacing:-0.025em;line-height:.95;
-    color:var(--ink);transition:color .3s,opacity .2s;
+    color:var(--ink);
   }
-  .i-word:hover:not(.solved){opacity:.65}
   .i-txt{display:inline-block;transition:transform .25s}
   .i-word.glitching .i-txt{animation:i-shake .09s steps(1) infinite}
-  .i-word.solved{color:var(--muted)}
   .i-hint{
     font-family:'Inter',sans-serif;font-size:12px;
     letter-spacing:.2em;text-transform:uppercase;
@@ -186,9 +184,9 @@
 <div id="intro" aria-hidden="true">
   <div class="i-inner">
     <div class="i-words">
-      <div class="i-word" data-stages="MAKE,MUST"><span class="i-txt">MATT</span></div>
-      <div class="i-word" data-stages="DOPE,DESIGN"><span class="i-txt">DANUSER</span></div>
-      <div class="i-word" data-stages="GROOVES,GAMES"><span class="i-txt">GRANT</span></div>
+      <div class="i-word"><span class="i-txt">MATT</span></div>
+      <div class="i-word"><span class="i-txt">DANUSER</span></div>
+      <div class="i-word"><span class="i-txt">GRANT</span></div>
     </div>
     <p class="i-hint">click</p>
   </div>
@@ -245,78 +243,69 @@
   if(!intro)return;
   if(sessionStorage.getItem('mdg-intro')){intro.remove();return;}
 
-  var CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  var HINTS=['click','keep going','one more'];
-  var solvedCount=0;
-  var phase1Count=0;
+  var STAGES=[
+    ['MATT','MAKE','MUST'],
+    ['DANUSER','DOPE','DESIGN'],
+    ['GRANT','GROOVES','GAMES']
+  ];
+  var wordEls=Array.from(document.querySelectorAll('.i-word'));
   var hint=document.querySelector('.i-hint');
+  var step=0;
+  var animating=false;
 
+  var CHARS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   function rnd(){return CHARS[Math.floor(Math.random()*CHARS.length)];}
   function scramble(n){var s='';for(var i=0;i<n;i++)s+=rnd();return s;}
 
-  document.querySelectorAll('.i-word').forEach(function(word){
-    var txt=word.querySelector('.i-txt');
-    var from=txt.textContent;
-    var stages=word.dataset.stages.split(',');
-    var stageIdx=0;
-    word._stageIdx=0;
-
-    function trigger(){
-      if(word.classList.contains('solved'))return;
-      if(word._iv)return;
-      if(stageIdx>=1&&phase1Count<3)return;
-      var to=stages[stageIdx];
+  function glitch(el,to,delay,cb){
+    setTimeout(function(){
+      var txt=el.querySelector('.i-txt');
+      var from=txt.textContent;
       var frames=Math.round(1400/30);
       var frame=0;
-      word.classList.add('glitching');
-      word._iv=setInterval(function(){
+      el.classList.add('glitching');
+      var iv=setInterval(function(){
         frame++;
         var p=frame/frames;
         if(p>0.55){
           var resolved=Math.floor(((p-0.55)/0.45)*to.length);
           txt.textContent=to.slice(0,resolved)+scramble(to.length-resolved);
-        } else {
+        }else{
           txt.textContent=scramble(Math.max(from.length,to.length));
         }
         if(frame>=frames){
-          clearInterval(word._iv);word._iv=null;
-          word.classList.remove('glitching');
+          clearInterval(iv);
+          el.classList.remove('glitching');
           txt.textContent=to;
-          from=to;
-          stageIdx++;
-          word._stageIdx=stageIdx;
-          if(stageIdx===1){
-            phase1Count++;
-            if(hint)hint.textContent=phase1Count<3?HINTS[phase1Count]:'click';
-          } else if(stageIdx>=stages.length){
-            word.classList.add('solved');
-            solvedCount++;
-            if(hint)hint.textContent=solvedCount<3?HINTS[solvedCount]:'';
-            if(solvedCount===3)celebrate();
-          }
+          if(cb)cb();
         }
       },30);
-    }
+    },delay);
+  }
 
-    word._trigger=trigger;
-    word.addEventListener('click',function(e){e.stopPropagation();trigger();});
-  });
-
-  intro.addEventListener('click',function(){
-    var eligible=Array.from(document.querySelectorAll('.i-word')).filter(function(w){
-      return !w.classList.contains('solved')&&!w._iv&&
-             (w._stageIdx===0||phase1Count>=3);
+  function advance(){
+    if(step===2){dismiss();return;}
+    if(animating)return;
+    animating=true;
+    step++;
+    var pending=wordEls.length;
+    wordEls.forEach(function(el,i){
+      glitch(el,STAGES[i][step],i*80,function(){
+        if(--pending===0){
+          animating=false;
+          if(step===2)celebrate();
+          else if(hint)hint.textContent='click';
+        }
+      });
     });
-    if(!eligible.length)return;
-    eligible[Math.floor(Math.random()*eligible.length)]._trigger();
-  });
+  }
+
+  intro.addEventListener('click',advance);
 
   function celebrate(){
-    var txts=Array.from(document.querySelectorAll('.i-word .i-txt'));
-    document.querySelectorAll('.i-word').forEach(function(w){w.style.color='var(--ink)';});
     if(hint)hint.textContent='';
+    var txts=wordEls.map(function(el){return el.querySelector('.i-txt');});
 
-    // Big staggered bounce with overshoot
     txts.forEach(function(t,i){
       setTimeout(function(){
         t.style.transition='transform .3s cubic-bezier(.17,.67,.35,1.5)';
@@ -328,7 +317,6 @@
       },i*150);
     });
 
-    // Synchronized second pulse — all three at once
     setTimeout(function(){
       txts.forEach(function(t){
         t.style.transition='transform .2s ease';
@@ -337,13 +325,16 @@
       });
     },950);
 
+    setTimeout(function(){if(step===2)dismiss();},2500);
+  }
+
+  function dismiss(){
+    step=3;
+    intro.style.opacity='0';
     setTimeout(function(){
-      intro.style.opacity='0';
-      setTimeout(function(){
-        intro.remove();
-        sessionStorage.setItem('mdg-intro','1');
-      },650);
-    },2500);
+      intro.remove();
+      sessionStorage.setItem('mdg-intro','1');
+    },650);
   }
 })();
 </script>
