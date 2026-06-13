@@ -162,9 +162,11 @@
     color:var(--ink);
   }
   .i-txt{display:inline-block;transition:transform .25s}
-  .i-word.glitching       .i-txt{animation:i-shake       .09s steps(1) infinite}
-  .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite}
-  .i-word.glitching-micro .i-txt{animation:i-shake-micro .05s steps(1) infinite}
+  .i-word.glitching       .i-txt{animation:i-shake .09s steps(1) infinite,i-chroma .13s steps(1) infinite}
+  .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite,i-chroma-heavy .10s steps(1) infinite}
+  .i-word.glitching-micro .i-txt{animation:i-shake-micro .05s steps(1) infinite,i-chroma-micro .08s steps(1) infinite}
+  .i-word.glitching-mirror .i-txt{animation:i-shake .09s steps(1) infinite,i-chroma .13s steps(1) infinite}
+  .i-word.glitching-mirror{animation:i-mirror .72s steps(1) 1 forwards}
   .i-hint{
     font-family:'Inter',sans-serif;font-size:12px;
     letter-spacing:.2em;text-transform:uppercase;
@@ -197,6 +199,40 @@
     75% {transform:translate(-1px,2px)}
     100%{transform:translate(1px,-1px)}
   }
+  /* ── VFX overlays ───────────────────────────── */
+  .i-vfx-flash,.i-vfx-scanlines{position:absolute;inset:0;pointer-events:none}
+  .i-vfx-flash{background:rgba(255,255,255,0);transition:background .05s}
+  #intro.vfx-flash .i-vfx-flash{background:rgba(255,255,255,.15)}
+  .i-vfx-scanlines{
+    background:repeating-linear-gradient(
+      to bottom,transparent 0,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px
+    );
+    opacity:0;transition:opacity .12s;
+  }
+  #intro.vfx-active .i-vfx-scanlines{opacity:1}
+  @keyframes i-chroma{
+    0%,100%{text-shadow:none}
+    25%{text-shadow:-4px 0 rgba(255,0,80,.8),4px 0 rgba(0,200,255,.8)}
+    50%{text-shadow:5px 0 rgba(255,0,80,.7),-4px 0 rgba(0,200,255,.7)}
+    75%{text-shadow:-3px 0 rgba(255,0,80,.6),2px 0 rgba(0,200,255,.6)}
+  }
+  @keyframes i-chroma-heavy{
+    0%,100%{text-shadow:none}
+    25%{text-shadow:-8px 0 rgba(255,0,80,.85),8px 0 rgba(0,200,255,.85)}
+    50%{text-shadow:7px 0 rgba(255,0,80,.8),-6px 0 rgba(0,200,255,.8)}
+    75%{text-shadow:-5px 0 rgba(255,0,80,.7),4px 0 rgba(0,200,255,.7)}
+  }
+  @keyframes i-chroma-micro{
+    0%,100%{text-shadow:none}
+    33%{text-shadow:-2px 0 rgba(255,0,80,.6),2px 0 rgba(0,200,255,.6)}
+    66%{text-shadow:2px 0 rgba(255,0,80,.5),-1px 0 rgba(0,200,255,.5)}
+  }
+  @keyframes i-mirror{
+    0%{transform:scaleX(1)}
+    45%{transform:scaleX(-1)}
+    90%{transform:scaleX(1)}
+    100%{transform:scaleX(1)}
+  }
 </style>
 </head>
 <body>
@@ -209,6 +245,8 @@
     </div>
     <p class="i-hint">click</p>
   </div>
+  <div class="i-vfx-flash"></div>
+  <div class="i-vfx-scanlines"></div>
 </div>
 <div class="wrap">
 
@@ -275,7 +313,8 @@
     {chars:'!@#$%&*?<>~^|ABCDEFGHIJKLMNOPQRSTUVWXYZ', revealAt:0.60, rtl:false, cls:'glitching-micro'},
     {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:true,  cls:'glitching'},
     {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.30, rtl:false, cls:'glitching-heavy'},
-    {chars:'!@#$%&*?<>~^|',                     revealAt:0.65, rtl:false, cls:'glitching-micro'}
+    {chars:'!@#$%&*?<>~^|',                     revealAt:0.65, rtl:false, cls:'glitching-micro'},
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:false, cls:'glitching-mirror'}
   ];
   var lastFlavor=-1;
   function pickFlavor(){
@@ -296,7 +335,7 @@
     setTimeout(function(){
       var txt=el.querySelector('.i-txt');
       var from=txt.textContent;
-      var frames=Math.round(700/30);
+      var frames=Math.round(700/80);
       var frame=0;
       el.classList.add(flavor.cls);
       var iv=setInterval(function(){
@@ -318,7 +357,7 @@
           txt.textContent=to;
           if(cb)cb();
         }
-      },30);
+      },80);
     },delay);
   }
 
@@ -330,10 +369,13 @@
     var targets=STAGES.map(function(s){return s[step];});
     var flavor=pickFlavor();
     var pending=wordEls.length;
+    intro.classList.add('vfx-active','vfx-flash');
+    setTimeout(function(){intro.classList.remove('vfx-flash');},120);
     wordEls.forEach(function(el,i){
       glitch(el,targets[i],i*80,flavor,function(){
         if(--pending===0){
           animating=false;
+          intro.classList.remove('vfx-active');
           if(step===2)celebrate();
           else if(hint)hint.textContent='click';
         }
