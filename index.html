@@ -153,7 +153,7 @@
   /* ── Intro puzzle ───────────────────────────── */
   #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
   .i-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px}
-  .i-words{display:flex;flex-direction:column;align-items:center}
+  .i-words{display:flex;flex-direction:column;align-items:center;position:relative}
   .i-word{
     user-select:none;
     font-family:'Fraunces',serif;font-weight:700;
@@ -202,16 +202,20 @@
     100%{transform:translate(1px,-1px)}
   }
   /* ── VFX overlays ───────────────────────────── */
-  .i-vfx-flash,.i-vfx-scanlines{position:absolute;inset:0;pointer-events:none}
-  .i-vfx-flash{background:rgba(255,255,255,0);transition:background .05s}
-  #intro.vfx-flash .i-vfx-flash{background:rgba(255,255,255,.15)}
   .i-vfx-scanlines{
+    position:absolute;inset:0;pointer-events:none;
     background:repeating-linear-gradient(
       to bottom,transparent 0,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px
     );
     opacity:0;transition:opacity .12s;
   }
   #intro.vfx-active .i-vfx-scanlines{opacity:1}
+  .i-pixels{position:absolute;inset:0;pointer-events:none;z-index:2}
+  .i-pixels span{position:absolute;display:block;border-radius:1px;animation:i-pixel .6s ease-out forwards}
+  @keyframes i-pixel{
+    0%{opacity:1;transform:translate(0,0) scale(1)}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}
+  }
   @keyframes i-chroma{
     0%,100%{text-shadow:none}
     25%{text-shadow:-4px 0 rgba(255,0,80,.8),4px 0 rgba(0,200,255,.8)}
@@ -247,7 +251,6 @@
     </div>
     <p class="i-hint">click</p>
   </div>
-  <div class="i-vfx-flash"></div>
   <div class="i-vfx-scanlines"></div>
 </div>
 <div class="wrap">
@@ -325,7 +328,7 @@
     return FLAVORS[idx];
   }
 
-  var VFXPOOL=['flash','scanlines','chroma','mirror'];
+  var VFXPOOL=['pixels','scanlines','chroma','mirror'];
   var lastVfx=-1;
   function pickVfx(){
     var idx;
@@ -371,6 +374,29 @@
     },delay);
   }
 
+  function pixelBlast(){
+    var wordsEl=document.querySelector('.i-words');
+    var w=wordsEl.offsetWidth,h=wordsEl.offsetHeight;
+    var layer=document.createElement('div');
+    layer.className='i-pixels';
+    var colors=['#ff0050','#00c8ff','#ffe600','#00ff95','#ff7b00','#b400ff'];
+    for(var i=0;i<64;i++){
+      var px=document.createElement('span');
+      var size=Math.random()*14+6;
+      px.style.left=(Math.random()*w)+'px';
+      px.style.top=(Math.random()*h)+'px';
+      px.style.width=size+'px';
+      px.style.height=size+'px';
+      px.style.background=colors[Math.floor(Math.random()*colors.length)];
+      px.style.setProperty('--dx',((Math.random()-0.5)*180)+'px');
+      px.style.setProperty('--dy',((Math.random()-0.5)*180)+'px');
+      px.style.animationDelay=(Math.random()*0.15)+'s';
+      layer.appendChild(px);
+    }
+    wordsEl.appendChild(layer);
+    setTimeout(function(){layer.remove();},900);
+  }
+
   function advance(){
     if(step===2){dismiss();return;}
     if(animating)return;
@@ -380,9 +406,8 @@
     var flavor=pickFlavor();
     var vfx=pickVfx();
     var pending=wordEls.length;
-    if(vfx==='flash'){
-      intro.classList.add('vfx-flash');
-      setTimeout(function(){intro.classList.remove('vfx-flash');},120);
+    if(vfx==='pixels'){
+      pixelBlast();
     }else if(vfx==='scanlines'){
       intro.classList.add('vfx-active');
     }else if(vfx==='chroma'){
