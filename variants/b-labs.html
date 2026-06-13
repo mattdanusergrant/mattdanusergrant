@@ -43,7 +43,8 @@
   a{color:inherit;text-decoration:none}
   .wrap{max-width:960px;margin:0 auto;padding:0 28px 80px}
   .nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em}
-  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(13px,3.8vw,17px);color:var(--ink);letter-spacing:-0.01em;white-space:nowrap}
+  .nav .links{display:flex;align-items:center;white-space:nowrap}
   .nav .links a{margin-left:22px;transition:color .15s}
   .nav .links a:hover{color:var(--ink)}
   .nav .links a.active{color:var(--ink);font-weight:600}
@@ -74,7 +75,7 @@
   .foot{margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
   .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
   .foot a:hover{border-color:var(--ink-2)}
-  @media (max-width:480px){.wrap{padding:0 22px 60px}.head{padding:40px 0 32px}}
+  @media (max-width:480px){.wrap{padding:0 22px 60px}.head{padding:40px 0 32px}.nav .links a{margin-left:14px;font-size:13px}.theme-toggle{margin-left:10px}}
 </style>
 </head>
 <body>
@@ -114,7 +115,7 @@
 
         <article class="card">
           <h2>Invisible Ink</h2>
-          <p>A writing app where your text fades into the page as you type. It's still there — you can reveal it — but the default mode is eyes-forward, words disappearing behind you. Useful for drafting. Surprisingly meditative.</p>
+          <p>A writing app where your text fades into the page as you type. It’s still there — you can reveal it — but the default mode is eyes-forward, words disappearing behind you. Useful for drafting. Surprisingly meditative.</p>
           <div class="btn-row">
             <a class="btn btn-play" href="https://itsinvisible.ink" target="_blank" rel="noopener">Open</a>
           </div>
@@ -164,7 +165,7 @@
 
         <article class="card">
           <h2>Switchback TD</h2>
-          <p>A tower defence where the path doubles back on itself. You're building defenses across both lanes of the same corridor, watching enemies thread the gap you left.</p>
+          <p>A tower defence where the path doubles back on itself. You’re building defenses across both lanes of the same corridor, watching enemies thread the gap you left.</p>
           <div class="btn-row">
             <a class="btn btn-play" href="/games/switchback-td/" target="_blank" rel="noopener">Play</a>
             <a class="btn btn-edge" href="https://mattdanusergrant.github.io/switchback-td/" target="_blank" rel="noopener">Experimental</a>
@@ -182,7 +183,7 @@
 
         <article class="card">
           <h2>Mosslings</h2>
-          <p>A virtual pet game with low friction and a slow pace. Check in, tend to your mossling, watch it live its small life. Designed around the feeling of returning to something you've missed.</p>
+          <p>A virtual pet game with low friction and a slow pace. Check in, tend to your mossling, watch it live its small life. Designed around the feeling of returning to something you’ve missed.</p>
           <div class="btn-row">
             <a class="btn btn-play" href="/games/mosslings/" target="_blank" rel="noopener">Play</a>
             <a class="btn btn-edge" href="https://mattdanusergrant.github.io/mosslings/" target="_blank" rel="noopener">Experimental</a>
