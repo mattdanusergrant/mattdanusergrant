@@ -56,17 +56,18 @@
 
   .wrap{max-width:760px;margin:0 auto;padding:0 28px 80px}
 
-  /* ── Top nav ───────────────────────────── */
+  /* ── Top nav ────────────────────────────────────────── */
   .nav{
     display:flex;justify-content:space-between;align-items:center;
     padding:24px 0 0;font-size:14px;color:var(--muted);
     letter-spacing:.04em;
   }
-  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(13px,3.8vw,17px);color:var(--ink);letter-spacing:-0.01em;white-space:nowrap}
+  .nav .links{display:flex;align-items:center;white-space:nowrap}
   .nav .links a{margin-left:22px;transition:color .15s}
   .nav .links a:hover{color:var(--ink)}
 
-  /* ── Hero ───────────────────────────── */
+  /* ── Hero ────────────────────────────────────────── */
   .hero{padding:72px 0 48px}
   .hero .eyebrow{
     font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
@@ -85,7 +86,7 @@
   }
   .hero .lede + .lede{color:var(--muted);font-size:18.5px}
 
-  /* ── Big CTAs ───────────────────────────── */
+  /* ── Big CTAs ────────────────────────────────────────── */
   .cards{
     display:grid;grid-template-columns:repeat(2,1fr);gap:18px;
     margin:48px 0 0;
@@ -122,14 +123,14 @@
   .card:hover .arrow span{transform:translateX(3px)}
   .card .arrow span{transition:transform .18s}
 
-  /* ── Theme toggle ───────────────────────────── */
+  /* ── Theme toggle ────────────────────────────────────────── */
   .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
   .toggle-track{width:34px;height:20px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
   .toggle-thumb{width:14px;height:14px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;display:block;transition:transform .2s,background .2s}
   [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
   @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
 
-  /* ── Footer ───────────────────────────── */
+  /* ── Footer ────────────────────────────────────────── */
   .foot{
     margin:80px 0 0;padding-top:28px;
     border-top:1px solid var(--line);
@@ -148,9 +149,11 @@
   @media (max-width:480px){
     .wrap{padding:0 22px 60px}
     .hero{padding:48px 0 36px}
+    .nav .links a{margin-left:14px;font-size:13px}
+    .theme-toggle{margin-left:10px}
   }
 
-  /* ── Intro puzzle ───────────────────────────── */
+  /* ── Intro puzzle ────────────────────────────────────────── */
   #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
   .i-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px}
   .i-words{display:flex;flex-direction:column;align-items:center;position:relative}
@@ -201,21 +204,21 @@
     75% {transform:translate(-1px,2px)}
     100%{transform:translate(1px,-1px)}
   }
-  /* ── VFX overlays ───────────────────────────── */
-  .i-vfx-scanlines{
-    position:absolute;inset:0;pointer-events:none;
-    background:repeating-linear-gradient(
-      to bottom,transparent 0,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px
-    );
-    opacity:0;transition:opacity .12s;
-  }
-  #intro.vfx-active .i-vfx-scanlines{opacity:1}
+  /* ── VFX overlays ────────────────────────────────────────── */
+  .i-vfx-scanlines{position:absolute;inset:0;pointer-events:none}
   .i-pixels{position:absolute;inset:0;pointer-events:none;z-index:2}
   .i-pixels span{position:absolute;display:block;border-radius:1px;animation:i-pixel .6s ease-out forwards}
   @keyframes i-pixel{
     0%{opacity:1;transform:translate(0,0) scale(1)}
     100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}
   }
+  .i-vfx-scanlines{
+    background:repeating-linear-gradient(
+      to bottom,transparent 0,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px
+    );
+    opacity:0;transition:opacity .12s;
+  }
+  #intro.vfx-active .i-vfx-scanlines{opacity:1}
   @keyframes i-chroma{
     0%,100%{text-shadow:none}
     25%{text-shadow:-4px 0 rgba(255,0,80,.8),4px 0 rgba(0,200,255,.8)}
