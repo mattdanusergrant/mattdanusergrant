@@ -56,7 +56,7 @@
 
   .wrap{max-width:760px;margin:0 auto;padding:0 28px 80px}
 
-  /* ── Top nav ────────────────────────────────────────────────── */
+  /* ── Top nav ──────────────────────────────────────────────────── */
   .nav{
     display:flex;justify-content:space-between;align-items:center;
     padding:24px 0 0;font-size:14px;color:var(--muted);
@@ -67,7 +67,7 @@
   .nav .links a{margin-left:22px;transition:color .15s}
   .nav .links a:hover{color:var(--ink)}
 
-  /* ── Hero ────────────────────────────────────────────────── */
+  /* ── Hero ──────────────────────────────────────────────────── */
   .hero{padding:72px 0 48px}
   .hero .eyebrow{
     font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
@@ -130,7 +130,7 @@
   [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
   @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
 
-  /* ── Footer ────────────────────────────────────────────────── */
+  /* ── Footer ──────────────────────────────────────────────────── */
   .foot{
     margin:80px 0 0;padding-top:28px;
     border-top:1px solid var(--line);
@@ -146,7 +146,7 @@
   .replay-btn{background:none;border:none;cursor:pointer;padding:0;color:var(--muted);font-size:inherit;font-family:inherit;transition:color .15s}
   .replay-btn:hover{color:var(--ink)}
 
-  /* ── Responsive content helpers ─────────────────────────────── */
+  /* ── Responsive content helpers ────────────────────────────── */
   .mob{display:none}
 
   @media (max-width:480px){
@@ -282,7 +282,7 @@
   <section class="hero">
     <p class="eyebrow">Principal Game Designer</p>
     <h1>I make <em>design worth coming back to.</em></h1>
-    <p class="lede">10+ years in mobile F2P — Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer’s Arena. Now making small ones.</p>
+    <p class="lede">10+ years in mobile F2P — Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer's Arena. Now making small ones.</p>
     <p class="lede desk">Most recently Principal Designer at Scopely. Now designing small games in the open while I look for the next big one.</p>
   </section>
 
@@ -320,11 +320,14 @@
   if(!intro)return;
   if(sessionStorage.getItem('mdg-intro')){intro.remove();return;}
 
-  var STAGES=[
-    ['MATT','MAKE','MUST'],
-    ['DANUSER','DOPE','DESIGN'],
-    ['GRANT','GROOVES','GAMES']
+  // Click 1: random pick from these three sets
+  var BRIDGE_SETS=[
+    ['MAKE','DOPE','GROOVES'],
+    ['MEDITATE','DREAM','GROW'],
+    ['MEANING','DESPITE','GAPS']
   ];
+  // Click 2: always lands here
+  var FINAL=['MUST','DESIGN','GAMES'];
 
   // Glitch visual flavors — vary char set, reveal direction, shake style
   var FLAVORS=[
@@ -418,7 +421,13 @@
     if(animating)return;
     animating=true;
     step++;
-    var targets=STAGES.map(function(s){return s[step];});
+    var targets;
+    if(step===1){
+      var idx=Math.floor(Math.random()*BRIDGE_SETS.length);
+      targets=BRIDGE_SETS[idx];
+    }else{
+      targets=FINAL;
+    }
     var flavor=pickFlavor();
     var vfx=pickVfx();
     var pending=wordEls.length;
