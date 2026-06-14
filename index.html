@@ -264,7 +264,7 @@
       <div class="i-word"><span class="i-txt">DANUSER</span></div>
       <div class="i-word"><span class="i-txt">GRANT</span></div>
     </div>
-    <p class="i-hint">click</p>
+    <p class="i-hint"></p>
   </div>
   <div class="i-vfx-scanlines"></div>
 </div>
@@ -364,7 +364,6 @@
   }
 
   var wordEls=Array.from(document.querySelectorAll('.i-word'));
-  var hint=document.querySelector('.i-hint');
   var step=0;
   var animating=false;
 
@@ -454,16 +453,25 @@
           animating=false;
           intro.classList.remove('vfx-active','vfx-chroma','vfx-mirror');
           if(step===2)celebrate();
-          else if(hint)hint.textContent='click';
         }
       });
     });
   }
 
   intro.addEventListener('click',advance);
+  intro.addEventListener('wheel',function(e){
+    e.preventDefault();
+    advance();
+  },{passive:false});
+
+  // Touch swipe support
+  var touchY=0;
+  intro.addEventListener('touchstart',function(e){touchY=e.touches[0].clientY;},{passive:true});
+  intro.addEventListener('touchend',function(e){
+    if(Math.abs(touchY-e.changedTouches[0].clientY)>30)advance();
+  },{passive:true});
 
   function celebrate(){
-    if(hint)hint.textContent='';
     var txts=wordEls.map(function(el){return el.querySelector('.i-txt');});
 
     txts.forEach(function(t,i){
