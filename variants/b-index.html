@@ -49,7 +49,8 @@
   .foot .contact a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
   .foot .contact a:hover{border-color:var(--ink-2)}
   .foot .contact span + span::before{content:' &middot; ';color:var(--line-2);margin:0 .4em}
-  @media (max-width:480px){.wrap{padding:0 22px 60px}.hero{padding:36px 0 24px}.hero h1{margin:0 0 16px}.hero .lede{font-size:17px;margin:0 0 12px}.nav .links a{margin-left:14px;font-size:13px}.theme-toggle{margin-left:10px}.cards{margin:24px 0 0;gap:10px}.card{padding:16px 18px}.card h2{font-size:20px;margin:0 0 6px}.card p{font-size:14px;line-height:1.45;margin:0 0 14px}.card .arrow{font-size:13px}}
+  .mob{display:none}
+  @media (max-width:480px){.wrap{padding:0 22px 60px}.hero{padding:36px 0 24px}.hero h1{margin:0 0 16px}.hero .lede{font-size:17px;margin:0 0 12px}.nav .links a{margin-left:14px;font-size:13px}.theme-toggle{margin-left:10px}.cards{margin:24px 0 0;gap:10px}.card{padding:16px 18px}.card h2{font-size:20px;margin:0 0 6px}.card p{font-size:14px;line-height:1.45;margin:0 0 14px}.card .arrow{font-size:13px}.desk{display:none}.mob{display:inline}}
 </style>
 </head>
 <body>
@@ -73,18 +74,21 @@
   <section class="hero">
     <p class="eyebrow">Principal Game Designer</p>
     <h1>I design characters. <em>You&rsquo;ve probably played them.</em></h1>
-    <p class="lede">Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer&rsquo;s Arena &mdash; a decade in mobile F2P. Now making small games.</p>
+    <p class="lede">Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer&rsquo;s Arena &mdash; a decade in mobile F2P, owning character and combat design on some of the biggest rosters in the genre.</p>
+    <p class="lede desk">Most recently Principal Designer at Scopely. Currently building small games in the open while I find the next big thing to make.</p>
   </section>
   <div class="cards">
     <a class="card" href="b-resume.html">
-      <h2>Resume</h2>
-      <p>Scopely, EA, Glu, MZ, Behaviour, and more. Online or PDF.</p>
-      <span class="arrow">View <span>&rarr;</span></span>
+      <p class="label desk">01 &mdash; Resume</p>
+      <h2><span class="desk">Full career, on one page.</span><span class="mob">Resume</span></h2>
+      <p><span class="desk">10+ years across Scopely, EA, Glu, MZ, Behaviour, Gazillion, and Cryptic. Browse online or download as PDF.</span><span class="mob">Scopely, EA, Glu, MZ, Behaviour, and more. Online or PDF.</span></p>
+      <span class="arrow"><span class="desk">View resume </span><span class="mob">View </span><span>&rarr;</span></span>
     </a>
     <a class="card" href="b-labs.html">
-      <h2>Labs</h2>
-      <p>Personal prototypes &mdash; tactics, survivors, puzzles, tower defence.</p>
-      <span class="arrow">Explore <span>&rarr;</span></span>
+      <p class="label desk">02 &mdash; Labs</p>
+      <h2><span class="desk">Small games, made out loud.</span><span class="mob">Labs</span></h2>
+      <p><span class="desk">A workbench of personal prototypes &mdash; tactics, survivors, pack openers, tower defence, a Go variant, a virtual pet. Made in public, iterated in the open.</span><span class="mob">Personal prototypes &mdash; tactics, survivors, puzzles, tower defence.</span></p>
+      <span class="arrow"><span class="desk">Explore the labs </span><span class="mob">Explore </span><span>&rarr;</span></span>
     </a>
   </div>
   <footer class="foot">

@@ -56,7 +56,7 @@
 
   .wrap{max-width:760px;margin:0 auto;padding:0 28px 80px}
 
-  /* ── Top nav ────────────────────────────────────────── */
+  /* ── Top nav ────────────────────────────────────────────────── */
   .nav{
     display:flex;justify-content:space-between;align-items:center;
     padding:24px 0 0;font-size:14px;color:var(--muted);
@@ -67,7 +67,7 @@
   .nav .links a{margin-left:22px;transition:color .15s}
   .nav .links a:hover{color:var(--ink)}
 
-  /* ── Hero ────────────────────────────────────────── */
+  /* ── Hero ────────────────────────────────────────────────── */
   .hero{padding:72px 0 48px}
   .hero .eyebrow{
     font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
@@ -86,7 +86,7 @@
   }
   .hero .lede + .lede{color:var(--muted);font-size:18.5px}
 
-  /* ── Big CTAs ────────────────────────────────────────── */
+  /* ── Big CTAs ────────────────────────────────────────────────── */
   .cards{
     display:grid;grid-template-columns:repeat(2,1fr);gap:18px;
     margin:48px 0 0;
@@ -123,14 +123,14 @@
   .card:hover .arrow span{transform:translateX(3px)}
   .card .arrow span{transition:transform .18s}
 
-  /* ── Theme toggle ────────────────────────────────────────── */
+  /* ── Theme toggle ────────────────────────────────────────────────── */
   .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
   .toggle-track{width:34px;height:20px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
   .toggle-thumb{width:14px;height:14px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;display:block;transition:transform .2s,background .2s}
   [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
   @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
 
-  /* ── Footer ────────────────────────────────────────── */
+  /* ── Footer ────────────────────────────────────────────────── */
   .foot{
     margin:80px 0 0;padding-top:28px;
     border-top:1px solid var(--line);
@@ -146,6 +146,9 @@
   .replay-btn{background:none;border:none;cursor:pointer;padding:0;color:var(--muted);font-size:inherit;font-family:inherit;transition:color .15s}
   .replay-btn:hover{color:var(--ink)}
 
+  /* ── Responsive content helpers ─────────────────────────────── */
+  .mob{display:none}
+
   @media (max-width:480px){
     .wrap{padding:0 22px 60px}
     .hero{padding:36px 0 24px}
@@ -158,9 +161,11 @@
     .card h2{font-size:20px;margin:0 0 6px}
     .card p{font-size:14px;line-height:1.45;margin:0 0 14px}
     .card .arrow{font-size:13px}
+    .desk{display:none}
+    .mob{display:inline}
   }
 
-  /* ── Intro puzzle ────────────────────────────────────────── */
+  /* ── Intro puzzle ────────────────────────────────────────────────── */
   #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
   .i-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px}
   .i-words{display:flex;flex-direction:column;align-items:center;position:relative}
@@ -211,7 +216,7 @@
     75% {transform:translate(-1px,2px)}
     100%{transform:translate(1px,-1px)}
   }
-  /* ── VFX overlays ────────────────────────────────────────── */
+  /* ── VFX overlays ────────────────────────────────────────────────── */
   .i-vfx-scanlines{position:absolute;inset:0;pointer-events:none}
   .i-pixels{position:absolute;inset:0;pointer-events:none;z-index:2}
   .i-pixels span{position:absolute;display:block;border-radius:1px;animation:i-pixel .6s ease-out forwards}
@@ -277,21 +282,24 @@
   <section class="hero">
     <p class="eyebrow">Principal Game Designer</p>
     <h1>I make <em>design worth coming back to.</em></h1>
-    <p class="lede">10+ years in mobile F2P — Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer's Arena. Now making small ones.</p>
+    <p class="lede">10+ years in mobile F2P — Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer’s Arena. Now making small ones.</p>
+    <p class="lede desk">Most recently Principal Designer at Scopely. Now designing small games in the open while I look for the next big one.</p>
   </section>
 
   <div class="cards">
 
     <a class="card" href="/resume.html">
-      <h2>Resume</h2>
-      <p>Scopely, EA, Glu, MZ, Behaviour, and more. Online or PDF.</p>
-      <span class="arrow">View <span>→</span></span>
+      <p class="label desk">01 — Resume</p>
+      <h2><span class="desk">Full career, one page.</span><span class="mob">Resume</span></h2>
+      <p><span class="desk">Scopely, EA, Glu, MZ, Behaviour, Gazillion, and Cryptic. Online or PDF.</span><span class="mob">Scopely, EA, Glu, MZ, Behaviour, and more. Online or PDF.</span></p>
+      <span class="arrow"><span class="desk">View resume </span><span class="mob">View </span><span>→</span></span>
     </a>
 
     <a class="card" href="/labs.html">
-      <h2>Labs</h2>
-      <p>Personal prototypes — tactics, survivors, puzzles, tower defence.</p>
-      <span class="arrow">Explore <span>→</span></span>
+      <p class="label desk">02 — Labs</p>
+      <h2><span class="desk">Small games, made out loud.</span><span class="mob">Labs</span></h2>
+      <p><span class="desk">Personal prototypes — tactics, survivors, pack openers, tower defence, a Go variant, a virtual pet. The workbench.</span><span class="mob">Personal prototypes — tactics, survivors, puzzles, tower defence.</span></p>
+      <span class="arrow"><span class="desk">Explore the labs </span><span class="mob">Explore </span><span>→</span></span>
     </a>
 
   </div>
