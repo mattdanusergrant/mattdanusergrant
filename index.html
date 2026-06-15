@@ -13,7 +13,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-<!-- #LLM-generated — Matt Danuser-Grant personal portfolio landing -->
 <style>
   :root{
     --bg:#FBF8F2;
@@ -175,6 +174,9 @@
     font-size:clamp(60px,15vw,120px);
     letter-spacing:-0.025em;line-height:.95;
     color:var(--ink);
+  }
+  @media (max-width:480px){
+    .i-word{font-size:clamp(32px,10vw,48px)}
   }
   .i-txt{display:inline-block;transition:transform .25s}
   .i-word.glitching       .i-txt{animation:i-shake .09s steps(1) infinite}
