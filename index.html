@@ -166,8 +166,8 @@
   }
 
   /* ── Intro puzzle ────────────────────────────────────────────────── */
-  #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer;overflow:hidden}
-  .i-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px;position:relative;z-index:2}
+  #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
+  .i-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px}
   .i-words{display:flex;flex-direction:column;align-items:center;position:relative}
   .i-word{
     user-select:none;
@@ -207,87 +207,6 @@
     75% {transform:translate(-1px,2px)}
     100%{transform:translate(1px,-1px)}
   }
-
-  /* ── Bridge FX layer ────────────────────────────────────────────── */
-  .i-fx{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
-  .i-p{position:absolute;pointer-events:none;will-change:transform,opacity}
-
-  /* MAKE DOPE GROOVES */
-  .i-note{color:var(--ink);opacity:0;line-height:1;animation:i-rise 3.4s ease-out forwards}
-  @keyframes i-rise{
-    0%{opacity:0;transform:translateY(0) translateX(0) rotate(0)}
-    10%{opacity:.85}
-    100%{opacity:0;transform:translateY(-92vh) translateX(var(--sway)) rotate(40deg)}
-  }
-  .i-eq{position:absolute;left:0;right:0;bottom:0;height:90px;display:flex;align-items:flex-end;justify-content:center;gap:5px;opacity:.5}
-  .i-eq span{width:7px;background:var(--ink);height:10px;animation:i-eqbar .5s ease-in-out infinite alternate}
-  @keyframes i-eqbar{from{height:8px}to{height:80px}}
-
-  /* MAXIMUM DOPAMINE GENERATED */
-  .i-dop{left:50%;top:50%;color:var(--ink);opacity:0;font-weight:600;white-space:nowrap;animation:i-burst 1.4s ease-out forwards}
-  @keyframes i-burst{
-    0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}
-    15%{opacity:1}
-    100%{opacity:0;transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) scale(1.1)}
-  }
-
-  /* MERCY DEVOURS GRIEF */
-  .i-mote{width:14px;height:14px;border-radius:50%;background:var(--ink);opacity:0;filter:blur(1px);animation:i-devour 4s ease-in forwards}
-  @keyframes i-devour{
-    0%{opacity:0;transform:translate(0,0) scale(1)}
-    20%{opacity:.5}
-    100%{opacity:0;transform:translate(var(--cx),var(--cy)) scale(.1)}
-  }
-
-  /* MANY DOORS GUILD */
-  .i-doors{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:clamp(8px,2vw,18px)}
-  .i-door{width:clamp(34px,9vw,64px);height:clamp(80px,20vw,150px);position:relative;perspective:500px;background:radial-gradient(circle at 50% 45%,rgba(255,210,120,.95),rgba(255,170,60,.25) 60%,transparent 75%);box-shadow:0 0 0 2px var(--ink) inset;opacity:.5;transition:opacity .4s}
-  .i-door span{position:absolute;inset:0;background:var(--bg);border:2px solid var(--ink);transform-origin:left center;transition:transform .9s cubic-bezier(.4,0,.2,1)}
-  .i-door.open{opacity:1}
-  .i-door.open span{transform:rotateY(-115deg)}
-
-  /* MILDLY DUBIOUS GAMBIT */
-  .i-gam{top:0;opacity:0;line-height:1;animation:i-tumble 2.6s linear forwards}
-  @keyframes i-tumble{
-    0%{opacity:0;transform:translateX(0) translateY(0) rotate(0)}
-    12%{opacity:1}
-    88%{opacity:1}
-    100%{opacity:0;transform:translateX(var(--tx)) translateY(-30px) rotate(720deg)}
-  }
-
-  /* MULTI DIMENSIONAL GATEWAY */
-  .i-ring{left:50%;top:50%;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;border:3px solid var(--ink);opacity:0;animation:i-portal 2.4s ease-out forwards}
-  @keyframes i-portal{
-    0%{opacity:0;transform:scale(.1)}
-    20%{opacity:.9}
-    100%{opacity:0;transform:scale(6)}
-  }
-
-  /* MAGICAL DANK GARDEN */
-  .i-spore{opacity:0;line-height:1;animation:i-float 5.2s linear forwards}
-  @keyframes i-float{
-    0%{opacity:0;transform:translateY(0) translateX(0) rotate(0)}
-    12%{opacity:.9}
-    100%{opacity:0;transform:translateY(-106vh) translateX(var(--sway)) rotate(180deg)}
-  }
-
-  /* MINDS DEFY GRAVITY */
-  .i-grav{background:var(--ink);opacity:0;animation:i-antigrav 4.2s ease-in forwards}
-  @keyframes i-antigrav{
-    0%{opacity:0;transform:translateY(0) translateX(0) rotate(0)}
-    15%{opacity:.85}
-    100%{opacity:0;transform:translateY(-112vh) translateX(var(--sway)) rotate(360deg)}
-  }
-
-  /* MANIFEST DIVINE GEOMETRY */
-  .i-geo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(86vw,540px);height:min(86vw,540px);opacity:.55}
-  .i-gshape{position:absolute;inset:0;margin:auto;border:2px solid var(--ink)}
-  .i-gshape.i-circ{border-radius:50%;animation:i-spin 18s linear infinite}
-  .i-gshape.i-hex{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);animation:i-spin 22s linear infinite reverse}
-  .i-gshape.i-tri{clip-path:polygon(50% 0,100% 100%,0 100%);animation:i-spin 26s linear infinite}
-  .i-gshape.i-tri2{clip-path:polygon(50% 100%,100% 0,0 0);animation:i-spin 30s linear infinite reverse}
-  .i-gshape.i-sq{width:70%;height:70%;animation:i-spin 20s linear infinite}
-  @keyframes i-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -387,7 +306,6 @@
   var wordEls=Array.from(document.querySelectorAll('.i-word'));
   var step=0;
   var animating=false;
-  var bridgeIdx=0;
 
   function scramble(n,chars){var s='';for(var i=0;i<n;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
 
@@ -422,133 +340,13 @@
     },delay);
   }
 
-  // ── Bridge FX engine ──
-  var fxLayer=document.createElement('div');
-  fxLayer.className='i-fx';
-  intro.insertBefore(fxLayer,intro.firstChild);
-  var fxStop=null;
-  function stopFx(){ if(fxStop){try{fxStop();}catch(e){}fxStop=null;} fxLayer.innerHTML=''; }
-  function startFx(i){ stopFx(); var fn=FX[i]; if(fn)fxStop=fn(); }
-
-  function spawn(cls,txt,styles,life){
-    var e=document.createElement('div');
-    e.className='i-p '+cls;
-    if(txt)e.textContent=txt;
-    if(styles)for(var k in styles){
-      if(k.charAt(0)==='-')e.style.setProperty(k,styles[k]);
-      else e.style[k]=styles[k];
-    }
-    fxLayer.appendChild(e);
-    if(life)setTimeout(function(){e.remove();},life);
-    return e;
-  }
-
-  var FX=[
-    // 0 — MAKE DOPE GROOVES
-    function(){
-      var notes=['♪','♫','♬','♩'];
-      var iv=setInterval(function(){
-        var W=innerWidth,H=innerHeight;
-        spawn('i-note',notes[Math.floor(Math.random()*notes.length)],{left:(Math.random()*W)+'px',top:(H-110)+'px',fontSize:(26+Math.random()*40)+'px','--sway':((Math.random()-0.5)*140)+'px'},3600);
-      },240);
-      var eq=document.createElement('div');eq.className='i-eq';
-      for(var i=0;i<36;i++){var b=document.createElement('span');b.style.animationDelay=(-Math.random()*0.6)+'s';b.style.animationDuration=(0.4+Math.random()*0.4)+'s';eq.appendChild(b);}
-      fxLayer.appendChild(eq);
-      return function(){clearInterval(iv);};
-    },
-    // 1 — MAXIMUM DOPAMINE GENERATED
-    function(){
-      var g=['⬡','＋','•','HO','NH₂','C₈H₁₁NO₂','✦','●','◇'];
-      function burst(){
-        var n=18;
-        for(var i=0;i<n;i++){
-          var a=(i/n)*Math.PI*2,d=110+Math.random()*240;
-          spawn('i-dop',g[Math.floor(Math.random()*g.length)],{fontSize:(13+Math.random()*22)+'px','--dx':(Math.cos(a)*d)+'px','--dy':(Math.sin(a)*d)+'px'},1500);
-        }
-      }
-      burst();var iv=setInterval(burst,1050);
-      return function(){clearInterval(iv);};
-    },
-    // 2 — MERCY DEVOURS GRIEF
-    function(){
-      var iv=setInterval(function(){
-        var W=innerWidth,H=innerHeight,e=Math.floor(Math.random()*4),x,y;
-        if(e===0){x=Math.random()*W;y=-20;}
-        else if(e===1){x=W+20;y=Math.random()*H;}
-        else if(e===2){x=Math.random()*W;y=H+20;}
-        else{x=-20;y=Math.random()*H;}
-        spawn('i-mote','',{left:x+'px',top:y+'px','--cx':(W/2-x)+'px','--cy':(H/2-y)+'px'},4200);
-      },170);
-      return function(){clearInterval(iv);};
-    },
-    // 3 — MANY DOORS GUILD
-    function(){
-      var wrap=document.createElement('div');wrap.className='i-doors';
-      var N=7,doors=[],i;
-      for(i=0;i<N;i++){var d=document.createElement('div');d.className='i-door';d.appendChild(document.createElement('span'));wrap.appendChild(d);doors.push(d);}
-      fxLayer.appendChild(wrap);
-      var k=0,timers=[];
-      var iv=setInterval(function(){
-        var d=doors[k%N];d.classList.add('open');
-        timers.push(setTimeout(function(){d.classList.remove('open');},1300));
-        k++;
-      },430);
-      return function(){clearInterval(iv);timers.forEach(clearTimeout);};
-    },
-    // 4 — MILDLY DUBIOUS GAMBIT
-    function(){
-      var faces=['⚀','⚁','⚂','⚃','⚄','⚅'],suits=['♠','♥','♦','♣'];
-      var iv=setInterval(function(){
-        var W=innerWidth,H=innerHeight,L=Math.random()<0.5;
-        var s=Math.random()<0.5?faces[Math.floor(Math.random()*6)]:suits[Math.floor(Math.random()*4)];
-        var red=(s==='♥'||s==='♦');
-        spawn('i-gam',s,{top:(Math.random()*H)+'px',left:L?'-50px':(W+50)+'px',fontSize:(28+Math.random()*30)+'px','--tx':(L?(W+120):-(W+120))+'px',color:red?'#d23':'var(--ink)'},2700);
-      },230);
-      return function(){clearInterval(iv);};
-    },
-    // 5 — MULTI DIMENSIONAL GATEWAY
-    function(){
-      var c=['var(--ink)','#7aa2ff','#c77dff','#5ee0c0'],n=0;
-      var iv=setInterval(function(){
-        var e=spawn('i-ring','',{},2500);
-        e.style.borderColor=c[n%c.length];n++;
-      },280);
-      return function(){clearInterval(iv);};
-    },
-    // 6 — MAGICAL DANK GARDEN
-    function(){
-      var g=['🍃','🍄','🌿','✿','❀'];
-      var iv=setInterval(function(){
-        var W=innerWidth,H=innerHeight;
-        spawn('i-spore',g[Math.floor(Math.random()*g.length)],{left:(Math.random()*W)+'px',top:(H+20)+'px',fontSize:(16+Math.random()*26)+'px','--sway':((Math.random()-0.5)*180)+'px'},5400);
-      },300);
-      return function(){clearInterval(iv);};
-    },
-    // 7 — MINDS DEFY GRAVITY
-    function(){
-      var iv=setInterval(function(){
-        var W=innerWidth,sz=8+Math.random()*26;
-        spawn('i-grav','',{left:(Math.random()*W)+'px',top:(innerHeight+30)+'px',width:sz+'px',height:sz+'px',borderRadius:(Math.random()<0.5?'50%':'3px'),'--sway':((Math.random()-0.5)*120)+'px'},4400);
-      },170);
-      return function(){clearInterval(iv);};
-    },
-    // 8 — MANIFEST DIVINE GEOMETRY
-    function(){
-      var g=document.createElement('div');g.className='i-geo';
-      ['i-circ','i-hex','i-tri','i-tri2','i-sq'].forEach(function(c){var e=document.createElement('div');e.className='i-gshape '+c;g.appendChild(e);});
-      fxLayer.appendChild(g);
-      return function(){};
-    }
-  ];
-
   function advance(){
     if(step===2){dismiss();return;}
     if(animating)return;
     animating=true;
-    stopFx();
     step++;
     var targets;
-    if(step===1){bridgeIdx=Math.floor(Math.random()*BRIDGE_SETS.length);targets=BRIDGE_SETS[bridgeIdx];}
+    if(step===1){targets=BRIDGE_SETS[Math.floor(Math.random()*BRIDGE_SETS.length)];}
     else{targets=FINAL;}
     var flavor=pickFlavor();
     var pending=wordEls.length;
@@ -556,8 +354,7 @@
       glitch(el,targets[i],i*80,flavor,function(){
         if(--pending===0){
           animating=false;
-          if(step===1)startFx(bridgeIdx);
-          else if(step===2)celebrate();
+          if(step===2)celebrate();
         }
       });
     });
@@ -610,7 +407,6 @@
 
   function dismiss(){
     step=3;
-    stopFx();
     intro.style.opacity='0';
     setTimeout(function(){
       intro.remove();
