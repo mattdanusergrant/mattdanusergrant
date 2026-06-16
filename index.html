@@ -55,7 +55,7 @@
 
   .wrap{max-width:760px;margin:0 auto;padding:0 28px 80px}
 
-  /* ── Top nav ──────────────────────────────────────────────────── */
+  /* ── Top nav ────────────────────────────────────────────────────── */
   .nav{
     display:flex;justify-content:space-between;align-items:center;
     padding:24px 0 0;font-size:14px;color:var(--muted);
@@ -66,7 +66,7 @@
   .nav .links a{margin-left:22px;transition:color .15s}
   .nav .links a:hover{color:var(--ink)}
 
-  /* ── Hero ──────────────────────────────────────────────────── */
+  /* ── Hero ────────────────────────────────────────────────────── */
   .hero{padding:72px 0 48px}
   .hero .eyebrow{
     font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
@@ -85,12 +85,12 @@
   }
   .hero .lede + .lede{color:var(--muted);font-size:18.5px}
 
-  /* ── Big CTAs ────────────────────────────────────────────────── */
+  /* ── Big CTAs ────────────────────────────────────────────────────── */
   .cards{
-    display:grid;grid-template-columns:repeat(2,1fr);gap:18px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
     margin:48px 0 0;
   }
-  @media (max-width:560px){.cards{grid-template-columns:1fr}}
+  @media (max-width:620px){.cards{grid-template-columns:1fr}}
   .card{
     background:var(--paper);
     border:1.5px solid var(--line);border-radius:14px;
@@ -122,7 +122,7 @@
   .card:hover .arrow span{transform:translateX(3px)}
   .card .arrow span{transition:transform .18s}
 
-  /* ── Theme toggle ────────────────────────────────────────────────── */
+  /* ── Theme toggle ────────────────────────────────────────────────────── */
   .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
   .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
   .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
@@ -144,7 +144,7 @@
   @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
   @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
 
-  /* ── Footer ──────────────────────────────────────────────────── */
+  /* ── Footer ────────────────────────────────────────────────────── */
   .foot{
     margin:80px 0 0;padding-top:28px;
     border-top:1px solid var(--line);
@@ -160,7 +160,7 @@
   .replay-btn{background:none;border:none;cursor:pointer;padding:0;color:var(--muted);font-size:inherit;font-family:inherit;transition:color .15s}
   .replay-btn:hover{color:var(--ink)}
 
-  /* ── Responsive content helpers ────────────────────────────── */
+  /* ── Responsive content helpers ────────────────────────────────── */
   .mob{display:none}
 
   @media (max-width:480px){
@@ -179,13 +179,8 @@
     .mob{display:inline}
   }
 
-  /* ── Intro puzzle ────────────────────────────────────────────────── */
-  /* overflow:hidden so very-long bridge words (GUARANTEED etc.) clip cleanly
-     at the right edge on narrower screens rather than causing reflow */
+  /* ── Intro puzzle ────────────────────────────────────────────────────── */
   #intro{position:fixed;inset:0;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
-  /* i-inner is centered by its own width (translate -50%,-50%) so the block
-     sits visually centred. Words within are left-aligned, so M/D/G stay at
-     the same x across all three rows — the block's left edge. */
   .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
   .i-words{display:flex;flex-direction:column;align-items:flex-start;position:relative}
   .i-word{
@@ -250,6 +245,7 @@
     <div class="links">
       <a href="/resume.html">Resume</a>
       <a href="/labs.html">Labs</a>
+      <a href="/ai-consulting.html">AI Consulting</a>
     </div>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </nav>
@@ -277,6 +273,13 @@
       <span class="arrow"><span class="desk">Explore the labs </span><span class="mob">Explore </span><span>→</span></span>
     </a>
 
+    <a class="card" href="/ai-consulting.html">
+      <p class="label desk">AI Consulting</p>
+      <h2><span class="desk">I run on AI. You can too.</span><span class="mob">AI Consulting</span></h2>
+      <p><span class="desk">A principal designer who rebuilt how he works around AI — now helping individuals and teams do the same. Free skills included.</span><span class="mob">AI workflows, skills, and operating systems.</span></p>
+      <span class="arrow"><span class="desk">See the offer </span><span class="mob">See offer </span><span>→</span></span>
+    </a>
+
   </div>
 
   <footer class="foot">
@@ -295,7 +298,6 @@
   if(!intro)return;
   if(sessionStorage.getItem('mdg-intro')){intro.remove();return;}
 
-  // Click 1: random pick from these sets
   var BRIDGE_SETS=[
     ['MAKE','DOPE','GROOVES'],
     ['MAXIMUM','DOPAMINE','GUARANTEED'],
@@ -304,10 +306,8 @@
     ['MULTIPLE','DIMENSIONS','GENERATED'],
     ['MANIFEST','DIVINE','GEOMETRY']
   ];
-  // Click 2: always lands here
   var FINAL=['MUST','DESIGN','GAMES'];
 
-  // Glitch visual flavors — vary char set, reveal direction, shake style
   var FLAVORS=[
     {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:false, cls:'glitching'},
     {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', revealAt:0.55, rtl:false, cls:'glitching-heavy'},
@@ -328,13 +328,8 @@
   var step=0;
   var animating=false;
 
-  // Lock .i-words to the FINAL block width (widest of MUST/DESIGN/GAMES)
-  // and center that block. M/D/G sit at the block's left edge, so they rest
-  // at their finale position from the very first frame. Longer bridge words
-  // simply overflow to the right without widening the block — the M/D/G
-  // column never shifts and there is no snap at the end.
   (function pinFinalWidth(){
-    var finalTails=['UST','ESIGN','AMES']; // tails of MUST / DESIGN / GAMES
+    var finalTails=['UST','ESIGN','AMES'];
     function measure(){
       var saved=wordEls.map(function(el){return el.querySelector('.i-txt').textContent;});
       var maxW=0;
@@ -355,7 +350,7 @@
   function glitch(el,to,delay,flavor,cb){
     setTimeout(function(){
       var txt=el.querySelector('.i-txt');
-      var from=txt.textContent; // rest of word — first letter is in .i-init, never scrambled
+      var from=txt.textContent;
       var frames=Math.round(700/80);
       var frame=0;
       el.classList.add(flavor.cls);
@@ -409,7 +404,6 @@
     advance();
   },{passive:false});
 
-  // Touch swipe support
   var touchY=0;
   intro.addEventListener('touchstart',function(e){touchY=e.touches[0].clientY;},{passive:true});
   intro.addEventListener('touchend',function(e){
@@ -417,7 +411,7 @@
   },{passive:true});
 
   function celebrate(){
-    var txts=wordEls; // pulse the whole .i-word so M/D/G bounce with the rest
+    var txts=wordEls;
 
     txts.forEach(function(t,i){
       setTimeout(function(){
@@ -438,7 +432,6 @@
       });
     },950);
 
-    // Words fade during the last half second
     setTimeout(function(){
       var wordsEl=document.querySelector('.i-words');
       wordsEl.style.transition='opacity .5s ease';
