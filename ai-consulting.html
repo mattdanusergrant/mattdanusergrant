@@ -195,10 +195,10 @@
   @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
 
   /* ── Theme switch FX ── */
-  html.mode-shift,html.mode-shift *{transition:background-color .9s ease,color .9s ease,border-color .9s ease,box-shadow .9s ease,fill .9s ease !important}
+  html.mode-shift,html.mode-shift *{transition:background-color 2.5s ease,color 2.5s ease,border-color 2.5s ease,box-shadow 2.5s ease,fill 2.5s ease !important}
   .fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;will-change:opacity,transform}
-  .fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.5) 0%,rgba(255,201,133,.3) 24%,rgba(255,224,178,.13) 48%,transparent 72%);animation:fx-rise 1.9s ease-in-out forwards}
-  .fx-sunset{background:linear-gradient(0deg,rgba(166,72,96,.46) 0%,rgba(132,68,116,.3) 26%,rgba(72,57,104,.16) 52%,transparent 74%);animation:fx-set 1.9s ease-in-out forwards}
+  .fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.22) 0%,rgba(255,201,133,.12) 40%,rgba(255,224,178,.05) 70%,transparent 100%);animation:fx-rise 3.5s ease-in-out forwards}
+  .fx-sunset{background:linear-gradient(0deg,rgba(90,60,100,.2) 0%,rgba(70,55,90,.11) 40%,rgba(50,45,75,.04) 70%,transparent 100%);animation:fx-set 3.5s ease-in-out forwards}
   @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
   @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
 
@@ -520,13 +520,13 @@ build step needed.
     var o=document.createElement('div');
     o.className='fx-overlay '+(theme==='light'?'fx-sunrise':'fx-sunset');
     document.body.appendChild(o);
-    setTimeout(function(){o.remove();},1900);
+    setTimeout(function(){o.remove();},3600);
   }
   btn.addEventListener('click',function(){
     var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
     if(!reduce){
       document.documentElement.classList.add('mode-shift');
-      setTimeout(function(){document.documentElement.classList.remove('mode-shift');},1000);
+      setTimeout(function(){document.documentElement.classList.remove('mode-shift');},2600);
     }
     document.documentElement.setAttribute('data-theme',next);
     localStorage.setItem('theme',next);
