@@ -328,6 +328,22 @@
   var step=0;
   var animating=false;
 
+  // Pin .i-words to the max possible block width so MDG never shift.
+  // Measure the longest word per row (MULTIPLE / DIMENSIONS / GUARANTEED),
+  // then set min-width on the container once fonts are ready.
+  (function pinMaxWidth(){
+    var maxTails=['ULTIPLE','IMENSIONS','UARANTEED'];
+    function measure(){
+      var saved=wordEls.map(function(el){return el.querySelector('.i-txt').textContent;});
+      wordEls.forEach(function(el,i){el.querySelector('.i-txt').textContent=maxTails[i];});
+      var wordsEl=document.querySelector('.i-words');
+      wordsEl.style.minWidth=wordsEl.getBoundingClientRect().width+'px';
+      wordEls.forEach(function(el,i){el.querySelector('.i-txt').textContent=saved[i];});
+    }
+    if(document.fonts&&document.fonts.ready){document.fonts.ready.then(measure);}
+    else{setTimeout(measure,200);}
+  })();
+
   function scramble(n,chars){var s='';for(var i=0;i<n;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
 
   function glitch(el,to,delay,flavor,cb){
