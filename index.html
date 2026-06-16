@@ -183,10 +183,10 @@
   /* overflow:hidden so very-long bridge words (GUARANTEED etc.) clip cleanly
      at the right edge on narrower screens rather than causing reflow */
   #intro{position:fixed;inset:0;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
-  /* i-inner: position:absolute + left:50% pins the M/D/G column at a fixed
-     x regardless of tail width. margin-left nudges it ~half a glyph left
-     so the initials sit visually near the horizontal centre of the screen. */
-  .i-inner{position:absolute;left:50%;top:50%;transform:translateY(-50%);margin-left:-0.42em}
+  /* i-inner is centered by its own width (translate -50%,-50%) so the block
+     sits visually centred. Words within are left-aligned, so M/D/G stay at
+     the same x across all three rows — the block's left edge. */
+  .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
   .i-words{display:flex;flex-direction:column;align-items:flex-start;position:relative}
   .i-word{
     user-select:none;
@@ -196,10 +196,7 @@
     color:var(--ink);
     white-space:nowrap;
   }
-  /* Mobile: anchor the column near the left edge so long words have room
-     to extend right across most of the screen width */
   @media (max-width:480px){
-    .i-inner{left:18px;margin-left:0}
     .i-word{font-size:clamp(32px,10vw,48px)}
   }
   .i-init{display:inline-block}
