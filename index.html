@@ -328,16 +328,22 @@
   var step=0;
   var animating=false;
 
-  // Pin .i-words to the max possible block width so MDG never shift.
-  // Measure the longest word per row (MULTIPLE / DIMENSIONS / GUARANTEED),
-  // then set min-width on the container once fonts are ready.
-  (function pinMaxWidth(){
-    var maxTails=['ULTIPLE','IMENSIONS','UARANTEED'];
+  // Lock .i-words to the FINAL block width (widest of MUST/DESIGN/GAMES)
+  // and center that block. M/D/G sit at the block's left edge, so they rest
+  // at their finale position from the very first frame. Longer bridge words
+  // simply overflow to the right without widening the block — the M/D/G
+  // column never shifts and there is no snap at the end.
+  (function pinFinalWidth(){
+    var finalTails=['UST','ESIGN','AMES']; // tails of MUST / DESIGN / GAMES
     function measure(){
       var saved=wordEls.map(function(el){return el.querySelector('.i-txt').textContent;});
-      wordEls.forEach(function(el,i){el.querySelector('.i-txt').textContent=maxTails[i];});
-      var wordsEl=document.querySelector('.i-words');
-      wordsEl.style.minWidth=wordsEl.getBoundingClientRect().width+'px';
+      var maxW=0;
+      wordEls.forEach(function(el,i){
+        el.querySelector('.i-txt').textContent=finalTails[i];
+        var w=el.getBoundingClientRect().width;
+        if(w>maxW)maxW=w;
+      });
+      document.querySelector('.i-words').style.width=maxW+'px';
       wordEls.forEach(function(el,i){el.querySelector('.i-txt').textContent=saved[i];});
     }
     if(document.fonts&&document.fonts.ready){document.fonts.ready.then(measure);}
@@ -411,9 +417,6 @@
   },{passive:true});
 
   function celebrate(){
-    // Release the min-width lock so the block contracts to final word widths
-    // and re-centers via translate(-50%,-50%).
-    document.querySelector('.i-words').style.minWidth='';
     var txts=wordEls; // pulse the whole .i-word so M/D/G bounce with the rest
 
     txts.forEach(function(t,i){
