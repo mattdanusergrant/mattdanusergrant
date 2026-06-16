@@ -124,10 +124,26 @@
 
   /* ── Theme toggle ────────────────────────────────────────────────── */
   .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
-  .toggle-track{width:34px;height:20px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
-  .toggle-thumb{width:14px;height:14px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;display:block;transition:transform .2s,background .2s}
-  [data-theme="dark"] .toggle-thumb{transform:translateX(14px);background:var(--ink)}
-  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(14px);background:var(--ink)}}
+  .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(20px)}}
+  .toggle-thumb svg{width:11px;height:11px;display:block}
+  .t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
+  .t-sun circle{fill:#E8A317;stroke:none}
+  .t-moon{fill:#3A3550;display:none}
+  [data-theme="dark"] .t-sun{display:none}
+  [data-theme="dark"] .t-moon{display:block}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
+
+  /* ── Theme switch FX (flashbang / smoke grenade) ── */
+  .fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;overflow:hidden}
+  .fx-flash{background:#fff;animation:fx-flash .7s ease-out forwards}
+  @keyframes fx-flash{0%{opacity:0}5%{opacity:1}100%{opacity:0}}
+  .fx-smoke{background:radial-gradient(circle at 50% 58%,rgba(30,30,34,.55),transparent 68%);animation:fx-fade 1.5s ease-out forwards}
+  @keyframes fx-fade{0%{opacity:0}14%{opacity:1}100%{opacity:0}}
+  .fx-puff{position:absolute;border-radius:50%;transform:translate(-50%,-50%) scale(.2);background:radial-gradient(circle,rgba(85,85,94,.78),rgba(45,45,52,.4) 55%,transparent 72%);filter:blur(11px);opacity:0;animation:fx-puff 1.5s ease-out forwards}
+  @keyframes fx-puff{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}22%{opacity:.95}100%{opacity:0;transform:translate(-50%,-50%) scale(1.85)}}
 
   /* ── Footer ──────────────────────────────────────────────────── */
   .foot{
@@ -229,7 +245,7 @@
       <a href="/resume.html">Resume</a>
       <a href="/labs.html">Labs</a>
     </div>
-    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode"><span class="toggle-track"><span class="toggle-thumb"></span></span></button>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </nav>
 
   <section class="hero">
@@ -417,10 +433,33 @@
 <script>
 (function(){
   var btn=document.getElementById('theme-toggle');
+  if(!btn)return;
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function fx(theme){
+    if(reduce)return;
+    var o=document.createElement('div');
+    o.className='fx-overlay '+(theme==='light'?'fx-flash':'fx-smoke');
+    if(theme==='dark'){
+      for(var i=0;i<16;i++){
+        var p=document.createElement('span');
+        p.className='fx-puff';
+        var sz=45+Math.random()*70;
+        p.style.left=(Math.random()*100)+'vw';
+        p.style.top=(38+Math.random()*55)+'vh';
+        p.style.width=sz+'vmin';
+        p.style.height=sz+'vmin';
+        p.style.animationDelay=(Math.random()*0.25)+'s';
+        o.appendChild(p);
+      }
+    }
+    document.body.appendChild(o);
+    setTimeout(function(){o.remove();},theme==='light'?850:1700);
+  }
   btn.addEventListener('click',function(){
     var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
     document.documentElement.setAttribute('data-theme',next);
     localStorage.setItem('theme',next);
+    fx(next);
   });
 })();
 </script>
