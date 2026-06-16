@@ -180,19 +180,29 @@
   }
 
   /* ── Intro puzzle ────────────────────────────────────────────────── */
-  #intro{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
-  .i-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px}
-  .i-words{display:flex;flex-direction:column;align-items:center;position:relative}
+  /* overflow:hidden so very-long bridge words (GUARANTEED etc.) clip cleanly
+     at the right edge on narrower screens rather than causing reflow */
+  #intro{position:fixed;inset:0;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
+  /* i-inner: position:absolute + left:50% pins the M/D/G column at a fixed
+     x regardless of tail width. margin-left nudges it ~half a glyph left
+     so the initials sit visually near the horizontal centre of the screen. */
+  .i-inner{position:absolute;left:50%;top:50%;transform:translateY(-50%);margin-left:-0.42em}
+  .i-words{display:flex;flex-direction:column;align-items:flex-start;position:relative}
   .i-word{
     user-select:none;
     font-family:'Fraunces',serif;font-weight:700;
     font-size:clamp(60px,15vw,120px);
     letter-spacing:-0.025em;line-height:.95;
     color:var(--ink);
+    white-space:nowrap;
   }
+  /* Mobile: anchor the column near the left edge so long words have room
+     to extend right across most of the screen width */
   @media (max-width:480px){
+    .i-inner{left:18px;margin-left:0}
     .i-word{font-size:clamp(32px,10vw,48px)}
   }
+  .i-init{display:inline-block}
   .i-txt{display:inline-block;transition:transform .25s}
   .i-word.glitching       .i-txt{animation:i-shake .09s steps(1) infinite}
   .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite}
@@ -230,9 +240,9 @@
 <div id="intro" aria-hidden="true">
   <div class="i-inner">
     <div class="i-words">
-      <div class="i-word"><span class="i-txt">MATT</span></div>
-      <div class="i-word"><span class="i-txt">DANUSER</span></div>
-      <div class="i-word"><span class="i-txt">GRANT</span></div>
+      <div class="i-word"><span class="i-init">M</span><span class="i-txt">ATT</span></div>
+      <div class="i-word"><span class="i-init">D</span><span class="i-txt">ANUSER</span></div>
+      <div class="i-word"><span class="i-init">G</span><span class="i-txt">RANT</span></div>
     </div>
   </div>
 </div>
@@ -326,7 +336,7 @@
   function glitch(el,to,delay,flavor,cb){
     setTimeout(function(){
       var txt=el.querySelector('.i-txt');
-      var from=txt.textContent;
+      var from=txt.textContent; // rest of word — first letter is in .i-init, never scrambled
       var frames=Math.round(700/80);
       var frame=0;
       el.classList.add(flavor.cls);
@@ -339,15 +349,15 @@
           var rest=to.slice(1);
           var resolved=Math.floor(prog*rest.length);
           txt.textContent=flavor.rtl
-            ? to[0]+scramble(rest.length-resolved,chars)+rest.slice(rest.length-resolved)
-            : to[0]+rest.slice(0,resolved)+scramble(rest.length-resolved,chars);
+            ? scramble(rest.length-resolved,chars)+rest.slice(rest.length-resolved)
+            : rest.slice(0,resolved)+scramble(rest.length-resolved,chars);
         }else{
-          txt.textContent=to[0]+scramble(Math.max(from.length,to.length)-1,chars);
+          txt.textContent=scramble(Math.max(from.length,to.length-1),chars);
         }
         if(frame>=frames){
           clearInterval(iv);
           el.classList.remove(flavor.cls);
-          txt.textContent=to;
+          txt.textContent=to.slice(1);
           if(cb)cb();
         }
       },80);
@@ -388,7 +398,7 @@
   },{passive:true});
 
   function celebrate(){
-    var txts=wordEls.map(function(el){return el.querySelector('.i-txt');});
+    var txts=wordEls; // pulse the whole .i-word so M/D/G bounce with the rest
 
     txts.forEach(function(t,i){
       setTimeout(function(){
