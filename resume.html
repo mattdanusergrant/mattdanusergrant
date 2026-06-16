@@ -42,7 +42,6 @@
   }
   a{color:inherit;text-decoration:none}
 
-  /* ── Site frame (web only) ───────────────────────── */
   .site-wrap{max-width:960px;margin:0 auto;padding:0 28px}
   .nav{
     display:flex;justify-content:space-between;align-items:center;
@@ -65,7 +64,6 @@
   }
   .print-hint .pdf-btn:hover{border-color:var(--ink)}
 
-  /* ── Resume sheet (looks like paper on screen, prints cleanly) ── */
   .sheet{
     background:var(--paper);
     border:1px solid var(--line);border-radius:8px;
@@ -79,7 +77,6 @@
     .sheet{padding:32px 28px;border-radius:6px}
   }
 
-  /* ── Header ───────────────────────── */
   .r-header{margin-bottom:.14in}
   .r-header h1{
     font-family:'Fraunces',serif;font-weight:500;
@@ -104,7 +101,6 @@
   .summary{font-size:10pt;line-height:1.6;color:var(--ink-2)}
   .summary p + p{margin-top:.5em}
 
-  /* ── Jobs ───────────────────────── */
   .job{margin-bottom:.14in}
   .job-meta{display:flex;justify-content:space-between;align-items:baseline;gap:.5em}
   .company{font-size:10pt;font-weight:600}
@@ -117,15 +113,11 @@
     position:relative;padding-left:1em;
     font-size:9.5pt;line-height:1.5;margin-bottom:1pt;color:var(--ink-2);
   }
-  ul.bullets li::before{
-    content:'–';position:absolute;left:0;color:#aaa;
-  }
+  ul.bullets li::before{content:'–';position:absolute;left:0;color:#aaa}
 
-  /* ── QA roles compact ───────────────────────── */
   .qa-block{margin-bottom:.07in}
   .qa-titles{font-size:9pt;color:var(--muted);font-style:italic;padding-left:1em;line-height:1.4}
 
-  /* ── Theme toggle ───────────────────────── */
   .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
   .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
   .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
@@ -139,7 +131,6 @@
   [data-theme="dark"] .t-moon{display:block}
   @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
 
-  /* ── Theme switch FX (gentle sunrise / sunset) ── */
   html.mode-shift,html.mode-shift *{transition:background-color .9s ease,color .9s ease,border-color .9s ease,box-shadow .9s ease,fill .9s ease !important}
   .fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;will-change:opacity,transform}
   .fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.5) 0%,rgba(255,201,133,.3) 24%,rgba(255,224,178,.13) 48%,transparent 72%);animation:fx-rise 1.9s ease-in-out forwards}
@@ -147,7 +138,6 @@
   @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
   @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
 
-  /* ── Footer ───────────────────────── */
   .foot{
     margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);
     display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
@@ -167,18 +157,14 @@
     ul.bullets li{font-size:13pt}
   }
 
-  /* ── Print styles ───────────────────────── */
   @media print{
     @page{margin:.55in .7in;size:letter}
     :root,[data-theme="dark"]{--ink:#000;--ink-2:#222;--muted:#555;--line:#ddd;--line-2:#ccc;--bg:#fff;--paper:#fff}
     body{background:#fff;color:#000;font-size:10pt}
     .site-wrap{max-width:none;padding:0;margin:0}
     .nav,.print-hint,.foot,.no-print{display:none !important}
-    .sheet{
-      background:transparent;border:none;border-radius:0;
-      padding:0;box-shadow:none;
-    }
-    .job, .no-break{page-break-inside:avoid}
+    .sheet{background:transparent;border:none;border-radius:0;padding:0;box-shadow:none}
+    .job,.no-break{page-break-inside:avoid}
     a{color:inherit;text-decoration:none}
   }
 </style>
@@ -191,6 +177,7 @@
     <div class="links">
       <a class="active" href="/resume.html">Resume</a>
       <a href="/labs.html">Labs</a>
+      <a href="/ai-consulting.html">AI Consulting</a>
     </div>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </nav>
@@ -221,7 +208,6 @@
 
     <div class="section-label">Experience</div>
 
-    <!-- Quadrant4 -->
     <div class="job">
       <div class="job-meta">
         <div><span class="company">Quadrant4 AI</span><span class="job-title"> — Head of Game Design</span></div>
@@ -232,7 +218,6 @@
       </ul>
     </div>
 
-    <!-- Scopely -->
     <div class="job">
       <div class="job-meta">
         <div><span class="company">Scopely</span><span class="job-title"> — Principal Game Designer</span></div>
@@ -247,7 +232,6 @@
       </ul>
     </div>
 
-    <!-- Glu Mobile -->
     <div class="job">
       <div class="job-meta">
         <div><span class="company">Glu Mobile</span><span class="job-title"> — Sr. Game Designer</span></div>
@@ -261,7 +245,6 @@
       </ul>
     </div>
 
-    <!-- MZ -->
     <div class="job">
       <div class="job-meta">
         <div><span class="company">MZ (Machine Zone)</span><span class="job-title"> — Sr. Game Designer</span></div>
@@ -274,7 +257,6 @@
       </ul>
     </div>
 
-    <!-- Behaviour -->
     <div class="job">
       <div class="job-meta">
         <div><span class="company">Behaviour Interactive</span><span class="job-title"> — Lead Game Designer</span></div>
@@ -288,7 +270,6 @@
       </ul>
     </div>
 
-    <!-- EA Capital Games -->
     <div class="job">
       <div class="job-meta">
         <div><span class="company">Electronic Arts (Capital Games)</span><span class="job-title"> — Sr. Game Designer</span></div>
@@ -302,7 +283,6 @@
       </ul>
     </div>
 
-    <!-- Gazillion -->
     <div class="job">
       <div class="job-meta">
         <div><span class="company">Gazillion Entertainment</span><span class="job-title"> — Game Designer</span></div>
@@ -317,7 +297,6 @@
       </ul>
     </div>
 
-    <!-- Cryptic -->
     <div class="job">
       <div class="job-meta">
         <div><span class="company">Cryptic Studios</span><span class="job-title"> — Combat Designer</span></div>
