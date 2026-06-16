@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Case Studies — Matt Danuser-Grant</title>
+<meta name="description" content="Anonymized design walk-throughs by Matt Danuser-Grant. Systems, live-ops, F2P economy, licensed IP." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --paper:#FFFFFF;
+    --ink:#15161C;
+    --ink-2:#2A2A2A;
+    --muted:#6A6A6A;
+    --line:#E5E0D2;
+    --line-2:#CBC4B2;
+    --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+    --shadow-hover:0 18px 48px rgba(15,16,28,.10);
+  }
+  [data-theme="dark"]{
+    --bg:#13110E;--paper:#1D1A16;
+    --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+    --line:#2C2924;--line-2:#3C3830;
+    --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+    --shadow-hover:0 18px 48px rgba(0,0,0,.5);
+  }
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#13110E;--paper:#1D1A16;
+      --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+      --line:#2C2924;--line-2:#3C3830;
+      --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+      --shadow-hover:0 18px 48px rgba(0,0,0,.5);
+    }
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:18px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+
+  .wrap{max-width:760px;margin:0 auto;padding:0 28px 80px}
+
+  /* ── Top nav ───────────────────────────── */
+  .nav{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:24px 0 0;font-size:14px;color:var(--muted);
+    letter-spacing:.04em;
+  }
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+
+  /* ── Header ───────────────────────────── */
+  .head{padding:64px 0 36px;max-width:640px}
+  .head .eyebrow{
+    font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px;font-weight:500;
+  }
+  .head h1{
+    font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(36px,6vw,52px);
+    line-height:1.1;letter-spacing:-0.02em;margin:0 0 18px;
+  }
+  .head h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .head .lede{color:var(--muted);font-size:18px;line-height:1.6;margin:0}
+
+  /* ── Case study entries ───────────────────────────── */
+  .list{display:flex;flex-direction:column;gap:18px}
+
+  .entry{
+    background:var(--paper);
+    border:1.5px solid var(--line);border-radius:14px;
+    padding:28px 28px 24px;
+    display:flex;flex-direction:column;
+    box-shadow:var(--shadow);
+    transition:transform .18s,border-color .18s,box-shadow .18s;
+  }
+  .entry:hover{
+    transform:translateY(-3px);
+    border-color:var(--line-2);
+    box-shadow:var(--shadow-hover);
+  }
+  .entry .type{
+    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 12px;font-weight:600;
+  }
+  .entry h2{
+    font-family:'Fraunces',serif;font-weight:500;font-size:26px;
+    margin:0 0 10px;letter-spacing:-0.01em;line-height:1.2;
+  }
+  .entry h2 em{font-style:italic;color:var(--ink-2);font-weight:500}
+  .entry p{margin:0 0 18px;color:var(--muted);font-size:15.5px;line-height:1.55}
+  .entry .tags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+  .tag{
+    font-size:12.5px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;
+    padding:4px 12px;background:transparent;
+  }
+  .entry .read{
+    font-family:'Fraunces',serif;font-size:14px;font-weight:500;
+    color:var(--ink);display:inline-flex;align-items:center;gap:6px;
+    letter-spacing:.01em;margin-top:auto;
+    transition:gap .18s;
+  }
+  .entry:hover .read{gap:10px}
+
+  /* ── Theme toggle ───────────────────────────── */
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(20px)}}
+  .toggle-thumb svg{width:11px;height:11px;display:block}
+  .t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
+  .t-sun circle{fill:#E8A317;stroke:none}
+  .t-moon{fill:#3A3550;display:none}
+  [data-theme="dark"] .t-sun{display:none}
+  [data-theme="dark"] .t-moon{display:block}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
+
+  /* ── Theme switch FX ── */
+  html.mode-shift,html.mode-shift *{transition:background-color .9s ease,color .9s ease,border-color .9s ease,box-shadow .9s ease,fill .9s ease !important}
+  .fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;will-change:opacity,transform}
+  .fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.5) 0%,rgba(255,201,133,.3) 24%,rgba(255,224,178,.13) 48%,transparent 72%);animation:fx-rise 1.9s ease-in-out forwards}
+  .fx-sunset{background:linear-gradient(0deg,rgba(166,72,96,.46) 0%,rgba(132,68,116,.3) 26%,rgba(72,57,104,.16) 52%,transparent 74%);animation:fx-set 1.9s ease-in-out forwards}
+  @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
+  @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
+
+  /* ── Footer ───────────────────────────── */
+  .foot{
+    margin:72px 0 0;padding-top:28px;
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    color:var(--muted);font-size:14px;
+  }
+  .foot a{
+    color:var(--ink-2);
+    border-bottom:1px solid transparent;transition:border-color .15s;
+  }
+  .foot a:hover{border-color:var(--ink-2)}
+
+  @media (max-width:480px){
+    .wrap{padding:0 22px 60px}
+    .head{padding:40px 0 32px}
+    .entry{padding:22px 20px 20px}
+    .entry h2{font-size:21px}
+    .nav .links a{margin-left:14px;font-size:13px}
+    .theme-toggle{margin-left:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links">
+      <a href="/resume.html">Experience</a>
+      <a href="/labs.html">Design Lab</a>
+      <a href="/ai-consulting.html">AI Consulting</a>
+      <a class="active" href="/case-studies.html">Case Studies</a>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <header class="head">
+    <p class="eyebrow">Case Studies</p>
+    <h1>Design thinking, <em>documented.</em></h1>
+    <p class="lede">Anonymized walk-throughs of real design challenges. The studio, the IP, and the confidential numbers are gone — the decisions, tradeoffs, and process are what's left.</p>
+  </header>
+
+  <div class="list">
+
+    <a class="entry" href="/case-studies/living-atlas-fantasy-rpg.html">
+      <p class="type">Systems &amp; Live-Ops Design</p>
+      <h2>A living atlas, <em>not a timeline.</em></h2>
+      <p>A AAA studio pitching for the official mobile game of a flagship fantasy TV saga. The brief: design a collection-RPG with tactical combat that could hold a fanbase for years, not a six-month tie-in.</p>
+      <div class="tags">
+        <span class="tag">Systems Design</span>
+        <span class="tag">Live-Ops</span>
+        <span class="tag">F2P Economy</span>
+        <span class="tag">Licensed IP</span>
+      </div>
+      <span class="read">Read case study →</span>
+    </a>
+
+  </div>
+
+  <footer class="foot">
+    <div><a href="/">← Home</a></div>
+  </footer>
+
+</div>
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  if(!btn)return;
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function fx(theme){
+    if(reduce)return;
+    var o=document.createElement('div');
+    o.className='fx-overlay '+(theme==='light'?'fx-sunrise':'fx-sunset');
+    document.body.appendChild(o);
+    setTimeout(function(){o.remove();},1900);
+  }
+  btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    if(!reduce){
+      document.documentElement.classList.add('mode-shift');
+      setTimeout(function(){document.documentElement.classList.remove('mode-shift');},1000);
+    }
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+    fx(next);
+  });
+})();
+</script>
+</body>
+</html>

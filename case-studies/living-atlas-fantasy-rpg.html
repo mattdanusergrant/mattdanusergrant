@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>A living atlas, not a timeline — Case Study — Matt Danuser-Grant</title>
+<meta name="description" content="Anonymized design case study: systems and live-ops design for a collection-RPG built on a flagship fantasy-TV license, holding a great wall against the cold beyond." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --paper:#FFFFFF;
+    --ink:#15161C;
+    --ink-2:#2A2A2A;
+    --muted:#6A6A6A;
+    --line:#E5E0D2;
+    --line-2:#CBC4B2;
+    --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+  }
+  [data-theme="dark"]{
+    --bg:#13110E;--paper:#1D1A16;
+    --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+    --line:#2C2924;--line-2:#3C3830;
+    --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+  }
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#13110E;--paper:#1D1A16;
+      --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+      --line:#2C2924;--line-2:#3C3830;
+      --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+    }
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:17px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+
+  .wrap{max-width:768px;margin:0 auto;padding:0 28px 80px}
+
+  /* ── Top nav ───────────────────────────── */
+  .nav{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:24px 0 0;font-size:14px;color:var(--muted);
+    letter-spacing:.04em;
+  }
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+
+  /* ── Header ───────────────────────────── */
+  .head{padding:60px 0 28px;max-width:640px}
+  .head .eyebrow{
+    font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px;font-weight:500;
+  }
+  .head h1{
+    font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(34px,6vw,50px);
+    line-height:1.1;letter-spacing:-0.02em;margin:0 0 18px;
+  }
+  .head h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .head .lede{color:var(--ink-2);font-size:18.5px;line-height:1.6;margin:0}
+
+  /* ── Meta row ───────────────────────────── */
+  .meta{
+    display:flex;flex-wrap:wrap;gap:26px;
+    margin:8px 0 4px;padding:20px 0;
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .meta div{display:flex;flex-direction:column;gap:3px}
+  .meta dt{
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  .meta dd{margin:0;font-size:14.5px;color:var(--ink-2);font-weight:500}
+
+  /* ── Prose body ───────────────────────────── */
+  .prose{padding:36px 0 0;max-width:680px}
+  .prose section{margin:0 0 40px}
+  .prose h2{
+    font-family:'Fraunces',serif;font-weight:500;font-size:26px;
+    letter-spacing:-0.01em;line-height:1.2;margin:0 0 14px;
+  }
+  .prose h3{
+    font-family:'Fraunces',serif;font-weight:500;font-size:19px;
+    margin:26px 0 8px;letter-spacing:-0.005em;
+  }
+  .prose p{margin:0 0 16px;color:var(--ink-2)}
+  .prose ul,.prose ol{margin:0 0 16px;padding-left:22px;color:var(--ink-2)}
+  .prose li{margin:0 0 8px}
+  .prose strong{font-weight:600;color:var(--ink)}
+
+  /* ── Pull quote ───────────────────────────── */
+  .pull{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:400;
+    font-size:23px;line-height:1.4;color:var(--ink);
+    margin:30px 0;padding:4px 0 4px 24px;
+    border-left:2px solid var(--line-2);
+  }
+
+  /* ── Callout ───────────────────────────── */
+  .callout{
+    background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
+    padding:22px 24px;margin:26px 0;box-shadow:var(--shadow);
+  }
+  .callout .label{
+    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin:0 0 10px;
+  }
+  .callout ul{margin:0;padding-left:20px}
+  .callout li:last-child{margin-bottom:0}
+
+  /* ── Tags ───────────────────────────── */
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}
+  .tag{
+    font-size:12.5px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;
+    padding:4px 12px;background:var(--paper);
+  }
+
+  /* ── Theme toggle ───────────────────────────── */
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(20px)}}
+  .toggle-thumb svg{width:11px;height:11px;display:block}
+  .t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
+  .t-sun circle{fill:#E8A317;stroke:none}
+  .t-moon{fill:#3A3550;display:none}
+  [data-theme="dark"] .t-sun{display:none}
+  [data-theme="dark"] .t-moon{display:block}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
+
+  /* ── Theme switch FX ── */
+  html.mode-shift,html.mode-shift *{transition:background-color .9s ease,color .9s ease,border-color .9s ease,box-shadow .9s ease,fill .9s ease !important}
+  .fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;will-change:opacity,transform}
+  .fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.5) 0%,rgba(255,201,133,.3) 24%,rgba(255,224,178,.13) 48%,transparent 72%);animation:fx-rise 1.9s ease-in-out forwards}
+  .fx-sunset{background:linear-gradient(0deg,rgba(166,72,96,.46) 0%,rgba(132,68,116,.3) 26%,rgba(72,57,104,.16) 52%,transparent 74%);animation:fx-set 1.9s ease-in-out forwards}
+  @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
+  @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
+
+  /* ── Footer ───────────────────────────── */
+  .foot{
+    margin:64px 0 0;padding-top:28px;
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    color:var(--muted);font-size:14px;
+  }
+  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot a:hover{border-color:var(--ink-2)}
+
+  .note{
+    max-width:680px;margin:30px auto 0;font-size:12.5px;color:var(--muted);
+    text-align:center;font-style:italic;
+  }
+
+  @media (max-width:480px){
+    .wrap{padding:0 22px 60px}
+    .head{padding:40px 0 24px}
+    .meta{gap:18px}
+    .nav .links a{margin-left:14px;font-size:13px}
+    .theme-toggle{margin-left:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links">
+      <a href="/resume.html">Experience</a>
+      <a href="/labs.html">Design Lab</a>
+      <a href="/ai-consulting.html">AI Consulting</a>
+      <a class="active" href="/case-studies.html">Case Studies</a>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <header class="head">
+    <p class="eyebrow">Case Study · Systems &amp; Live-Ops Design</p>
+    <h1>A living atlas, <em>not a timeline.</em></h1>
+    <p class="lede">A AAA studio was competing for the rights to build the official mobile game of a flagship epic-fantasy TV saga. The exercise: design a collection-RPG with real-time tactical combat around the saga&rsquo;s sworn frontier order &mdash; and earn the right to be the brand&rsquo;s daily touchpoint for years, not a six-month tie-in.</p>
+  </header>
+
+  <dl class="meta">
+    <div><dt>Context</dt><dd>AAA mobile studio · licensing pitch</dd></div>
+    <div><dt>Brief</dt><dd>Collection-RPG + tactical combat</dd></div>
+    <div><dt>Surface</dt><dd>Mobile F2P · licensed fantasy IP</dd></div>
+    <div><dt>Format</dt><dd>Solo design exercise · pre-production</dd></div>
+  </dl>
+
+  <article class="prose">
+
+    <section>
+      <h2>The brief</h2>
+      <p>The studio was pitching for the official mobile game of a globally famous epic-fantasy TV saga, and put me on a design exercise to prove out the concept. The mandate: a collection-RPG with real-time, light-tactical combat, built around the saga&rsquo;s <strong>sworn frontier order</strong> &mdash; the soldiers who hold a great wall against the inhuman things that come from the cold beyond. It had to satisfy a lore-obsessed fanbase, stay legible to lapsed and new players on mobile, and become a daily brand touchpoint that could run for years.</p>
+      <div class="callout">
+        <p class="label">Hard constraints</p>
+        <ul>
+          <li>Only <strong>five</strong> marquee figures from the saga could be licensed as named, actor-portrayed characters &mdash; every other unit had to be original.</li>
+          <li>No altered or obscured actor likenesses, and canon/timeline conflicts had to be avoided entirely.</li>
+          <li>The order is canonically a closed, all-male institution &mdash; a real tension against roster breadth and collection variety.</li>
+          <li>Authentic enough for superfans; readable enough for everyone else.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>My approach</h2>
+      <p>I refused to anchor the game to a single year. Pinning it to one point on the timeline would have meant fighting the canon forever &mdash; every event a continuity argument, every character a question of <em>before or after</em>. So I framed the whole game as a <strong>living atlas</strong>: you don&rsquo;t play a person, you play the order itself as an institution, touring the world across every era through a &ldquo;memory-tree&rdquo; vision conceit that let any character or moment appear on the board without breaking canon. That single move turned the licensing constraints from a cage into a feature &mdash; and handed the live game decades of content runway.</p>
+      <p>The second decision was a values call: <strong>lead with brand integrity over the obvious money-makers</strong>. I argued for a roster weighted toward the frontier and its lore rather than stacking the five marquee slots with the most bankable faces. The bet was that press and the hardcore fanbase would read the restraint as respect, the licensor would trust us with it, and that trust would lift every downstream metric more than a cynical roster ever could.</p>
+      <p class="pull">Stop trying to be canon. Play the institution, not a person &mdash; and the whole world becomes a living atlas you can keep adding to for years.</p>
+    </section>
+
+    <section>
+      <h2>The design</h2>
+
+      <h3>Collection as a habit engine</h3>
+      <p>Acquisition ran through four time-gated vectors &mdash; recruitment, unit perfection, resource gathering, and PvE patrols &mdash; each dripping incremental progress every session, so there was always a reason to check back in. A deep trait system let players optimise units, with an unlock lifecycle that deliberately <em>hid</em> the optimisation layer until a player had promoted their first unit and was ready to meet it. The north star was goal density: a constant, legible sense of progress on every system, with passive research boosts triggered by ordinary play so no action ever felt wasted.</p>
+
+      <h3>Real-time, light-tactical combat</h3>
+      <p>The combat brief was &ldquo;less twitch, more tactics.&rdquo; Roughly two-minute, five-versus-five character battles with a <strong>finite ability deck</strong> &mdash; used-once tactics rather than a constantly recycling hand &mdash; so every decision carried weight. Commanders brought a small kit and one high-impact moment to time; wins could come by elimination, morale break, or conditional objective. I pushed for about a 70/30 strategic-to-tactical split: deep enough for theorycrafters, calm enough to play one-handed on a commute.</p>
+
+      <h3>Death as legacy &mdash; the signature system</h3>
+      <p>The system I was proudest of: units can <strong>permanently die</strong> in opt-in challenge content &mdash; but death isn&rsquo;t a loss. A fallen unit becomes a <strong>legacy scroll</strong> that passes its traits, and even its heritage, to the next recruit. I gated it behind a valor currency earned only when the server confirms a real win or loss, so the stakes stay honest and players can&rsquo;t game it by force-quitting. Because permadeath is a genuine retention risk, I designed it with an explicit fallback: if players reject it in testing, the same loop runs on a cooldown-and-reward model instead &mdash; no economy rework required.</p>
+
+      <h3>Seasonal events and a calmer monetization</h3>
+      <p>Live-ops ran on seasonal event blocks with a prophecy-style teaser&rarr;announce rhythm, using in-world symbols to herald what was coming. For monetization I argued <em>against</em> the gacha &ldquo;last chance to roll&rdquo; pressure and toward a battlepass framed as guaranteed, already-earned rewards you bank by playing &mdash; scarcity from the season&rsquo;s timing, not from randomness. Three themed tracks (currency, research, cosmetics) layered rewards on top of habits players already had.</p>
+    </section>
+
+    <section>
+      <h2>Tradeoffs &amp; decisions</h2>
+      <ul>
+        <li><strong>Brand integrity vs. obvious revenue</strong> &mdash; chose a lore-weighted roster over stacking the marquee slots with the most bankable faces, betting trust would out-earn cynicism.</li>
+        <li><strong>Permadeath stakes vs. retention risk</strong> &mdash; kept the emotional weight of losing a unit, but de-risked it with the legacy-scroll loop and a tested fallback.</li>
+        <li><strong>Canon fidelity vs. content freedom</strong> &mdash; the living-atlas framing traded strict timeline accuracy for years of conflict-free content and a cleaner relationship with the license.</li>
+        <li><strong>Authenticity vs. accessibility</strong> &mdash; real-time light-tactical combat aimed to satisfy superfans without demanding hardcore execution on a phone.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>What I&rsquo;d validate next</h2>
+      <p>The pitch rests on three unproven bets, and I&rsquo;d prototype to retire them in order. <strong>First, the moment-to-moment combat</strong> &mdash; build it, then lock the three experience pillars against real inputs before anything else is committed. <strong>Second, the death-and-legacy loop</strong> &mdash; does it read as meaningful stakes or as punishment? It&rsquo;s the single biggest retention risk, and the fallback exists for a reason. <strong>Third, the collection cadence</strong> &mdash; are the per-session increments frequent and satisfying enough to build the daily habit the entire &ldquo;brand touchpoint&rdquo; thesis depends on?</p>
+    </section>
+
+    <div class="tags">
+      <span class="tag">Systems Design</span>
+      <span class="tag">Live-Ops</span>
+      <span class="tag">F2P Economy</span>
+      <span class="tag">Licensed IP</span>
+    </div>
+
+  </article>
+
+  <p class="note">The studio, the license, the characters, and internal specifics from the original brief have been changed or removed. What remains is the design thinking.</p>
+
+  <footer class="foot">
+    <div><a href="/case-studies.html">← Case Studies</a></div>
+    <div><a href="/">← Home</a></div>
+  </footer>
+
+</div>
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  if(!btn)return;
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function fx(theme){
+    if(reduce)return;
+    var o=document.createElement('div');
+    o.className='fx-overlay '+(theme==='light'?'fx-sunrise':'fx-sunset');
+    document.body.appendChild(o);
+    setTimeout(function(){o.remove();},1900);
+  }
+  btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    if(!reduce){
+      document.documentElement.classList.add('mode-shift');
+      setTimeout(function(){document.documentElement.classList.remove('mode-shift');},1000);
+    }
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+    fx(next);
+  });
+})();
+</script>
+</body>
+</html>
