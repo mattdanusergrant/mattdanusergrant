@@ -411,6 +411,9 @@
   },{passive:true});
 
   function celebrate(){
+    // Release the min-width lock so the block contracts to final word widths
+    // and re-centers via translate(-50%,-50%).
+    document.querySelector('.i-words').style.minWidth='';
     var txts=wordEls; // pulse the whole .i-word so M/D/G bounce with the rest
 
     txts.forEach(function(t,i){
