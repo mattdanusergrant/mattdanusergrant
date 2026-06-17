@@ -1,7 +1,7 @@
 # Project screenshots
 
 Drop a screenshot here named `<slug>.png` (or `.jpg`) and it appears
-automatically in that project's card on `/labs.html`. Until a file exists,
+automatically in that project's card on `/design-lab.html`. Until a file exists,
 the card shows a tasteful gradient placeholder.
 
 Slots are sized at a 16:10 aspect ratio and cropped with `object-fit: cover`,
