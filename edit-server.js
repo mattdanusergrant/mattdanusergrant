@@ -74,7 +74,7 @@ function buildOverlay() {
     "  toggleBtn.textContent=editing?'Editing':'Edit';",
     '  saveBtn.disabled=!editing;',
     "  document.body.classList.toggle('mdg-editing',editing);",
-    '  if(editing){enableEditing();setHint("Ctrl+click any link to edit its URL");}',
+    '  if(editing){enableEditing();setHint("Links stay put while editing \\u00b7 Ctrl+click to edit a URL");}',
     "  else{disableEditing();setHint('');}",
     '});',
 
@@ -104,11 +104,14 @@ function buildOverlay() {
     "  document.querySelectorAll('a').forEach(function(a){",
     '    function fn(e){',
     '      if(!editing)return;',
-    '      if(!(e.ctrlKey||e.metaKey))return;',
-    '      e.preventDefault();e.stopPropagation();',
-    "      var cur=a.getAttribute('href')||'';",
-    "      var url=prompt('Edit link URL:',cur);",
-    "      if(url!==null)a.setAttribute('href',url);",
+    '      if(e.ctrlKey||e.metaKey){',
+    '        e.preventDefault();e.stopPropagation();',
+    "        var cur=a.getAttribute('href')||'';",
+    "        var url=prompt('Edit link URL:',cur);",
+    "        if(url!==null)a.setAttribute('href',url);",
+    '        return;',
+    '      }',
+    '      e.preventDefault();',
     '    }',
     "    a.addEventListener('click',fn,true);",
     '    linkListeners.push({el:a,fn:fn});',
@@ -444,6 +447,7 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log('');
   console.log('  [Edit]       toggle edit mode');
   console.log('  [Bridge sets] edit the intro word-sets (home page only)');
+  console.log('  Click        links/cards stay put while editing (no navigation)');
   console.log('  Ctrl+click   any link to edit its URL');
   console.log('  Drag         project cards to reorder them (Labs page)');
   console.log('  [Save]       write changes back to the HTML file on disk');
