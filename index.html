@@ -180,7 +180,7 @@
   }
 
   /* ── Intro puzzle ────────────────────────────────────────────────────── */
-  #intro{position:fixed;inset:0;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
+  #intro{position:fixed;inset:0;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity 1.7s ease;cursor:pointer}
   /* Math Draws Graphics — live sketches drawn pure white on black behind the words */
   #intro-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
   .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1}
@@ -570,21 +570,21 @@
 
     setTimeout(function(){
       var wordsEl=document.querySelector('.i-words');
-      wordsEl.style.transition='opacity .5s ease';
+      wordsEl.style.transition='opacity 1.4s ease';
       wordsEl.style.opacity='0';
-    },1500);
+    },3400);
 
-    setTimeout(function(){if(step===2)dismiss();},2000);
+    setTimeout(function(){if(step===2)dismiss();},4400);
   }
 
   function dismiss(){
     step=3;
-    if(mdgBg)mdgBg.stop();
     intro.style.opacity='0';
     setTimeout(function(){
+      if(mdgBg)mdgBg.stop();
       intro.remove();
       sessionStorage.setItem('mdg-intro','1');
-    },650);
+    },1800);
   }
 })();
 </script>
