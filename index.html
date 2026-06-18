@@ -373,12 +373,17 @@
     };
     // Walk Through Doors — first-person corridor of receding doorways (MANY DOORS GUILD).
     SK.doors=function(w,h,t){
-      var N=20,focal=Math.min(w,h)*0.62,march=t*0.55,cx=w/2+Math.sin(t*0.9)*w*0.018,cy=h/2+Math.sin(t*1.7)*h*0.012;
-      ctx.shadowColor=col(210,0.4);ctx.strokeStyle=col(210,0.12);ctx.lineWidth=1;ctx.beginPath();
-      ctx.moveTo(0,0);ctx.lineTo(cx,cy);ctx.moveTo(w,0);ctx.lineTo(cx,cy);ctx.moveTo(0,h);ctx.lineTo(cx,cy);ctx.moveTo(w,h);ctx.lineTo(cx,cy);ctx.stroke();
-      for(var i=N;i>=1;i--){var z=i-(march%1),s=focal/z,hw=0.26*s,hh=0.42*s;if(hw<0.4)continue;
-        ctx.strokeStyle=col(210,Math.min(0.9,Math.max(0.05,1.1-z/N)));ctx.lineWidth=Math.min(16,Math.max(0.8,7/z));
-        var top=cy-hh,bot=cy+hh;ctx.beginPath();ctx.moveTo(cx-hw,bot);ctx.lineTo(cx-hw,top);ctx.lineTo(cx+hw,top);ctx.lineTo(cx+hw,bot);ctx.stroke();}
+      var N=22,focal=Math.min(w,h)*0.62,march=t*0.55,cx=w/2,cy=h/2;
+      ctx.shadowBlur=0;ctx.lineWidth=1; // crisp + cheap: no per-door glow, no horizon guides
+      for(var i=N;i>=1;i--){
+        var z=i-(march%1);
+        if(z<0.12)continue;                              // skip the door rushing past the camera
+        var a=Math.min(1,(z-0.12)*1.4)*(1-z/N);          // fade in far, fade out near -> hides the loop wrap
+        if(a<=0.02)continue;
+        var s=focal/z,hw=0.26*s,hh=0.42*s,top=cy-hh,bot=cy+hh,l=cx-hw,r=cx+hw;
+        ctx.strokeStyle=col(210,Math.min(0.9,a));ctx.lineWidth=Math.min(14,Math.max(0.8,7/z));
+        ctx.beginPath();ctx.moveTo(l,bot);ctx.lineTo(l,top);ctx.lineTo(r,top);ctx.lineTo(r,bot);ctx.stroke();
+      }
     };
     // Lorenz Attractor — the butterfly of chaos (MILDLY DUBIOUS GAMBIT).
     SK.lorenz=function(w,h,t){
