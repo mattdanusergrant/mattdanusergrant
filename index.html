@@ -337,7 +337,7 @@
     SK.fern=function(w,h,t){
       var S=fernS,key=Math.round(w)+'x'+Math.round(h);
       if(S.key!==key){S.key=key;S.x=0;S.y=0;S.off=document.createElement('canvas');S.off.width=Math.round(w);S.off.height=Math.round(h);S.octx=S.off.getContext('2d');}
-      var octx=S.octx,W=S.off.width,H=S.off.height,x=S.x,y=S.y,iters=reduce?60000:1400;
+      var octx=S.octx,W=S.off.width,H=S.off.height,x=S.x,y=S.y,iters=reduce?60000:140;
       octx.fillStyle='rgba(255,255,255,0.85)';
       for(var i=0;i<iters;i++){
         var r=Math.random(),nx,ny;
