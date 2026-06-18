@@ -406,9 +406,9 @@
     // Conway's Game of Life — the final reveal: MUST DESIGN GAMES.
     SK.life=function(w,h,t){
       var cell=Math.max(5,Math.round(Math.min(w,h)/60)),cols=Math.max(8,Math.floor(w/cell)),rows=Math.max(8,Math.floor(h/cell)),S=lifeS;
-      function seed(){S.grid=[];for(var y=0;y<rows;y++){var row=[];for(var x=0;x<cols;x++)row.push(Math.random()<0.3?1:0);S.grid.push(row);}S.cols=cols;S.rows=rows;S.seedGen=S.gen||0;}
+      function seed(){S.grid=[];for(var y=0;y<rows;y++){var row=[];for(var x=0;x<cols;x++)row.push(Math.random()<0.15?1:0);S.grid.push(row);}S.cols=cols;S.rows=rows;S.seedGen=S.gen||0;}
       if(S.cols!==cols||S.rows!==rows||!S.grid){S.gen=0;seed();}
-      var target=Math.floor(t*4);
+      var target=Math.floor(t*2);
       while(S.gen<target){var g=S.grid,ng=[],pop=0;
         for(var y=0;y<rows;y++){var row=[];for(var x=0;x<cols;x++){var nb=0;
           for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++)if(dx||dy)nb+=g[(y+dy+rows)%rows][(x+dx+cols)%cols];
