@@ -181,7 +181,9 @@
 
   /* ── Intro puzzle ────────────────────────────────────────────────────── */
   #intro{position:fixed;inset:0;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
-  .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+  /* Math Draws Graphics — live spirograph rendered behind the words */
+  #intro-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+  .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1}
   .i-words{display:flex;flex-direction:column;align-items:flex-start;position:relative}
   .i-word{
     user-select:none;
@@ -230,6 +232,7 @@
 </head>
 <body>
 <div id="intro" aria-hidden="true">
+  <canvas id="intro-canvas" aria-hidden="true"></canvas>
   <div class="i-inner">
     <div class="i-words">
       <div class="i-word"><span class="i-init">M</span><span class="i-txt">ATT</span></div>
@@ -305,6 +308,57 @@
   var intro=document.getElementById('intro');
   if(!intro)return;
   if(sessionStorage.getItem('mdg-intro')){intro.remove();return;}
+
+  /* ── Math Draws Graphics: live spirograph behind the words ──────── */
+  var mdgBg=(function(){
+    var canvas=document.getElementById('intro-canvas');
+    if(!canvas||!canvas.getContext)return null;
+    var ctx=canvas.getContext('2d');
+    var DPR=Math.min(2,window.devicePixelRatio||1);
+    var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    var raf=0,t0=0,running=false;
+    function gcd(a,b){while(b){var t=b;b=a%b;a=t;}return a;}
+    function clamp(v,a,b){return v<a?a:v>b?b:v;}
+    function rnd(){return {R:60+Math.floor(Math.random()*100),r:12+Math.floor(Math.random()*90),pen:0.5+Math.random()*0.5};}
+    var P=rnd(),T=rnd(),hue=Math.random()*360,hueT=hue;
+    function resize(){var w=intro.clientWidth,h=intro.clientHeight;canvas.width=w*DPR;canvas.height=h*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+    // Spirograph polyline — the Math Draws Graphics generator.
+    function build(p,ph,R){
+      var Rt=p.R,rt=Math.max(1,Math.round(p.r)),rev=Math.min(40,Math.max(1,Math.round(rt/gcd(Math.round(Rt),rt))));
+      var tMax=2*Math.PI*rev,Rr=Rt-rt;
+      var dd=clamp(p.pen+0.1*Math.sin(ph*0.7),0.02,1.2)*rt;
+      var scale=R/((Math.abs(Rr)+dd)||1),segs=Math.min(2200,Math.max(240,rev*150)),pts=[];
+      for(var i=0;i<=segs;i++){var th=tMax*i/segs;
+        pts.push([(Rr*Math.cos(th)+dd*Math.cos(Rr/rt*th))*scale,(Rr*Math.sin(th)-dd*Math.sin(Rr/rt*th))*scale]);}
+      return pts;
+    }
+    function frame(now){
+      if(!t0)t0=now;var t=(now-t0)/1000;
+      for(var k in T){P[k]+=(T[k]-P[k])*0.04;}
+      hue+=(hueT-hue)*0.04;
+      var w=intro.clientWidth,h=intro.clientHeight,R=Math.min(w,h)*0.42;
+      ctx.clearRect(0,0,w,h);
+      var pts=build(P,t*0.6,R);
+      ctx.save();
+      ctx.translate(w/2,h/2);ctx.rotate(t*0.05);
+      ctx.lineWidth=1.2;ctx.lineJoin='round';
+      if(!reduce){ctx.shadowBlur=8;ctx.shadowColor='hsla('+(hue%360)+',85%,60%,0.5)';}
+      var g=ctx.createLinearGradient(-R,-R,R,R);
+      g.addColorStop(0,'hsla('+(hue%360)+',85%,60%,0.5)');
+      g.addColorStop(1,'hsla('+((hue+80)%360)+',85%,62%,0.5)');
+      ctx.strokeStyle=g;ctx.beginPath();
+      for(var i=0;i<pts.length;i++){i?ctx.lineTo(pts[i][0],pts[i][1]):ctx.moveTo(pts[i][0],pts[i][1]);}
+      ctx.stroke();ctx.restore();
+      if(running)raf=requestAnimationFrame(frame);
+    }
+    return {
+      start:function(){resize();if(reduce){running=false;frame(performance.now());}else{running=true;raf=requestAnimationFrame(frame);}},
+      stop:function(){running=false;cancelAnimationFrame(raf);},
+      resize:function(){resize();if(reduce)frame(performance.now());},
+      reseed:function(){T=rnd();hueT=Math.random()*360;if(reduce){frame(performance.now());}}
+    };
+  })();
+  if(mdgBg){mdgBg.start();window.addEventListener('resize',mdgBg.resize);}
 
   var BRIDGE_SETS=[
     ['MAKE','DOPE','GROOVES'],
@@ -391,6 +445,7 @@
     if(animating)return;
     animating=true;
     step++;
+    if(mdgBg)mdgBg.reseed();
     var targets;
     if(step===1){targets=BRIDGE_SETS[Math.floor(Math.random()*BRIDGE_SETS.length)];}
     else{targets=FINAL;}
@@ -451,6 +506,7 @@
 
   function dismiss(){
     step=3;
+    if(mdgBg)mdgBg.stop();
     intro.style.opacity='0';
     setTimeout(function(){
       intro.remove();
