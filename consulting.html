@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Consulting — Matt Danuser-Grant</title>
-<meta name="description" content="Matt Danuser-Grant — available for consulting. 10+ years of F2P game design (Marvel Strike Force, Star Wars: Galaxy of Heroes) and an AI-first workflow. Advisory, design reviews, and AI builds." />
+<meta name="description" content="Matt Danuser-Grant — AI + game design consulting. A decade of F2P design (Marvel Strike Force, Star Wars: Galaxy of Heroes) shipped through an AI-first workflow. Advisory, design reviews, and AI builds." />
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -75,84 +75,30 @@
   .head h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
   .head .lede{color:var(--muted);font-size:17.5px;line-height:1.6;margin:0}
 
-  /* ── How-to callout ────────────────────────────── */
-  .howto{
-    background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
-    padding:20px 24px;margin:0 0 12px;box-shadow:var(--shadow);font-size:15px;color:var(--ink-2);
+  /* ── Top split (AI / Game Design) ────────────────────────────── */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+  @media(max-width:680px){.cols{grid-template-columns:1fr;gap:36px}}
+  .col-head{
+    font-family:'Fraunces',serif;font-weight:500;font-size:23px;
+    letter-spacing:-0.01em;color:var(--ink);
+    margin:0 0 16px;padding-bottom:12px;border-bottom:1.5px solid var(--line);
   }
-  .howto .label{
-    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--muted);font-weight:600;margin:0 0 8px;
+  .col-intro{color:var(--ink-2);font-size:15.5px;line-height:1.55;margin:0 0 18px}
+  .col-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+  .col-list li{
+    background:var(--paper);border:1.5px solid var(--line);border-radius:12px;
+    padding:15px 17px;box-shadow:var(--shadow);
+    transition:transform .18s,border-color .18s,box-shadow .18s;
   }
-  .howto p{margin:0}
-  .howto code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;background:var(--code-bg);padding:1px 6px;border-radius:5px}
-
-  /* ── Skill cards ────────────────────────────── */
-  .skills{display:flex;flex-direction:column;gap:22px;margin-top:30px}
-  .skill{
-    background:var(--paper);border:1.5px solid var(--line);border-radius:16px;
-    padding:28px 28px 24px;box-shadow:var(--shadow);
-  }
-  .skill-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 4px}
-  .skill-head h2{
-    font-family:'Fraunces',serif;font-weight:500;font-size:27px;
-    margin:0;letter-spacing:-0.01em;line-height:1.15;
-  }
-  .pill{
-    font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
-    color:var(--muted);border:1px solid var(--line-2);border-radius:999px;padding:4px 11px;
-  }
-  .skill .sum{color:var(--ink-2);font-size:16.5px;margin:10px 0 18px}
-  .skill h3{
-    font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--muted);font-weight:600;margin:18px 0 8px;
-  }
-  .skill p{margin:0 0 10px;color:var(--ink-2);font-size:15.5px}
-  .examples{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
-  .examples li{font-size:14.5px;color:var(--muted)}
-  .examples code{
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;
-    background:var(--code-bg);color:var(--ink-2);padding:2px 8px;border-radius:6px;
-  }
-
-  /* ── Code reveal ────────────────────────────── */
-  details.code{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
-  summary.reveal{
-    cursor:pointer;list-style:none;font-family:'Fraunces',serif;font-size:15px;
-    color:var(--ink);display:inline-flex;align-items:center;gap:8px;
-    border-bottom:1px solid var(--line-2);padding-bottom:2px;transition:gap .15s;
-  }
-  summary.reveal::-webkit-details-marker{display:none}
-  summary.reveal:hover{gap:11px}
-  summary.reveal .chev{transition:transform .2s}
-  details[open] summary.reveal .chev{transform:rotate(90deg)}
-
-  .code-wrap{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--code-bg)}
-  .code-bar{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:9px 14px;border-bottom:1px solid var(--line);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);
-  }
-  .copy{
-    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;
-    color:var(--ink);background:var(--paper);border:1px solid var(--line-2);
-    border-radius:7px;padding:5px 12px;transition:background .15s,border-color .15s;
-  }
-  .copy:hover{border-color:var(--ink);background:#fff}
-  .copy.done{color:#2a7a3f;border-color:#bcd9c4}
-  pre.skill-md{
-    margin:0;padding:18px 16px;max-height:460px;overflow:auto;
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    font-size:12.5px;line-height:1.5;color:var(--ink-2);
-    white-space:pre;tab-size:2;
-  }
-  pre.skill-md::-webkit-scrollbar{width:10px;height:10px}
-  pre.skill-md::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:6px}
+  .col-list li:hover{transform:translateY(-2px);border-color:var(--line-2);box-shadow:var(--shadow-hover)}
+  .col-list h3{font-family:'Fraunces',serif;font-weight:500;font-size:16.5px;margin:0 0 4px;letter-spacing:-0.005em}
+  .col-list p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
 
   /* ── Consulting sections ────────────────────────────── */
   .divider{height:1px;background:var(--line);border:0;margin:44px 0}
   .sect-eye{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 10px}
   .section-title{font-family:'Fraunces',serif;font-weight:500;font-size:27px;letter-spacing:-0.01em;line-height:1.2;margin:0 0 6px}
+  .section-title em{font-style:italic;font-weight:500;color:var(--ink-2)}
   .section-sub{color:var(--muted);font-size:15.5px;line-height:1.55;margin:0 0 22px;max-width:600px}
   .section-sub a{color:var(--ink-2);border-bottom:1px solid var(--line-2);transition:border-color .15s}
   .section-sub a:hover{border-color:var(--ink)}
@@ -176,6 +122,32 @@
   .receipts li::before{content:'→';position:absolute;left:0;color:var(--line-2)}
   .receipts a{border-bottom:1px solid var(--line-2);transition:border-color .15s}
   .receipts a:hover{border-color:var(--ink)}
+
+  /* ── Newsletter ────────────────────────────── */
+  .news{
+    background:var(--paper);border:1.5px solid var(--line-2);border-radius:16px;
+    padding:32px 30px;box-shadow:var(--shadow);
+  }
+  .news h2{font-family:'Fraunces',serif;font-weight:500;font-size:27px;margin:0 0 8px;letter-spacing:-0.01em}
+  .news h2 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .news .blurb{color:var(--muted);margin:0 0 18px;max-width:540px;font-size:15.5px}
+  .news ul{margin:0 0 22px;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+  .news ul li{position:relative;padding-left:24px;color:var(--ink-2);font-size:15px;line-height:1.5}
+  .news ul li::before{content:'✓';position:absolute;left:0;color:#2a7a3f;font-weight:700}
+  .news form{display:flex;gap:10px;flex-wrap:wrap;max-width:480px}
+  .news input[type=email]{
+    flex:1;min-width:210px;font-family:inherit;font-size:15px;color:var(--ink);
+    background:var(--bg);border:1.5px solid var(--line-2);border-radius:10px;padding:11px 14px;
+    transition:border-color .15s;
+  }
+  .news input[type=email]:focus{outline:none;border-color:var(--ink)}
+  .news button{
+    font-family:'Fraunces',serif;font-size:15px;color:var(--paper);background:var(--ink);
+    border:0;border-radius:10px;padding:11px 22px;cursor:pointer;transition:transform .15s,background .15s;
+  }
+  .news button:hover{transform:translateY(-2px);background:#000}
+  .news .fine{font-size:12.5px;color:var(--muted);margin:13px 0 0}
+
   .cta{
     background:var(--paper);border:1.5px solid var(--line-2);border-radius:16px;
     padding:36px 30px;text-align:center;box-shadow:var(--shadow);
@@ -218,7 +190,7 @@
   @media (max-width:480px){
     .wrap{padding:0 22px 60px}
     .head{padding:40px 0 26px}
-    .skill{padding:24px 20px 20px}
+    .news{padding:26px 22px}
   }
 </style>
 </head>
@@ -238,139 +210,110 @@
 
   <header class="head">
     <p class="eyebrow">Consulting</p>
-    <h1>A game designer <em>who runs on AI.</em></h1>
-    <p class="lede">Two ways to work with me — the design craft I’ve shipped for a decade, and the AI workflow I rebuilt everything around.</p>
+    <h1>AI <em>+</em> game design.</h1>
+    <p class="lede">One engagement, two halves: a decade of shipped game design, and the AI workflow I rebuilt everything around. Hire either — or the overlap, which is the real edge.</p>
   </header>
 
+  <div class="cols">
+
+    <section>
+      <h2 class="col-head">AI</h2>
+      <p class="col-intro">I rebuilt my entire workflow around AI — a personal operating system that captures, plans, builds, and researches on my behalf. I help individuals and teams do the same: turn AI from a demo into shipped work.</p>
+      <ul class="col-list">
+        <li>
+          <h3>Operating systems</h3>
+          <p>An AI-run workflow shaped around how you actually work — capture, planning, review, and a knowledge base that compounds instead of rotting in browser tabs.</p>
+        </li>
+        <li>
+          <h3>Skills &amp; agents</h3>
+          <p>Turn your repeatable judgment into reusable skills and agents your tools run on demand — like the ones I'll send you below.</p>
+        </li>
+        <li>
+          <h3>Pragmatic adoption</h3>
+          <p>Less hype, more shipping. We find the handful of AI workflows that actually pay off — and quietly drop the ones that don't.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="col-head">Game Design</h2>
+      <p class="col-intro">10+ years designing F2P systems and live-ops for games with millions of daily players — Principal Designer on Marvel Strike Force, plus Star Wars: Galaxy of Heroes, Disney Sorcerer's Arena, and more.</p>
+      <ul class="col-list">
+        <li>
+          <h3>Design reviews</h3>
+          <p>A principal designer's read on your game — what's working, what'll churn players, and the highest-leverage changes to make next.</p>
+        </li>
+        <li>
+          <h3>Systems &amp; economy</h3>
+          <p>Audits of progression, economy, and meta — the loops that decide whether players stay and whether the game pays.</p>
+        </li>
+        <li>
+          <h3>Live-ops &amp; advisory</h3>
+          <p>Ongoing design counsel for live games and teams — events, content cadence, and the calls that keep a game healthy.</p>
+        </li>
+      </ul>
+    </section>
+
+  </div>
+
   <hr class="divider" />
 
   <section>
-    <p class="sect-eye">Game Design</p>
-    <h2 class="section-title">The day job, <em>for hire.</em></h2>
-    <p class="section-sub">10+ years designing F2P systems and live-ops for games with millions of daily players — Principal Designer on <strong>Marvel Strike Force</strong>, plus <strong>Star Wars: Galaxy of Heroes</strong>, <strong>Disney Sorcerer’s Arena</strong>, and more. Design reviews, systems audits, advisory. Want a principal designer’s read on your game? <a href="mailto:hello@mattdanusergrant.com?subject=Game%20design%20consulting">Say hello.</a></p>
-  </section>
-
-  <hr class="divider" />
-
-  <section>
-    <p class="sect-eye">AI Consulting</p>
-    <h2 class="section-title">I run on AI. <em>You can too.</em></h2>
-    <p class="section-sub">I rebuilt my entire workflow around AI — a personal operating system that captures, plans, builds, and researches on my behalf. I help individuals and teams do the same: turn AI from a demo into shipped work.</p>
-    <div class="hero-cta"><a class="btn-primary" href="mailto:hello@mattdanusergrant.com?subject=AI%20consulting">Start a conversation →</a></div>
-  </section>
-
-  <hr class="divider" />
-
-  <section>
-    <h2 class="section-title">What I help with</h2>
-    <p class="section-sub">Grounded in a decade of systems and live-ops design — and a workflow I actually live in, not a deck about one.</p>
+    <p class="sect-eye">The package</p>
+    <h2 class="section-title">Not two consultants. <em>One overlap.</em></h2>
+    <p class="section-sub">The edge isn't AI or game design on their own — it's a principal designer who ships real games <em>through</em> an AI workflow. You get both halves in one hire, and the place they meet is where the unusual work happens.</p>
     <div class="offer">
       <div class="offer-card">
-        <h3>Operating systems</h3>
-        <p>An AI-run workflow shaped around how you really work — capture, planning, review, and a knowledge base that compounds instead of rotting in browser tabs.</p>
+        <h3>Advisory</h3>
+        <p>A standing line to a principal designer who works this way daily — counsel on design direction and AI adoption, as you need it.</p>
       </div>
       <div class="offer-card">
-        <h3>Skills &amp; agents</h3>
-        <p>Turn your repeatable judgment into reusable skills and agents your tools can run on demand — like the ones further down this page.</p>
+        <h3>Design reviews</h3>
+        <p>Deep reads and systems audits of your game or feature — delivered fast and grounded in a decade of live-ops.</p>
       </div>
       <div class="offer-card">
-        <h3>Pragmatic adoption</h3>
-        <p>Less hype, more shipping. I’ll help you find the handful of AI workflows that actually pay off — and quietly drop the ones that don’t.</p>
+        <h3>AI builds</h3>
+        <p>Working prototypes, internal tools, and operating systems — designed and built with the AI workflow, not just specced.</p>
       </div>
     </div>
+    <div class="hero-cta"><a class="btn-primary" href="mailto:hello@mattdanusergrant.com?subject=AI%20%2B%20game%20design%20consulting">Start a conversation →</a></div>
   </section>
 
   <hr class="divider" />
 
   <section>
     <h2 class="section-title">Receipts, not promises</h2>
-    <p class="section-sub">Everything on this site is built and maintained with the kind of AI workflow I’d set up for you.</p>
+    <p class="section-sub">Everything on this site is built and maintained with the kind of AI workflow I'd set up for you.</p>
     <ul class="receipts">
-      <li><strong>A personal operating system.</strong> I run my work and knowledge through a system I call Conductive — managed by a small set of AI “avatars” that capture, plan, build, and research. This very site is maintained through it.</li>
+      <li><strong>A personal operating system.</strong> I run my work and knowledge through a system I call Conductive — managed by a small set of AI "avatars" that capture, plan, build, and research. This very site is maintained through it.</li>
       <li><strong>A workbench of games.</strong> Browser prototypes designed and built fast with AI, playable in <a href="/design-lab.html">Design Lab</a>.</li>
-      <li><strong>Reusable skills.</strong> The two below are the same building blocks I use day to day — yours to copy, no strings.</li>
+      <li><strong>Reusable skills.</strong> The building blocks I use day to day — yours free when you join the list below.</li>
     </ul>
   </section>
 
   <hr class="divider" />
 
-  <section>
-    <h2 class="section-title">Free skills, yours to steal</h2>
-    <p class="section-sub">Reusable instructions that turn a general AI assistant into a specialist for one job. Copy one, drop it into your assistant, and call it by name.</p>
-
-    <div class="howto">
-      <p class="label">Using a skill</p>
-      <p>Hit <strong>Copy</strong> and paste it straight into any AI assistant — ChatGPT, Claude, Gemini, whatever you use. Each block is written as a ready-to-send message that teaches the model the skill on the spot; after that, just describe what you want.</p>
-    </div>
-
-    <div class="skills">
-
-    <section class="skill">
-      <div class="skill-head">
-        <h2>Decision Tournament</h2>
-        <span class="pill">Decision-making</span>
-      </div>
-      <p class="sum">A five-judge panel for any decision. Take (or generate) the options, score each one from five tailored viewpoints, then <em>merge the winners</em> into a single, defensible pick.</p>
-
-      <h3>What it does</h3>
-      <p>Most “what should I pick?” answers hide their tradeoffs. This runs your options past five distinct personas — an enthusiast, a skeptic, an expert, a pragmatist, a rival — scores every contender on a 1–10 matrix, and then assembles the best possible answer from across the field instead of just crowning one. Great for names, copy, designs, product calls, and life decisions.</p>
-
-      <h3>Try it</h3>
-      <ul class="examples">
-        <li><code>run a decision tournament on these three app names</code></li>
-        <li><code>judge these five taglines for my landing page</code></li>
-        <li><code>help me decide between these two job offers</code></li>
-      </ul>
-
-      <details class="code">
-        <summary class="reveal"><span class="chev">›</span> View &amp; copy the full skill</summary>
-        <div class="code-wrap">
-          <div class="code-bar">
-            <span>Decision Tournament</span>
-            <button class="copy" type="button" data-src="src-tournament">Copy</button>
-          </div>
-          <pre class="skill-md"><code id="code-tournament"></code></pre>
-        </div>
-      </details>
-    </section>
-
-    <section class="skill">
-      <div class="skill-head">
-        <h2>Case Study Forge</h2>
-        <span class="pill">Portfolio · Anonymizer</span>
-      </div>
-      <p class="sum">Turn a completed interview design test into a polished, fully anonymized HTML case study — company, product, names, and confidential numbers stripped out; only your thinking kept.</p>
-
-      <h3>What it does</h3>
-      <p>Take-homes and design challenges are some of your best work, but they’re usually under NDA and can’t go in a portfolio as-is. This reads your finished response, builds an anonymization ledger (real → stand-in for every company, IP, and figure), and renders a clean, self-contained HTML case study that shows <em>how you think</em> without exposing who it was for. Works for any discipline that runs take-homes.</p>
-
-      <h3>Try it</h3>
-      <ul class="examples">
-        <li><code>turn my take-home into a case study</code></li>
-        <li><code>anonymize this design challenge for my portfolio</code></li>
-        <li><code>make a writeup of this exercise, scrub the client</code></li>
-      </ul>
-
-      <details class="code">
-        <summary class="reveal"><span class="chev">›</span> View &amp; copy the full skill</summary>
-        <div class="code-wrap">
-          <div class="code-bar">
-            <span>Case Study Forge</span>
-            <button class="copy" type="button" data-src="src-casestudy">Copy</button>
-          </div>
-          <pre class="skill-md"><code id="code-casestudy"></code></pre>
-        </div>
-      </details>
-    </section>
-
-    </div>
+  <section class="news" id="newsletter">
+    <p class="sect-eye">Newsletter</p>
+    <h2>Steal my skills.</h2>
+    <p class="blurb">Join the list and I'll send you the two AI skills I use every week — <strong>Decision Tournament</strong> and <strong>Case Study Forge</strong> — then the occasional dispatch on game design, AI workflows, and whatever I'm building in the open.</p>
+    <ul>
+      <li>Both skills, ready to paste into any AI assistant</li>
+      <li>New prototypes and design teardowns from the lab</li>
+      <li>Roughly monthly. No spam, unsubscribe anytime.</li>
+    </ul>
+    <form action="https://buttondown.com/api/emails/embed-subscribe/YOUR_BUTTONDOWN_USERNAME" method="post" target="_blank">
+      <input type="email" name="email" placeholder="you@email.com" required aria-label="Email address" />
+      <button type="submit">Subscribe →</button>
+    </form>
+    <p class="fine">Delivered by Buttondown. Unsubscribe anytime.</p>
   </section>
 
   <hr class="divider" />
 
   <section class="cta">
     <h2>Ready to work together?</h2>
-    <p>I take on a small number of consulting engagements. Tell me what you’re trying to ship and we’ll see if it’s a fit.</p>
+    <p>I take on a small number of consulting engagements. Tell me what you're trying to ship and we'll see if it's a fit.</p>
     <a class="btn-primary" href="mailto:hello@mattdanusergrant.com?subject=Consulting">hello@mattdanusergrant.com →</a>
   </section>
 
@@ -384,151 +327,6 @@
 
 </div>
 
-<script type="text/plain" id="src-tournament">
----
-name: decision-tournament
-description: >-
-  Evaluate ANY decision with the "Decision Tournament" method — assemble a panel of 5
-  distinct judge personas, score each contender across them, and merge the winners
-  into a final recommendation. Use when you want to choose between options, pick
-  the best version of something, pressure-test an idea from multiple viewpoints, or
-  stress-rank candidates (e.g. "run a tournament on these three names", "judge these
-  taglines", "help me decide between A, B and C").
----
-
-# Decision Tournament
-
-A reusable decision engine. Take whatever is being decided, run it past a panel of
-**5 distinct judge personas**, score every contender, and **merge the winners** into
-one high-quality final answer. Works for names, copy, designs, product calls,
-strategies, hires, purchases — any decision with comparable options or variants.
-
-The value is the **panel of viewpoints**: a single "best" answer hides tradeoffs;
-five tailored judges surface them and force an honest, defensible pick.
-
----
-
-## Run it in four phases. Pause for the user at Phase 1 and Phase 2.
-
-### Phase 1 — Establish the contest
-Figure out **what is being compared**. From the request:
-
-- **If the user already said what's being decided AND listed the options** -> use them as the contenders; skip ahead.
-- **If they named a decision but not options** (e.g. "best name for my app") -> tell them you'll *generate* the contenders, and produce **up to 8** strong, genuinely distinct variants. Fewer is fine for naturally small fields.
-- **If the subject is missing or vague** -> ask, briefly: *what's the decision, and do you have specific options or should I generate them?*
-
-Also capture any **context that matters to judging** (audience, budget, constraints, goals) — pull it from the request; ask only if it's load-bearing and absent.
-
-### Phase 2 — Propose the panel, let the user edit it
-Design **5 judge personas tailored to THIS decision's domain** — not generic. Each
-judge needs: a short name, a one-line profile, and **what they reward** (their lens).
-The craft is picking viewpoints that genuinely pull in different directions (an
-enthusiast, a skeptic, a pragmatist, an expert, an adversary/competitor).
-
-Present the 5 as a short table, then **stop and let the user edit** — add, drop, swap,
-rename, or reweight judges. Do not run until they approve. (If they say "looks good" /
-"go", proceed.)
-
-### Phase 3 — Run the tournament
-1. Lock the contenders.
-2. Have **each judge score every contender 1-10**, scoring honestly from that judge's lens.
-3. Build a **scorecard matrix** (contenders x judges) with a **Total** column. Rank it.
-4. Write **brief commentary on the top ~3** — quote a judge or two per contender.
-
-### Phase 4 — Declare + merge
-- **Declare the winner** with a one-paragraph "why it won."
-- **Merge the winners:** synthesize the strongest elements across the top contenders into one final output.
-- Give an **honest caveat**: where the winner is weak and what would change the call.
-
----
-
-## Rules of the format
-- **5 judges by default**, editable by the user before the run.
-- **Distinct viewpoints** — judges must disagree usefully.
-- **Honest scoring** — the panel is a thinking tool, not a rubber stamp.
-- **Up to 8 generated contenders**; use the user's set as-is when provided.
-- **Merge, don't just rank** — the deliverable is the assembled best answer plus the reasoning.
-</script>
-
-<script type="text/plain" id="src-casestudy">
----
-name: case-study-forge
-description: >-
-  Turn a COMPLETED design test — an interview take-home, design challenge, or
-  application exercise — into a fully anonymized, self-contained HTML case study
-  for a portfolio. Strips the company, the product/IP, named people, and
-  confidential figures; keeps only the candidate's thinking; and renders a clean
-  standalone page with no build step and no external dependencies. Use when
-  someone wants to show how they think on a design test without exposing who it
-  was for.
----
-
-# Case Study Forge
-
-Takes a **completed** design test and produces an **anonymized, portfolio-ready
-HTML case study**. The thinking survives intact; everything identifying is stripped.
-
-Works for any discipline that runs take-homes — game design, product, UX,
-systems, engineering. Output is a **single self-contained .html file** with no
-build step needed.
-
----
-
-## The anonymization ruleset
-
-| In the original | In the case study |
-|---|---|
-| Company / studio / client name | Generic descriptor: "a mid-size fintech", "a AAA game studio" |
-| Product / brand / franchise / IP | Neutral genre stand-in: "a flagship fantasy franchise" |
-| Named people | Remove, or invent consistent stand-ins |
-| Confidential figures (revenue, targets, headcount) | **Remove.** Replace with qualitative phrasing |
-| Internal links, ticket IDs | Remove entirely |
-
-**What survives:** the problem framing, the approach, the tradeoff reasoning, and the candidate's voice.
-
----
-
-## Procedure
-
-1. **Read** the completed test (not just the brief).
-2. **Build the anonymization ledger** — every real entity mapped to its stand-in.
-3. **Produce** a single `.html` file: header, brief, approach, design pillars, tradeoffs, what's next.
-4. **Present the ledger** for review before the page is shared.
-
-**Style:** editorial — serif headings, system sans body, warm off-white, generous whitespace. Should read like a confident portfolio piece.
-
----
-
-## Caveats
-- Needs the **completed** response, not just the prompt.
-- **Anonymize, don't fabricate** — if a section is thin, leave it thin.
-- **Review before sharing** — walk through the ledger to confirm nothing slipped through.
-</script>
-
-<script>
-  (function () {
-    var PREAMBLE = 'I want you to learn a new skill. Here it is — adopt it and use it whenever it applies:\n\n';
-    function skillText(srcId) {
-      var src = document.getElementById(srcId);
-      return src ? src.textContent.replace(/^\n/, '').replace(/\s+$/, '') : '';
-    }
-    function payload(srcId) { return PREAMBLE + skillText(srcId) + '\n'; }
-
-    var map = { 'src-tournament': 'code-tournament', 'src-casestudy': 'code-casestudy' };
-    Object.keys(map).forEach(function (srcId) {
-      var dest = document.getElementById(map[srcId]);
-      if (dest) dest.textContent = payload(srcId);
-    });
-    document.querySelectorAll('.copy').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        navigator.clipboard.writeText(payload(btn.dataset.src)).then(function () {
-          btn.textContent = 'Copied ✓'; btn.classList.add('done');
-          setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1800);
-        }).catch(function () { btn.textContent = 'Press Ctrl/Cmd+C'; });
-      });
-    });
-  })();
-</script>
 <script>
 (function(){
   var btn=document.getElementById('theme-toggle');
