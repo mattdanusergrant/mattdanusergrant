@@ -321,7 +321,7 @@
     var DPR=Math.min(2,window.devicePixelRatio||1);
     var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
     var TAU=Math.PI*2;
-    var raf=0,t0=0,running=false,cur='fern',lifeS={},fernS={},hilCache=null;
+    var raf=0,t0=0,running=false,cur='fern',lifeS={},fernS={},fourierS={},hilCache=null;
     // Every sketch draws pure white on the black intro, exactly as it renders in the MathDraws app.
     // (hue arg kept so the ported sketch code is unchanged; only alpha varies.)
     function col(hue,a){return 'rgba(255,255,255,'+a+')';}
@@ -402,6 +402,25 @@
       for(i=0;i<p.length;i++)for(j=i+1;j<p.length;j++){ctx.moveTo(cx+p[i].x,cy+p[i].y);ctx.lineTo(cx+p[j].x,cy+p[j].y);}ctx.stroke();
       ctx.strokeStyle=col(45,0.85);ctx.lineWidth=1.5;
       for(i=0;i<p.length;i++){ctx.beginPath();ctx.arc(cx+p[i].x,cy+p[i].y,r,0,TAU);ctx.stroke();}
+    };
+    // Fourier Epicycles — stacked rotating circles tracing a square wave (MATH DRAWS GRAPHICS).
+    SK.fourier=function(w,h,t){
+      var S=fourierS;if(S.h!==h){S.h=h;S.trace=[];}
+      var terms=6,cyc=h*0.5,baseR=Math.min(w,h)*0.18,cxc=w*0.30,px=cxc,py=cyc;
+      ctx.lineCap='round';ctx.shadowColor=col(0,0.4);
+      for(var k=0;k<terms;k++){
+        var n=2*k+1,r=baseR*(4/(n*Math.PI));
+        ctx.strokeStyle=col(0,0.16);ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,r,0,TAU);ctx.stroke();
+        var ang=n*t,nx=px+r*Math.cos(ang),ny=py+r*Math.sin(ang);
+        ctx.strokeStyle=col(0,0.7);ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(nx,ny);ctx.stroke();
+        px=nx;py=ny;
+      }
+      S.trace.unshift(py);var maxLen=240;if(S.trace.length>maxLen)S.trace.length=maxLen;
+      var waveX0=cxc+baseR+30,dx=(w-waveX0-8)/maxLen;
+      ctx.strokeStyle=col(0,0.25);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(waveX0,S.trace[0]);ctx.stroke();
+      ctx.strokeStyle=col(0,0.95);ctx.lineWidth=1.6;ctx.beginPath();
+      for(var i=0;i<S.trace.length;i++){var X=waveX0+i*dx,Y=S.trace[i];i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}
+      ctx.stroke();
     };
     // Conway's Game of Life — the final reveal: MUST DESIGN GAMES.
     SK.life=function(w,h,t){
