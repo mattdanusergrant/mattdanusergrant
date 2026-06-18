@@ -180,9 +180,12 @@
   }
 
   /* ── Intro puzzle ────────────────────────────────────────────────────── */
-  #intro{position:fixed;inset:0;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity 1.7s ease;cursor:pointer}
-  /* Math Draws Graphics — live sketches drawn pure white on black behind the words */
-  #intro-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+  #intro-backdrop{position:fixed;inset:0;background:#000;z-index:9997;pointer-events:none;transition:opacity 1.6s ease}
+  /* Math Draws Graphics — sketches play white-on-black during the intro; afterwards the
+     Game of Life keeps running and drops behind the site as a faint living background */
+  #intro-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:9998;pointer-events:none;transition:opacity 1.6s ease}
+  #intro-canvas.bg{z-index:-1;opacity:.16}
+  #intro{position:fixed;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
   .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1}
   .i-words{display:flex;flex-direction:column;align-items:flex-start;position:relative}
   .i-word{
@@ -241,8 +244,9 @@
 </style>
 </head>
 <body>
+<div id="intro-backdrop" aria-hidden="true"></div>
+<canvas id="intro-canvas" aria-hidden="true"></canvas>
 <div id="intro" aria-hidden="true">
-  <canvas id="intro-canvas" aria-hidden="true"></canvas>
   <div class="i-inner">
     <div class="i-words">
       <div class="i-word"><span class="i-init">M</span><span class="i-txt">ATT</span></div>
@@ -317,7 +321,6 @@
 (function(){
   var intro=document.getElementById('intro');
   if(!intro)return;
-  if(sessionStorage.getItem('mdg-intro')){intro.remove();return;}
 
   /* ── Math Draws Graphics: a live sketch plays behind the words, one per phrase ──── */
   var mdgBg=(function(){
@@ -330,10 +333,11 @@
     var raf=0,t0=0,running=false,cur='fern',lifeS={},fernS={},fourierS={},hilCache=null;
     // crossfade: a snapshot of the outgoing sketch dissolves out over the incoming one
     var snap=null,sctx=null,fadeUntil=0,fadeDur=750;
-    // Every sketch draws pure white on the black intro, exactly as it renders in the MathDraws app.
-    // (hue arg kept so the ported sketch code is unchanged; only alpha varies.)
-    function col(hue,a){return 'rgba(255,255,255,'+a+')';}
-    function resize(){var w=intro.clientWidth,h=intro.clientHeight;canvas.width=w*DPR;canvas.height=h*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);hilCache=null;
+    var bgMode=false,lastDraw=0; // bgMode: the Game of Life lives on as the faint site background
+    function isDark(){var d=document.documentElement.getAttribute('data-theme');return d?d==='dark':matchMedia('(prefers-color-scheme:dark)').matches;}
+    // Pure white on the black intro; theme-aware ink once it has become the site background.
+    function col(hue,a){return bgMode?(isDark()?'rgba(237,232,223,'+a+')':'rgba(21,22,28,'+a+')'):'rgba(255,255,255,'+a+')';}
+    function resize(){var w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*DPR;canvas.height=h*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);hilCache=null;
       if(!snap){snap=document.createElement('canvas');sctx=snap.getContext('2d');}
       snap.width=canvas.width;snap.height=canvas.height;fadeUntil=0;}
 
@@ -453,14 +457,16 @@
     };
 
     function frame(now){
-      if(!t0)t0=now;var t=(now-t0)/1000,w=intro.clientWidth,h=intro.clientHeight;
-      ctx.clearRect(0,0,w,h);ctx.lineCap='butt';ctx.lineJoin='round';ctx.shadowBlur=reduce?0:7;
+      if(running)raf=requestAnimationFrame(frame);
+      if(bgMode&&now-lastDraw<90)return;   // throttle the persistent background to ~11fps
+      lastDraw=now;
+      if(!t0)t0=now;var t=(now-t0)/1000,w=canvas.clientWidth,h=canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);ctx.lineCap='butt';ctx.lineJoin='round';ctx.shadowBlur=(reduce||bgMode)?0:7;
       (SK[cur]||SK.fern)(w,h,t);
-      // dissolve the frozen outgoing frame out over the live incoming sketch
-      if(now<fadeUntil&&snap){var a=(fadeUntil-now)/fadeDur;
+      // dissolve the frozen outgoing frame out over the live incoming sketch (intro only)
+      if(!bgMode&&now<fadeUntil&&snap){var a=(fadeUntil-now)/fadeDur;
         ctx.save();ctx.globalAlpha=a<0?0:a>1?1:a;ctx.shadowBlur=0;ctx.setTransform(1,0,0,1,0,0);
         ctx.drawImage(snap,0,0);ctx.restore();}
-      if(running)raf=requestAnimationFrame(frame);
     }
     return {
       start:function(){resize();if(reduce){running=false;frame(performance.now());}else{running=true;raf=requestAnimationFrame(frame);}},
@@ -468,10 +474,24 @@
       resize:function(){resize();if(reduce)frame(performance.now());},
       setSketch:function(name){if(!SK[name])return;
         if(!reduce&&snap){sctx.setTransform(1,0,0,1,0,0);sctx.clearRect(0,0,snap.width,snap.height);sctx.drawImage(canvas,0,0);fadeUntil=performance.now()+fadeDur;}
-        if(name==='life')lifeS={};cur=name;t0=0;if(reduce)frame(performance.now());}
+        if(name==='life')lifeS={};cur=name;t0=0;if(reduce)frame(performance.now());},
+      // hand the Game of Life off to the site background and keep it running
+      toBackground:function(){
+        bgMode=true;canvas.classList.add('bg');
+        if(cur!=='life'){cur='life';t0=0;lifeS={};}   // reload path: fresh sim; intro path keeps the running board
+        if(!running){resize();if(reduce){frame(performance.now());}else{running=true;raf=requestAnimationFrame(frame);}}
+      }
     };
   })();
-  if(mdgBg){mdgBg.start();window.addEventListener('resize',mdgBg.resize);}
+  if(mdgBg)window.addEventListener('resize',mdgBg.resize);
+  if(sessionStorage.getItem('mdg-intro')){
+    // intro already seen this session — skip straight to the living background
+    var bd0=document.getElementById('intro-backdrop');if(bd0)bd0.remove();
+    intro.remove();
+    if(mdgBg)mdgBg.toBackground();
+    return;
+  }
+  if(mdgBg)mdgBg.start();
 
   // Each phrase pairs with the Math Draws Graphics sketch that plays behind it.
   var BRIDGE_SETS=[
@@ -556,7 +576,7 @@
   }
 
   function advance(){
-    if(step===2){dismiss();return;}
+    if(step===2){handoff();return;}
     if(animating)return;
     animating=true;
     step++;
@@ -611,21 +631,26 @@
 
     setTimeout(function(){
       var wordsEl=document.querySelector('.i-words');
-      wordsEl.style.transition='opacity 1.4s ease';
+      wordsEl.style.transition='opacity .95s ease';
       wordsEl.style.opacity='0';
     },3400);
 
-    setTimeout(function(){if(step===2)dismiss();},4400);
+    setTimeout(function(){if(step===2)handoff();},4450);
   }
 
-  function dismiss(){
+  // End of intro: words gone, black backdrop burns off, and the Game of Life keeps
+  // running — dropping behind the site as a faint living background.
+  function handoff(){
+    if(step>2)return;
     step=3;
+    if(mdgBg)mdgBg.toBackground();
+    var bd=document.getElementById('intro-backdrop');
+    if(bd){bd.style.opacity='0';setTimeout(function(){bd.remove();},1700);}
     intro.style.opacity='0';
     setTimeout(function(){
-      if(mdgBg)mdgBg.stop();
       intro.remove();
       sessionStorage.setItem('mdg-intro','1');
-    },1800);
+    },700);
   }
 })();
 </script>
