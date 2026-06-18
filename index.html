@@ -322,10 +322,14 @@
     var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
     var TAU=Math.PI*2;
     var raf=0,t0=0,running=false,cur='fern',lifeS={},fernS={},fourierS={},hilCache=null;
+    // crossfade: a snapshot of the outgoing sketch dissolves out over the incoming one
+    var snap=null,sctx=null,fadeUntil=0,fadeDur=750;
     // Every sketch draws pure white on the black intro, exactly as it renders in the MathDraws app.
     // (hue arg kept so the ported sketch code is unchanged; only alpha varies.)
     function col(hue,a){return 'rgba(255,255,255,'+a+')';}
-    function resize(){var w=intro.clientWidth,h=intro.clientHeight;canvas.width=w*DPR;canvas.height=h*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);hilCache=null;}
+    function resize(){var w=intro.clientWidth,h=intro.clientHeight;canvas.width=w*DPR;canvas.height=h*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);hilCache=null;
+      if(!snap){snap=document.createElement('canvas');sctx=snap.getContext('2d');}
+      snap.width=canvas.width;snap.height=canvas.height;fadeUntil=0;}
 
     // Each sketch is an authentic Math Draws Graphics example, drawing one frame from (w,h,t).
     var SK={};
@@ -441,13 +445,19 @@
       if(!t0)t0=now;var t=(now-t0)/1000,w=intro.clientWidth,h=intro.clientHeight;
       ctx.clearRect(0,0,w,h);ctx.lineCap='butt';ctx.lineJoin='round';ctx.shadowBlur=reduce?0:7;
       (SK[cur]||SK.fern)(w,h,t);
+      // dissolve the frozen outgoing frame out over the live incoming sketch
+      if(now<fadeUntil&&snap){var a=(fadeUntil-now)/fadeDur;
+        ctx.save();ctx.globalAlpha=a<0?0:a>1?1:a;ctx.shadowBlur=0;ctx.setTransform(1,0,0,1,0,0);
+        ctx.drawImage(snap,0,0);ctx.restore();}
       if(running)raf=requestAnimationFrame(frame);
     }
     return {
       start:function(){resize();if(reduce){running=false;frame(performance.now());}else{running=true;raf=requestAnimationFrame(frame);}},
       stop:function(){running=false;cancelAnimationFrame(raf);},
       resize:function(){resize();if(reduce)frame(performance.now());},
-      setSketch:function(name){if(!SK[name])return;if(name==='life')lifeS={};cur=name;t0=0;if(reduce)frame(performance.now());}
+      setSketch:function(name){if(!SK[name])return;
+        if(!reduce&&snap){sctx.setTransform(1,0,0,1,0,0);sctx.clearRect(0,0,snap.width,snap.height);sctx.drawImage(canvas,0,0);fadeUntil=performance.now()+fadeDur;}
+        if(name==='life')lifeS={};cur=name;t0=0;if(reduce)frame(performance.now());}
     };
   })();
   if(mdgBg){mdgBg.start();window.addEventListener('resize',mdgBg.resize);}
