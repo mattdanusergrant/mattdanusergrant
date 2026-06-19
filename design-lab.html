@@ -77,18 +77,22 @@
   .head .lede{color:var(--muted);font-size:18px;line-height:1.6;margin:0}
 
   /* ── Two-column section layout ───────────────────────────── */
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
-  @media(max-width:760px){.cols{grid-template-columns:1fr;gap:48px}}
+  /* Subgrid lets both columns share the same row tracks, so card 1 lines up with
+     card 1, card 2 with card 2, etc. — equal heights per spot across Apps and Games. */
+  .cols{display:grid;grid-template-columns:1fr 1fr;column-gap:56px;grid-template-rows:auto repeat(3,auto)}
+  .cols > section{display:grid;grid-row:1 / -1;grid-template-rows:subgrid;row-gap:18px}
+  @media(max-width:760px){
+    .cols{display:block}
+    .cols > section{display:flex;flex-direction:column;gap:18px}
+    .cols > section + section{margin-top:48px}
+  }
   .col-head{
     font-family:'Fraunces',serif;font-weight:500;font-size:22px;
     letter-spacing:-0.01em;color:var(--ink);
-    margin:0 0 20px;padding-bottom:14px;
+    margin:0;padding-bottom:14px;
     border-bottom:1.5px solid var(--line);
   }
   .col-empty{color:var(--muted);font-size:15px;margin:0}
-
-  /* ── Grid of prototypes ───────────────────────────── */
-  .grid{display:grid;grid-template-columns:1fr;gap:18px}
 
   .card{
     background:var(--paper);
@@ -188,94 +192,63 @@
 
     <section>
       <h2 class="col-head">Apps</h2>
-      <div class="grid">
 
-        <article class="card">
-          <h2>Invisible Ink</h2>
-          <p>Write it. It hides. It's always there. A minimal writing app where your words vanish into the page — present but unseen until you choose to reveal them.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="https://itsinvisible.ink" target="_blank" rel="noopener">Open</a>
-          </div>
-        </article>
+      <article class="card">
+        <h2>Invisible Ink</h2>
+        <p>Write it. It hides. It's always there. A minimal writing app where your words vanish into the page — present but unseen until you choose to reveal them.</p>
+        <div class="btn-row">
+          <a class="btn btn-play" href="https://itsinvisible.ink" target="_blank" rel="noopener">Open</a>
+        </div>
+      </article>
 
-        <article class="card">
-          <h2>Keeping Cadence</h2>
-          <p>A clean weekly schedule builder. Block out your time, name what matters, and see the whole week at a glance.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="https://mattdanusergrant.github.io/keeping-cadence/" target="_blank" rel="noopener">Open</a>
-          </div>
-        </article>
+      <article class="card">
+        <h2>Keeping Cadence</h2>
+        <p>A clean weekly schedule builder. Block out your time, name what matters, and see the whole week at a glance.</p>
+        <div class="btn-row">
+          <a class="btn btn-play" href="https://mattdanusergrant.github.io/keeping-cadence/" target="_blank" rel="noopener">Open</a>
+        </div>
+      </article>
 
-        <article class="card">
-          <h2>Math Draws Graphics</h2>
-          <p>A browser-based coding-art studio. Write live canvas sketches, or shape spirographs, harmonographs, roses, and string art with visual controls. Neon glow, animation, PNG + SVG export.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="https://mattdanusergrant.github.io/mathdrawsgraphics/" target="_blank" rel="noopener">Open</a>
-          </div>
-        </article>
+      <article class="card">
+        <h2>Math Draws Graphics</h2>
+        <p>A browser-based coding-art studio. Write live canvas sketches, or shape spirographs, harmonographs, roses, and string art with visual controls. Neon glow, animation, PNG + SVG export.</p>
+        <div class="btn-row">
+          <a class="btn btn-play" href="https://mattdanusergrant.github.io/mathdrawsgraphics/" target="_blank" rel="noopener">Open</a>
+        </div>
+      </article>
 
-      </div>
     </section>
 
     <section>
       <h2 class="col-head">Games</h2>
-      <div class="grid">
 
-        <article class="card">
-          <h2>Sigil Tactics</h2>
-          <p>Mobile-web tactical card-battler. Two sides, three heroes each, on a small grid. Cards add sidekicks, spells, and battlefield effects.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a>
-            <a class="btn btn-edge" href="https://mattdanusergrant.github.io/sigil-tactics/" target="_blank" rel="noopener">Experimental</a>
-          </div>
-        </article>
+      <article class="card">
+        <h2>Sigil Tactics</h2>
+        <p>Mobile-web tactical card-battler. Two sides, three heroes each, on a small grid. Cards add sidekicks, spells, and battlefield effects.</p>
+        <div class="btn-row">
+          <a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a>
+          <a class="btn btn-edge" href="https://mattdanusergrant.github.io/sigil-tactics/" target="_blank" rel="noopener">Experimental</a>
+        </div>
+      </article>
 
-        <article class="card">
-          <h2>Ronin Survivor</h2>
-          <p>Horde-survival auto-battler in the spirit of Vampire Survivors. A lone afro'd swordsman holds his ground on a blood-red road — you only move, the blade swings itself.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="/games/ronin-survivor/" target="_blank" rel="noopener">Play</a>
-            <a class="btn btn-edge" href="https://mattdanusergrant.github.io/ronin-survivor/" target="_blank" rel="noopener">Experimental</a>
-          </div>
-        </article>
+      <article class="card">
+        <h2>Ronin Survivor</h2>
+        <p>Horde-survival auto-battler in the spirit of Vampire Survivors. A lone afro'd swordsman holds his ground on a blood-red road — you only move, the blade swings itself.</p>
+        <div class="btn-row">
+          <a class="btn btn-play" href="/games/ronin-survivor/" target="_blank" rel="noopener">Play</a>
+          <a class="btn btn-edge" href="https://mattdanusergrant.github.io/ronin-survivor/" target="_blank" rel="noopener">Experimental</a>
+        </div>
+      </article>
 
-        <article class="card">
-          <h2>Ripping Packs</h2>
-          <p>Incremental clicker about cracking trading-card boosters, sorting the spill, and selling sets on a live market across thirty years of a fictional cryptid TCG.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="/games/ripping-packs/" target="_blank" rel="noopener">Play</a>
-            <a class="btn btn-edge" href="https://mattdanusergrant.github.io/ripping-packs/" target="_blank" rel="noopener">Experimental</a>
-          </div>
-        </article>
+      <article class="card">
+        <h2>Ripping Packs</h2>
+        <p>Incremental clicker about cracking trading-card boosters, sorting the spill, and selling sets on a live market across thirty years of a fictional cryptid TCG.</p>
+        <div class="btn-row">
+          <a class="btn btn-play" href="/games/ripping-packs/" target="_blank" rel="noopener">Play</a>
+          <a class="btn btn-edge" href="https://mattdanusergrant.github.io/ripping-packs/" target="_blank" rel="noopener">Experimental</a>
+        </div>
+      </article>
 
-        <article class="card">
-          <h2>Switchback TD</h2>
-          <p>Maze-building tower defence. Wind the path, hold the wave.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="/games/switchback-td/" target="_blank" rel="noopener">Play</a>
-            <a class="btn btn-edge" href="https://mattdanusergrant.github.io/switchback-td/" target="_blank" rel="noopener">Experimental</a>
-          </div>
-        </article>
-
-        <article class="card">
-          <h2>Baduk Blitz</h2>
-          <p>High-stakes parimutuel betting on auto-playing Go boards. Read the position, bet the winner before the 30-second clock runs out.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="/games/baduk-blitz/" target="_blank" rel="noopener">Play</a>
-            <a class="btn btn-edge" href="https://mattdanusergrant.github.io/baduk-blitz/" target="_blank" rel="noopener">Experimental</a>
-          </div>
-        </article>
-
-        <article class="card">
-          <h2>Mosslings</h2>
-          <p>Tamagotchi-cozy virtual pets in a moss-and-firefly world. Feed, play, explore. Multiple pets, XP and levels, a world map of places to visit.</p>
-          <div class="btn-row">
-            <a class="btn btn-play" href="/games/mosslings/" target="_blank" rel="noopener">Play</a>
-            <a class="btn btn-edge" href="https://mattdanusergrant.github.io/mosslings/" target="_blank" rel="noopener">Experimental</a>
-          </div>
-        </article>
-
-      </div>
     </section>
 
   </div>
