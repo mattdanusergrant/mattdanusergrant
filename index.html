@@ -184,7 +184,7 @@
   /* Math Draws Graphics — sketches play white-on-black during the intro; afterwards the
      Game of Life keeps running and drops behind the site as a faint living background */
   #intro-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:9998;pointer-events:none;transition:opacity 1.1s ease}
-  #intro-canvas.bg{z-index:-1;opacity:.16}
+  #intro-canvas.bg{z-index:-1}
   #intro{position:fixed;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
   .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1}
   .i-words{display:flex;flex-direction:column;align-items:flex-start;position:relative}
@@ -333,10 +333,12 @@
     var raf=0,t0=0,running=false,cur='fern',lifeS={},fernS={},fourierS={},hilCache=null;
     // crossfade: a snapshot of the outgoing sketch dissolves out over the incoming one
     var snap=null,sctx=null,fadeUntil=0,fadeDur=750;
-    var bgMode=false,lastDraw=0; // bgMode: the Game of Life lives on as the faint site background
+    var bgMode=false,lastDraw=0;            // bgMode: the Game of Life lives on as the site background
+    var gFade=0,gFadeStart=0,gFadeMs=3200;  // final GoL eases bright-white -> faint theme-ink over this window
     function isDark(){var d=document.documentElement.getAttribute('data-theme');return d?d==='dark':matchMedia('(prefers-color-scheme:dark)').matches;}
-    // Pure white on the black intro; theme-aware ink once it has become the site background.
-    function col(hue,a){return bgMode?(isDark()?'rgba(237,232,223,'+a+')':'rgba(21,22,28,'+a+')'):'rgba(255,255,255,'+a+')';}
+    function col(hue,a){return 'rgba(255,255,255,'+a+')';}   // sketches draw pure white on the black intro
+    // Game of Life cells: lerp white(bright) -> theme-ink(faint) by p, so they dissolve into the site background.
+    function lifeCol(p){var r=Math.round(255+((isDark()?237:21)-255)*p),g=Math.round(255+((isDark()?232:22)-255)*p),b=Math.round(255+((isDark()?223:28)-255)*p);return 'rgba('+r+','+g+','+b+','+(0.85+(0.18-0.85)*p)+')';}
     function resize(){var w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*DPR;canvas.height=h*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);hilCache=null;
       if(!snap){snap=document.createElement('canvas');sctx=snap.getContext('2d');}
       snap.width=canvas.width;snap.height=canvas.height;fadeUntil=0;}
@@ -452,7 +454,7 @@
           for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++)if(dx||dy)nb+=g[(y+dy+rows)%rows][(x+dx+cols)%cols];
           var alive=g[y][x]?(nb===2||nb===3):(nb===3);row.push(alive?1:0);if(alive)pop++;}ng.push(row);}
         S.grid=ng;S.gen++;if(pop===0||S.gen-S.seedGen>140)seed();}
-      ctx.shadowColor=col(130,0.4);ctx.fillStyle=col(130,0.85);var pad=Math.max(1,cell*0.1);
+      var lc=lifeCol(gFade);ctx.shadowColor=lc;ctx.fillStyle=lc;var pad=Math.max(1,cell*0.1);
       for(var y2=0;y2<rows;y2++)for(var x2=0;x2<cols;x2++)if(S.grid[y2][x2])ctx.fillRect(x2*cell+pad,y2*cell+pad,cell-2*pad,cell-2*pad);
     };
 
@@ -460,8 +462,9 @@
       if(running)raf=requestAnimationFrame(frame);
       if(bgMode&&now-lastDraw<90)return;   // throttle the persistent background to ~11fps
       lastDraw=now;
+      gFade=gFadeStart?Math.min(1,(now-gFadeStart)/gFadeMs):(bgMode?1:0);
       if(!t0)t0=now;var t=(now-t0)/1000,w=canvas.clientWidth,h=canvas.clientHeight;
-      ctx.clearRect(0,0,w,h);ctx.lineCap='butt';ctx.lineJoin='round';ctx.shadowBlur=(reduce||bgMode)?0:7;
+      ctx.clearRect(0,0,w,h);ctx.lineCap='butt';ctx.lineJoin='round';ctx.shadowBlur=reduce?0:7*(1-gFade);
       (SK[cur]||SK.fern)(w,h,t);
       // dissolve the frozen outgoing frame out over the live incoming sketch (intro only)
       if(!bgMode&&now<fadeUntil&&snap){var a=(fadeUntil-now)/fadeDur;
@@ -474,7 +477,7 @@
       resize:function(){resize();if(reduce)frame(performance.now());},
       setSketch:function(name){if(!SK[name])return;
         if(!reduce&&snap){sctx.setTransform(1,0,0,1,0,0);sctx.clearRect(0,0,snap.width,snap.height);sctx.drawImage(canvas,0,0);fadeUntil=performance.now()+fadeDur;}
-        if(name==='life')lifeS={};cur=name;t0=0;if(reduce)frame(performance.now());},
+        if(name==='life'){lifeS={};if(!reduce)gFadeStart=performance.now();}cur=name;t0=0;if(reduce)frame(performance.now());},
       // hand the Game of Life off to the site background and keep it running
       toBackground:function(){
         bgMode=true;canvas.classList.add('bg');
@@ -524,7 +527,7 @@
   var wordEls=Array.from(document.querySelectorAll('.i-word'));
   var step=0;
   var animating=false;
-  var revealed=false;
+  var bgRevealed=false;
 
   (function pinFinalWidth(){
     var finalTails=['UST','ESIGN','AMES'];
@@ -584,6 +587,7 @@
     var pick=step===1?BRIDGE_SETS[Math.floor(Math.random()*BRIDGE_SETS.length)]:FINAL;
     var targets=pick.words;
     if(mdgBg)mdgBg.setSketch(pick.sketch);
+    if(step===2)startBgReveal();   // start morphing the black backdrop toward the site bg as the GoL appears
     var flavor=pickFlavor();
     var pending=wordEls.length;
     wordEls.forEach(function(el,i){
@@ -609,7 +613,6 @@
   },{passive:true});
 
   function celebrate(){
-    reveal();   // the words now sit on the real main-page background
     var txts=wordEls;
 
     txts.forEach(function(t,i){
@@ -631,34 +634,40 @@
       });
     },950);
 
-    // logo fades fast & natural — straight into the background it's already sitting on
+    // logo fades at a middle speed — into the background the GoL has been easing toward
     setTimeout(function(){
       var wordsEl=document.querySelector('.i-words');
-      wordsEl.style.transition='opacity .55s ease';
+      wordsEl.style.transition='opacity .85s ease';
       wordsEl.style.opacity='0';
     },1500);
 
-    setTimeout(function(){if(step===2)finish();},2100);
+    setTimeout(function(){if(step===2)finish();},2400);
   }
 
-  // Turn the final frame INTO the main page: the Game of Life drops to a faint, theme-ink
-  // background behind the site content and the black backdrop burns off. After this the
-  // words are sitting on the exact landed-page background, so the fade has nothing to cross.
-  function reveal(){
-    if(revealed)return;revealed=true;
-    if(mdgBg)mdgBg.toBackground();
+  // As the final Game of Life appears, morph the black backdrop toward the site's --bg colour
+  // over the same window the cells ease white -> grey, so cell contrast is kept the whole way.
+  function startBgReveal(){
+    if(bgRevealed)return;bgRevealed=true;
     var bd=document.getElementById('intro-backdrop');
-    if(bd){bd.style.opacity='0';setTimeout(function(){if(bd.parentNode)bd.remove();},850);}
+    if(!bd)return;
+    var bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#000';
+    bd.style.transition='background-color 3.2s linear';
+    requestAnimationFrame(function(){bd.style.backgroundColor=bg;});
   }
 
+  // Words gone, backdrop already at the site bg colour: drop the GoL behind the content as the
+  // faint living background, remove the (now bg-coloured) backdrop, and fade the page content in.
   function finish(){
     if(step>2)return;step=3;
-    reveal();
-    intro.style.opacity='0';
-    setTimeout(function(){
-      intro.remove();
-      sessionStorage.setItem('mdg-intro','1');
-    },650);
+    startBgReveal();
+    if(mdgBg)mdgBg.toBackground();
+    var bd=document.getElementById('intro-backdrop');if(bd)bd.remove();
+    var wrap=document.querySelector('.wrap');
+    if(wrap){wrap.style.transition='none';wrap.style.opacity='0';
+      requestAnimationFrame(function(){wrap.style.transition='opacity .7s ease';wrap.style.opacity='1';
+        setTimeout(function(){wrap.style.transition='';wrap.style.opacity='';},780);});}
+    intro.remove();
+    sessionStorage.setItem('mdg-intro','1');
   }
 })();
 </script>
