@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Design Lab — Matt Danuser-Grant</title>
-<meta name="description" content="A workbench of game prototypes by Matt Danuser-Grant. Small games, made out loud." />
+<title>More Games — Matt Danuser-Grant</title>
+<meta name="description" content="The stockpile — early game prototypes and works in progress by Matt Danuser-Grant." />
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-<!-- #LLM-generated — Matt Danuser-Grant Labs (game prototypes hub) -->
 <style>
   :root{
     --bg:#FBF8F2;
@@ -68,6 +67,8 @@
     font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--muted);margin:0 0 18px;font-weight:500;
   }
+  .head .eyebrow a{border-bottom:1px solid var(--line-2);transition:border-color .15s}
+  .head .eyebrow a:hover{border-color:var(--ink)}
   .head h1{
     font-family:'Fraunces',serif;font-weight:500;
     font-size:clamp(36px,6vw,52px);
@@ -76,23 +77,8 @@
   .head h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
   .head .lede{color:var(--muted);font-size:18px;line-height:1.6;margin:0}
 
-  /* ── Two-column section layout ───────────────────────────── */
-  /* Subgrid lets both columns share the same row tracks, so card 1 lines up with
-     card 1, card 2 with card 2, etc. — equal heights per spot across Apps and Games. */
-  .cols{display:grid;grid-template-columns:1fr 1fr;column-gap:56px;grid-template-rows:auto repeat(3,auto) auto}
-  .cols > section{display:grid;grid-row:1 / -1;grid-template-rows:subgrid;row-gap:18px}
-  @media(max-width:760px){
-    .cols{display:block}
-    .cols > section{display:flex;flex-direction:column;gap:18px}
-    .cols > section + section{margin-top:48px}
-  }
-  .col-head{
-    font-family:'Fraunces',serif;font-weight:500;font-size:22px;
-    letter-spacing:-0.01em;color:var(--ink);
-    margin:0;padding-bottom:14px;
-    border-bottom:1.5px solid var(--line);
-  }
-  .col-empty{color:var(--muted);font-size:15px;margin:0}
+  /* ── Stockpile grid ───────────────────────────── */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;grid-auto-rows:1fr}
 
   .card{
     background:var(--paper);
@@ -126,18 +112,7 @@
   .btn-play:hover{background:var(--ink-2);border-color:var(--ink-2)}
   .btn-edge{background:transparent;color:var(--muted);border:1.5px solid var(--line-2)}
   .btn-edge:hover{border-color:var(--ink);color:var(--ink)}
-
-  /* "More games" link — sits under the Games column, sized to that column */
-  .more-link{
-    display:flex;align-items:center;justify-content:center;gap:8px;
-    font-family:'Fraunces',serif;font-weight:500;font-size:15px;color:var(--ink);
-    background:var(--paper);border:1.5px dashed var(--line-2);border-radius:14px;
-    padding:18px;box-shadow:var(--shadow);
-    transition:border-color .18s,transform .18s;
-  }
-  .more-link:hover{border-color:var(--ink);transform:translateY(-2px)}
-  .more-link span{transition:transform .18s}
-  .more-link:hover span{transform:translateX(3px)}
+  .btn-soon{background:transparent;color:var(--muted);border:1.5px dashed var(--line-2);cursor:default}
 
   /* ── Theme toggle ───────────────────────────── */
   .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
@@ -195,81 +170,61 @@
   </nav>
 
   <header class="head">
-    <p class="eyebrow">Design Lab</p>
-    <h1>Small games, <em>made out loud.</em></h1>
-    <p class="lede">A workbench of game prototypes. Browser-playable, one-shot ideas, no monetisation. Every push goes live in seconds.</p>
+    <p class="eyebrow"><a href="/design-lab.html">← Design Lab</a></p>
+    <h1>The stockpile.</h1>
+    <p class="lede">Everything else on the workbench — earlier prototypes and rougher ideas, parked here until they're worth promoting. Expect more to pile up.</p>
   </header>
 
-  <div class="cols">
+  <div class="grid">
 
-    <section>
-      <h2 class="col-head">Apps</h2>
+    <article class="card">
+      <h2>Switchback TD</h2>
+      <p>Maze-building tower defence. Wind the path, hold the wave.</p>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/switchback-td/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/switchback-td/" target="_blank" rel="noopener">Experimental</a>
+      </div>
+    </article>
 
-      <article class="card">
-        <h2>Invisible Ink</h2>
-        <p>Write it. It hides. It's always there. A minimal writing app where your words vanish into the page — present but unseen until you choose to reveal them.</p>
-        <div class="btn-row">
-          <a class="btn btn-play" href="https://itsinvisible.ink" target="_blank" rel="noopener">Open</a>
-        </div>
-      </article>
+    <article class="card">
+      <h2>Baduk Blitz</h2>
+      <p>High-stakes parimutuel betting on auto-playing Go boards. Read the position, bet the winner before the 30-second clock runs out.</p>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/baduk-blitz/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/baduk-blitz/" target="_blank" rel="noopener">Experimental</a>
+      </div>
+    </article>
 
-      <article class="card">
-        <h2>Keeping Cadence</h2>
-        <p>A clean weekly schedule builder. Block out your time, name what matters, and see the whole week at a glance.</p>
-        <div class="btn-row">
-          <a class="btn btn-play" href="https://mattdanusergrant.github.io/keeping-cadence/" target="_blank" rel="noopener">Open</a>
-        </div>
-      </article>
+    <article class="card">
+      <h2>Mosslings</h2>
+      <p>Tamagotchi-cozy virtual pets in a moss-and-firefly world. Feed, play, explore. Multiple pets, XP and levels, a world map of places to visit.</p>
+      <div class="btn-row">
+        <a class="btn btn-play" href="/games/mosslings/" target="_blank" rel="noopener">Play</a>
+        <a class="btn btn-edge" href="https://mattdanusergrant.github.io/mosslings/" target="_blank" rel="noopener">Experimental</a>
+      </div>
+    </article>
 
-      <article class="card">
-        <h2>Math Draws Graphics</h2>
-        <p>A browser-based coding-art studio. Write live canvas sketches, or shape spirographs, harmonographs, roses, and string art with visual controls. Neon glow, animation, PNG + SVG export.</p>
-        <div class="btn-row">
-          <a class="btn btn-play" href="https://mattdanusergrant.github.io/mathdrawsgraphics/" target="_blank" rel="noopener">Open</a>
-        </div>
-      </article>
+    <article class="card">
+      <h2>Bloom Again</h2>
+      <p>An early prototype, still taking root. Stable build coming.</p>
+      <div class="btn-row">
+        <a class="btn btn-edge" href="/games/bloom-again/" target="_blank" rel="noopener">Peek</a>
+      </div>
+    </article>
 
-    </section>
-
-    <section>
-      <h2 class="col-head">Games</h2>
-
-      <article class="card">
-        <h2>Sigil Tactics</h2>
-        <p>Mobile-web tactical card-battler. Two sides, three heroes each, on a small grid. Cards add sidekicks, spells, and battlefield effects.</p>
-        <div class="btn-row">
-          <a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a>
-          <a class="btn btn-edge" href="https://mattdanusergrant.github.io/sigil-tactics/" target="_blank" rel="noopener">Experimental</a>
-        </div>
-      </article>
-
-      <article class="card">
-        <h2>Ronin Survivor</h2>
-        <p>Horde-survival auto-battler in the spirit of Vampire Survivors. A lone afro'd swordsman holds his ground on a blood-red road — you only move, the blade swings itself.</p>
-        <div class="btn-row">
-          <a class="btn btn-play" href="/games/ronin-survivor/" target="_blank" rel="noopener">Play</a>
-          <a class="btn btn-edge" href="https://mattdanusergrant.github.io/ronin-survivor/" target="_blank" rel="noopener">Experimental</a>
-        </div>
-      </article>
-
-      <article class="card">
-        <h2>Ripping Packs</h2>
-        <p>Incremental clicker about cracking trading-card boosters, sorting the spill, and selling sets on a live market across thirty years of a fictional cryptid TCG.</p>
-        <div class="btn-row">
-          <a class="btn btn-play" href="/games/ripping-packs/" target="_blank" rel="noopener">Play</a>
-          <a class="btn btn-edge" href="https://mattdanusergrant.github.io/ripping-packs/" target="_blank" rel="noopener">Experimental</a>
-        </div>
-      </article>
-
-      <a class="more-link" href="/more-games.html">More games <span>→</span></a>
-
-    </section>
+    <article class="card">
+      <h2>Prism Pond</h2>
+      <p>A prototype catching the light. Stable build coming.</p>
+      <div class="btn-row">
+        <a class="btn btn-edge" href="/games/prism-pond/" target="_blank" rel="noopener">Peek</a>
+      </div>
+    </article>
 
   </div>
 
   <footer class="foot">
-    <div>Made by <a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">Matt Danuser-Grant</a></div>
-    <div><a href="/">← Home</a></div>
+    <div><a href="/design-lab.html">← Back to Design Lab</a></div>
+    <div><a href="/">Home</a></div>
   </footer>
 
 </div>
