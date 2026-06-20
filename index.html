@@ -361,7 +361,7 @@
       }
       S.x=x;S.y=y;ctx.shadowBlur=0;ctx.drawImage(S.off,0,0,w,h);
     };
-    // Sound Waves - overlaid oscilloscope waveforms (MAKE DOPE GROOVES).
+    // Sound Waves - overlaid oscilloscope waveforms (MANUFACTURE DIGITAL GROOVES).
     SK.waves=function(w,h,t){
       var mid=h/2,nw=5,step=Math.max(2,Math.floor(w/260));ctx.lineCap='round';ctx.shadowColor=col(300,0.4);
       ctx.strokeStyle=col(300,0.1);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();
@@ -460,6 +460,19 @@
       var lc=lifeCol(gFade);ctx.shadowColor=lc;ctx.fillStyle=lc;var pad=Math.max(1,cell*0.1);
       for(var y2=0;y2<rows;y2++)for(var x2=0;x2<cols;x2++)if(S.grid[y2][x2])ctx.fillRect(x2*cell+pad,y2*cell+pad,cell-2*pad,cell-2*pad);
     };
+    // Sierpinski Triangle - recursive subdivision, slowly turning (MAKE DOPE GARMENTS).
+    SK.sierpinski=function(w,h,t){
+      var m=Math.min(w,h)*0.84,cx=w/2,cy=h/2,H=m*Math.sqrt(3)/2,rot=t*0.14,cs=Math.cos(rot),sn=Math.sin(rot);
+      function R(px,py){var dx=px-cx,dy=py-cy;return [cx+dx*cs-dy*sn,cy+dx*sn+dy*cs];}
+      var A=R(cx,cy-2*H/3),B=R(cx-m/2,cy+H/3),C=R(cx+m/2,cy+H/3);
+      ctx.lineCap='round';ctx.shadowColor=col(265,0.45);ctx.strokeStyle=col(265,0.82);ctx.lineWidth=1.1;ctx.beginPath();
+      (function tri(p1,p2,p3,d){
+        if(d===0){ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.lineTo(p3[0],p3[1]);ctx.closePath();return;}
+        var a=[(p1[0]+p2[0])/2,(p1[1]+p2[1])/2],b=[(p2[0]+p3[0])/2,(p2[1]+p3[1])/2],c=[(p1[0]+p3[0])/2,(p1[1]+p3[1])/2];
+        tri(p1,a,c,d-1);tri(a,p2,b,d-1);tri(c,b,p3,d-1);
+      })(A,B,C,5);
+      ctx.stroke();
+    };
 
     function frame(now){
       if(running)raf=requestAnimationFrame(frame);
@@ -501,11 +514,12 @@
 
   // Each phrase pairs with the Math Draws Graphics sketch that plays behind it.
   var BRIDGE_SETS=[
-    {words:['MAKE','DOPE','GROOVES'],            sketch:'waves'},
+    {words:['MANUFACTURE','DIGITAL','GROOVES'],  sketch:'waves'},
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketch:'doors'},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'hilbert'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
+    {words:['MAKE','DOPE','GARMENTS'],           sketch:'sierpinski'},
     {words:['MATH','DRAWS','GRAPHICS'],          sketch:'fourier'}
   ];
   var FINAL={words:['MUST','DESIGN','GAMES'], sketch:'life'};
