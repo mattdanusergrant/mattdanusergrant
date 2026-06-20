@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Math Draws Graphics · MDG</title>
+<style>
+  :root{
+    --bg:#07070d; --panel:#10101a; --panel2:#171724; --line:#26263a;
+    --text:#e9e9f4; --muted:#9595ad; --accent:#7df9ff; --accent2:#ff5dd8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    font:14px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:var(--text); background:var(--bg); overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .app{display:flex; height:100dvh}
+  .stage{flex:1; position:relative; background:var(--bg); min-width:0}
+  canvas{display:block; width:100%; height:100%; touch-action:none}
+  .wordmark{
+    position:absolute; top:14px; left:18px; font-weight:700; letter-spacing:.5px;
+    font-size:15px; pointer-events:none; user-select:none;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .wordmark small{display:block; font-size:10px; letter-spacing:2px; color:var(--muted);
+    -webkit-text-fill-color:var(--muted); font-weight:600}
+
+  .panel{
+    width:308px; flex:none; background:var(--panel); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; overflow-y:auto;
+  }
+  .head{padding:16px 16px 12px; border-bottom:1px solid var(--line)}
+  .actions{display:flex; gap:8px}
+  .actions button{flex:1}
+  button{
+    font:inherit; font-weight:600; color:var(--text); cursor:pointer;
+    background:var(--panel2); border:1px solid var(--line); border-radius:9px;
+    padding:9px 10px; transition:.12s;
+  }
+  button:hover{border-color:var(--accent); color:var(--accent)}
+  button:active{transform:translateY(1px)}
+  button.go{background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#05050a; border:none}
+  button.go:hover{filter:brightness(1.08); color:#05050a}
+  button.mini{background:transparent; border:none; color:var(--muted); font-size:11.5px; padding:6px 2px 0; text-align:left}
+  button.mini:hover{color:var(--accent); border:none}
+
+  .tabs{display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:12px 16px}
+  .tabs button{padding:8px 6px; font-size:13px}
+  .tabs button.on{background:var(--accent); color:#05050a; border-color:var(--accent)}
+
+  .section{padding:6px 16px 14px}
+  .section h3{
+    font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted);
+    margin:12px 0 8px; font-weight:700;
+  }
+  .ctrl{margin:11px 0}
+  .ctrl label{display:flex; justify-content:space-between; align-items:baseline; color:var(--muted); margin-bottom:5px}
+  .ctrl .val{color:var(--text); font-variant-numeric:tabular-nums; font-weight:600}
+  input[type=range]{width:100%; accent-color:var(--accent); cursor:pointer}
+  input[type=color]{
+    width:100%; height:34px; background:var(--panel2); border:1px solid var(--line);
+    border-radius:8px; cursor:pointer; padding:3px;
+  }
+  .row{display:flex; gap:10px}
+  .row>*{flex:1}
+
+  .seg{display:flex; background:var(--panel2); border:1px solid var(--line); border-radius:9px; overflow:hidden}
+  .seg button{flex:1; border:none; border-radius:0; background:transparent; padding:8px 4px; font-size:12.5px; font-weight:600}
+  .seg button.on{background:var(--accent); color:#05050a}
+  .seg button:hover:not(.on){color:var(--accent)}
+
+  .toggle{display:flex; align-items:center; justify-content:space-between; padding:8px 0; color:var(--muted)}
+  .toggle input{width:18px; height:18px; accent-color:var(--accent); cursor:pointer}
+  .toggle span{color:var(--text); font-weight:600}
+
+  .codehint{color:var(--muted); font-size:11px; margin-bottom:8px; line-height:1.5}
+  textarea#code{
+    width:100%; min-height:240px; resize:vertical; tab-size:2;
+    background:#0c0c16; color:#cfe9ff; border:1px solid var(--line); border-radius:9px;
+    padding:10px; font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; white-space:pre;
+  }
+  textarea#code:focus{outline:none; border-color:var(--accent)}
+  .err{color:#ff8a8a; font-size:11.5px; margin-top:7px; min-height:14px; font-family:ui-monospace,monospace; white-space:pre-wrap}
+  .exrow{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px}
+  .exrow .exlabel{color:var(--muted); font-size:11px; margin-right:2px}
+  .exrow button{background:var(--panel2); border:1px solid var(--line); border-radius:7px; color:var(--text); font-size:11.5px; padding:4px 9px; cursor:pointer}
+  .exrow button:hover{border-color:var(--accent); color:var(--accent)}
+
+  /* examples — one full-width button per row, bigger text */
+  #examples{display:flex; flex-direction:column; gap:7px; margin-bottom:0}
+  #examples button{width:100%; text-align:left; font-size:14.5px; font-weight:600;
+    padding:11px 14px; border-radius:9px}
+
+  .hint{padding:12px 16px 18px; color:var(--muted); font-size:11.5px; line-height:1.6; border-top:1px solid var(--line)}
+  .hint b{color:var(--text); font-weight:600}
+  kbd{background:var(--panel2); border:1px solid var(--line); border-bottom-width:2px; border-radius:5px;
+    padding:1px 5px; font:inherit; font-size:11px; color:var(--text)}
+
+  .info{color:var(--muted); font-size:12px; line-height:1.6}
+  .info code{background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:0 4px;
+    color:var(--accent); font-size:11.5px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .info b{color:var(--text); font-weight:600}
+  .exrow button.on{background:var(--accent); color:#05050a; border-color:var(--accent)}
+
+  @media (max-width:820px){
+    .app{flex-direction:column}
+    .stage{height:52vh}
+    .panel{width:auto; height:48vh; border-left:none; border-top:1px solid var(--line)}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <canvas id="c"></canvas>
+    <div class="wordmark">MDG<small>MATH DRAWS GRAPHICS</small></div>
+  </div>
+
+  <aside class="panel">
+    <div class="head">
+      <div class="actions">
+        <button class="go" id="rand">🎲 Random</button>
+        <button id="replay" title="Replay (Space)">▶ Replay</button>
+      </div>
+      <div class="actions" style="margin-top:8px">
+        <button id="save" title="Save PNG (S)">⬇ PNG</button>
+        <button id="saveSvg" title="Save SVG (V)">⬇ SVG</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Examples</h3>
+      <div class="exrow" id="examples"></div>
+    </div>
+
+    <div class="section">
+      <h3>How it works</h3>
+      <div class="info" id="info"></div>
+    </div>
+
+    <div class="section">
+      <h3>Code</h3>
+      <div id="editor"></div>
+    </div>
+
+    <div class="section">
+      <h3>Motion</h3>
+      <div class="toggle"><span>Animate</span><input type="checkbox" id="animate"></div>
+      <div class="toggle"><span>Trails</span><input type="checkbox" id="trails"></div>
+      <div class="ctrl"><label>Speed <span class="val" id="esv"></span></label><input type="range" id="es" min="0" max="2" step="0.05"></div>
+    </div>
+
+    <div class="hint">
+      <b>Keys:</b> <kbd>Space</kbd> replay · <kbd>R</kbd> random · <kbd>S</kbd> PNG · <kbd>V</kbd> SVG · <kbd>A</kbd> animate
+    </div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const el = (t,c) => { const e = document.createElement(t); if(c) e.className = c; return e; };
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+const gcd = (a,b) => { a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; };
+function hexA(h,a){ const n=parseInt(h.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+function hx(h){ const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function hexLerp(a,b,f){ const p=hx(a),q=hx(b); return `rgb(${Math.round(p[0]+(q[0]-p[0])*f)},${Math.round(p[1]+(q[1]-p[1])*f)},${Math.round(p[2]+(q[2]-p[2])*f)})`; }
+function hslHex(h,s,l){ s/=100; l/=100; const k=n=>(n+h/30)%12; const a=s*Math.min(l,1-l);
+  const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1)); const to=x=>Math.round(255*x).toString(16).padStart(2,'0');
+  return `#${to(f(0))}${to(f(8))}${to(f(4))}`; }
+const randHue = () => hslHex(Math.floor(Math.random()*360),85,60);
+
+/* ---- state (math-example gallery: live code sketches only) ---- */
+const style={ bg:'#0a0a14', trails:false };
+const anim={ animate:true, evolveSpeed:0.5, phase:0 };
+
+/* ---- code-sketch mode ---- */
+const SIDE_DOORS_SKETCH =
+`// Side Doors — a corridor with passages branching off the side walls.
+// Animate ON; try Trails. ctx, w, h, t, TAU.
+
+const N = 22, speed = 0.55, focal = Math.min(w, h) * 0.62, march = t * speed;
+const cx = w / 2 + Math.sin(t * 0.9) * w * 0.015;
+const cy = h / 2 + Math.sin(t * 1.7) * h * 0.010;
+const WX = 0.26, HY = 0.42;            // corridor half width / height (world)
+
+ctx.lineCap = 'butt';
+ctx.lineJoin = 'miter';
+
+ctx.strokeStyle = 'hsla(210, 50%, 45%, 0.16)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(0, 0); ctx.lineTo(cx, cy);
+ctx.moveTo(w, 0); ctx.lineTo(cx, cy);
+ctx.moveTo(0, h); ctx.lineTo(cx, cy);
+ctx.moveTo(w, h); ctx.lineTo(cx, cy);
+ctx.stroke();
+
+for (let i = N; i >= 1; i--) {
+  const z = i - (march % 1);
+  const s = focal / z;
+  if (WX * s < 0.4) continue;
+  const hue = (march * 40 + z * 16) % 360;
+  const light = Math.max(10, 64 - z * 6);
+  const alpha = Math.min(1, Math.max(0.05, 1.2 - z / N));
+  ctx.lineWidth = Math.min(15, Math.max(0.8, 6.5 / z));
+
+  // a passage opening in a side wall every 3rd layer, alternating sides
+  if (i % 3 === 0) {
+    const side = (i % 6 === 0) ? -1 : 1;
+    const z2 = z + 0.85, s2 = focal / z2;
+    const x1 = cx + side * WX * s,  x2 = cx + side * WX * s2;
+    const o1 = 0.30 * s, o2 = 0.30 * s2;
+    ctx.strokeStyle = \`hsla(\${(hue + 40) % 360}, 90%, \${light + 6}%, \${alpha})\`;
+    ctx.beginPath();
+    ctx.moveTo(x1, cy - o1); ctx.lineTo(x1, cy + o1);
+    ctx.lineTo(x2, cy + o2); ctx.lineTo(x2, cy - o2);
+    ctx.closePath(); ctx.stroke();
+  }
+
+  // main corridor doorway
+  ctx.strokeStyle = \`hsla(\${hue}, 85%, \${light}%, \${alpha})\`;
+  const hw = WX * s, hh = HY * s, top = cy - hh, bot = cy + hh;
+  ctx.beginPath();
+  ctx.moveTo(cx - hw, bot); ctx.lineTo(cx - hw, top);
+  ctx.lineTo(cx + hw, top); ctx.lineTo(cx + hw, bot);
+  ctx.stroke();
+}`;
+const TURNING_HALL_SKETCH =
+`// Turning Hall — the corridor curves as you walk down it.
+// Animate ON; try Trails. ctx, w, h, t, TAU.
+
+const N = 22, speed = 0.5, focal = Math.min(w, h) * 0.62, march = t * speed;
+const cy = h / 2 + Math.sin(t * 1.4) * h * 0.010;
+const WX = 0.26, HY = 0.42;
+
+ctx.lineCap = 'butt';
+ctx.lineJoin = 'miter';
+
+for (let i = N; i >= 1; i--) {
+  const z = i - (march % 1);
+  const s = focal / z;
+  if (WX * s < 0.4) continue;
+  // curving centre-line: far doors hold the vanishing point, near doors swing;
+  // the wave travels toward you over time so you keep rounding the bend
+  const bend = Math.sin(z * 0.45 - t * 0.9) * w * 0.16 * (1 - z / (N + 3));
+  const dx = w / 2 + bend;
+  const hue = (march * 45 + z * 14) % 360;
+  const light = Math.max(10, 64 - z * 6);
+  const alpha = Math.min(1, Math.max(0.05, 1.2 - z / N));
+  ctx.strokeStyle = \`hsla(\${hue}, 85%, \${light}%, \${alpha})\`;
+  ctx.lineWidth = Math.min(15, Math.max(0.8, 6.5 / z));
+  const hw = WX * s, hh = HY * s, top = cy - hh, bot = cy + hh;
+  ctx.beginPath();
+  ctx.moveTo(dx - hw, bot); ctx.lineTo(dx - hw, top);
+  ctx.lineTo(dx + hw, top); ctx.lineTo(dx + hw, bot);
+  ctx.stroke();
+}`;
+const SWINGING_DOORS_SKETCH =
+`// Swinging Doors — each door hinges open as you reach it.
+// Animate ON; try Trails. ctx, w, h, t, TAU.
+
+const N = 20, speed = 0.5, focal = Math.min(w, h) * 0.62, march = t * speed;
+const cx = w / 2, cy = h / 2;
+const WX = 0.28, HY = 0.44;
+
+ctx.lineCap = 'butt';
+ctx.lineJoin = 'miter';
+
+for (let i = N; i >= 1; i--) {
+  const z = i - (march % 1);
+  const s = focal / z;
+  if (WX * s < 0.4) continue;
+  const hw = WX * s, hh = HY * s, top = cy - hh, bot = cy + hh;
+  const hue = (march * 40 + z * 15) % 360;
+  const light = Math.max(12, 66 - z * 6);
+  const alpha = Math.min(1, Math.max(0.06, 1.2 - z / N));
+
+  // openness ramps up as the door nears the camera
+  const open = Math.min(1, Math.max(0, (6 - z) / 6));
+  const theta = open * (Math.PI / 2) * 0.95;
+  const hingeX = cx - hw;
+  const freeX = hingeX + (2 * hw) * Math.cos(theta);
+  const tilt = hh * 0.06 * open;
+
+  // filled leaf (so a closed door occludes what's behind it)
+  ctx.fillStyle = \`hsla(\${hue}, 70%, \${Math.max(8, light - 22)}%, \${0.85 * alpha})\`;
+  ctx.beginPath();
+  ctx.moveTo(hingeX, top);
+  ctx.lineTo(freeX, top - tilt);
+  ctx.lineTo(freeX, bot + tilt);
+  ctx.lineTo(hingeX, bot);
+  ctx.closePath(); ctx.fill();
+
+  // door frame
+  ctx.strokeStyle = \`hsla(\${hue}, 88%, \${light}%, \${alpha})\`;
+  ctx.lineWidth = Math.min(15, Math.max(0.8, 6.5 / z));
+  ctx.beginPath();
+  ctx.moveTo(cx - hw, bot); ctx.lineTo(cx - hw, top);
+  ctx.lineTo(cx + hw, top); ctx.lineTo(cx + hw, bot);
+  ctx.stroke();
+
+  // the swinging leaf's free edge
+  ctx.strokeStyle = \`hsla(\${(hue + 30) % 360}, 90%, \${light + 8}%, \${alpha})\`;
+  ctx.lineWidth = Math.min(8, Math.max(0.6, 4 / z));
+  ctx.beginPath();
+  ctx.moveTo(freeX, top - tilt); ctx.lineTo(freeX, bot + tilt);
+  ctx.stroke();
+}`;
+const WALK_SKETCH =
+`// Walk Through Doors — first-person POV down an endless corridor.
+// ARCHED = false -> squared corners; true -> round arches. Animate ON; try Trails.
+
+const ARCHED = false;
+const N      = 22;
+const speed  = 0.55;
+const focal  = Math.min(w, h) * 0.62;
+const march  = t * speed;
+
+const cx = w / 2 + Math.sin(t * 0.9) * w * 0.018;
+const cy = h / 2 + Math.sin(t * 1.7) * h * 0.012;
+
+ctx.lineCap = 'butt';
+ctx.lineJoin = 'miter';
+
+ctx.strokeStyle = 'hsla(0, 0%, 45%, 0.18)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(0, 0); ctx.lineTo(cx, cy);
+ctx.moveTo(w, 0); ctx.lineTo(cx, cy);
+ctx.moveTo(0, h); ctx.lineTo(cx, cy);
+ctx.moveTo(w, h); ctx.lineTo(cx, cy);
+ctx.stroke();
+
+for (let i = N; i >= 1; i--) {
+  const z = i - (march % 1);
+  const s = focal / z;
+  const hw = 0.26 * s, hh = 0.42 * s;
+  if (hw < 0.4) continue;
+  const alpha = Math.min(1, Math.max(0.05, 1.2 - z / N));
+  ctx.strokeStyle = \`hsla(0, 0%, 100%, \${alpha})\`;   // white lines; depth still reads via the fade
+  ctx.lineWidth = Math.min(16, Math.max(0.8, 7 / z));
+  doorway(cx, cy, hw, hh);
+}
+
+function doorway(cx, cy, hw, hh) {
+  const top = cy - hh, bot = cy + hh;
+  ctx.beginPath();
+  if (ARCHED) {
+    const sp = top + Math.min(hw, hh * 0.5);
+    ctx.moveTo(cx - hw, bot); ctx.lineTo(cx - hw, sp);
+    ctx.quadraticCurveTo(cx - hw, top, cx, top);
+    ctx.quadraticCurveTo(cx + hw, top, cx + hw, sp);
+    ctx.lineTo(cx + hw, bot);
+  } else {
+    ctx.moveTo(cx - hw, bot);
+    ctx.lineTo(cx - hw, top);
+    ctx.lineTo(cx + hw, top);
+    ctx.lineTo(cx + hw, bot);
+  }
+  ctx.stroke();
+}`;
+const SOUND_WAVES_SKETCH =
+`// Sound Waves — overlaid oscilloscope waveforms, tapered like a sound packet.
+// Animate ON to watch them travel. ctx, w, h, t, TAU.
+
+const mid = h / 2;
+const waves = 5;
+const step = Math.max(2, Math.floor(w / 260));
+
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+
+// faint baseline
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.12)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(0, mid); ctx.lineTo(w, mid);
+ctx.stroke();
+
+for (let k = 0; k < waves; k++) {
+  const freq = 2 + k * 1.6;                         // cycles across the width
+  const amp = h * 0.20 * (1 - k / (waves + 1));
+  const speed = 0.7 + k * 0.35;
+  const alpha = 0.85 - k * 0.13;
+  ctx.strokeStyle = 'hsla(0, 0%, 100%, ' + alpha + ')';
+  ctx.lineWidth = 2.4 - k * 0.32;
+  ctx.beginPath();
+  for (let x = 0; x <= w; x += step) {
+    const u = x / w;
+    const win = Math.sin(Math.PI * u);              // taper to 0 at both ends
+    const y = mid + Math.sin(u * freq * TAU + t * speed) * amp * win;
+    if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}`;
+const METATRON_SKETCH =
+`// Metatron's Cube — the 13 circles of the Fruit of Life with every centre joined.
+// Animate ON for a slow rotation. ctx, w, h, t, TAU.
+
+const cx = w / 2, cy = h / 2;
+const r = Math.min(w, h) * 0.092;
+const rot = t * 0.1;
+
+const pts = [{ x: 0, y: 0 }];
+for (let k = 0; k < 6; k++) { const a = k * TAU / 6 + rot; pts.push({ x: Math.cos(a) * 2 * r, y: Math.sin(a) * 2 * r }); }
+for (let k = 0; k < 6; k++) { const a = k * TAU / 6 + rot; pts.push({ x: Math.cos(a) * 4 * r, y: Math.sin(a) * 4 * r }); }
+
+// every centre connected to every other centre
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.26)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+for (let i = 0; i < pts.length; i++)
+  for (let j = i + 1; j < pts.length; j++) {
+    ctx.moveTo(cx + pts[i].x, cy + pts[i].y);
+    ctx.lineTo(cx + pts[j].x, cy + pts[j].y);
+  }
+ctx.stroke();
+
+// the 13 circles
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.9)';
+ctx.lineWidth = 1.5;
+for (let i = 0; i < pts.length; i++) {
+  ctx.beginPath();
+  ctx.arc(cx + pts[i].x, cy + pts[i].y, r, 0, TAU);
+  ctx.stroke();
+}`;
+const GRID_OF_LIFE_SKETCH =
+`// Grid of Life — Conway's Game of Life on a wrapping grid.
+// Animate ON to evolve; it reseeds when it dies out or stagnates. ctx, w, h, t, TAU.
+
+const cell = Math.max(10, Math.round(Math.min(w, h) / 38));
+const cols = Math.max(8, Math.floor(w / cell));
+const rows = Math.max(8, Math.floor(h / cell));
+const S = (globalThis.__gridOfLife = globalThis.__gridOfLife || {});
+
+function seed() {
+  S.grid = [];
+  for (let y = 0; y < rows; y++) {
+    const row = [];
+    for (let x = 0; x < cols; x++) row.push(Math.random() < 0.30 ? 1 : 0);
+    S.grid.push(row);
+  }
+  S.cols = cols; S.rows = rows; S.seedGen = S.gen || 0;
+}
+if (S.cols !== cols || S.rows !== rows || !S.grid) { S.gen = 0; seed(); }
+
+const targetGen = Math.floor(t * 4);               // ~4 generations per second
+while (S.gen < targetGen) {
+  const g = S.grid, ng = [];
+  let pop = 0;
+  for (let y = 0; y < rows; y++) {
+    const row = [];
+    for (let x = 0; x < cols; x++) {
+      let n = 0;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++)
+          if (dx || dy) n += g[(y + dy + rows) % rows][(x + dx + cols) % cols];
+      const alive = g[y][x] ? (n === 2 || n === 3) : (n === 3);
+      row.push(alive ? 1 : 0);
+      if (alive) pop++;
+    }
+    ng.push(row);
+  }
+  S.grid = ng; S.gen++;
+  if (pop === 0 || S.gen - S.seedGen > 140) seed();
+}
+
+// draw live cells
+ctx.fillStyle = 'hsla(0, 0%, 100%, 0.92)';
+const pad = Math.max(1, cell * 0.08);
+for (let y = 0; y < rows; y++)
+  for (let x = 0; x < cols; x++)
+    if (S.grid[y][x]) ctx.fillRect(x * cell + pad, y * cell + pad, cell - 2 * pad, cell - 2 * pad);`;
+const PHYLLOTAXIS_SKETCH =
+`// Phyllotaxis (sunflower) — each seed sits one golden angle (137.5 deg) from the last.
+// Animate ON for a slow turn. ctx, w, h, t, TAU.
+
+const cx = w / 2, cy = h / 2;
+const phi = (1 + Math.sqrt(5)) / 2;
+const golden = TAU / (phi * phi);                  // the golden angle, ~137.5 deg
+const N = 600;
+const R = Math.min(w, h) * 0.46;
+const scale = R / Math.sqrt(N);                    // keeps the head inside the canvas
+const dot = Math.max(0.8, scale * 0.5);
+const spin = t * 0.12;
+
+for (let i = 1; i <= N; i++) {
+  const a = i * golden + spin;
+  const rad = scale * Math.sqrt(i);
+  const x = cx + Math.cos(a) * rad;
+  const y = cy + Math.sin(a) * rad;
+  const f = i / N;                                 // 0 at centre -> 1 at rim
+  ctx.fillStyle = 'hsla(45, 85%, ' + (55 + 25 * f) + '%, ' + (0.4 + 0.55 * f) + ')';
+  ctx.beginPath();
+  ctx.arc(x, y, dot, 0, TAU);
+  ctx.fill();
+}`;
+const FIBONACCI_SKETCH =
+`// Fibonacci — the golden spiral from Fibonacci squares + quarter-circle arcs.
+// Animate ON for a slow turn. ctx, w, h, t, TAU.
+
+const fib = [1, 1, 2, 3, 5, 8, 13, 21, 34];
+const n = 8;
+
+// build the Fibonacci square tiling (math coords, y up)
+let minx = 0, miny = 0, maxx = 1, maxy = 1;
+const sq = [{ x0: 0, y0: 0, x1: 1, y1: 1, dir: 'S' }];
+const dn = ['L', 'U', 'R', 'D'];
+for (let i = 1; i <= n; i++) {
+  const s = fib[i], d = (i - 1) % 4;
+  let x0, y0;
+  if (d === 0) { x0 = minx - s; y0 = miny; minx -= s; }
+  else if (d === 1) { x0 = minx; y0 = maxy; maxy += s; }
+  else if (d === 2) { x0 = maxx; y0 = miny; maxx += s; }
+  else { x0 = minx; y0 = miny - s; miny -= s; }
+  sq.push({ x0: x0, y0: y0, x1: x0 + s, y1: y0 + s, dir: dn[d] });
+}
+
+// fit to a circle (rotation never clips); transform = rotate in math space then flip y to screen
+const bcx = (minx + maxx) / 2, bcy = (miny + maxy) / 2;
+let maxR = 1;
+for (let i = 0; i < sq.length; i++) {
+  const s = sq[i], cs = [[s.x0, s.y0], [s.x1, s.y0], [s.x1, s.y1], [s.x0, s.y1]];
+  for (let j = 0; j < 4; j++) maxR = Math.max(maxR, Math.hypot(cs[j][0] - bcx, cs[j][1] - bcy));
+}
+const scale = Math.min(w, h) * 0.46 / maxR;
+const rot = t * 0.08, cphi = Math.cos(rot), sphi = Math.sin(rot);
+const cx = w / 2, cy = h / 2;
+function T(mx, my) {
+  const dx = mx - bcx, dy = my - bcy;
+  return [cx + (dx * cphi - dy * sphi) * scale, cy - (dx * sphi + dy * cphi) * scale];
+}
+
+// corner helpers + the verified per-square pivot rule
+const C = { BL: s => [s.x0, s.y0], BR: s => [s.x1, s.y0], TR: s => [s.x1, s.y1], TL: s => [s.x0, s.y1] };
+const ADJ = { BL: ['BR', 'TL'], BR: ['BL', 'TR'], TR: ['BR', 'TL'], TL: ['BL', 'TR'] };
+const PIV = { S: 'TL', L: 'TR', U: 'BR', R: 'BL', D: 'TL' };
+function arcPts(s) {
+  const pk = PIV[s.dir], P = C[pk](s), r = s.x1 - s.x0;
+  const A = C[ADJ[pk][0]](s), B = C[ADJ[pk][1]](s);
+  let a0 = Math.atan2(A[1] - P[1], A[0] - P[0]), a1 = Math.atan2(B[1] - P[1], B[0] - P[0]);
+  let dd = a1 - a0; while (dd > Math.PI) dd -= TAU; while (dd < -Math.PI) dd += TAU;
+  const pts = [], M = 22;
+  for (let k = 0; k <= M; k++) { const a = a0 + dd * k / M; pts.push([P[0] + r * Math.cos(a), P[1] + r * Math.sin(a)]); }
+  return pts;
+}
+const dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+
+// faint squares
+ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.14)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+for (let i = 0; i < sq.length; i++) {
+  const s = sq[i], a = T(s.x0, s.y0), b = T(s.x1, s.y0), c = T(s.x1, s.y1), d = T(s.x0, s.y1);
+  ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.lineTo(a[0], a[1]);
+}
+ctx.stroke();
+
+// stitch the quarter-arcs into one continuous spiral, then draw it in gold
+let spiral;
+{
+  let a = arcPts(sq[0]); const b = arcPts(sq[1]);
+  const eN = a[a.length - 1], eF = a[0];
+  const dNo = Math.min(dist(eN, b[0]), dist(eN, b[b.length - 1]));
+  const dFl = Math.min(dist(eF, b[0]), dist(eF, b[b.length - 1]));
+  spiral = dFl < dNo ? a.reverse() : a;
+}
+for (let i = 1; i <= n; i++) {
+  let a = arcPts(sq[i]);
+  const tail = spiral[spiral.length - 1];
+  if (dist(tail, a[a.length - 1]) < dist(tail, a[0])) a = a.reverse();
+  spiral = spiral.concat(a.slice(1));
+}
+ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+ctx.strokeStyle = 'hsla(45, 90%, 62%, 0.95)';
+ctx.lineWidth = 2.2;
+ctx.beginPath();
+for (let i = 0; i < spiral.length; i++) {
+  const p = T(spiral[i][0], spiral[i][1]);
+  if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+}
+ctx.stroke();`;
+const LISSAJOUS_SKETCH =
+`// Lissajous — the classic table of x=sin(a*th + d), y=sin(b*th) curves.
+// Animate ON to sweep the phase. ctx, w, h, t, TAU.
+
+const g = 5;
+const cellW = w / g, cellH = h / g;
+const rad = Math.min(cellW, cellH) * 0.40;
+const delta = t * 0.5, steps = 200;
+ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+ctx.lineWidth = 1.4;
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.9)';
+for (let row = 0; row < g; row++) {
+  for (let col = 0; col < g; col++) {
+    const a = col + 1, b = row + 1;
+    const ox = cellW * (col + 0.5), oy = cellH * (row + 0.5);
+    ctx.beginPath();
+    for (let k = 0; k <= steps; k++) {
+      const th = k / steps * TAU;
+      const x = ox + Math.sin(a * th + delta) * rad;
+      const y = oy + Math.sin(b * th) * rad;
+      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}`;
+const LORENZ_SKETCH =
+`// Lorenz Attractor — the butterfly of chaos (sigma 10, rho 28, beta 8/3).
+// Animate ON to rotate the view. ctx, w, h, t, TAU.
+
+const sigma = 10, rho = 28, beta = 8 / 3, dt = 0.006;
+let x = 0.1, y = 0, z = 0;
+for (let i = 0; i < 400; i++) {                 // warm-up: skip the fly-in from origin
+  const ddx = sigma * (y - x), ddy = x * (rho - z) - y, ddz = x * y - beta * z;
+  x += ddx * dt; y += ddy * dt; z += ddz * dt;
+}
+const rot = t * 0.25, cr = Math.cos(rot), sr = Math.sin(rot);
+const sc = Math.min(w, h) / 62, cx = w / 2, cy = h / 2;
+ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+ctx.strokeStyle = 'hsla(190, 80%, 68%, 0.85)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+for (let i = 0; i < 5200; i++) {
+  const ddx = sigma * (y - x), ddy = x * (rho - z) - y, ddz = x * y - beta * z;
+  x += ddx * dt; y += ddy * dt; z += ddz * dt;
+  const px = cx + (x * cr - y * sr) * sc;
+  const py = cy + (z - 25) * sc;
+  if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+}
+ctx.stroke();`;
+const HILBERT_SKETCH =
+`// Hilbert Curve — a space-filling fractal (order 6). ctx, w, h, t, TAU.
+
+const order = 6;
+const m = Math.min(w, h) * 0.86;
+const ox = w / 2 - m / 2, oy = h / 2 - m / 2;
+const pts = [];
+function hil(x, y, xi, xj, yi, yj, n) {
+  if (n <= 0) { pts.push([x + (xi + yi) / 2, y + (xj + yj) / 2]); return; }
+  hil(x, y, yi / 2, yj / 2, xi / 2, xj / 2, n - 1);
+  hil(x + xi / 2, y + xj / 2, xi / 2, xj / 2, yi / 2, yj / 2, n - 1);
+  hil(x + xi / 2 + yi / 2, y + xj / 2 + yj / 2, xi / 2, xj / 2, yi / 2, yj / 2, n - 1);
+  hil(x + xi / 2 + yi, y + xj / 2 + yj, -yi / 2, -yj / 2, -xi / 2, -xj / 2, n - 1);
+}
+hil(ox, oy, m, 0, 0, m, order);
+ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.9)';
+ctx.lineWidth = 1.3;
+ctx.beginPath();
+for (let i = 0; i < pts.length; i++) { const p = pts[i]; if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]); }
+ctx.stroke();`;
+const KOCH_SKETCH =
+`// Koch Snowflake — the classic fractal curve (depth 4). Animate ON for a slow turn.
+// ctx, w, h, t, TAU.
+
+const depth = 4;
+const R = Math.min(w, h) * 0.42;
+const cx = w / 2, cy = h / 2, rot = t * 0.1;
+let pts = [];
+for (let k = 0; k < 3; k++) { const ang = -Math.PI / 2 + k * TAU / 3 + rot; pts.push([cx + Math.cos(ang) * R, cy + Math.sin(ang) * R]); }
+pts.push(pts[0]);
+for (let d = 0; d < depth; d++) {
+  const np = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const A = pts[i], B = pts[i + 1];
+    const dx = (B[0] - A[0]) / 3, dy = (B[1] - A[1]) / 3;
+    const p1 = [A[0] + dx, A[1] + dy], p2 = [A[0] + 2 * dx, A[1] + 2 * dy];
+    const vx = p2[0] - p1[0], vy = p2[1] - p1[1];
+    const c1 = [p1[0] + vx * 0.5 - vy * 0.8660254, p1[1] + vx * 0.8660254 + vy * 0.5];
+    const c2 = [p1[0] + vx * 0.5 + vy * 0.8660254, p1[1] - vx * 0.8660254 + vy * 0.5];
+    const apex = (Math.hypot(c1[0] - cx, c1[1] - cy) > Math.hypot(c2[0] - cx, c2[1] - cy)) ? c1 : c2;
+    np.push(A, p1, apex, p2);
+  }
+  np.push(pts[pts.length - 1]);
+  pts = np;
+}
+ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+ctx.strokeStyle = 'hsla(195, 45%, 86%, 0.92)';
+ctx.lineWidth = 1.3;
+ctx.beginPath();
+for (let i = 0; i < pts.length; i++) { const p = pts[i]; if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]); }
+ctx.stroke();`;
+const PRIME_SPIRAL_SKETCH =
+`// Prime Spiral (Ulam) — integers on a square spiral; primes lit up. ctx, w, h, t, TAU.
+
+const N = 3000;
+const cell = Math.max(4, Math.round(Math.min(w, h) / 92));
+const prime = new Array(N + 1).fill(true);
+prime[0] = prime[1] = false;
+for (let i = 2; i * i <= N; i++) if (prime[i]) for (let j = i * i; j <= N; j += i) prime[j] = false;
+const cx = w / 2, cy = h / 2;
+let x = 0, y = 0, dx = 1, dy = 0, segLen = 1, segRem = 1, turns = 0;
+ctx.fillStyle = 'hsla(0, 0%, 100%, 0.9)';
+for (let v = 1; v <= N; v++) {
+  if (prime[v]) {
+    const px = cx + x * cell, py = cy - y * cell;
+    if (px > -cell && px < w + cell && py > -cell && py < h + cell) { ctx.beginPath(); ctx.arc(px, py, cell * 0.36, 0, TAU); ctx.fill(); }
+  }
+  x += dx; y += dy; segRem--;
+  if (segRem === 0) { const ndx = -dy, ndy = dx; dx = ndx; dy = ndy; turns++; if (turns % 2 === 0) segLen++; segRem = segLen; }
+}`;
+const PYTHAGORAS_SKETCH =
+`// Pythagoras Tree — recursive squares branching like a tree; sways with t.
+// Animate ON for wind. ctx, w, h, t, TAU.
+
+const depth = 9;
+const base = Math.min(w, h) * 0.12;
+const baseY = h * 0.94;
+let level = [[[w / 2 - base / 2, baseY], [w / 2 + base / 2, baseY]]];
+const alpha = Math.PI / 4 + Math.sin(t * 0.8) * 0.18;
+const ca = Math.cos(alpha), sa = Math.sin(alpha);
+const rot = (px, py, c, s) => [px * c - py * s, px * s + py * c];
+ctx.lineJoin = 'round';
+for (let d = 0; d <= depth; d++) {
+  const f = d / depth;
+  ctx.fillStyle = 'hsla(' + (28 + f * 92) + ', 55%, ' + (28 + f * 26) + '%, 0.92)';
+  ctx.beginPath();
+  const next = [];
+  for (let s = 0; s < level.length; s++) {
+    const A = level[s][0], B = level[s][1];
+    const vx = B[0] - A[0], vy = B[1] - A[1];
+    const ux = vy, uy = -vx;
+    const C = [B[0] + ux, B[1] + uy], D = [A[0] + ux, A[1] + uy];
+    ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineTo(C[0], C[1]); ctx.lineTo(D[0], D[1]); ctx.lineTo(A[0], A[1]);
+    if (d < depth) {
+      const ex = C[0] - D[0], ey = C[1] - D[1];
+      const r1 = rot(ex, ey, ca, sa), r2 = rot(ex, ey, ca, -sa);
+      const ap1 = [D[0] + ca * r1[0], D[1] + ca * r1[1]];
+      const ap2 = [D[0] + ca * r2[0], D[1] + ca * r2[1]];
+      const mx = (A[0] + B[0] + C[0] + D[0]) / 4, my = (A[1] + B[1] + C[1] + D[1]) / 4;
+      const apex = (Math.hypot(ap1[0] - mx, ap1[1] - my) > Math.hypot(ap2[0] - mx, ap2[1] - my)) ? ap1 : ap2;
+      next.push([D, apex]); next.push([apex, C]);
+    }
+  }
+  ctx.fill();
+  level = next;
+}`;
+const MANDELBROT_SKETCH =
+`// Mandelbrot Set — iterate z -> z^2 + c; colour by escape time. (Raster: export as PNG.)
+// ctx, w, h, t, TAU.
+
+const S = (globalThis.__mandel = globalThis.__mandel || {});
+const CW = Math.min(640, Math.round(w)), CH = Math.max(1, Math.round(CW * h / w));
+const key = CW + 'x' + CH;
+if (S.key !== key) {
+  S.key = key;
+  const off = document.createElement('canvas'); off.width = CW; off.height = CH;
+  const octx = off.getContext('2d'), img = octx.createImageData(CW, CH), dat = img.data, maxIt = 90;
+  const minX = -2.4, maxX = 1.0, minY = -1.3, maxY = 1.3;
+  for (let py = 0; py < CH; py++) {
+    const y0 = minY + (maxY - minY) * py / CH;
+    for (let px = 0; px < CW; px++) {
+      const x0 = minX + (maxX - minX) * px / CW;
+      let zx = 0, zy = 0, it = 0;
+      while (zx * zx + zy * zy <= 4 && it < maxIt) { const xt = zx * zx - zy * zy + x0; zy = 2 * zx * zy + y0; zx = xt; it++; }
+      const o = (py * CW + px) * 4;
+      if (it >= maxIt) { dat[o] = dat[o + 1] = dat[o + 2] = 8; }
+      else { const m = it / maxIt; dat[o] = 9 + 255 * Math.sqrt(m); dat[o + 1] = 30 + 200 * m * m; dat[o + 2] = 70 + 180 * Math.sqrt(m); }
+      dat[o + 3] = 255;
+    }
+  }
+  octx.putImageData(img, 0, 0); S.canvas = off;
+}
+ctx.drawImage(S.canvas, 0, 0, w, h);`;
+const JULIA_SKETCH =
+`// Julia Set — same z -> z^2 + c, but c is fixed and z starts at the pixel. (Raster: PNG.)
+// ctx, w, h, t, TAU.
+
+const S = (globalThis.__julia = globalThis.__julia || {});
+const cRe = -0.8, cIm = 0.156;
+const CW = Math.min(640, Math.round(w)), CH = Math.max(1, Math.round(CW * h / w));
+const key = CW + 'x' + CH;
+if (S.key !== key) {
+  S.key = key;
+  const off = document.createElement('canvas'); off.width = CW; off.height = CH;
+  const octx = off.getContext('2d'), img = octx.createImageData(CW, CH), dat = img.data, maxIt = 110, span = 3.0;
+  for (let py = 0; py < CH; py++) {
+    const y0 = (py / CH - 0.5) * span;
+    for (let px = 0; px < CW; px++) {
+      const x0 = (px / CW - 0.5) * span * (CW / CH);
+      let zx = x0, zy = y0, it = 0;
+      while (zx * zx + zy * zy <= 4 && it < maxIt) { const xt = zx * zx - zy * zy + cRe; zy = 2 * zx * zy + cIm; zx = xt; it++; }
+      const o = (py * CW + px) * 4, m = it / maxIt;
+      if (it >= maxIt) { dat[o] = dat[o + 1] = dat[o + 2] = 8; }
+      else { dat[o] = 20 + 235 * m; dat[o + 1] = 12 + 120 * Math.sqrt(m); dat[o + 2] = 60 + 195 * (1 - m); }
+      dat[o + 3] = 255;
+    }
+  }
+  octx.putImageData(img, 0, 0); S.canvas = off;
+}
+ctx.drawImage(S.canvas, 0, 0, w, h);`;
+const BARNSLEY_FERN_SKETCH =
+`// Barnsley Fern — an IFS 'chaos game': each step picks one of 4 affine maps at random.
+// (Raster: export as PNG.) ctx, w, h, t, TAU.
+
+const S = (globalThis.__fern = globalThis.__fern || {});
+const key = Math.round(w) + 'x' + Math.round(h);
+if (S.key !== key) {
+  S.key = key; S.x = 0; S.y = 0;
+  S.off = document.createElement('canvas'); S.off.width = Math.round(w); S.off.height = Math.round(h);
+  S.octx = S.off.getContext('2d');
+}
+const octx = S.octx, W = S.off.width, H = S.off.height;
+octx.fillStyle = 'hsla(120, 60%, 65%, 0.85)';
+let x = S.x, y = S.y;
+for (let i = 0; i < 1400; i++) {
+  const r = Math.random(); let nx, ny;
+  if (r < 0.01) { nx = 0; ny = 0.16 * y; }
+  else if (r < 0.86) { nx = 0.85 * x + 0.04 * y; ny = -0.04 * x + 0.85 * y + 1.6; }
+  else if (r < 0.93) { nx = 0.20 * x - 0.26 * y; ny = 0.23 * x + 0.22 * y + 1.6; }
+  else { nx = -0.15 * x + 0.28 * y; ny = 0.26 * x + 0.24 * y + 0.44; }
+  x = nx; y = ny;
+  octx.fillRect(W * (x + 2.8) / 5.6, H - H * y / 11, 1, 1);
+}
+S.x = x; S.y = y;
+ctx.drawImage(S.off, 0, 0, w, h);`;
+const COLLATZ_SKETCH =
+`// Collatz (3n+1) — each number's hailstone path, turned by parity; overlaid into a coral.
+// (Raster: export as PNG.) ctx, w, h, t, TAU.
+
+const S = (globalThis.__collatz = globalThis.__collatz || {});
+const key = Math.round(w) + 'x' + Math.round(h);
+if (S.key !== key) {
+  S.key = key;
+  const seg = Math.min(w, h) * 0.02, aEven = 0.16, aOdd = -0.32, paths = [];
+  let mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9;
+  for (let n = 2; n <= 1000; n++) {
+    const seq = []; let m = n;
+    while (m !== 1) { seq.push(m); m = (m % 2 === 0) ? m / 2 : 3 * m + 1; }
+    seq.push(1); seq.reverse();
+    let x = 0, y = 0, ang = -Math.PI / 2; const pts = [[0, 0]];
+    for (let i = 1; i < seq.length; i++) {
+      ang += (seq[i] % 2 === 0) ? aEven : aOdd;
+      x += Math.cos(ang) * seg; y += Math.sin(ang) * seg; pts.push([x, y]);
+      if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y;
+    }
+    paths.push(pts);
+  }
+  const sc = Math.min(w / (mxx - mnx || 1), h / (mxy - mny || 1)) * 0.9;
+  const ox = w / 2 - (mnx + mxx) / 2 * sc, oy = h / 2 - (mny + mxy) / 2 * sc;
+  const off = document.createElement('canvas'); off.width = Math.round(w); off.height = Math.round(h);
+  const octx = off.getContext('2d');
+  octx.lineCap = 'round'; octx.lineJoin = 'round'; octx.lineWidth = 1;
+  octx.strokeStyle = 'hsla(140, 65%, 70%, 0.14)';
+  octx.beginPath();
+  for (const p of paths) for (let i = 0; i < p.length; i++) { const X = ox + p[i][0] * sc, Y = oy + p[i][1] * sc; if (i === 0) octx.moveTo(X, Y); else octx.lineTo(X, Y); }
+  octx.stroke();
+  S.off = off;
+}
+ctx.drawImage(S.off, 0, 0, w, h);`;
+const DRAGON_CURVE_SKETCH =
+`// Dragon Curve — fold a strip in half repeatedly; every crease becomes a 90-degree turn.
+// ctx, w, h, t, TAU.
+
+const S = (globalThis.__dragon = globalThis.__dragon || {});
+const order = 13;
+if (!S.pts || S.order !== order) {
+  S.order = order;
+  const dxs = [1, 0, -1, 0], dys = [0, 1, 0, -1];
+  let dir = 0, x = 0, y = 0; const pts = [[0, 0]], total = 1 << order;
+  for (let i = 1; i < total; i++) {
+    x += dxs[dir]; y += dys[dir]; pts.push([x, y]);
+    const right = (((i & -i) << 1) & i) !== 0;
+    dir = (dir + (right ? 3 : 1)) % 4;
+  }
+  x += dxs[dir]; y += dys[dir]; pts.push([x, y]);
+  let mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9;
+  for (const p of pts) { if (p[0] < mnx) mnx = p[0]; if (p[0] > mxx) mxx = p[0]; if (p[1] < mny) mny = p[1]; if (p[1] > mxy) mxy = p[1]; }
+  S.pts = pts; S.bb = [mnx, mny, mxx, mxy];
+}
+const bb = S.bb, sc = Math.min(w / (bb[2] - bb[0] || 1), h / (bb[3] - bb[1] || 1)) * 0.86;
+const ox = w / 2 - (bb[0] + bb[2]) / 2 * sc, oy = h / 2 - (bb[1] + bb[3]) / 2 * sc;
+ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 1.2;
+ctx.strokeStyle = 'hsla(280, 70%, 74%, 0.9)';
+ctx.beginPath();
+const pts = S.pts;
+for (let i = 0; i < pts.length; i++) { const X = ox + pts[i][0] * sc, Y = oy + pts[i][1] * sc; if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y); }
+ctx.stroke();`;
+const FOURIER_SKETCH =
+`// Fourier Epicycles — odd harmonics (4/n.pi).sin(n.t) as stacked rotating circles
+// sum to a square wave. Animate ON. ctx, w, h, t, TAU.
+
+const S = (globalThis.__fourier = globalThis.__fourier || { trace: [] });
+if (S.h !== h) { S.h = h; S.trace = []; }
+const terms = 6, cyc = h * 0.5, baseR = Math.min(w, h) * 0.18, cxc = w * 0.30;
+let px = cxc, py = cyc;
+ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+for (let k = 0; k < terms; k++) {
+  const n = 2 * k + 1, r = baseR * (4 / (n * Math.PI));
+  ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.16)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.stroke();
+  const ang = n * t, nx = px + r * Math.cos(ang), ny = py + r * Math.sin(ang);
+  ctx.strokeStyle = 'hsla(45, 90%, 65%, 0.7)';
+  ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(nx, ny); ctx.stroke();
+  px = nx; py = ny;
+}
+S.trace.unshift(py);
+const maxLen = 240; if (S.trace.length > maxLen) S.trace.length = maxLen;
+const waveX0 = cxc + baseR + 30, dx = (w - waveX0 - 8) / maxLen;
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.25)'; ctx.lineWidth = 1;
+ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(waveX0, S.trace[0]); ctx.stroke();
+ctx.strokeStyle = 'hsla(45, 90%, 65%, 0.95)'; ctx.lineWidth = 1.6;
+ctx.beginPath();
+for (let i = 0; i < S.trace.length; i++) { const X = waveX0 + i * dx, Y = S.trace[i]; if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y); }
+ctx.stroke();`;
+const SIERPINSKI_SKETCH =
+`// Sierpinski Triangle — remove the middle of each triangle, forever (depth 7).
+// Animate ON for a slow turn. ctx, w, h, t, TAU.
+
+const depth = 7;
+const R = Math.min(w, h) * 0.46;
+const cx = w / 2, cy = h / 2 + R * 0.12, rot = t * 0.08;
+const v = [];
+for (let k = 0; k < 3; k++) { const a = -Math.PI / 2 + k * TAU / 3 + rot; v.push([cx + Math.cos(a) * R, cy + Math.sin(a) * R]); }
+ctx.fillStyle = 'hsla(0, 0%, 100%, 0.9)';
+ctx.beginPath();
+function tri(a, b, c, n) {
+  if (n === 0) { ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.closePath(); return; }
+  const ab = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], bc = [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2], ca = [(c[0] + a[0]) / 2, (c[1] + a[1]) / 2];
+  tri(a, ab, ca, n - 1); tri(ab, b, bc, n - 1); tri(ca, bc, c, n - 1);
+}
+tri(v[0], v[1], v[2], depth);
+ctx.fill();`;
+const SKETCHES = [
+  { name: 'Doors',           code: WALK_SKETCH,        info: `A first-person corridor — a tiny lesson in <b>perspective projection</b>. An object at depth <code>z</code> appears at size proportional to <code>1/z</code>, so we loop depth layers, scale each by <code>focal/z</code>, and recycle the nearest one as you "walk" forward.` },
+  { name: 'Side Doors',      code: SIDE_DOORS_SKETCH,  info: `The same <code>1/z</code> perspective, with trapezoidal openings cut into the side walls. Each opening's near and far edges use the wall's own <code>focal/z</code> at two different depths, so the gaps foreshorten correctly.` },
+  { name: 'Turning Hall',    code: TURNING_HALL_SKETCH,info: `A corridor whose centre-line bends by <code>sin(z·k − t)</code>, weighted by <code>(1 − z/N)</code> so the far end stays pinned to the vanishing point while the near hall swings — and the bend travels toward you.` },
+  { name: 'Swinging Doors',  code: SWINGING_DOORS_SKETCH, info: `A perspective corridor where each door hinges open as you reach it. The free edge foreshortens by <code>cos(θ)</code> as it swings, and a filled leaf occludes the doors behind it.` },
+  { name: 'Sound Waves',     code: SOUND_WAVES_SKETCH, info: `Overlaid sine waves <code>sin(2π·f·x + t)</code> at rising frequencies, each multiplied by a window <code>sin(πx)</code> that tapers both ends — like an oscilloscope tracing a packet of sound.` },
+  { name: "Metatron's Cube", code: METATRON_SKETCH,    info: `The 13 circles of the "Fruit of Life" (a centre, a hexagon at radius <code>2r</code>, another at <code>4r</code>) with a straight line joining <b>every</b> pair of centres. Those 78 lines contain the silhouettes of the Platonic solids.` },
+  { name: 'Grid of Life',    code: GRID_OF_LIFE_SKETCH,info: `Conway's <b>Game of Life</b>. Each cell counts its 8 neighbours: a live cell survives on 2–3, a dead cell is born on exactly 3. These two rules alone produce gliders, oscillators and chaos. It reseeds when it dies out.` },
+  { name: 'Phyllotaxis',     code: PHYLLOTAXIS_SKETCH, info: `How a sunflower packs seeds. Seed <code>n</code> sits at angle <code>n × 137.5°</code> — the <b>golden angle</b>, <code>360°/φ²</code> — and radius <code>c·√n</code>. Because the golden angle never lines up, seeds fill space as tightly as possible.` },
+  { name: 'Fibonacci',       code: FIBONACCI_SKETCH,   info: `The <b>golden spiral</b>. Squares with Fibonacci side lengths (1, 1, 2, 3, 5, 8…) tile a golden rectangle; a quarter-circle inside each square joins into a spiral that grows by <code>φ</code> every quarter-turn.` },
+  { name: 'Lissajous',       code: LISSAJOUS_SKETCH,   info: `The table of curves <code>x = sin(a·θ), y = sin(b·θ)</code>. The frequency ratio <code>a:b</code> sets the knot; the animated phase makes each figure breathe. You see these whenever two signals drive an oscilloscope.` },
+  { name: 'Lorenz Attractor',code: LORENZ_SKETCH,      info: `A 3-equation weather model: <code>x'=σ(y−x)</code>, <code>y'=x(ρ−z)−y</code>, <code>z'=xy−βz</code>. It never repeats yet stays trapped on a butterfly-shaped <b>strange attractor</b> — the birthplace of chaos theory and the "butterfly effect".` },
+  { name: 'Hilbert Curve',   code: HILBERT_SKETCH,     info: `A <b>space-filling</b> fractal: one line that visits every cell of a grid without crossing itself, built by recursively rotating and linking four smaller copies. Points close on the line stay close in space — handy for image and database indexing.` },
+  { name: 'Koch Snowflake',  code: KOCH_SKETCH,        info: `Replace the middle third of every edge with a triangular bump, forever. The perimeter multiplies by <code>4/3</code> each step → <b>infinite length around a finite area</b>. Its fractal dimension is <code>log4/log3 ≈ 1.26</code>.` },
+  { name: 'Prime Spiral',    code: PRIME_SPIRAL_SKETCH,info: `<b>Ulam's spiral</b>. Write 1, 2, 3… along a square spiral and light up the primes. They fall on surprising diagonal streaks — the fingerprint of prime-rich polynomials like <code>4x²+bx+c</code>, still not fully understood.` },
+  { name: 'Pythagoras Tree', code: PYTHAGORAS_SKETCH,  info: `From a square, raise two smaller squares on top meeting at a right angle — the areas obey <code>a² + b² = c²</code>. Recurse on each new square. The branch angle (swaying here) decides how the "tree" leans.` },
+  { name: 'Mandelbrot',      code: MANDELBROT_SKETCH,  info: `For each point <code>c</code>, iterate <code>z → z² + c</code> from <code>z = 0</code>; colour by how fast it escapes. Points that never escape (black) form the <b>Mandelbrot set</b> — endless detail at every zoom. <i>Raster: use PNG export.</i>` },
+  { name: 'Julia',           code: JULIA_SKETCH,       info: `The same map <code>z → z² + c</code>, but now <code>c</code> is fixed and the <b>starting</b> <code>z</code> is the pixel. Every <code>c</code> gives a different Julia set; this is <code>c = −0.8 + 0.156i</code>. <i>Raster: use PNG export.</i>` },
+  { name: 'Barnsley Fern',   code: BARNSLEY_FERN_SKETCH, info: `An <b>iterated function system</b>: repeatedly apply one of four affine maps chosen at random (the "chaos game"). Pure randomness, yet the points always settle onto exactly the same fern. <i>Raster: use PNG export.</i>` },
+  { name: 'Collatz',         code: COLLATZ_SKETCH,     info: `The <b>3n+1 conjecture</b>: from any <code>n</code>, take <code>n/2</code> if even or <code>3n+1</code> if odd — you always seem to reach 1. Each number's path is drawn from the root, turning by parity, overlapping into a coral. Unproven for 85+ years. <i>Raster: PNG.</i>` },
+  { name: 'Dragon Curve',    code: DRAGON_CURVE_SKETCH,info: `Fold a strip of paper in half again and again, then open every crease to 90°. The edge traces the <b>Heighway dragon</b> — a fractal that tiles the plane perfectly and never crosses itself.` },
+  { name: 'Fourier',         code: FOURIER_SKETCH,     info: `Any periodic signal is a sum of sines. Here the odd harmonics <code>(4/nπ)·sin(n·t)</code> are drawn as stacked rotating circles; the tip's height traces a <b>square wave</b> on the right. This is the heart of Fourier analysis.` },
+  { name: 'Sierpinski',      code: SIERPINSKI_SKETCH,  info: `Take a triangle, remove its middle quarter, and repeat on the three corners forever. The limit has <b>zero area but infinite edge</b> — and it secretly appears in Pascal's triangle mod 2 and in the chaos game.` },
+];
+const CODE_KEY='spiroloom.sketch';
+let codeText = (function(){ try{ return localStorage.getItem(CODE_KEY) || WALK_SKETCH; }catch(e){ return WALK_SKETCH; } })(), codeFn = null;
+function saveSketch(){ try{ localStorage.setItem(CODE_KEY, codeText); }catch(e){} }
+function compileCode(){
+  try { codeFn = new Function('ctx','w','h','t','TAU', codeText); setCodeErr(''); }
+  catch(e){ setCodeErr('Syntax: ' + e.message); }
+}
+function setCodeErr(msg){ const e=$('#err'); if(e) e.textContent=msg; }
+function buildEditor(box){
+  const hint=el('div','codehint'); hint.innerHTML='Live JS — edit and it redraws as you type. Globals: <code style="color:var(--accent)">ctx, w, h, t, TAU</code>. Auto-saved.';
+  const ta=el('textarea'); ta.id='code'; ta.value=codeText; ta.spellcheck=false;
+  ta.addEventListener('input',()=>{ codeText=ta.value; saveSketch(); compileCode(); refreshInfo(); dirty=true; });
+  ta.addEventListener('keydown',e=>{
+    if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart, en=ta.selectionEnd;
+      ta.value=ta.value.slice(0,s)+'  '+ta.value.slice(en); ta.selectionStart=ta.selectionEnd=s+2;
+      codeText=ta.value; saveSketch(); compileCode(); refreshInfo(); dirty=true; }
+  });
+  const err=el('div','err'); err.id='err';
+  box.append(hint,ta,err); setCodeErr('');
+}
+function loadExample(i){
+  codeText=SKETCHES[i].code;
+  const ta=$('#code'); if(ta) ta.value=codeText;
+  saveSketch(); compileCode(); refreshInfo(); anim.phase=0; dirty=true;
+}
+function buildExamples(){
+  const box=$('#examples'); box.innerHTML='';
+  SKETCHES.forEach((sk,i)=>{
+    const b=el('button'); b.textContent=sk.name; b.dataset.i=i;
+    b.onclick=()=>{
+      if(SKETCHES.findIndex(x=>x.code===codeText)<0 && !confirm('Load "'+sk.name+'"? This replaces your current sketch.')) return;
+      loadExample(i);
+    };
+    box.append(b);
+  });
+}
+function refreshInfo(){
+  const idx=SKETCHES.findIndex(s=>s.code===codeText);
+  const info=$('#info');
+  if(info) info.innerHTML = idx>=0 ? SKETCHES[idx].info
+    : 'Custom sketch — pick an example above to see the maths behind it, or keep writing your own with <code>ctx, w, h, t, TAU</code>.';
+  const box=$('#examples'); if(box) [...box.children].forEach(b=>b.classList.toggle('on', +b.dataset.i===idx));
+}
+
+/* ---- canvas ---- */
+const cv=$('#c'), ctx=cv.getContext('2d'), stage=$('.stage');
+let dpr=1, stageR=0, dirty=true;
+function resize(){
+  const r=stage.getBoundingClientRect();
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.max(1,Math.round(r.width*dpr));
+  cv.height=Math.max(1,Math.round(r.height*dpr));
+  cv.style.width=r.width+'px'; cv.style.height=r.height+'px';
+  dirty=true; triggerDraw();
+}
+new ResizeObserver(resize).observe(stage);
+
+/* ---- render ---- */
+function render(){
+  const w=cv.width/dpr, h=cv.height/dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1; ctx.shadowBlur=0;
+  ctx.fillStyle = (style.trails && anim.animate) ? hexA(style.bg,0.12) : style.bg;
+  ctx.fillRect(0,0,w,h);
+  if(codeFn){
+    ctx.save();
+    ctx.lineWidth=2; ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.strokeStyle='#cfe9ff'; ctx.fillStyle='#cfe9ff';
+    try{ codeFn(ctx,w,h,anim.phase,Math.PI*2); }
+    catch(e){ setCodeErr('Runtime: '+e.message); }
+    ctx.restore();
+  }
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+/* ---- loop ---- */
+let lastT=0;
+function loop(now){
+  if(!lastT) lastT=now;
+  const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+  let active=false;
+  if(anim.animate){ anim.phase+=anim.evolveSpeed*dt; active=true; }
+  if(active||dirty){ render(); dirty=false; }
+  requestAnimationFrame(loop);
+}
+function triggerDraw(){ dirty=true; }
+function replay(){ anim.phase=0; dirty=true; }
+
+/* ---- actions ---- */
+function pickRandom(){ loadExample(Math.floor(Math.random()*SKETCHES.length)); }
+function savePNG(){
+  render();
+  const a=el('a'); a.href=cv.toDataURL('image/png'); a.download=`mdg-${Date.now()}.png`; a.click();
+}
+
+/* ---- SVG export ---- */
+const F=n=>Math.round(n*100)/100;
+function svgDoc(w,h,bg,defs,body){
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`
+    +`<rect width="${w}" height="${h}" fill="${bg}"/>`+(defs?`<defs>${defs}</defs>`:'')+body+`</svg>`;
+}
+function makeSVGRecorder(){
+  const els=[], defs=[], stack=[]; let gid=0, d='';
+  let st={ stroke:'#cfe9ff', fill:'#cfe9ff', width:2, cap:'round', join:'round', alpha:1 };
+  function colorRef(c){
+    if(c && c.__grad){ const id='g'+(gid++);
+      defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${F(c.x0)}" y1="${F(c.y0)}" x2="${F(c.x1)}" y2="${F(c.y1)}">`+c.stops.map(s=>`<stop offset="${s.o}" stop-color="${s.c}"/>`).join('')+`</linearGradient>`);
+      return `url(#${id})`; }
+    return c;
+  }
+  const ctx={
+    save(){ stack.push({...st}); }, restore(){ if(stack.length) st=stack.pop(); },
+    beginPath(){ d=''; }, closePath(){ d+='Z'; },
+    moveTo(x,y){ d+=`M${F(x)} ${F(y)}`; }, lineTo(x,y){ d+=(d?'L':'M')+`${F(x)} ${F(y)}`; },
+    quadraticCurveTo(cx,cy,x,y){ d+=`Q${F(cx)} ${F(cy)} ${F(x)} ${F(y)}`; },
+    bezierCurveTo(a,b,c,e,x,y){ d+=`C${F(a)} ${F(b)} ${F(c)} ${F(e)} ${F(x)} ${F(y)}`; },
+    arc(cx,cy,r,a0,a1){ const T=Math.PI*2, da=a1-a0, x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+      if(Math.abs(da)>=T-1e-6){ const xm=cx-r*Math.cos(a0), ym=cy-r*Math.sin(a0);
+        d+=(d?'L':'M')+`${F(x0)} ${F(y0)}A${F(r)} ${F(r)} 0 1 1 ${F(xm)} ${F(ym)}A${F(r)} ${F(r)} 0 1 1 ${F(x0)} ${F(y0)}`; }
+      else { const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1), large=Math.abs(da)>Math.PI?1:0, sweep=da>0?1:0;
+        d+=(d?'L':'M')+`${F(x0)} ${F(y0)}A${F(r)} ${F(r)} 0 ${large} ${sweep} ${F(x1)} ${F(y1)}`; }
+    },
+    rect(x,y,w,h){ d+=`M${F(x)} ${F(y)}h${F(w)}v${F(h)}h${F(-w)}Z`; },
+    stroke(){ if(d) els.push(`<path d="${d}" fill="none" stroke="${colorRef(st.stroke)}" stroke-width="${F(st.width)}" stroke-linecap="${st.cap}" stroke-linejoin="${st.join}"${st.alpha<1?` stroke-opacity="${st.alpha}"`:''}/>`); },
+    fill(){ if(d) els.push(`<path d="${d}" fill="${colorRef(st.fill)}"${st.alpha<1?` fill-opacity="${st.alpha}"`:''}/>`); },
+    fillRect(x,y,w,h){ els.push(`<rect x="${F(x)}" y="${F(y)}" width="${F(w)}" height="${F(h)}" fill="${colorRef(st.fill)}"${st.alpha<1?` fill-opacity="${st.alpha}"`:''}/>`); },
+    strokeRect(x,y,w,h){ els.push(`<rect x="${F(x)}" y="${F(y)}" width="${F(w)}" height="${F(h)}" fill="none" stroke="${colorRef(st.stroke)}" stroke-width="${F(st.width)}"/>`); },
+    clearRect(){}, fillText(){}, strokeText(){}, measureText(){ return {width:0}; }, setLineDash(){}, drawImage(){},
+    createLinearGradient(x0,y0,x1,y1){ return {__grad:true,x0,y0,x1,y1,stops:[],addColorStop(o,c){ this.stops.push({o,c}); }}; },
+    set strokeStyle(v){ st.stroke=v; }, get strokeStyle(){ return st.stroke; },
+    set fillStyle(v){ st.fill=v; }, get fillStyle(){ return st.fill; },
+    set lineWidth(v){ st.width=v; }, get lineWidth(){ return st.width; },
+    set lineCap(v){ st.cap=v; }, get lineCap(){ return st.cap; },
+    set lineJoin(v){ st.join=v; }, get lineJoin(){ return st.join; },
+    set globalAlpha(v){ st.alpha=v; }, get globalAlpha(){ return st.alpha; },
+    set globalCompositeOperation(v){}, get globalCompositeOperation(){ return 'source-over'; },
+    set shadowBlur(v){}, get shadowBlur(){ return 0; }, set shadowColor(v){}, get shadowColor(){ return '#000'; },
+    set font(v){}, set textAlign(v){}, set textBaseline(v){},
+    translate(){}, scale(){}, rotate(){}, setTransform(){}, resetTransform(){}
+  };
+  return { ctx, defs:()=>defs.join(''), body:()=>els.join('') };
+}
+function buildSVG(){
+  const w=cv.width/dpr, h=cv.height/dpr;
+  const rec=makeSVGRecorder();
+  if(codeFn){ try{ codeFn(rec.ctx,w,h,anim.phase,Math.PI*2); }catch(e){ setCodeErr('SVG: '+e.message); } }
+  return svgDoc(F(w),F(h),style.bg, rec.defs(), rec.body());
+}
+function saveSVG(){
+  const blob=new Blob([buildSVG()],{type:'image/svg+xml'});
+  const url=URL.createObjectURL(blob);
+  const a=el('a'); a.href=url; a.download=`mdg-${Date.now()}.svg`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ---- UI ---- */
+function syncStatic(){
+  $('#animate').checked=anim.animate;
+  $('#trails').checked=style.trails;
+  $('#es').value=anim.evolveSpeed; $('#esv').textContent=anim.evolveSpeed.toFixed(2);
+}
+function wire(){
+  $('#rand').onclick=pickRandom; $('#replay').onclick=replay; $('#save').onclick=savePNG; $('#saveSvg').onclick=saveSVG;
+  $('#animate').onchange=e=>{ anim.animate=e.target.checked; dirty=true; };
+  $('#trails').onchange=e=>{ style.trails=e.target.checked; dirty=true; };
+  $('#es').oninput=e=>{ anim.evolveSpeed=parseFloat(e.target.value); $('#esv').textContent=anim.evolveSpeed.toFixed(2); };
+  window.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+    if(e.code==='Space'){ e.preventDefault(); replay(); }
+    else if(e.key==='r'||e.key==='R') pickRandom();
+    else if(e.key==='s'||e.key==='S') savePNG();
+    else if(e.key==='v'||e.key==='V') saveSVG();
+    else if(e.key==='a'||e.key==='A'){ anim.animate=!anim.animate; $('#animate').checked=anim.animate; dirty=true; }
+  });
+}
+
+/* ---- init ---- */
+buildExamples(); compileCode(); buildEditor($('#editor')); refreshInfo(); syncStatic(); wire(); resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
