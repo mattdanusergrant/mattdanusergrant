@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manufacture Digital Grooves — Code Crafter</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>CODE CRAFTER</h1>
+    <p class="tag">build a code song with buttons.</p>
+  </header>
+
+  <section class="transport">
+    <button id="play" class="play">▶ Play</button>
+    <label>BPM <input id="bpm" type="range" min="60" max="180" value="120" /><span id="bpmv">120</span></label>
+    <a href="index.html" class="ghost linkish">← Grooves</a>
+    <span id="status" class="status"></span>
+  </section>
+
+  <section id="parts" class="parts"></section>
+
+  <div class="craft-actions">
+    <button id="add" class="ghost">+ Add part</button>
+    <span class="plabel">tap steps to toggle · pick an instrument · pitched parts get a note</span>
+  </div>
+
+  <section class="codeout">
+    <div class="codehdr">
+      <span>Generated code</span>
+      <button id="copy" class="ghost">Copy raw</button>
+      <a id="open" class="ghost linkish" href="index.html">Open in editor ↗</a>
+    </div>
+    <pre id="code" class="codeprev"></pre>
+  </section>
+
+  <footer>
+    <span>Every part becomes a <code>play(...)</code> line. Build a loop here, then open it in
+      the editor to add sections, melodies, and chords by hand.</span>
+  </footer>
+
+  <script type="module" src="crafter.js"></script>
+</body>
+</html>
