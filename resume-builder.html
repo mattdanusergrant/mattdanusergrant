@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Resume Builder · Matt Danuser-Grant</title>
+<meta name="description" content="A plain-text resume builder by Matt Danuser-Grant. Write on the left, watch a clean, ATS-safe resume build on the right, save straight to PDF. No account." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<!-- #LLM-generated - Matt Danuser-Grant Labs (resume builder) -->
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --paper:#FFFFFF;
+    --ink:#15161C;
+    --ink-2:#2A2A2A;
+    --muted:#6A6A6A;
+    --line:#E5E0D2;
+    --line-2:#CBC4B2;
+    --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+  }
+  [data-theme="dark"]{
+    --bg:#13110E;--paper:#1D1A16;
+    --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+    --line:#2C2924;--line-2:#3C3830;
+    --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+  }
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#13110E;--paper:#1D1A16;
+      --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+      --line:#2C2924;--line-2:#3C3830;
+      --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+    }
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:17px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+
+  .site-wrap{max-width:1240px;margin:0 auto;padding:0 28px 64px}
+  .nav{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em;
+  }
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+
+  /* ── Intro + controls ───────────────────────────── */
+  .intro{padding:44px 0 6px;max-width:700px}
+  .intro .eyebrow{font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 16px;font-weight:500}
+  .intro h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(32px,5vw,46px);line-height:1.1;letter-spacing:-0.02em;margin:0 0 14px}
+  .intro .lede{color:var(--muted);font-size:17px;line-height:1.6;margin:0}
+
+  .controls{display:flex;flex-wrap:wrap;gap:9px;margin:22px 0 0}
+  .btn{
+    font-family:'Fraunces',serif;font-size:14px;font-weight:500;color:var(--ink);
+    border:1.5px solid var(--line-2);border-radius:999px;padding:7px 16px 8px;
+    background:var(--paper);cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    transition:border-color .15s,background .15s,color .15s;
+  }
+  .btn:hover{border-color:var(--ink)}
+  .btn-primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .btn-primary:hover{background:var(--ink-2);border-color:var(--ink-2)}
+
+  /* ── Workbench (editor + preview) ───────────────────────────── */
+  .workbench{display:grid;grid-template-columns:minmax(320px,.82fr) minmax(0,1.18fr);gap:30px;align-items:start;margin:26px 0 0}
+  @media(max-width:900px){.workbench{grid-template-columns:1fr}}
+
+  .legend{font-size:13px;color:var(--muted);margin:0 0 12px;border:1px solid var(--line);border-radius:10px;padding:8px 14px;background:var(--paper)}
+  .legend summary{cursor:pointer;font-family:'Fraunces',serif;font-weight:500;color:var(--ink);font-size:13.5px;letter-spacing:.01em}
+  .legend ul{margin:10px 0 4px;padding-left:18px}
+  .legend li{margin:4px 0;line-height:1.5}
+  .legend code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:12px;color:var(--ink-2)}
+
+  .editor{
+    width:100%;min-height:74vh;resize:vertical;display:block;
+    font-family:ui-monospace,Menlo,Consolas,'SF Mono',monospace;
+    font-size:13.5px;line-height:1.55;color:var(--ink);background:var(--paper);
+    border:1.5px solid var(--line-2);border-radius:12px;padding:16px 18px;
+    box-shadow:var(--shadow);tab-size:2;
+  }
+  .editor:focus{outline:none;border-color:var(--ink)}
+  .pane-tag{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:500}
+
+  /* ── Resume sheet (the flagship template, shared with experience.html) ── */
+  .sheet{
+    background:var(--paper);
+    border:1px solid var(--line);border-radius:8px;
+    padding:44px 48px;
+    box-shadow:var(--shadow);
+    color:var(--ink);
+    font-size:10.5pt;line-height:1.55;
+  }
+  @media (max-width:560px){.sheet{padding:30px 26px;border-radius:6px}}
+
+  .r-header{margin-bottom:.14in}
+  .r-header h1{font-family:'Fraunces',serif;font-weight:500;font-size:30pt;letter-spacing:-0.015em;margin:0 0 4pt;line-height:1.05}
+  .r-header .tagline{font-size:10.5pt;font-weight:500;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8pt}
+  .contact{font-size:9.5pt;color:#444;display:flex;flex-wrap:wrap}
+  .contact span + span::before{content:' · ';color:#aaa;margin:0 .35em}
+  .contact a{color:#444}
+
+  hr.divide{border:none;border-top:1px solid var(--ink);margin:.12in 0 0}
+
+  .section-label{
+    font-family:'Fraunces',serif;font-size:9pt;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--ink);
+    margin:.2in 0 .1in;
+    display:flex;align-items:center;gap:.7em;
+  }
+  .section-label::after{content:'';flex:1;height:0;border-top:1px solid var(--line-2)}
+
+  .summary{font-size:10pt;line-height:1.6;color:var(--ink-2)}
+  .summary p{margin:0}
+  .summary p + p{margin-top:.5em}
+
+  .job{margin-bottom:.14in}
+  .job-meta{display:flex;justify-content:space-between;align-items:baseline;gap:.5em}
+  .company{font-size:10pt;font-weight:600}
+  .job-title{font-size:10pt;font-weight:400;color:var(--ink)}
+  .dates{font-size:9pt;color:var(--muted);white-space:nowrap;flex-shrink:0}
+  .game-credit{font-size:9pt;color:var(--muted);font-style:italic;margin:1pt 0 4pt}
+
+  ul.bullets{list-style:none;padding:0;margin:0}
+  ul.bullets li{position:relative;padding-left:1em;font-size:9.5pt;line-height:1.5;margin-bottom:1pt;color:var(--ink-2)}
+  ul.bullets li::before{content:'–';position:absolute;left:0;color:#aaa}
+
+  /* ── Theme toggle ───────────────────────────── */
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(20px)}}
+  .toggle-thumb svg{width:11px;height:11px;display:block}
+  .t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
+  .t-sun circle{fill:#E8A317;stroke:none}
+  .t-moon{fill:#3A3550;display:none}
+  [data-theme="dark"] .t-sun{display:none}
+  [data-theme="dark"] .t-moon{display:block}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
+
+  /* ── Footer ───────────────────────────── */
+  .foot{margin:56px 0 0;padding-top:26px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
+  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot a:hover{border-color:var(--ink-2)}
+
+  @media screen{
+    .sheet{font-size:12.5pt}
+    .r-header h1{font-size:29pt}
+    .r-header .tagline{font-size:12pt}
+    .contact{font-size:11.5pt}
+    .section-label{font-size:10.5pt}
+    .summary,.company,.job-title{font-size:12.5pt}
+    .dates,.game-credit{font-size:10.5pt}
+    ul.bullets li{font-size:11.5pt}
+  }
+
+  /* ── Print: only the resume sheet prints, identical to experience.html ── */
+  @media print{
+    @page{margin:.55in .7in;size:letter}
+    :root,[data-theme="dark"]{--ink:#000;--ink-2:#222;--muted:#555;--line:#ddd;--line-2:#ccc;--bg:#fff;--paper:#fff}
+    body{background:#fff;color:#000;font-size:10pt}
+    .site-wrap{max-width:none;padding:0;margin:0}
+    .nav,.intro,.editor-pane,.foot,.no-print{display:none !important}
+    .workbench{display:block;gap:0;margin:0}
+    .preview-pane{margin:0;padding:0}
+    .sheet{background:transparent;border:none;border-radius:0;padding:0;box-shadow:none;font-size:10.5pt}
+    .r-header h1{font-size:30pt}
+    .job,.no-break{page-break-inside:avoid;break-inside:avoid}
+    .section-label{page-break-after:avoid;break-after:avoid}
+    ul.bullets li{break-inside:avoid}
+    .summary p{orphans:2;widows:2}
+    a{color:inherit;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<div class="site-wrap">
+
+  <nav class="nav no-print">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links">
+      <a class="active" href="/design-lab.html">Design Lab</a>
+      <a href="/consulting.html">Consulting</a>
+      <a href="/experience.html">Experience</a>
+      <a href="/case-studies.html">Case Studies</a>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <header class="intro no-print">
+    <p class="eyebrow">Design Lab</p>
+    <h1>Resume Builder</h1>
+    <p class="lede">Write in plain text on the left; a clean, single-column, ATS-safe resume builds on the right. Then save straight to PDF. No account, and nothing ever leaves your browser.</p>
+    <div class="controls">
+      <button class="btn btn-primary" id="btn-pdf" type="button">Save as PDF →</button>
+      <button class="btn" id="btn-example" type="button">Load example</button>
+      <button class="btn" id="btn-blank" type="button">Start blank</button>
+      <button class="btn" id="btn-export" type="button">Export .txt</button>
+      <button class="btn" id="btn-import" type="button">Import</button>
+      <input type="file" id="file" accept=".txt,text/plain" hidden />
+    </div>
+  </header>
+
+  <div class="workbench">
+    <div class="editor-pane no-print">
+      <details class="legend">
+        <summary>Formatting cheatsheet</summary>
+        <ul>
+          <li><code># Your Name</code> — then a line for your title, then a line of contacts split by <code>|</code></li>
+          <li><code>## Section</code> — a heading (Summary, Experience, Education…)</li>
+          <li>Plain paragraphs under a heading become summary text</li>
+          <li><code>### Company, Role @ Dates</code> — starts an entry</li>
+          <li><code>&gt; note</code> — an italic line under an entry (a credit, a tagline, a course list)</li>
+          <li><code>- bullet</code> — a bullet point</li>
+        </ul>
+      </details>
+      <p class="pane-tag">Source</p>
+      <textarea id="editor" spellcheck="true" aria-label="Resume source text"></textarea>
+    </div>
+    <div class="preview-pane">
+      <p class="pane-tag no-print">Preview · this is what prints</p>
+      <article class="sheet" id="sheet"></article>
+    </div>
+  </div>
+
+  <footer class="foot no-print">
+    <div><a href="/design-lab.html">← Design Lab</a></div>
+    <div><a href="/experience.html">See this template as a finished resume →</a></div>
+  </footer>
+
+</div>
+
+<script>
+/* Theme toggle - shared site behavior */
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  if(!btn)return;
+  btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+  });
+})();
+</script>
+
+<script>
+/* Resume Builder: parse a tiny plain-text format into the resume template and
+   render it live. Everything stays client-side; the source is saved to
+   localStorage so a refresh keeps your work. */
+(function(){
+  var KEY='mdg-resume-src';
+  var editor=document.getElementById('editor');
+  var sheet=document.getElementById('sheet');
+
+  var DEFAULT=[
+'# Matt Danuser-Grant',
+'Principal Game Designer',
+'hello@mattdanusergrant.com | Newark, CA | linkedin.com/in/mattdanusergrant',
+'',
+'## Summary',
+"I design the systems that bring players back. Over a decade in mobile F2P, across Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer's Arena, owning character and combat design on titles with hundreds of millions of installs.",
+'',
+"What I'm solving for is feel: the kit that finally clicks, the event that pulls someone back after weeks away, the character who becomes a player's favorite. I reach for systems because that's how you build feel at scale.",
+'',
+'## Experience',
+'',
+'### Quadrant4 AI, Head of Game Design @ Apr 2025 – Aug 2025',
+'- Led game design at an early-stage studio, setting design vision and direction.',
+'',
+'### Scopely, Principal Game Designer @ Aug 2021 – Jan 2025',
+'> Marvel Strike Force · $300M+ lifetime revenue · 200+ character roster',
+"- Owned character and combat design for one of mobile's top-grossing live games, shipping new playable characters on a monthly cadence.",
+'- Designed kits, abilities, and combat systems balanced for both PvE and competitive PvP play.',
+'- Mentored and gave design direction to other designers, raising the bar on kit quality and design consistency across the team.',
+'- Partnered across production, engineering, and live ops to land content that drove player engagement and retention.',
+'',
+'### Glu Mobile, Sr. Game Designer @ Mar 2020 – Aug 2021',
+"> Disney Sorcerer's Arena · $22M+ in launch-quarter bookings",
+'- Designed characters and combat systems for a Disney/Pixar collectible RPG.',
+'- Translated beloved Disney and Pixar characters into distinct, satisfying kits across an expanding PvE and PvP roster.',
+'- Tuned combat balance for both newcomer accessibility and competitive depth.',
+'',
+'### MZ (Machine Zone), Sr. Game Designer @ Jun 2019 – Feb 2020',
+'> Crystalborne: Heroes of Fate',
+'- Designed combat systems and hero kits for a story-driven mobile RPG.',
+'- Balanced character abilities and progression to keep encounters challenging and rewarding across the player journey.',
+'',
+'### Behaviour Interactive, Lead Game Designer @ 2018 – 2019',
+'> Game of Thrones: Beyond the Wall',
+'- Led system design across the game, owning the world map, crafting system, castle upgrades, and core progression loops.',
+'- Designed and balanced the connected systems that structured the player journey, from exploration to base-building to long-term progression.',
+'- Translated the Game of Thrones universe into tactical mobile RPG systems with both narrative weight and competitive depth.',
+'',
+'### Electronic Arts (Capital Games), Sr. Game Designer @ 2016 – 2018',
+'> Star Wars: Galaxy of Heroes · $2B+ lifetime player spending',
+'- Designed character kits, abilities, and combat systems for the most successful Star Wars mobile title ever made.',
+'- Built faction-based team synergies and encounters spanning PvE campaigns, raids, and competitive PvP modes.',
+'- Contributed to a deep, expanding roster of iconic Star Wars characters, balanced across daily, weekly, and event-driven live ops cadence.',
+'',
+'### Gazillion Entertainment, Game Designer @ 2012 – 2015',
+'> Super Hero Squad Online',
+'- Owned character design for a free-to-play MMO, shipping 2–3 new characters every month to drive constant revenue.',
+'- Continuously rebalanced a 180+ character roster based on player feedback.',
+'- Recruited onto a small, multi-disciplinary team, one of each role, to keep the game live and growing.',
+'- Partnered with the team to overhaul the entire game economy for a major release.',
+'',
+'### Cryptic Studios, Combat Designer @ 2008 – 2012',
+'> Champions Online',
+'- Owned ongoing PvE and PvP balance across 26 power frameworks, creating hundreds of powers in the in-house scripting engine.',
+'- Designed, implemented, and balanced 2 new player classes from scratch.',
+'- Helped transition the game from a subscription model to free-to-play.',
+'- Wrote unique AI scripting for each power framework in the Nemesis system.',
+'',
+'## Earlier Roles: Quality Assurance',
+'',
+'### Namco Bandai Games America, QA @ 2007 – 2008',
+'> Soul Calibur Legends · Namco Museum Remix · Digimon World Dusk / Dawn',
+'',
+'### Konami, QA Lead @ 2006 – 2007',
+'> Super Contra · TMNT Arcade · DDR Universe · Karaoke Revolution / American Idol · Xiaolin Showdown · Death Jr. 2 · Winx Club',
+'',
+'### Electronic Arts, QA @ 2005 – 2006',
+'> The Godfather · Mass Effect'
+].join('\n');
+
+  function esc(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+
+  function parseEntry(s){
+    var dates='', rest=s, at=s.indexOf(' @ ');
+    if(at>=0){ rest=s.slice(0,at).trim(); dates=s.slice(at+3).trim(); }
+    var org=rest, role='', c=rest.indexOf(',');
+    if(c>=0){ org=rest.slice(0,c).trim(); role=rest.slice(c+1).trim(); }
+    return {org:org,role:role,dates:dates,note:'',bullets:[]};
+  }
+
+  function parse(src){
+    var lines=String(src).replace(/\r\n/g,'\n').split('\n');
+    var model={name:'',title:'',contacts:[],sections:[]};
+    var i=0;
+    while(i<lines.length && !lines[i].trim()) i++;
+    if(i<lines.length && /^#\s+/.test(lines[i])){
+      model.name=lines[i].replace(/^#\s+/,'').trim(); i++;
+      if(i<lines.length && lines[i].trim() && !/^#/.test(lines[i])){ model.title=lines[i].trim(); i++; }
+      if(i<lines.length && lines[i].trim() && !/^#/.test(lines[i])){ model.contacts=lines[i].split('|').map(function(s){return s.trim();}).filter(Boolean); i++; }
+    }
+    var section=null, entry=null, para=[];
+    function flushPara(){ if(section && para.length){ section.paragraphs.push(para.join(' ')); } para=[]; }
+    function newSection(label){ flushPara(); section={label:label,paragraphs:[],entries:[]}; entry=null; model.sections.push(section); }
+    for(; i<lines.length; i++){
+      var raw=lines[i], line=raw.trim();
+      if(/^###\s+/.test(raw)){
+        flushPara(); if(!section) newSection('');
+        entry=parseEntry(raw.replace(/^###\s+/,'').trim()); section.entries.push(entry);
+      } else if(/^##\s+/.test(raw)){
+        newSection(raw.replace(/^##\s+/,'').trim());
+      } else if(/^>\s?/.test(raw)){
+        var note=raw.replace(/^>\s?/,''); if(entry){ entry.note = entry.note ? entry.note+' '+note : note; }
+      } else if(/^-\s+/.test(raw)){
+        var b=raw.replace(/^-\s+/,''); if(!section) newSection('');
+        if(!entry){ entry={org:'',role:'',dates:'',note:'',bullets:[]}; section.entries.push(entry); }
+        entry.bullets.push(b);
+      } else if(!line){
+        flushPara();
+      } else {
+        if(!section) newSection(''); entry=null; para.push(line);
+      }
+    }
+    flushPara();
+    return model;
+  }
+
+  function contactHTML(p){
+    if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p)) return '<span><a href="mailto:'+esc(p)+'">'+esc(p)+'</a></span>';
+    if(/^(https?:\/\/|www\.)/i.test(p) || /[\w-]+\.[a-z]{2,}\//i.test(p)){
+      var href=/^https?:\/\//i.test(p)?p:'https://'+p;
+      return '<span><a href="'+esc(href)+'" target="_blank" rel="noopener">'+esc(p)+'</a></span>';
+    }
+    return '<span>'+esc(p)+'</span>';
+  }
+
+  function render(m){
+    var h='<header class="r-header"><h1>'+esc(m.name||'Your Name')+'</h1>';
+    if(m.title) h+='<div class="tagline">'+esc(m.title)+'</div>';
+    if(m.contacts.length) h+='<div class="contact">'+m.contacts.map(contactHTML).join('')+'</div>';
+    h+='</header><hr class="divide" />';
+    m.sections.forEach(function(sec){
+      if(sec.label) h+='<div class="section-label">'+esc(sec.label)+'</div>';
+      if(sec.paragraphs.length) h+='<div class="summary no-break">'+sec.paragraphs.map(function(p){return '<p>'+esc(p)+'</p>';}).join('')+'</div>';
+      sec.entries.forEach(function(e){
+        h+='<div class="job">';
+        if(e.org||e.role||e.dates){
+          h+='<div class="job-meta"><div>';
+          if(e.org) h+='<span class="company">'+esc(e.org)+'</span>';
+          if(e.role) h+='<span class="job-title">, '+esc(e.role)+'</span>';
+          h+='</div>';
+          if(e.dates) h+='<span class="dates">'+esc(e.dates)+'</span>';
+          h+='</div>';
+        }
+        if(e.note) h+='<div class="game-credit">'+esc(e.note)+'</div>';
+        if(e.bullets.length) h+='<ul class="bullets">'+e.bullets.map(function(b){return '<li>'+esc(b)+'</li>';}).join('')+'</ul>';
+        h+='</div>';
+      });
+    });
+    return h;
+  }
+
+  function update(){ sheet.innerHTML=render(parse(editor.value)); try{ localStorage.setItem(KEY,editor.value); }catch(e){} }
+
+  var stored=null; try{ stored=localStorage.getItem(KEY); }catch(e){}
+  editor.value=(stored!=null)?stored:DEFAULT;
+  update();
+  editor.addEventListener('input',update);
+
+  document.getElementById('btn-pdf').addEventListener('click',function(){ window.print(); });
+  document.getElementById('btn-blank').addEventListener('click',function(){
+    if(confirm('Clear the editor and start from a blank resume?')){ editor.value=''; update(); editor.focus(); }
+  });
+  document.getElementById('btn-example').addEventListener('click',function(){
+    if(!editor.value.trim() || confirm('Replace the current content with the example resume?')){ editor.value=DEFAULT; update(); }
+  });
+  document.getElementById('btn-export').addEventListener('click',function(){
+    var blob=new Blob([editor.value],{type:'text/plain'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='resume.txt';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  });
+  var file=document.getElementById('file');
+  document.getElementById('btn-import').addEventListener('click',function(){ file.click(); });
+  file.addEventListener('change',function(){
+    var f=file.files[0]; if(!f)return;
+    var r=new FileReader(); r.onload=function(){ editor.value=r.result; update(); }; r.readAsText(f); file.value='';
+  });
+})();
+</script>
+</body>
+</html>
