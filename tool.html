@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Tool · Matt Danuser-Grant</title>
+<meta name="description" content="A tool in the Matt Danuser-Grant Design Lab toolbox." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<!-- #LLM-generated - Matt Danuser-Grant Labs (tool frame: wraps a toolbox tool in the site shell) -->
+<style>
+  :root{--bg:#FBF8F2;--paper:#FFFFFF;--ink:#15161C;--ink-2:#2A2A2A;--muted:#6A6A6A;--line:#E5E0D2;--line-2:#CBC4B2;}
+  [data-theme="dark"]{--bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;--line:#2C2924;--line-2:#3C3830;}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;--line:#2C2924;--line-2:#3C3830;}}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:14px;display:flex;flex-direction:column;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+
+  /* ── Top nav (matches the rest of the site) ── */
+  .nav{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:0 28px;height:58px;flex-shrink:0;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted);letter-spacing:.04em;background:var(--bg)}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em;white-space:nowrap}
+  .nav .links{display:flex;align-items:center}
+  .nav .links a{margin-left:22px;transition:color .15s;white-space:nowrap}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+
+  /* ── The tool, filling the space between the bars ── */
+  .frame-wrap{flex:1 1 auto;min-height:0;position:relative;background:var(--paper)}
+  iframe.tool{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+
+  /* ── Bottom back-nav ── */
+  .toolfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 28px;height:46px;flex-shrink:0;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted);letter-spacing:.04em;background:var(--bg)}
+  .toolfoot a{transition:color .15s;white-space:nowrap}
+  .toolfoot a:hover{color:var(--ink)}
+  .toolfoot .left a{font-family:'Fraunces',serif;color:var(--ink)}
+  .toolfoot .where{font-family:'Fraunces',serif;color:var(--muted);letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .toolfoot .right a{margin-left:18px}
+
+  /* ── Theme toggle (matches the site) ── */
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:18px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(20px)}}
+  .toggle-thumb svg{width:11px;height:11px;display:block}
+  .t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
+  .t-sun circle{fill:#E8A317;stroke:none}
+  .t-moon{fill:#3A3550;display:none}
+  [data-theme="dark"] .t-sun{display:none}
+  [data-theme="dark"] .t-moon{display:block}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
+
+  @media(max-width:560px){
+    .nav,.toolfoot{padding:0 16px}
+    .nav .links a{margin-left:14px}
+    .toolfoot .where{display:none}
+  }
+</style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links">
+      <a class="active" href="/design-lab.html">Design Lab</a>
+      <a href="/consulting.html">Consulting</a>
+      <a href="/resume.html">Resume</a>
+      <a href="/case-studies.html">Case Studies</a>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <div class="frame-wrap"><iframe class="tool" id="frame" title="Tool" src="about:blank" allow="autoplay"></iframe></div>
+
+  <footer class="toolfoot">
+    <div class="left"><a href="/tools.html">← Toolbox</a></div>
+    <div class="where" id="toolname"></div>
+    <div class="right"><a href="/design-lab.html">Design Lab</a><a href="/">Home</a></div>
+  </footer>
+
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  if(btn)btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+  });
+})();
+</script>
+<script>
+/* Frame a known toolbox tool inside the site shell. Whitelisted so the ?app
+   param can only load tools that live on this site. */
+(function(){
+  var TOOLS={
+    'math-draws-graphics':       { name:'Math Draws Graphics',        src:'/math-draws-graphics/' },
+    'manufacture-digital-grooves':{ name:'Manufacture Digital Grooves', src:'/manufacture-digital-grooves/' }
+  };
+  var key=new URLSearchParams(location.search).get('app');
+  var t=TOOLS[key];
+  if(!t){ location.replace('/tools.html'); return; }
+  var f=document.getElementById('frame');
+  f.src=t.src; f.title=t.name;
+  document.getElementById('toolname').textContent=t.name;
+  document.title=t.name+' · Matt Danuser-Grant';
+})();
+</script>
+</body>
+</html>
