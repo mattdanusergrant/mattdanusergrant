@@ -90,13 +90,15 @@
   .contact span + span::before{content:' · ';color:#aaa;margin:0 .35em}
   .contact a{color:#444}
 
-  hr.divide{border:none;border-top:1.5px solid var(--ink);margin:.12in 0 0}
+  hr.divide{border:none;border-top:1px solid var(--ink);margin:.12in 0 0}
 
   .section-label{
     font-family:'Fraunces',serif;font-size:9pt;font-weight:600;
     letter-spacing:.14em;text-transform:uppercase;color:var(--ink);
     margin:.2in 0 .1in;
+    display:flex;align-items:center;gap:.7em;
   }
+  .section-label::after{content:'';flex:1;height:0;border-top:1px solid var(--line-2)}
 
   .summary{font-size:10pt;line-height:1.6;color:var(--ink-2)}
   .summary p + p{margin-top:.5em}
@@ -164,7 +166,10 @@
     .site-wrap{max-width:none;padding:0;margin:0}
     .nav,.print-hint,.foot,.no-print{display:none !important}
     .sheet{background:transparent;border:none;border-radius:0;padding:0;box-shadow:none}
-    .job,.no-break{page-break-inside:avoid}
+    .job,.qa-block,.no-break{page-break-inside:avoid;break-inside:avoid}
+    .section-label{page-break-after:avoid;break-after:avoid}
+    ul.bullets li{break-inside:avoid}
+    .summary p{orphans:2;widows:2}
     a{color:inherit;text-decoration:none}
   }
 </style>
