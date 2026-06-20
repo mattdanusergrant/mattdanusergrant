@@ -132,6 +132,11 @@
   .mdg-taken{color:#b4543a;font-size:13.5px}
   .mdg-hint{color:var(--muted);font-size:13px}
   .mdg-save{margin-top:14px}
+  .mdg-new{margin:14px 0 0;max-width:520px;padding:14px 16px;border-radius:12px;background:rgba(60,140,90,.1);border:1px solid rgba(60,140,90,.4);animation:mdg-pop .3s ease both}
+  @keyframes mdg-pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+  .mdg-new p{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--ink)}
+  .mdg-new .send{display:inline-flex;align-items:center;gap:6px;font-family:'Fraunces',serif;font-size:14px;font-weight:500;color:#fff;background:#3c8c5a;border:1.5px solid #3c8c5a;border-radius:999px;padding:8px 16px;transition:filter .15s}
+  .mdg-new .send:hover{filter:brightness(1.08)}
   .mdg-cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:26px}
   @media(max-width:680px){.mdg-cols{grid-template-columns:1fr}}
   .mdg-sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 12px}
@@ -230,6 +235,10 @@
     <input id="mdg-input" type="text" placeholder="e.g. Make Dazzling Gizmos" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Try an MDG" />
     <div id="mdg-dupe" class="mdg-dupe" hidden></div>
     <div id="mdg-result" class="mdg-result"></div>
+    <div id="mdg-new" class="mdg-new" hidden>
+      <p>Nice, all three words are brand new. Send it to <strong>MDG@mattdanusergrant.com</strong>:</p>
+      <a id="mdg-send" class="send" href="#">Send it in →</a>
+    </div>
     <button id="mdg-save" class="btn btn-edge mdg-save" type="button" hidden>+ Save to my ideas</button>
 
     <div class="mdg-cols">
@@ -308,6 +317,8 @@
   var input=document.getElementById('mdg-input'),
       resultEl=document.getElementById('mdg-result'),
       dupeEl=document.getElementById('mdg-dupe'),
+      newEl=document.getElementById('mdg-new'),
+      sendEl=document.getElementById('mdg-send'),
       saveBtn=document.getElementById('mdg-save'),
       listEl=document.getElementById('mdg-list'),
       ideasWrap=document.getElementById('mdg-ideas-wrap'),
@@ -331,22 +342,29 @@
     var dupe=words.length===3 && entries.filter(function(e){return e.w.join(' ').toLowerCase()===lc;})[0];
     if(dupe){ dupeEl.hidden=false; dupeEl.textContent='Already an MDG: "'+phrase(dupe)+'" ('+dupe.where+')'; }
     else dupeEl.hidden=true;
-    if(!words.length){ resultEl.innerHTML=''; saveBtn.hidden=true; return; }
-    var rows='';
+    if(!words.length){ resultEl.innerHTML=''; saveBtn.hidden=true; newEl.hidden=true; return; }
+    var rows='', allFree=(words.length===3);
     for(var i=0;i<3;i++){
       var word=words[i]||'', slot='<span class="mdg-slot">'+SLOTS[i]+'</span>';
-      if(!word){ rows+='<div class="mdg-row">'+slot+'<span class="mdg-word mdg-hint">(add a word)</span></div>'; continue; }
+      if(!word){ rows+='<div class="mdg-row">'+slot+'<span class="mdg-word mdg-hint">(add a word)</span></div>'; allFree=false; continue; }
       var used=entries.filter(function(e){return e.w[i] && e.w[i].toLowerCase()===word.toLowerCase();});
+      var ok=word.charAt(0).toUpperCase()===SLOTS[i];
       var stat;
       if(used.length){
+        allFree=false;
         stat='<span class="mdg-taken">in use: '+used.map(function(e){return '"'+esc(phrase(e))+'" ('+esc(e.where)+')';}).join('; ')+'</span>';
       } else {
-        var ok=word.charAt(0).toUpperCase()===SLOTS[i];
+        if(!ok) allFree=false;
         stat='<span class="mdg-free">free</span>'+(ok?'':' <span class="mdg-hint">(not a '+SLOTS[i]+'-word)</span>');
       }
       rows+='<div class="mdg-row">'+slot+'<span class="mdg-word">'+esc(word)+'</span>'+stat+'</div>';
     }
     resultEl.innerHTML=rows;
+    if(allFree){
+      var np=words.join(' ');
+      sendEl.href='mailto:MDG@mattdanusergrant.com?subject='+encodeURIComponent('New MDG: '+np)+'&body='+encodeURIComponent(np);
+      newEl.hidden=false;
+    } else newEl.hidden=true;
     saveBtn.hidden=!(words.length===3 && !dupe);
   }
 
