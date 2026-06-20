@@ -442,7 +442,7 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log('  MDG Local Editor');
   console.log('  ──────────────────────────────────────────────');
   console.log(`  http://localhost:${PORT}/                  Home`);
-  console.log(`  http://localhost:${PORT}/experience.html   Experience`);
+  console.log(`  http://localhost:${PORT}/resume.html       Resume`);
   console.log(`  http://localhost:${PORT}/design-lab.html   Design Lab`);
   console.log(`  http://localhost:${PORT}/consulting.html   Consulting`);
   console.log(`  http://localhost:${PORT}/case-studies.html Case Studies`);
