@@ -141,6 +141,15 @@
   .more-link .arr{transition:transform .18s}
   .more-link:hover .arr{transform:translateX(3px)}
 
+  /* ── Tools (a third section below the columns; grows over time) ── */
+  .tools{margin-top:64px}
+  .tools-head{max-width:calc((100% - 56px) / 2)}
+  .tools-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:56px;row-gap:18px;margin-top:18px}
+  @media(max-width:760px){
+    .tools-grid{grid-template-columns:1fr}
+    .tools-head{max-width:none}
+  }
+
   /* ── Theme toggle ───────────────────────────── */
   .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
   .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
@@ -231,14 +240,6 @@
         </div>
       </article>
 
-      <article class="card">
-        <h2>Resume Builder</h2>
-        <p>Write a resume in plain text and watch a clean, ATS-friendly one build live, then save straight to PDF. No account. Built it for mine; yours works too.</p>
-        <div class="btn-row">
-          <a class="btn btn-play" href="/resume-builder.html" target="_blank" rel="noopener">Open</a>
-        </div>
-      </article>
-
     </section>
 
     <section>
@@ -276,6 +277,21 @@
     </section>
 
   </div>
+
+  <section class="tools">
+    <h2 class="col-head tools-head">Tools</h2>
+    <div class="tools-grid">
+
+      <article class="card">
+        <h2>Resume Builder</h2>
+        <p>Write a resume in plain text and watch a clean, ATS-friendly one build live, then save straight to PDF. No account. Built it for mine; yours works too.</p>
+        <div class="btn-row">
+          <a class="btn btn-play" href="/resume-builder.html" target="_blank" rel="noopener">Open</a>
+        </div>
+      </article>
+
+    </div>
+  </section>
 
   <footer class="foot">
     <div>Made by <a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">Matt Danuser-Grant</a></div>
