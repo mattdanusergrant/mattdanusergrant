@@ -121,7 +121,7 @@
   .mdg-head{font-family:'Fraunces',serif;font-weight:500;font-size:26px;letter-spacing:-0.01em;color:var(--ink);margin:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .mdg-badge{font-family:'Inter',sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line-2);border-radius:999px;padding:3px 9px;font-weight:500}
   .mdg-intro{color:var(--muted);font-size:15px;line-height:1.55;margin:14px 0 18px;max-width:640px}
-  #mdg-input{width:100%;max-width:520px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;color:var(--ink);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
+  #mdg-input{display:block;width:100%;max-width:520px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;color:var(--ink);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
   #mdg-input:focus{outline:none;border-color:var(--ink)}
   .mdg-dupe{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:rgba(180,84,58,.1);border:1px solid rgba(180,84,58,.35);color:#b4543a;font-size:14px;max-width:520px}
   .mdg-result{margin:12px 0 0;max-width:560px;display:flex;flex-direction:column;gap:6px}
@@ -132,6 +132,7 @@
   .mdg-taken{color:#b4543a;font-size:13.5px}
   .mdg-hint{color:var(--muted);font-size:13px}
   .mdg-save{margin-top:14px}
+  .mdg-rand{margin-top:12px}
   .mdg-new{margin:14px 0 0;max-width:520px;padding:14px 16px;border-radius:12px;background:rgba(60,140,90,.1);border:1px solid rgba(60,140,90,.4);animation:mdg-pop .3s ease both}
   @keyframes mdg-pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
   .mdg-new p{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--ink)}
@@ -241,6 +242,7 @@
     <p class="mdg-intro">Every MDG in play across the site. Type a new three-word idea (M, then D, then G) and I'll show which words are already spoken for, and where.</p>
 
     <input id="mdg-input" type="text" placeholder="e.g. Make Dazzling Gizmos" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Try an MDG" />
+    <button id="mdg-rand" class="btn btn-edge mdg-rand" type="button">🎲 Randomize missing</button>
     <div id="mdg-dupe" class="mdg-dupe" hidden></div>
     <div id="mdg-result" class="mdg-result"></div>
     <div id="mdg-new" class="mdg-new" hidden>
@@ -314,6 +316,12 @@
     {w:['Mildly','Dubious','Gambits'], where:'More Games button'}
   ];
   var SLOTS=['M','D','G'], IDEAS_KEY='mdg-ideas';
+  // Word banks for "randomize missing" - fresh M/D/G words; used ones get filtered out at pick time.
+  var BANK={
+    M:['Make','Mighty','Modern','Mellow','Massive','Merry','Mythic','Molten','Mystic','Manic','Marvelous','Murky','Magnetic','Minimal','Monstrous','Mossy','Misty','Moody','Macabre','Majestic','Modular','Motley','Mercurial','Meandering','Maximal','Marbled','Midnight','Moonlit','Melodic','Murmuring','Marauding','Muted'],
+    D:['Dancing','Daring','Dazzling','Decadent','Deep','Delirious','Devious','Diligent','Distant','Divergent','Dizzy','Dormant','Dreaming','Drifting','Dusty','Dynamic','Dapper','Daunting','Dewy','Diabolical','Dappled','Doomed','Drowsy','Dueling','Dulcet','Dusky','Diamond','Doodled','Drastic','Dreamy','Driven','Defiant'],
+    G:['Gardens','Gears','Gestures','Ghosts','Giants','Glaciers','Glyphs','Goblins','Gradients','Grids','Groves','Gusts','Galaxies','Gargoyles','Gateways','Geodes','Geysers','Glimmers','Gnomes','Golems','Gospels','Grottos','Guardians','Gullies','Gusto','Gyroscopes','Glow','Glaze','Gamut','Garlands','Goggles','Gauntlets']
+  };
   function loadIdeas(){ try{return JSON.parse(localStorage.getItem(IDEAS_KEY))||[];}catch(e){return [];} }
   function saveIdeas(){ try{localStorage.setItem(IDEAS_KEY,JSON.stringify(ideas));}catch(e){} }
   var ideas=loadIdeas();
@@ -328,6 +336,7 @@
       newEl=document.getElementById('mdg-new'),
       sendEl=document.getElementById('mdg-send'),
       saveBtn=document.getElementById('mdg-save'),
+      randEl=document.getElementById('mdg-rand'),
       listEl=document.getElementById('mdg-list'),
       ideasWrap=document.getElementById('mdg-ideas-wrap'),
       ideasEl=document.getElementById('mdg-ideas');
@@ -376,7 +385,21 @@
     saveBtn.hidden=!(words.length===3 && !dupe);
   }
 
+  // Fill only the empty M/D/G slots with random unused words; keep what's typed.
+  function randomizeMissing(){
+    var words=input.value.trim().split(/\s+/).filter(Boolean), entries=all(), out=[];
+    for(var i=0;i<3;i++){
+      if(words[i]){ out[i]=words[i]; continue; }
+      var used={}; entries.forEach(function(e){ if(e.w[i]) used[e.w[i].toLowerCase()]=1; });
+      var pool=BANK[SLOTS[i]].filter(function(w){ return !used[w.toLowerCase()]; });
+      if(!pool.length) pool=BANK[SLOTS[i]];
+      out[i]=pool[(Math.random()*pool.length)|0];
+    }
+    input.value=out.join(' '); check(); input.focus();
+  }
+
   input.addEventListener('input',check);
+  randEl.addEventListener('click',randomizeMissing);
   saveBtn.addEventListener('click',function(){
     var words=input.value.trim().split(/\s+/).filter(Boolean); if(words.length!==3) return;
     var p=words.join(' ');
