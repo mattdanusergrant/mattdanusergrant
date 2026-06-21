@@ -353,49 +353,59 @@
     } else { ideasWrap.hidden=true; ideasEl.innerHTML=''; }
   }
 
-  function check(){
-    var words=input.value.trim().split(/\s+/).filter(Boolean), entries=all();
-    var lc=words.join(' ').toLowerCase();
-    var dupe=words.length===3 && entries.filter(function(e){return e.w.join(' ').toLowerCase()===lc;})[0];
-    if(dupe){ dupeEl.hidden=false; dupeEl.textContent='Already an MDG: "'+phrase(dupe)+'" ('+dupe.where+')'; }
-    else dupeEl.hidden=true;
-    if(!words.length){ resultEl.innerHTML=''; saveBtn.hidden=true; newEl.hidden=true; return; }
-    var rows='', allFree=(words.length===3);
-    for(var i=0;i<3;i++){
-      var word=words[i]||'', slot='<span class="mdg-slot">'+SLOTS[i]+'</span>';
-      if(!word){ rows+='<div class="mdg-row">'+slot+'<span class="mdg-word mdg-hint">(add a word)</span></div>'; allFree=false; continue; }
-      var used=entries.filter(function(e){return e.w[i] && e.w[i].toLowerCase()===word.toLowerCase();});
-      var ok=word.charAt(0).toUpperCase()===SLOTS[i];
-      var stat;
-      if(used.length){
-        allFree=false;
-        stat='<span class="mdg-taken">in use: '+used.map(function(e){return '"'+esc(phrase(e))+'" ('+esc(e.where)+')';}).join('; ')+'</span>';
-      } else {
-        if(!ok) allFree=false;
-        stat='<span class="mdg-free">free</span>'+(ok?'':' <span class="mdg-hint">(not a '+SLOTS[i]+'-word)</span>');
-      }
-      rows+='<div class="mdg-row">'+slot+'<span class="mdg-word">'+esc(word)+'</span>'+stat+'</div>';
-    }
-    resultEl.innerHTML=rows;
-    if(allFree){
-      var np=words.join(' ');
-      sendEl.href='mailto:MDG@mattdanusergrant.com?subject='+encodeURIComponent('New MDG: '+np)+'&body='+encodeURIComponent(np);
-      newEl.hidden=false;
-    } else newEl.hidden=true;
-    saveBtn.hidden=!(words.length===3 && !dupe);
+  // Assign typed words to their letter slot (M/D/G) by first letter; first word wins per letter.
+  function readSlots(){
+    var words=input.value.trim().split(/\s+/).filter(Boolean), slot={M:'',D:'',G:''}, stray=[];
+    words.forEach(function(w){
+      var L=w.charAt(0).toUpperCase();
+      if((L==='M'||L==='D'||L==='G') && !slot[L]) slot[L]=w; else stray.push(w);
+    });
+    return {slot:slot, stray:stray, count:words.length};
   }
 
-  // Fill only the empty M/D/G slots with random unused words; keep what's typed.
-  function randomizeMissing(){
-    var words=input.value.trim().split(/\s+/).filter(Boolean), entries=all(), out=[];
-    for(var i=0;i<3;i++){
-      if(words[i]){ out[i]=words[i]; continue; }
-      var used={}; entries.forEach(function(e){ if(e.w[i]) used[e.w[i].toLowerCase()]=1; });
-      var pool=BANK[SLOTS[i]].filter(function(w){ return !used[w.toLowerCase()]; });
-      if(!pool.length) pool=BANK[SLOTS[i]];
-      out[i]=pool[(Math.random()*pool.length)|0];
+  function check(){
+    var r=readSlots(), slot=r.slot, entries=all();
+    var present=SLOTS.filter(function(L){return slot[L];}).length;
+    var dupe=false;
+    if(present===3){
+      var lc=[slot.M,slot.D,slot.G].join(' ').toLowerCase();
+      dupe=entries.filter(function(e){return e.w.join(' ').toLowerCase()===lc;})[0];
     }
-    input.value=out.join(' '); check(); input.focus();
+    if(dupe){ dupeEl.hidden=false; dupeEl.textContent='Already an MDG: "'+phrase(dupe)+'" ('+dupe.where+')'; }
+    else dupeEl.hidden=true;
+    if(!r.count){ resultEl.innerHTML=''; saveBtn.hidden=true; newEl.hidden=true; return; }
+    var rows='', allFree=true;
+    SLOTS.forEach(function(L,i){
+      var word=slot[L], slotEl='<span class="mdg-slot">'+L+'</span>';
+      if(!word){ allFree=false; rows+='<div class="mdg-row">'+slotEl+'<span class="mdg-word mdg-hint">(missing)</span></div>'; return; }
+      var used=entries.filter(function(e){return e.w[i] && e.w[i].toLowerCase()===word.toLowerCase();});
+      var stat;
+      if(used.length){ allFree=false; stat='<span class="mdg-taken">in use: '+used.map(function(e){return '"'+esc(phrase(e))+'" ('+esc(e.where)+')';}).join('; ')+'</span>'; }
+      else stat='<span class="mdg-free">free</span>';
+      rows+='<div class="mdg-row">'+slotEl+'<span class="mdg-word">'+esc(word)+'</span>'+stat+'</div>';
+    });
+    if(r.stray.length) rows+='<div class="mdg-row"><span class="mdg-slot"></span><span class="mdg-hint">extra, ignored: '+esc(r.stray.join(', '))+'</span></div>';
+    resultEl.innerHTML=rows;
+    if(allFree && !dupe){
+      var p=[slot.M,slot.D,slot.G].join(' ');
+      sendEl.href='mailto:MDG@mattdanusergrant.com?subject='+encodeURIComponent('New MDG: '+p)+'&body='+encodeURIComponent(p);
+      newEl.hidden=false;
+    } else newEl.hidden=true;
+    saveBtn.hidden=!(present===3 && !dupe);
+  }
+
+  // Fill only the empty M/D/G letter slots with random unused words; keep what's typed,
+  // and write the result back in M D G order.
+  function randomizeMissing(){
+    var slot=readSlots().slot, entries=all();
+    SLOTS.forEach(function(L,i){
+      if(slot[L]) return;
+      var used={}; entries.forEach(function(e){ if(e.w[i]) used[e.w[i].toLowerCase()]=1; });
+      var pool=BANK[L].filter(function(w){ return !used[w.toLowerCase()]; });
+      if(!pool.length) pool=BANK[L];
+      slot[L]=pool[(Math.random()*pool.length)|0];
+    });
+    input.value=[slot.M,slot.D,slot.G].join(' '); check(); input.focus();
   }
 
   input.addEventListener('input',check);
