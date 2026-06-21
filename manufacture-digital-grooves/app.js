@@ -1,4 +1,4 @@
-// THUDWORKS — app glue: a code editor that compiles to a song, transport, examples.
+// THUDWORKS, app glue: a code editor that compiles to a song, transport, examples.
 import { createKit } from './synth.js';
 import { compile, SongPlayer } from './song.js';
 import { EXAMPLES } from './examples.js';
@@ -53,7 +53,7 @@ playBtn.onclick = () => { if (player && player.playing) stop(); else run(); };
 volEl.oninput = () => { if (master) master.gain.value = +volEl.value; };
 copyBtn.onclick = async () => {
   try { await navigator.clipboard.writeText(codeEl.value); setStatus('copied to clipboard ✓'); }
-  catch { setStatus('copy failed — select the code and copy manually', true); }
+  catch { setStatus('copy failed, select the code and copy manually', true); }
 };
 
 // live status: tempo + bar while playing
@@ -107,7 +107,7 @@ downloadBtn.onclick = async () => {
   finally { rendering = false; downloadBtn.disabled = false; }
 };
 
-// example songs, grouped by genre — each loads into the editor and plays on click
+// example songs, grouped by genre, each loads into the editor and plays on click
 const exBar = document.getElementById('examples');
 EXAMPLES.forEach(group => {
   const row = document.createElement('div'); row.className = 'exrow';
@@ -126,8 +126,8 @@ const fromCrafter = localStorage.getItem('mdg:craft');
 if (fromCrafter) {
   localStorage.removeItem('mdg:craft');
   codeEl.value = fromCrafter;
-  setStatus('loaded from Code Crafter — press ▶ Play');
+  setStatus('loaded from Code Crafter, press ▶ Play');
 } else {
   codeEl.value = EXAMPLES[0].songs[0].code.trim();
-  setStatus('press ▶ Play — or pick a song above');
+  setStatus('press ▶ Play, or pick a song above');
 }

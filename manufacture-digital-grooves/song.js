@@ -1,11 +1,11 @@
-// THUDWORKS — the song language + player.
+// THUDWORKS, the song language + player.
 //
 // A song is plain code. You call play(instrument, pattern, opts?) for each part;
 // tempo()/swing() set the clock. Patterns are read one 16th-note per cell:
 //
-//   drums    — one character per step:  'x' (or any non-'.') = hit, '.' = rest.
+//   drums, one character per step:  'x' (or any non-'.') = hit, '.' = rest.
 //              spaces are ignored, so you can group beats:  "x... x... x... x..."
-//   pitched  — whitespace-separated tokens, one per step:
+//   pitched, whitespace-separated tokens, one per step:
 //              note "C4" / "F#3" / "Bb2" = play it, '.' = rest, '-' = hold (tie).
 //
 // Every part loops to fill the longest part, so a 1-bar drum loop repeats under a
@@ -67,7 +67,7 @@ export function compile(code) {
   const length = v => { lengthBars = Math.max(1, Math.floor(+v)); };             // fix total song length
   const cellsOf = (inst, pattern) => {
     const meta = VOICES[inst];
-    if (!meta) throw new Error(`unknown instrument "${inst}" — try: ${INSTRUMENTS.join(', ')}`);
+    if (!meta) throw new Error(`unknown instrument "${inst}", try: ${INSTRUMENTS.join(', ')}`);
     return meta.pitched ? parsePitched(pattern) : parseDrum(pattern);
   };
   const play = (inst, pattern, opts = {}) => {
@@ -117,7 +117,7 @@ export function compile(code) {
 
   new Function('tempo', 'swing', 'play', 'rep', 'euclid', 'seq', 'length', 'section', 'arrange', 'transpose', code)
     (tempo, swingFn, play, rep, euclid, seq, length, section, arrange, transpose);
-  if (!tracks.length) throw new Error('no play() calls — nothing to play');
+  if (!tracks.length) throw new Error('no play() calls, nothing to play');
   return { bpm: Math.max(20, bpm), swing: Math.min(70, Math.max(0, swing)),
            cells: lengthBars * 16, tracks };                                     // cells 0 = auto (longest part)
 }

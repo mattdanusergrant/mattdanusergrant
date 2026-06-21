@@ -1,4 +1,4 @@
-// THUDWORKS — Code Crafter: build a song with buttons, get code out.
+// THUDWORKS, Code Crafter: build a song with buttons, get code out.
 // Each "part" is one instrument + a 16-step pattern; it generates a play(...) line.
 import { createKit } from './synth.js';
 import { compile, SongPlayer, INSTRUMENTS, PITCHED } from './song.js';
@@ -104,7 +104,7 @@ bpmEl.oninput = () => { tempo = +bpmEl.value; bpmv.textContent = tempo; refresh(
 el('add').onclick = () => addPart('kick');
 el('copy').onclick = async () => {
   try { await navigator.clipboard.writeText(genCode()); setStatus('copied to clipboard ✓'); }
-  catch { setStatus('copy failed — select the code and copy manually', true); }
+  catch { setStatus('copy failed, select the code and copy manually', true); }
 };
 el('open').onclick = () => { localStorage.setItem('mdg:craft', genCode()); };   // index.html reads this
 

@@ -1,4 +1,4 @@
-// THUDWORKS — synth voices (Web Audio). Every drum is generated live: sine + noise
+// THUDWORKS, synth voices (Web Audio). Every drum is generated live: sine + noise
 // + envelopes, the same way the real TR-808 works. No samples, no licensing.
 // Each voice is trigger(time, gain, opts) and schedules itself on the audio clock.
 
@@ -95,7 +95,7 @@ export function createKit(ctx, out) {
     o.connect(g).connect(out); o.start(t); o.stop(t + 0.24);
   }
 
-  // melodic voice — two detuned oscillators through a lowpass with an AD envelope.
+  // melodic voice, two detuned oscillators through a lowpass with an AD envelope.
   // `dur` is the note length in seconds (set by the song engine from note ties).
   function synth(t, gain = 1, freq = 440, opts = {}) {
     const { wave = 'sawtooth', dur = 0.25, cutoff = 3000, detune = 6 } = opts;

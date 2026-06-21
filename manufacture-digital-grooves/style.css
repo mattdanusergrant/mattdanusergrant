@@ -24,18 +24,24 @@ body {
   font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
   padding: 32px clamp(14px, 4vw, 40px) 60px;
 }
-header { text-align: center; margin-bottom: 24px; }
-h1 {
-  margin: 0; font-family: 'Fraunces', Georgia, serif; font-weight: 500;
-  font-size: clamp(26px, 5vw, 40px); letter-spacing: -0.01em; color: var(--ink);
+/* Title card + transport, side by side */
+.topbar { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; max-width: 920px; margin: 0 auto 14px; }
+.titlecard {
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+  padding: 18px 24px; display: flex; flex-direction: column; justify-content: center;
 }
-.tag { margin: 6px 0 0; color: var(--muted); font-style: italic; font-size: 15px; }
+.titlecard h1 {
+  margin: 0; font-family: 'Fraunces', Georgia, serif; font-weight: 500;
+  font-size: clamp(22px, 3.4vw, 30px); line-height: 1.02; letter-spacing: -0.01em; color: var(--ink);
+}
+.titlecard .tag { margin: 10px 0 0; color: var(--muted); font-style: italic; font-size: 14px; }
 
 .transport, .examples {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center;
   background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px;
   padding: 14px 18px; margin: 0 auto 14px; max-width: 920px; box-shadow: var(--shadow);
 }
+.transport { flex: 1 1 320px; margin: 0; max-width: none; }
 .transport label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
 input[type=range] { accent-color: var(--ink); width: 110px; vertical-align: middle; }
 .status { color: var(--muted); font: 13px var(--mono); min-width: 12ch; }

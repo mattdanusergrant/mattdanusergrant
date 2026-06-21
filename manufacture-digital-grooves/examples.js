@@ -1,4 +1,4 @@
-// THUDWORKS — example songs, grouped by genre. Each is fully arranged with
+// THUDWORKS, example songs, grouped by genre. Each is fully arranged with
 // section(name, { instrument: pattern }) + arrange(...names).
 // Click one in the app to load it into the editor and play it.
 
@@ -9,7 +9,7 @@ export const EXAMPLES = [
       {
         name: 'Overworld',
         code: `
-// OVERWORLD — bright NES march in C. Two pulse channels + triangle bass + noise drums.
+// OVERWORLD, bright NES march in C. Two pulse channels + triangle bass + noise drums.
 // pulse = lead, pulse2 = fast arpeggio (how the NES fakes chords), tri = bass.
 tempo(144)
 
@@ -34,7 +34,7 @@ arrange('intro', 'main', 'main', 'main', 'main')
       {
         name: 'Boss Battle',
         code: `
-// BOSS BATTLE — fast, tense Am. Pounding triangle, frantic arp, screaming lead.
+// BOSS BATTLE, fast, tense Am. Pounding triangle, frantic arp, screaming lead.
 tempo(168)
 
 section('build', {
@@ -58,7 +58,7 @@ arrange('build', 'main', 'main', 'main', 'main', 'main')
       {
         name: 'Dungeon',
         code: `
-// DUNGEON — slow and eerie in Dm. Sparse pulse over a creeping triangle.
+// DUNGEON, slow and eerie in Dm. Sparse pulse over a creeping triangle.
 tempo(100)
 
 section('main', {
@@ -80,7 +80,7 @@ arrange('main', 'main', 'turn', 'main', 'turn')
       {
         name: 'Title',
         code: `
-// TITLE — a triumphant fanfare; the reprise lifts up a whole step (transpose +2).
+// TITLE, a triumphant fanfare; the reprise lifts up a whole step (transpose +2).
 tempo(132)
 
 section('fanfare', {
@@ -110,7 +110,7 @@ arrange('fanfare', 'fanfare', 'reprise', 'reprise')
       {
         name: 'Acid House',
         code: `
-// ACID HOUSE — 128bpm. '-' holds a note so the 303 slides. Builds to a peak.
+// ACID HOUSE, 128bpm. '-' holds a note so the 303 slides. Builds to a peak.
 tempo(128)
 
 section('intro', { kick: "x...x...x...x...", openhat: "..x...x...x...x." })
@@ -137,7 +137,7 @@ arrange('intro', 'main', 'main', 'peak', 'main', 'peak', 'peak')
       {
         name: 'Deep House',
         code: `
-// DEEP HOUSE — 122bpm chord stabs ('+' = chord). Goes to a deeper key, then back.
+// DEEP HOUSE, 122bpm chord stabs ('+' = chord). Goes to a deeper key, then back.
 tempo(122)
 
 section('intro', { kick: "x...x...x...x...", openhat: "..x...x...x...x." })
@@ -164,7 +164,7 @@ arrange('intro', 'main', 'main', 'deep', 'main', 'deep', 'deep', 'main')
       {
         name: 'Euclid Techno',
         code: `
-// EUCLID TECHNO — euclid(hits, steps) spreads hits evenly. Lift section adds a lead.
+// EUCLID TECHNO, euclid(hits, steps) spreads hits evenly. Lift section adds a lead.
 tempo(130)
 
 section('intro', { kick: "x...x...x...x...", openhat: euclid(7, 16) })
@@ -189,7 +189,7 @@ arrange('intro', 'main', 'main', 'lift', 'main', 'lift', 'lift')
       {
         name: 'Arranged',
         code: `
-// ARRANGED — the full toolkit: section/arrange, per-part swing, chords, and
+// ARRANGED, the full toolkit: section/arrange, per-part swing, chords, and
 // transpose() to lift the chorus up a fourth.
 tempo(124)
 
@@ -226,7 +226,7 @@ arrange('intro', 'build', 'drop', 'drop', 'lift', 'drop', 'lift')
       {
         name: 'Boom Bap',
         code: `
-// BOOM BAP — dusty 90bpm head-nod, with a 2-bar riff section
+// BOOM BAP, dusty 90bpm head-nod, with a 2-bar riff section
 tempo(90)
 swing(14)
 
@@ -257,7 +257,7 @@ arrange('intro', 'groove', 'riff', 'groove', 'riff', 'riff', 'outro')
       {
         name: 'Trap',
         code: `
-// TRAP — 140, rolling hats, sliding 808, chord pad. A roll section every 4th bar.
+// TRAP, 140, rolling hats, sliding 808, chord pad. A roll section every 4th bar.
 tempo(140)
 
 section('intro', {
@@ -286,7 +286,7 @@ arrange('intro', 'main', 'main', 'roll', 'main', 'main', 'roll', 'main')
       {
         name: 'Lo-Fi',
         code: `
-// LO-FI — 78bpm, sleepy and swung, with a chord turnaround
+// LO-FI, 78bpm, sleepy and swung, with a chord turnaround
 tempo(78)
 swing(18)
 
