@@ -213,56 +213,57 @@ const style={ bg:'#0a0a14', trails:false };
 const anim={ animate:true, evolveSpeed:0.5, phase:0 };
 
 /* ---- code-sketch mode ---- */
-const SIDE_DOORS_SKETCH =
-`// Side Doors, a corridor with passages branching off the side walls.
+const MANY_DOORS_SKETCH =
+`// Many Doors, a long hallway lined with doors on both side walls.
 // Animate ON; try Trails. ctx, w, h, t, TAU.
 
-const N = 22, speed = 0.55, focal = Math.min(w, h) * 0.62, march = t * speed;
-const cx = w / 2 + Math.sin(t * 0.9) * w * 0.015;
-const cy = h / 2 + Math.sin(t * 1.7) * h * 0.010;
-const WX = 0.26, HY = 0.42;            // corridor half width / height (world)
+const N = 28, speed = 0.5, focal = Math.min(w, h) * 0.62, march = t * speed;
+const cx = w / 2 + Math.sin(t * 0.7) * w * 0.012;
+const cy = h / 2 + Math.sin(t * 1.3) * h * 0.008;
+const WX = 0.40, HY = 0.52;          // corridor half width / height (world)
+const DH = 0.80, GAP = 0.6;          // door height / door depth-span (world)
 
 ctx.lineCap = 'butt';
 ctx.lineJoin = 'miter';
 
+// faint corridor: the four wall edges converging to the vanishing point
+const e = focal;                     // scale at depth 1 (the nearest opening)
 ctx.strokeStyle = 'hsla(210, 50%, 45%, 0.16)';
 ctx.lineWidth = 1;
 ctx.beginPath();
-ctx.moveTo(0, 0); ctx.lineTo(cx, cy);
-ctx.moveTo(w, 0); ctx.lineTo(cx, cy);
-ctx.moveTo(0, h); ctx.lineTo(cx, cy);
-ctx.moveTo(w, h); ctx.lineTo(cx, cy);
+ctx.moveTo(cx - WX*e, cy - HY*e); ctx.lineTo(cx, cy);
+ctx.moveTo(cx + WX*e, cy - HY*e); ctx.lineTo(cx, cy);
+ctx.moveTo(cx - WX*e, cy + HY*e); ctx.lineTo(cx, cy);
+ctx.moveTo(cx + WX*e, cy + HY*e); ctx.lineTo(cx, cy);
 ctx.stroke();
 
 for (let i = N; i >= 1; i--) {
-  const z = i - (march % 1);
+  const z = i - (march % 1);         // door near-edge depth, scrolling toward you
+  if (z < 0.6) continue;
   const s = focal / z;
   if (WX * s < 0.4) continue;
-  const hue = (march * 40 + z * 16) % 360;
-  const light = Math.max(10, 64 - z * 6);
-  const alpha = Math.min(1, Math.max(0.05, 1.2 - z / N));
-  ctx.lineWidth = Math.min(15, Math.max(0.8, 6.5 / z));
+  const zf = z + GAP, sf = focal / zf; // door far edge, set back along the wall
+  const hue = (march * 30 + z * 16) % 360;
+  const light = Math.max(12, 66 - z * 5.5);
+  const alpha = Math.min(1, Math.max(0.05, 1.25 - z / N));
+  ctx.lineWidth = Math.min(9, Math.max(0.7, 4.2 / z));
 
-  // a passage opening in a side wall every 3rd layer, alternating sides
-  if (i % 3 === 0) {
-    const side = (i % 6 === 0) ? -1 : 1;
-    const z2 = z + 0.85, s2 = focal / z2;
-    const x1 = cx + side * WX * s,  x2 = cx + side * WX * s2;
-    const o1 = 0.30 * s, o2 = 0.30 * s2;
-    ctx.strokeStyle = \`hsla(\${(hue + 40) % 360}, 90%, \${light + 6}%, \${alpha})\`;
+  // one door on each side wall; near + far stiles ride the converging wall line,
+  // verticals stay vertical, so each door foreshortens into a trapezoid
+  for (let side = -1; side <= 1; side += 2) {
+    const xn = cx + side * WX * s,   xf = cx + side * WX * sf;
+    const floorN = cy + HY * s,      floorF = cy + HY * sf;
+    const topN = cy + (HY - DH) * s, topF = cy + (HY - DH) * sf;
+    ctx.strokeStyle = \`hsla(\${hue}, 85%, \${light}%, \${alpha})\`;
     ctx.beginPath();
-    ctx.moveTo(x1, cy - o1); ctx.lineTo(x1, cy + o1);
-    ctx.lineTo(x2, cy + o2); ctx.lineTo(x2, cy - o2);
+    ctx.moveTo(xn, floorN); ctx.lineTo(xn, topN);
+    ctx.lineTo(xf, topF);   ctx.lineTo(xf, floorF);
     ctx.closePath(); ctx.stroke();
+    // knob, inset from the far stile, mid height
+    ctx.beginPath();
+    ctx.arc(xf + (xn - xf) * 0.16, (topF + floorF) / 2, Math.max(0.6, 3 / z), 0, TAU);
+    ctx.stroke();
   }
-
-  // main corridor doorway
-  ctx.strokeStyle = \`hsla(\${hue}, 85%, \${light}%, \${alpha})\`;
-  const hw = WX * s, hh = HY * s, top = cy - hh, bot = cy + hh;
-  ctx.beginPath();
-  ctx.moveTo(cx - hw, bot); ctx.lineTo(cx - hw, top);
-  ctx.lineTo(cx + hw, top); ctx.lineTo(cx + hw, bot);
-  ctx.stroke();
 }`;
 const TURNING_HALL_SKETCH =
 `// Turning Hall, the corridor curves as you walk down it.
@@ -964,7 +965,7 @@ tri(v[0], v[1], v[2], depth);
 ctx.fill();`;
 const SKETCHES = [
   { name: 'Doors',           code: WALK_SKETCH,        info: `A first-person corridor, a tiny lesson in <b>perspective projection</b>. An object at depth <code>z</code> appears at size proportional to <code>1/z</code>, so we loop depth layers, scale each by <code>focal/z</code>, and recycle the nearest one as you "walk" forward.` },
-  { name: 'Side Doors',      code: SIDE_DOORS_SKETCH,  info: `The same <code>1/z</code> perspective, with trapezoidal openings cut into the side walls. Each opening's near and far edges use the wall's own <code>focal/z</code> at two different depths, so the gaps foreshorten correctly.` },
+  { name: 'Many Doors',      code: MANY_DOORS_SKETCH,  info: `A long hallway lined with doors on both walls, from the same <code>1/z</code> perspective. Each door's near and far stiles ride the converging wall line at depths <code>z</code> and <code>z+gap</code>, while its verticals stay vertical, so every door foreshortens into a trapezoid. The whole rank scrolls toward you as you "walk".` },
   { name: 'Turning Hall',    code: TURNING_HALL_SKETCH,info: `A corridor whose centre-line bends by <code>sin(z·k − t)</code>, weighted by <code>(1 − z/N)</code> so the far end stays pinned to the vanishing point while the near hall swings, and the bend travels toward you.` },
   { name: 'Swinging Doors',  code: SWINGING_DOORS_SKETCH, info: `A perspective corridor where each door hinges open as you reach it. The free edge foreshortens by <code>cos(θ)</code> as it swings, and a filled leaf occludes the doors behind it.` },
   { name: 'Sound Waves',     code: SOUND_WAVES_SKETCH, info: `Overlaid sine waves <code>sin(2π·f·x + t)</code> at rising frequencies, each multiplied by a window <code>sin(πx)</code> that tapers both ends, like an oscilloscope tracing a packet of sound.` },
