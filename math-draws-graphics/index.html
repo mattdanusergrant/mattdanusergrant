@@ -228,7 +228,7 @@ ctx.lineJoin = 'miter';
 
 // faint corridor: the four wall edges converging to the vanishing point
 const e = focal;                     // scale at depth 1 (the nearest opening)
-ctx.strokeStyle = 'hsla(210, 50%, 45%, 0.16)';
+ctx.strokeStyle = 'rgba(255,255,255,0.14)';
 ctx.lineWidth = 1;
 ctx.beginPath();
 ctx.moveTo(cx - WX*e, cy - HY*e); ctx.lineTo(cx, cy);
@@ -239,14 +239,15 @@ ctx.stroke();
 
 for (let i = N; i >= 1; i--) {
   const z = i - (march % 1);         // door near-edge depth, scrolling toward you
-  if (z < 0.6) continue;
+  if (z < 0.12) continue;            // stay drawn right up to the camera; drop only once it sweeps past
   const s = focal / z;
   if (WX * s < 0.4) continue;
   const zf = z + GAP, sf = focal / zf; // door far edge, set back along the wall
-  const hue = (march * 30 + z * 16) % 360;
-  const light = Math.max(12, 66 - z * 5.5);
-  const alpha = Math.min(1, Math.max(0.05, 1.25 - z / N));
+  // white on black: full bright through the approach, washing out only as it overtakes you (no pop)
+  const pass = z > 0.4 ? 1 : Math.max(0, (z - 0.12) / 0.28);
+  const alpha = Math.min(1, Math.max(0.05, 1.25 - z / N)) * pass;
   ctx.lineWidth = Math.min(9, Math.max(0.7, 4.2 / z));
+  ctx.strokeStyle = 'rgba(255,255,255,' + alpha.toFixed(3) + ')';
 
   // one door on each side wall; near + far stiles ride the converging wall line,
   // verticals stay vertical, so each door foreshortens into a trapezoid
@@ -254,15 +255,10 @@ for (let i = N; i >= 1; i--) {
     const xn = cx + side * WX * s,   xf = cx + side * WX * sf;
     const floorN = cy + HY * s,      floorF = cy + HY * sf;
     const topN = cy + (HY - DH) * s, topF = cy + (HY - DH) * sf;
-    ctx.strokeStyle = \`hsla(\${hue}, 85%, \${light}%, \${alpha})\`;
     ctx.beginPath();
     ctx.moveTo(xn, floorN); ctx.lineTo(xn, topN);
     ctx.lineTo(xf, topF);   ctx.lineTo(xf, floorF);
     ctx.closePath(); ctx.stroke();
-    // knob, inset from the far stile, mid height
-    ctx.beginPath();
-    ctx.arc(xf + (xn - xf) * 0.16, (topF + floorF) / 2, Math.max(0.6, 3 / z), 0, TAU);
-    ctx.stroke();
   }
 }`;
 const TURNING_HALL_SKETCH =
