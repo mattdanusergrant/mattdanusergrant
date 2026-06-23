@@ -40,7 +40,7 @@
     color:#8A857D; -webkit-text-fill-color:#8A857D; font-weight:500; margin-top:3px}
 
   .panel{
-    width:320px; flex:none; background:var(--paper); border-left:1.5px solid var(--line);
+    width:320px; flex:none; order:-1; background:var(--paper); border-right:1.5px solid var(--line);
     display:flex; flex-direction:column; overflow-y:auto;
   }
   .head{padding:18px 18px 14px; border-bottom:1.5px solid var(--line)}
@@ -134,7 +134,7 @@
   @media (max-width:820px){
     .app{flex-direction:column}
     .stage{height:52vh}
-    .panel{width:auto; height:48vh; border-left:none; border-top:1.5px solid var(--line)}
+    .panel{width:auto; height:48vh; order:0; border-right:none; border-top:1.5px solid var(--line)}
   }
 
 </style>
