@@ -361,7 +361,7 @@
       }
       S.x=x;S.y=y;ctx.shadowBlur=0;ctx.drawImage(S.off,0,0,w,h);
     };
-    // Sound Waves - overlaid oscilloscope waveforms (MANUFACTURE DIGITAL GROOVES).
+    // Sound Waves - overlaid oscilloscope waveforms (MAKE DOPE GROOVES).
     SK.waves=function(w,h,t){
       var mid=h/2,nw=5,step=Math.max(2,Math.floor(w/260));ctx.lineCap='round';ctx.shadowColor=col(300,0.4);
       ctx.strokeStyle=col(300,0.1);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();
@@ -400,7 +400,7 @@
       for(i=0;i<5200;i++){dx=sg*(y-x);dy=x*(rho-z)-y;dz=x*y-bt*z;x+=dx*dt;y+=dy*dt;z+=dz*dt;var px=cx+(x*cr-y*sr)*sc,py=cy+(z-25)*sc;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
       ctx.stroke();
     };
-    // Hilbert Curve - a space-filling fractal that draws itself in (MULTIPLE DIMENSIONS GENERATED).
+    // Hilbert Curve - a space-filling fractal that draws itself in (unused).
     function hil(w,h){
       if(hilCache&&hilCache.w===w&&hilCache.h===h)return hilCache.p;
       var m=Math.min(w,h)*0.86,ox=w/2-m/2,oy=h/2-m/2,p=[];
@@ -413,6 +413,13 @@
       var p=hil(w,h),n=Math.max(2,Math.floor(p.length*Math.min(1,(t*0.18)%1.4)));
       ctx.lineCap='round';ctx.shadowColor=col(150,0.45);ctx.strokeStyle=col(150,0.8);ctx.lineWidth=1.3;ctx.beginPath();
       for(var i=0;i<n;i++){i?ctx.lineTo(p[i][0],p[i][1]):ctx.moveTo(p[i][0],p[i][1]);}ctx.stroke();
+    };
+    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes (MULTIPLE DIMENSIONS GENERATED).
+    SK.lissajous=function(w,h,t){
+      var cx=w/2,cy=h/2,R=Math.min(w,h)*0.42,a=3,b=2,ph=t*0.5,N=420;
+      ctx.lineCap='round';ctx.shadowColor=col(0,0.5);ctx.strokeStyle=col(0,0.85);ctx.lineWidth=1.5;ctx.beginPath();
+      for(var i=0;i<=N;i++){var th=i/N*TAU,x=cx+Math.sin(a*th+ph)*R,y=cy+Math.sin(b*th)*R;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+      ctx.stroke();
     };
     // Metatron's Cube - sacred geometry of 13 circles (MANIFEST DIVINE GEOMETRY).
     SK.metatron=function(w,h,t){
@@ -460,7 +467,7 @@
       var lc=lifeCol(gFade);ctx.shadowColor=lc;ctx.fillStyle=lc;var pad=Math.max(1,cell*0.1);
       for(var y2=0;y2<rows;y2++)for(var x2=0;x2<cols;x2++)if(S.grid[y2][x2])ctx.fillRect(x2*cell+pad,y2*cell+pad,cell-2*pad,cell-2*pad);
     };
-    // Sierpinski Triangle - recursive subdivision, slowly turning (MAKE DOPE GARMENTS).
+    // Sierpinski Triangle - recursive subdivision, slowly turning (unused).
     SK.sierpinski=function(w,h,t){
       var m=Math.min(w,h)*0.84,cx=w/2,cy=h/2,H=m*Math.sqrt(3)/2,rot=t*0.14,cs=Math.cos(rot),sn=Math.sin(rot);
       function R(px,py){var dx=px-cx,dy=py-cy;return [cx+dx*cs-dy*sn,cy+dx*sn+dy*cs];}
@@ -514,12 +521,11 @@
 
   // Each phrase pairs with the Math Draws Graphics sketch that plays behind it.
   var BRIDGE_SETS=[
-    {words:['MANUFACTURE','DIGITAL','GROOVES'],  sketch:'waves'},
+    {words:['MAKE','DOPE','GROOVES'],            sketch:'waves'},
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketch:'doors'},
-    {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'hilbert'},
+    {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lissajous'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
-    {words:['MAKE','DOPE','GARMENTS'],           sketch:'sierpinski'},
     {words:['MATH','DRAWS','GRAPHICS'],          sketch:'fourier'}
   ];
   var FINAL={words:['MUST','DESIGN','GAMES'], sketch:'life'};
