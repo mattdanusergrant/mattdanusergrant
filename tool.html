@@ -95,8 +95,9 @@
    param can only load tools that live on this site. */
 (function(){
   var TOOLS={
-    'math-draws-graphics':       { name:'Math Draws Graphics',        src:'/math-draws-graphics/' },
-    'manufacture-digital-grooves':{ name:'Manufacture Digital Grooves', src:'/manufacture-digital-grooves/' }
+    'math-draws-graphics':        { name:'Math Draws Graphics', src:'/math-draws-graphics/' },
+    'make-dope-grooves':          { name:'Make Dope Grooves',   src:'/make-dope-grooves/' },
+    'manufacture-digital-grooves':{ name:'Make Dope Grooves',   src:'/make-dope-grooves/' } // legacy alias for old links
   };
   var key=new URLSearchParams(location.search).get('app');
   var t=TOOLS[key];

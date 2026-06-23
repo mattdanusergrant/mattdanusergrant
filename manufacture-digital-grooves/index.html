@@ -1,75 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manufacture Digital Grooves</title>
-  <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);addEventListener('storage',function(e){if(e.key==='theme'&&e.newValue)document.documentElement.setAttribute('data-theme',e.newValue)})}()</script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Make Dope Grooves · Matt Danuser-Grant</title>
+<link rel="canonical" href="https://mattdanusergrant.com/make-dope-grooves/" />
+<meta http-equiv="refresh" content="0; url=/make-dope-grooves/" />
+<meta name="robots" content="noindex" />
+<script>location.replace('/make-dope-grooves/' + location.search + location.hash);</script>
+<style>body{font-family:system-ui,-apple-system,sans-serif;background:#FBF8F2;color:#15161C;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center}p{font-size:16px}a{color:inherit}</style>
 </head>
 <body>
-  <div class="topbar">
-    <header class="titlecard">
-      <h1>Manufacture<br>Digital<br>Grooves</h1>
-      <p class="tag">write a song in code.</p>
-    </header>
-
-    <section class="transport">
-      <button id="play" class="play">▶ Play</button>
-      <label>Vol <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" /></label>
-      <button id="copy" class="ghost">Copy raw</button>
-      <button id="download" class="ghost">Generate WAV</button>
-      <a href="crafter.html" class="ghost linkish">Code Crafter ↗</a>
-      <span id="status" class="status"></span>
-    </section>
-  </div>
-
-  <section id="examples" class="examples"></section>
-
-  <main class="editor">
-    <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off"
-              wrap="off" aria-label="song code"></textarea>
-  </main>
-
-  <details class="cheat">
-    <summary>How the code works</summary>
-    <div class="cheatbody">
-      <p><code>play(instrument, pattern, opts?)</code> adds a part. <code>tempo(bpm)</code> and
-      <code>swing(0–70)</code> set the clock. Every part loops to fill the longest one.</p>
-      <p><strong>Patterns</strong> read one 16th-note per cell:</p>
-      <ul>
-        <li><strong>Drums</strong>, one character per step: <code>x</code> = hit, <code>.</code> = rest.
-          Spaces are ignored, so you can group beats: <code>"x... x... x... x..."</code></li>
-        <li><strong>Pitched</strong>, space-separated tokens: a note like <code>C4</code> /
-          <code>F#3</code> / <code>Bb2</code> plays it, <code>.</code> = rest, <code>-</code> = hold (tie).
-          Stack notes with <code>+</code> for a chord: <code>C4+E4+G4</code>.</li>
-      </ul>
-      <p><strong>Arrange:</strong> <code>section('name', { instrument: pattern })</code> defines a
-        reusable block, then <code>arrange('a', 'b', 'a', …)</code> plays blocks in order (each part
-        tiles to fill its block). <code>transpose(pattern, semitones)</code> shifts notes, handy for
-        lifting a chorus to a new key. An instrument value can be <code>[pattern, opts]</code>.</p>
-      <p><strong>Helpers:</strong> <code>rep(pattern, n)</code> repeats a pattern n times ·
-        <code>seq(...parts)</code> glues sections in order ·
-        <code>euclid(hits, steps[, rotate])</code> makes an evenly-spread drum pattern ·
-        <code>length(bars)</code> fixes the total song length (default: the longest part).</p>
-      <p><strong>opts:</strong> <code>{ gain, swing, wave, cutoff, detune }</code>, <code>gain</code> and <code>swing</code> (0–70, overrides the global) work on any part;
-        <code>wave</code>/<code>cutoff</code>/<code>detune</code> shape pitched parts.</p>
-      <p><strong>Generate WAV:</strong> renders your song offline to a lossless <code>.wav</code>
-        and saves it to your device, synthesized right in your browser, nothing fetched or uploaded.</p>
-      <p><strong>Instruments:</strong> kick, snare, clap, hat, openhat, cowbell, clave, tom ·
-        pitched: bass (808), synth, lead, pad, pluck ·
-        NES: <code>pulse</code> &amp; <code>pulse2</code> (square channels), <code>tri</code> (triangle bass).</p>
-    </div>
-  </details>
-
-  <footer>
-    <span>Every sound is synthesized live in your browser, no samples, no licensing.
-      Edit the code, hit Play. Pick a song above to start. · part of mattdanusergrant.com</span>
-  </footer>
-
-  <script type="module" src="app.js"></script>
+<p>This tool moved to <a href="/make-dope-grooves/">/make-dope-grooves/</a>.</p>
 </body>
 </html>
