@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>One designer, the whole stack · Case Study · Matt Danuser-Grant</title>
+<meta name="description" content="A Principal game designer, a year past full-time games, learns to direct AI as an engineering team — and ships a personal OS, an 11-game web arcade, and a multi-cloud backend, solo." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --paper:#FFFFFF;
+    --ink:#15161C;
+    --ink-2:#2A2A2A;
+    --muted:#6A6A6A;
+    --line:#E5E0D2;
+    --line-2:#CBC4B2;
+    --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+  }
+  [data-theme="dark"]{
+    --bg:#13110E;--paper:#1D1A16;
+    --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+    --line:#2C2924;--line-2:#3C3830;
+    --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+  }
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#13110E;--paper:#1D1A16;
+      --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#7A756D;
+      --line:#2C2924;--line-2:#3C3830;
+      --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+    }
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:17px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+
+  .wrap{max-width:768px;margin:0 auto;padding:0 28px 80px}
+
+  /* ── Top nav ───────────────────────────── */
+  .nav{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:24px 0 0;font-size:14px;color:var(--muted);
+    letter-spacing:.04em;
+  }
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+
+  /* ── Header ───────────────────────────── */
+  .head{padding:60px 0 28px;max-width:640px}
+  .head .eyebrow{
+    font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px;font-weight:500;
+  }
+  .head h1{
+    font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(34px,6vw,50px);
+    line-height:1.1;letter-spacing:-0.02em;margin:0 0 18px;
+  }
+  .head h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .head .lede{color:var(--ink-2);font-size:18.5px;line-height:1.6;margin:0}
+
+  /* ── Meta row ───────────────────────────── */
+  .meta{
+    display:flex;flex-wrap:wrap;gap:26px;
+    margin:8px 0 4px;padding:20px 0;
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .meta div{display:flex;flex-direction:column;gap:3px}
+  .meta dt{
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  .meta dd{margin:0;font-size:14.5px;color:var(--ink-2);font-weight:500}
+
+  /* ── Prose body ───────────────────────────── */
+  .prose{padding:36px 0 0;max-width:680px}
+  .prose section{margin:0 0 40px}
+  .prose h2{
+    font-family:'Fraunces',serif;font-weight:500;font-size:26px;
+    letter-spacing:-0.01em;line-height:1.2;margin:0 0 14px;
+  }
+  .prose h3{
+    font-family:'Fraunces',serif;font-weight:500;font-size:19px;
+    margin:26px 0 8px;letter-spacing:-0.005em;
+  }
+  .prose p{margin:0 0 16px;color:var(--ink-2)}
+  .prose ul,.prose ol{margin:0 0 16px;padding-left:22px;color:var(--ink-2)}
+  .prose li{margin:0 0 8px}
+  .prose strong{font-weight:600;color:var(--ink)}
+
+  /* ── Pull quote ───────────────────────────── */
+  .pull{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:400;
+    font-size:23px;line-height:1.4;color:var(--ink);
+    margin:30px 0;padding:4px 0 4px 24px;
+    border-left:2px solid var(--line-2);
+  }
+
+  /* ── Callout ───────────────────────────── */
+  .callout{
+    background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
+    padding:22px 24px;margin:26px 0;box-shadow:var(--shadow);
+  }
+  .callout .label{
+    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin:0 0 10px;
+  }
+  .callout ul{margin:0;padding-left:20px}
+  .callout li:last-child{margin-bottom:0}
+
+  /* ── Tags ───────────────────────────── */
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}
+  .tag{
+    font-size:12.5px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;
+    padding:4px 12px;background:var(--paper);
+  }
+
+  /* ── Theme toggle ───────────────────────────── */
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(20px)}}
+  .toggle-thumb svg{width:11px;height:11px;display:block}
+  .t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
+  .t-sun circle{fill:#E8A317;stroke:none}
+  .t-moon{fill:#3A3550;display:none}
+  [data-theme="dark"] .t-sun{display:none}
+  [data-theme="dark"] .t-moon{display:block}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
+
+  /* ── Theme switch FX ── */
+  html.mode-shift,html.mode-shift *{transition:background-color 2.5s ease,color 2.5s ease,border-color 2.5s ease,box-shadow 2.5s ease,fill 2.5s ease !important}
+  .fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;will-change:opacity,transform}
+  .fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.22) 0%,rgba(255,201,133,.12) 40%,rgba(255,224,178,.05) 70%,transparent 100%);animation:fx-rise 3.5s ease-in-out forwards}
+  .fx-sunset{background:linear-gradient(0deg,rgba(90,60,100,.2) 0%,rgba(70,55,90,.11) 40%,rgba(50,45,75,.04) 70%,transparent 100%);animation:fx-set 3.5s ease-in-out forwards}
+  @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
+  @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
+
+  /* ── Footer ───────────────────────────── */
+  .foot{
+    margin:64px 0 0;padding-top:28px;
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    color:var(--muted);font-size:14px;
+  }
+  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot a:hover{border-color:var(--ink-2)}
+
+  .note{
+    max-width:680px;margin:30px auto 0;font-size:12.5px;color:var(--muted);
+    text-align:center;font-style:italic;
+  }
+
+  @media (max-width:480px){
+    .wrap{padding:0 22px 60px}
+    .head{padding:40px 0 24px}
+    .meta{gap:18px}
+    .nav .links a{margin-left:14px;font-size:13px}
+    .theme-toggle{margin-left:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links">
+      <a href="/resume.html">Resume</a>
+      <a href="/design-lab.html">Design Lab</a>
+      <a href="/consulting.html">Consulting</a>
+      <a class="active" href="/case-studies.html">Case Studies</a>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <header class="head">
+    <p class="eyebrow">Case Study · Building with AI</p>
+    <h1>One designer, <em>the whole stack.</em></h1>
+    <p class="lede">For seventeen years I designed the systems behind games like <strong>Star Wars: Galaxy of Heroes</strong> and <strong>Marvel Strike Force</strong>. Then the industry&rsquo;s AI wave moved the ground under all of us. Instead of waiting it out, I sat down with the same tools and learned to <em>direct</em> them &mdash; and shipped more, solo, than I thought one person could.</p>
+  </header>
+
+  <dl class="meta">
+    <div><dt>Context</dt><dd>Solo · ~1 year past full-time games</dd></div>
+    <div><dt>Role</dt><dd>Designer as director</dd></div>
+    <div><dt>Stack</dt><dd>Vanilla JS · Neon · Supabase · Cloudflare</dd></div>
+    <div><dt>Tooling</dt><dd>Claude Code as the engineering team</dd></div>
+  </dl>
+
+  <article class="prose">
+
+    <section>
+      <h2>The situation</h2>
+      <p>The mobile games industry that employed me for most of two decades got hit hard &mdash; contraction, layoffs, and an AI shift that has a lot of brilliant people scared for their craft. I was out of a full-time seat for a while (partly the market, partly a deliberate choice to be home with two young kids). The easy move was to treat AI as the thing that came for my job.</p>
+      <p>I made the opposite bet: that the tool that disrupts a craft is also the best thing that ever happened to anyone who can <em>direct</em> craft. So I stopped reading about it and started building with it.</p>
+      <div class="callout">
+        <p class="label">What I set out to prove</p>
+        <ul>
+          <li>That a designer who can&rsquo;t hand-write a backend can still <strong>ship</strong> one &mdash; by directing, not typing.</li>
+          <li>That seventeen years of systems judgment transfers directly to working with AI.</li>
+          <li>That &ldquo;solo&rdquo; doesn&rsquo;t have to mean &ldquo;small&rdquo; anymore.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>The approach &mdash; direct it like a team</h2>
+      <p>I&rsquo;ve spent my career telling engineers and designers what &ldquo;good&rdquo; looks like and reviewing until it got there. It turns out directing a model is the same job: <strong>set the vision, define done, hand over the problem instead of the steps, then review hard and own the calls it can&rsquo;t make.</strong></p>
+      <p>So I built a system for it &mdash; a personal operating system with specialist roles (capture &amp; planning, building, research) running over a Markdown knowledge graph that gives the AI persistent memory across sessions. The guardrails are borrowed from good engineering culture: think before coding, build the simplest thing, make surgical changes, work toward a definition of done. The skill that carries the whole thing isn&rsquo;t syntax. It&rsquo;s decomposition, taste, and knowing the moment an answer is wrong.</p>
+      <p class="pull">I&rsquo;d spent a career telling a team what &ldquo;good&rdquo; looks like and reviewing until it got there. Directing a model turned out to be the same job.</p>
+    </section>
+
+    <section>
+      <h2>What I built</h2>
+
+      <h3>A self-governing personal OS</h3>
+      <p>A three-agent system over a structured knowledge base that plans my week, keeps a journal, runs research routines, and remembers context between sessions instead of starting cold each time. It&rsquo;s the workbench everything else gets built from &mdash; and proof that I think in systems and operating models, not one-off prompts.</p>
+
+      <h3>An 11-game web arcade</h3>
+      <p>A scatter of prototype game repos, consolidated into a single deploy with a gallery front end and one clean home for everyone to play. Midway through, the platform blocked the obvious path; rather than stall, I had the build <strong>re-route its own architecture</strong> &mdash; repurpose an existing home, re-point everything, ship. Turning a hard constraint into a one-move workaround is the same instinct I&rsquo;ve always brought to design.</p>
+
+      <h3>A private backend control plane</h3>
+      <p>Auth, databases, and infrastructure across <strong>Neon, Supabase, and Cloudflare Workers</strong> for a handful of projects &mdash; unified behind one private &ldquo;control plane&rdquo; with a strict <em>no-secrets-in-git</em> discipline and a registry that maps exactly where every credential really lives. I ran a security pass on my own repos in the process and closed the gaps I found.</p>
+    </section>
+
+    <section>
+      <h2>What actually made it work</h2>
+      <ul>
+        <li><strong>Judgment over syntax.</strong> The muscle that balanced a 200+ character roster &mdash; decompose the problem, define done, review for correctness, decide under ambiguity &mdash; is the exact muscle that gets good work out of a model.</li>
+        <li><strong>Systems thinking as the unlock.</strong> The reason I could direct a backend I couldn&rsquo;t hand-write is that I understood the <em>shape</em> of the system and could tell when the pieces were wrong.</li>
+        <li><strong>Honesty about the edges.</strong> I&rsquo;m a director and a systems designer, not a from-scratch software engineer. I know what good looks like, and I can get a model there fast. In this era, that&rsquo;s the job.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Where this points</h2>
+      <p>The next era rewards the people who can aim these tools with taste &mdash; who can turn intent into shipped systems and tell the difference between impressive and correct. I want to do that work, and I especially want to help the people whose industries are being remade (the way mine was) learn to wield it instead of fear it. Whether that&rsquo;s a studio of my own or a team building this future, it&rsquo;s the same craft I&rsquo;ve practiced for seventeen years &mdash; pointed at a new kind of collaborator.</p>
+    </section>
+
+    <div class="tags">
+      <span class="tag">AI-Native Building</span>
+      <span class="tag">Systems Thinking</span>
+      <span class="tag">Multi-Agent</span>
+      <span class="tag">Solo → Shipped</span>
+    </div>
+
+  </article>
+
+  <p class="note">Written as a portfolio piece. The build was solo, recent, and real &mdash; some systems are private, and I&rsquo;m happy to walk through any of them live.</p>
+
+  <footer class="foot">
+    <div><a href="/case-studies.html">&larr; Case Studies</a></div>
+    <div><a href="/">&larr; Home</a></div>
+  </footer>
+
+</div>
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  if(!btn)return;
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function fx(theme){
+    if(reduce)return;
+    var o=document.createElement('div');
+    o.className='fx-overlay '+(theme==='light'?'fx-sunrise':'fx-sunset');
+    document.body.appendChild(o);
+    setTimeout(function(){o.remove();},3600);
+  }
+  btn.addEventListener('click',function(){
+    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    if(!reduce){
+      document.documentElement.classList.add('mode-shift');
+      setTimeout(function(){document.documentElement.classList.remove('mode-shift');},2600);
+    }
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+    fx(next);
+  });
+})();
+</script>
+</body>
+</html>
