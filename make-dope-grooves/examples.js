@@ -316,4 +316,52 @@ arrange('intro', 'verse', 'verse', 'turn', 'verse', 'turn')
       },
     ],
   },
+  {
+    group: 'TV Themes',
+    songs: [
+      {
+        name: 'Airwolf',
+        code: `
+// AIRWOLF, an homage to Sylvester Levay's 1984 TV theme: a fast, driving
+// D-minor action cue. Galloping 16th synth, heroic saw lead, pounding 80s beat.
+// Chords ride i - VI - VII (Dm - Bb - C); every sound is synthesized live.
+tempo(150)
+
+section('intro', {
+  kick:   "x.......x.......",
+  tom:    "............x.x.",
+  bass:   "D2 . D2 . D2 . D2 . D2 . D2 . D2 . D2 .",
+  pulse2: ["D5 F5 A5 F5 D5 F5 A5 F5 D5 F5 A5 F5 D5 F5 A5 F5", { gain: 0.2 }],
+})
+section('main', {
+  kick:   "x...x...x...x...",
+  snare:  "....x.......x...",
+  hat:    "x.x.x.x.x.x.x.x.",
+  bass:   seq("D2 . D2 . D2 . D2 . D2 . D2 . D2 . D2 .",
+              "A#1 . A#1 . A#1 . A#1 . C2 . C2 . C2 . C2 ."),
+  pulse2: [seq("D5 F5 A5 F5 D5 F5 A5 F5 D5 F5 A5 F5 D5 F5 A5 F5",
+               "A#4 D5 F5 D5 A#4 D5 F5 D5 C5 E5 G5 E5 C5 E5 G5 E5"), { gain: 0.2 }],
+  lead:   [seq("D5 - F5 - A5 - - G5 F5 - E5 - D5 - - -",
+               "C5 - - E5 - D5 - C5 A#4 - - - C5 - D5 -"), { gain: 0.42 }],
+})
+section('lift', {       // heroic restatement: 16th hats, open-hat sizzle, full pad
+  kick:    "x...x...x...x.x.",
+  snare:   "....x.......x...",
+  hat:     "xxxxxxxxxxxxxxxx",
+  openhat: "..x...x...x...x.",
+  bass:    seq("D2 . D2 D2 . D2 . D2 D2 . D2 . D2 D2 . D2",
+               "A#1 . A#1 A#1 . A#1 . C2 C2 . C2 . C2 C2 . C2"),
+  pulse2:  [seq("D5 F5 A5 F5 D5 F5 A5 F5 D5 F5 A5 F5 D5 F5 A5 F5",
+                "A#4 D5 F5 D5 A#4 D5 F5 D5 C5 E5 G5 E5 C5 E5 G5 E5"), { gain: 0.22 }],
+  pad:     [seq("D3+F3+A3 - - - - - - - - - - - - - - -",
+                "A#2+D3+F3 - - - - - - - C3+E3+G3 - - - - - - -"), { gain: 0.22 }],
+  lead:    [seq("D5 - F5 - A5 - - G5 F5 - E5 - D5 - - -",
+                "C5 - - E5 - D5 - C5 A#4 - - - C5 - D5 -"), { gain: 0.44 }],
+})
+
+arrange('intro', 'main', 'main', 'lift', 'main', 'lift', 'lift')
+`,
+      },
+    ],
+  },
 ];
