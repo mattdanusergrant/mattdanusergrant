@@ -86,42 +86,53 @@
   }
   .hero .lede + .lede{color:var(--muted);font-size:18.5px}
 
-  /* ── Big CTAs ────────────────────────────────────────────────────── */
-  .cards{
-    display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
-    margin:48px 0 0;
+  /* ── Work showcase — the good stuff, right on the page ── */
+  .work{margin:48px 0 0}
+  .work-head{
+    display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+    margin:0 0 18px;padding-bottom:12px;border-bottom:1.5px solid var(--line);
   }
-  @media (max-width:540px){.cards{grid-template-columns:1fr}}
-  .card{
-    background:var(--paper);
-    border:1.5px solid var(--line);border-radius:14px;
-    padding:28px 26px;
-    display:flex;flex-direction:column;
-    box-shadow:var(--shadow);
-    transition:transform .18s,border-color .18s,box-shadow .18s;
-    position:relative;
+  .work-head h2{
+    font-family:'Fraunces',serif;font-weight:500;font-size:22px;
+    letter-spacing:-0.01em;color:var(--ink);margin:0;
   }
-  .card:hover{
-    transform:translateY(-3px);
-    border-color:var(--line-2);
-    box-shadow:var(--shadow-hover);
+  .work-head .more{font-size:13.5px;color:var(--muted);white-space:nowrap;transition:color .15s}
+  .work-head .more:hover{color:var(--ink)}
+  .work-head .more span{display:inline-block;transition:transform .18s}
+  .work-head .more:hover span{transform:translateX(3px)}
+
+  .shelf{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:14px}
+  .tile{
+    background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
+    padding:18px 18px 16px;display:flex;flex-direction:column;
+    box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s;
   }
-  .card .label{
-    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--muted);margin:0 0 10px;font-weight:600;
+  .tile:hover{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow-hover)}
+  .tile h3{
+    font-family:'Fraunces',serif;font-weight:500;font-size:19px;
+    letter-spacing:-0.01em;line-height:1.2;margin:0 0 7px;color:var(--ink);
   }
-  .card h2{
-    font-family:'Fraunces',serif;font-weight:500;font-size:28px;
-    margin:0 0 8px;letter-spacing:-0.01em;line-height:1.15;
+  .tile p{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.5;flex:1}
+
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+  .btn{
+    font-family:'Fraunces',serif;font-size:13px;font-weight:500;
+    display:inline-flex;align-items:center;border-radius:999px;padding:6px 14px 7px;
+    white-space:nowrap;transition:border-color .15s,background .15s,color .15s;
   }
-  .card p{margin:0 0 22px;color:var(--muted);font-size:15.5px;line-height:1.55}
-  .card .arrow{
-    font-family:'Fraunces',serif;font-size:14px;font-weight:500;
-    color:var(--ink);display:inline-flex;align-items:center;gap:6px;
-    margin-top:auto;letter-spacing:.01em;
+  .btn-play{background:var(--ink);color:var(--bg);border:1.5px solid var(--ink)}
+  .btn-play:hover{background:var(--ink-2);border-color:var(--ink-2)}
+  .btn-edge{background:transparent;color:var(--muted);border:1.5px solid var(--line-2)}
+  .btn-edge:hover{border-color:var(--ink);color:var(--ink)}
+
+  /* closing call-to-action → Consulting / Resume */
+  .cta-band{
+    margin:54px 0 0;padding:22px 26px;border:1.5px solid var(--line);border-radius:14px;
+    background:var(--paper);box-shadow:var(--shadow);
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;
   }
-  .card:hover .arrow span{transform:translateX(3px)}
-  .card .arrow span{transition:transform .18s}
+  .cta-band p{margin:0;font-family:'Fraunces',serif;font-size:19px;color:var(--ink);letter-spacing:-0.01em}
+  .cta-band .band-links{display:flex;gap:10px;flex-wrap:wrap}
 
   /* ── Theme toggle ────────────────────────────────────────────────────── */
   .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
@@ -171,11 +182,10 @@
     .hero .lede{font-size:17px;margin:0 0 12px}
     .nav .links a{margin-left:14px;font-size:13px}
     .theme-toggle{margin-left:10px}
-    .cards{margin:24px 0 0;gap:10px}
-    .card{padding:16px 18px}
-    .card h2{font-size:20px;margin:0 0 6px}
-    .card p{font-size:14px;line-height:1.45;margin:0 0 14px}
-    .card .arrow{font-size:13px}
+    .work{margin:36px 0 0}
+    .work-head h2{font-size:20px}
+    .tile{padding:16px 16px 14px}
+    .cta-band{margin:40px 0 0;padding:20px}
     .desk{display:none}
     .mob{display:inline}
   }
@@ -264,7 +274,6 @@
       <a href="/design-lab.html">Design Lab</a>
       <a href="/consulting.html">Consulting</a>
       <a href="/resume.html">Resume</a>
-      <a href="/case-studies.html">Case Studies</a>
     </div>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </nav>
@@ -276,37 +285,80 @@
     <p class="lede desk">Lifelong game designer, now full-stack AI developer. What's next?</p>
   </section>
 
-  <div class="cards">
+  <section class="work" aria-labelledby="games-h">
+    <div class="work-head">
+      <h2 id="games-h">Games</h2>
+      <a class="more" href="/more-games.html">All games <span>→</span></a>
+    </div>
+    <div class="shelf">
+      <article class="tile">
+        <h3>Ronin Survivor</h3>
+        <p>A survivor-like: play a lone ronin as the screen fills with enemies. Upgrade between waves and chase the run that finally goes the distance.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/games/ronin-survivor/" target="_blank" rel="noopener">Play</a></div>
+      </article>
+      <article class="tile">
+        <h3>Ripping Packs</h3>
+        <p>The part of card games everyone secretly loves most, on its own. Open packs, chase the rare, sort the spill, then go again.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/games/ripping-packs/" target="_blank" rel="noopener">Play</a></div>
+      </article>
+      <article class="tile">
+        <h3>Sigil Tactics</h3>
+        <p>A tactical card-battler for mobile web. Collect sigils, build a hand, and fight turn-based skirmishes where position and timing decide it.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a></div>
+      </article>
+    </div>
+  </section>
 
-    <a class="card" href="/design-lab.html">
-      <p class="label desk">Design Lab</p>
-      <h2><span class="desk">Made in the open.</span><span class="mob">Design Lab</span></h2>
-      <p><span class="desk">Games and apps: a survivor-like, a pack opener, a math playground, a writing app. The open workbench.</span><span class="mob">Two games, two apps. The open workbench.</span></p>
-      <span class="arrow"><span class="desk">Take a look </span><span class="mob">Explore </span><span>→</span></span>
-    </a>
+  <section class="work" aria-labelledby="apps-h">
+    <div class="work-head">
+      <h2 id="apps-h">Apps</h2>
+      <a class="more" href="/design-lab.html">In the Lab <span>→</span></a>
+    </div>
+    <div class="shelf">
+      <article class="tile">
+        <h3>Invisible Ink</h3>
+        <p>A writing app with one idea: your words fade into the page as you type. Still there, just hidden, so you draft forward and never look back.</p>
+        <div class="btn-row"><a class="btn btn-play" href="https://itsinvisible.ink" target="_blank" rel="noopener">Open</a></div>
+      </article>
+      <article class="tile">
+        <h3>Keeping Cadence</h3>
+        <p>A weekly planner kept deliberately simple. Block your time, name what matters, and see the whole week at a glance. No accounts.</p>
+        <div class="btn-row"><a class="btn btn-play" href="https://mattdanusergrant.github.io/keeping-cadence/" target="_blank" rel="noopener">Open</a></div>
+      </article>
+      <article class="tile">
+        <h3>Dank Omphalos</h3>
+        <p>A digital arthouse where Magic: The Gathering cards become canvases — hand-painted alters, original paintings, and the artists behind them.</p>
+        <div class="btn-row"><a class="btn btn-play" href="https://dankomphalos.com/" target="_blank" rel="noopener">Open</a></div>
+      </article>
+    </div>
+  </section>
 
-    <a class="card" href="/consulting.html">
-      <p class="label desk">Consulting</p>
-      <h2><span class="desk">AI + game design.</span><span class="mob">Consulting</span></h2>
-      <p><span class="desk">I rebuilt how I work around AI. I can help you do the same: advisory, design reviews, AI builds.</span><span class="mob">Game design and AI.</span></p>
-      <span class="arrow"><span class="desk">What I do </span><span class="mob">More </span><span>→</span></span>
-    </a>
+  <section class="work" aria-labelledby="tools-h">
+    <div class="work-head">
+      <h2 id="tools-h">Tools</h2>
+      <a class="more" href="/tools.html">Full toolbox <span>→</span></a>
+    </div>
+    <div class="shelf">
+      <article class="tile">
+        <h3>Math Draws Graphics</h3>
+        <p>A playground of animated math sketches, each with a plain explanation and live, editable code. The tool behind this site's intro art.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=math-draws-graphics">Open</a></div>
+      </article>
+      <article class="tile">
+        <h3>Make Dope Grooves</h3>
+        <p>Write a whole song as code — drums, bass, melodies, chords — and it plays back, every sound synthesized live in your browser.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=make-dope-grooves">Open</a></div>
+      </article>
+    </div>
+  </section>
 
-    <a class="card" href="/resume.html">
-      <p class="label desk">Resume</p>
-      <h2><span class="desk">Career, one page.</span><span class="mob">Resume</span></h2>
-      <p><span class="desk">Scopely, EA, Glu, MZ, Behaviour, Gazillion, Cryptic. A full decade of credits. Online or PDF.</span><span class="mob">Scopely, EA, Glu, MZ, and more. Online or PDF.</span></p>
-      <span class="arrow"><span class="desk">View resume </span><span class="mob">View </span><span>→</span></span>
-    </a>
-
-    <a class="card" href="/case-studies.html">
-      <p class="label desk">Case Studies</p>
-      <h2><span class="desk">Design thinking.</span><span class="mob">Case Studies</span></h2>
-      <p><span class="desk">Anonymized walk-throughs of real design problems: systems, economy, and live-ops. Decisions shown.</span><span class="mob">Design walk-throughs.</span></p>
-      <span class="arrow"><span class="desk">See the work </span><span class="mob">See work </span><span>→</span></span>
-    </a>
-
-  </div>
+  <section class="cta-band">
+    <p>Looking to work together?</p>
+    <div class="band-links">
+      <a class="btn btn-play" href="/consulting.html">Consulting</a>
+      <a class="btn btn-edge" href="/resume.html">Resume</a>
+    </div>
+  </section>
 
   <footer class="foot">
     <div class="contact">
