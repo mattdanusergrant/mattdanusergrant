@@ -952,6 +952,62 @@ function tri(a, b, c, n) {
 }
 tri(v[0], v[1], v[2], depth);
 ctx.fill();`;
+const STELLATED_RD_SKETCH =
+`// Stellated Rhombic Dodecahedron (Escher's solid): a spike raised on each of the
+// 12 rhombic faces, extended until neighbours meet. Rotating wireframe. ctx, w, h, t, TAU.
+
+// Build the 12 spikes; collect unique vertices and edges as we go.
+const verts = [], idx = new Map();
+const id = p => { const k = p.map(v => v.toFixed(2)).join(); if (!idx.has(k)) { idx.set(k, verts.length); verts.push(p); } return idx.get(k); };
+const seen = new Set(), edges = [];
+const edge = (p, q) => { const i = id(p), j = id(q), k = i < j ? i + '_' + j : j + '_' + i; if (!seen.has(k)) { seen.add(k); edges.push([i, j]); } };
+
+// Each rhombic face points along a 'two axes nonzero, one zero' direction.
+for (let a = 0; a < 3; a++) for (let b = a + 1; b < 3; b++)
+  for (const sa of [-1, 1]) for (const sb of [-1, 1]) {
+    const c = 3 - a - b;                                     // the remaining axis
+    const o1 = [0,0,0]; o1[a] = 2 * sa;                      // 2 octahedron corners
+    const o2 = [0,0,0]; o2[b] = 2 * sb;
+    const k1 = [0,0,0]; k1[a] = sa; k1[b] = sb; k1[c] = 1;   // 2 cube corners
+    const k2 = [0,0,0]; k2[a] = sa; k2[b] = sb; k2[c] = -1;
+    const apex = [0,0,0]; apex[a] = 2 * sa; apex[b] = 2 * sb;  // the spike tip
+    const ring = [o1, k1, o2, k2];                          // rhombus rim, octa-cube-octa-cube
+    for (let i = 0; i < 4; i++) { edge(apex, ring[i]); edge(ring[i], ring[(i + 1) % 4]); }
+  }
+
+// Rotate (steady yaw + a slow tumble) and project to the screen.
+const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.16;
+const ay = 1.15 + t * 0.3, ax = 0.7 + 0.1 * Math.sin(t * 0.4);
+function rot(p) {
+  const x = p[0], y = p[1], z = p[2];
+  let c = Math.cos(ay), s = Math.sin(ay);
+  const X = x * c + z * s, z1 = z * c - x * s;
+  c = Math.cos(ax); s = Math.sin(ax);
+  return [X, y * c - z1 * s, y * s + z1 * c];
+}
+const P = verts.map(p => { const r = rot(p); return [cx + r[0] * R, cy - r[1] * R, r[2]]; });
+
+// Draw far edges first; depth sets brightness and weight so the form reads in 3D.
+ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+const order = edges.map((e, i) => i).sort((A, B) =>
+  (P[edges[A][0]][2] + P[edges[A][1]][2]) - (P[edges[B][0]][2] + P[edges[B][1]][2]));
+for (const i of order) {
+  const e = edges[i], A = P[e[0]], B = P[e[1]];
+  const f = ((A[2] + B[2]) / 2 + 2.9) / 5.8;              // 0 far .. 1 near
+  ctx.strokeStyle = 'hsla(0, 0%, 100%, ' + (0.2 + 0.74 * f).toFixed(3) + ')';
+  ctx.lineWidth = 0.6 + 1.7 * f;
+  ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+}
+
+// Glints on the 12 spike tips (the stellation points).
+ctx.fillStyle = 'hsla(0, 0%, 100%, 0.95)';
+for (let i = 0; i < verts.length; i++) {
+  const vp = verts[i];
+  if (Math.abs(vp[0]) + Math.abs(vp[1]) + Math.abs(vp[2]) > 3.5) {
+    const f = (P[i][2] + 2.9) / 5.8;
+    ctx.beginPath(); ctx.arc(P[i][0], P[i][1], 1.2 + 1.8 * f, 0, TAU); ctx.fill();
+  }
+}`;
 const SKETCHES = [
   { name: 'Doors',           code: WALK_SKETCH,        info: `A first-person corridor, a tiny lesson in <b>perspective projection</b>. An object at depth <code>z</code> appears at size proportional to <code>1/z</code>, so we loop depth layers, scale each by <code>focal/z</code>, and recycle the nearest one as you "walk" forward.` },
   { name: 'Many Doors',      code: MANY_DOORS_SKETCH,  info: `A long hallway lined with doors on both walls, from the same <code>1/z</code> perspective. Each door's near and far stiles ride the converging wall line at depths <code>z</code> and <code>z+gap</code>, while its verticals stay vertical, so every door foreshortens into a trapezoid. The whole rank scrolls toward you as you "walk".` },
@@ -975,6 +1031,7 @@ const SKETCHES = [
   { name: 'Dragon Curve',    code: DRAGON_CURVE_SKETCH,info: `Fold a strip of paper in half again and again, then open every crease to 90°. The edge traces the <b>Heighway dragon</b>, a fractal that tiles the plane perfectly and never crosses itself.` },
   { name: 'Fourier',         code: FOURIER_SKETCH,     info: `Any periodic signal is a sum of sines. Here the odd harmonics <code>(4/nπ)·sin(n·t)</code> are drawn as stacked rotating circles; the tip's height traces a <b>square wave</b> on the right. This is the heart of Fourier analysis.` },
   { name: 'Sierpinski',      code: SIERPINSKI_SKETCH,  info: `Take a triangle, remove its middle quarter, and repeat on the three corners forever. The limit has <b>zero area but infinite edge</b>, and it secretly appears in Pascal's triangle mod 2 and in the chaos game.` },
+  { name: 'Stellated Rhombic Dodecahedron', code: STELLATED_RD_SKETCH, info: `The first <b>stellation</b> of the rhombic dodecahedron, known as <b>Escher's solid</b>: raise a spike on each of the 12 rhombic faces by extending the faces until neighbours meet. The tips land at <code>(±2, ±2, 0)</code> and its permutations. Remarkably, copies of it still <b>tile 3D space</b> with no gaps.` },
 ];
 const CODE_KEY='spiroloom.sketch';
 let codeText = (function(){ try{ return localStorage.getItem(CODE_KEY) || WALK_SKETCH; }catch(e){ return WALK_SKETCH; } })(), codeFn = null;
