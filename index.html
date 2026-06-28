@@ -58,11 +58,12 @@
   /* ── Top nav ────────────────────────────────────────────────────── */
   .nav{
     display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:wrap;row-gap:10px;
     padding:24px 0 0;font-size:14px;color:var(--muted);
     letter-spacing:.04em;
   }
   .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(13px,3.8vw,17px);color:var(--ink);letter-spacing:-0.01em;white-space:nowrap}
-  .nav .links{display:flex;align-items:center;white-space:nowrap}
+  .nav .links{display:flex;align-items:center;flex-wrap:wrap;row-gap:6px;white-space:nowrap}
   .nav .links a{margin-left:22px;transition:color .15s}
   .nav .links a:hover{color:var(--ink)}
 
