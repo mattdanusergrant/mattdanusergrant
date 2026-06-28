@@ -32,12 +32,6 @@
   .app{display:flex; height:100dvh}
   .stage{flex:1; position:relative; background:var(--stage); min-width:0}
   canvas{display:block; width:100%; height:100%; touch-action:none}
-  .wordmark{
-    position:absolute; top:16px; left:20px; font-family:'Fraunces',serif; font-weight:600;
-    font-size:17px; letter-spacing:-0.01em; pointer-events:none; user-select:none; color:#EDE8DF;
-  }
-  .wordmark small{display:block; font-family:'Inter',sans-serif; font-size:10px; letter-spacing:.16em;
-    color:#8A857D; -webkit-text-fill-color:#8A857D; font-weight:500; margin-top:3px}
 
   .panel{
     width:320px; flex:none; order:-1; background:var(--paper); border-right:1.5px solid var(--line);
@@ -143,7 +137,6 @@
 <div class="app">
   <div class="stage">
     <canvas id="c"></canvas>
-    <div class="wordmark">MDG</div>
   </div>
 
   <aside class="panel">
