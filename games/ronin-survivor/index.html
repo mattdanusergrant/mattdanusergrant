@@ -378,10 +378,6 @@ const elCampfire = D('campfire');
 
 // ---------- audio ----------
 const ROAD_ENTER_SOUND_SRC = 'assets/audio/road-enter-slash.mp3';
-const ROAD_MUSIC_SRC = 'https://mattdanusergrant.github.io/ronin-survivor/assets/audio/road-music-samurai-siren.mp3';
-const MENU_DOJO_MUSIC_SRC = 'https://mattdanusergrant.github.io/ronin-survivor/assets/audio/menu-dojo-music.mp3';
-let roadMusic = null;
-let menuDojoMusic = null;
 function playRoadEnterSound(){
   try {
     const s = new Audio(ROAD_ENTER_SOUND_SRC);
@@ -391,45 +387,415 @@ function playRoadEnterSound(){
     if (p && p.catch) p.catch(()=>{});
   } catch {}
 }
-function playRoadMusic(){
-  try {
-    stopMenuDojoMusic();
-    if (!roadMusic){
-      roadMusic = new Audio(ROAD_MUSIC_SRC);
-      roadMusic.loop = true;
-      roadMusic.volume = 0.42;
+
+// Music is synthesized live as 8-bit chiptune via the THUDWORKS engine (ported from the
+// "Make Dope Grooves" tool) - a calm dojo theme (D-minor pentatonic) and a driving combat
+// theme (C# phrygian). No audio files, so the soundtrack costs ~0 storage.
+var playRoadMusic, stopRoadMusic, playMenuDojoMusic, stopMenuDojoMusic;
+(function(){
+  // THUDWORKS, synth voices (Web Audio). Every drum is generated live: sine + noise
+  // + envelopes, the same way the real TR-808 works. No samples, no licensing.
+  // Each voice is trigger(time, gain, opts) and schedules itself on the audio clock.
+
+  function createKit(ctx, out) {
+    // shared 1s white-noise buffer (reused by every noise-based voice)
+    const noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    const noise = () => { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s; };
+
+    // soft-saturation curve so sub-bass has audible harmonics on small speakers
+    const sat = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; sat[i] = Math.tanh(2.2 * x); }
+
+    const decayGain = (t, peak, dur) => {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(Math.max(peak, 0.0001), t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      return g;
+    };
+
+    function kick(t, gain = 1) {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(120, t);
+      o.frequency.exponentialRampToValueAtTime(46, t + 0.08);
+      const g = decayGain(t, gain, 0.5);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.55);
+      // transient click
+      const n = noise(), ng = decayGain(t, gain * 0.6, 0.012);
+      n.connect(ng).connect(out); n.start(t); n.stop(t + 0.02);
     }
-    if (roadMusic.paused) roadMusic.currentTime = 0;
-    const p = roadMusic.play();
-    if (p && p.catch) p.catch(()=>{});
-  } catch {}
-}
-function stopRoadMusic(){
-  if (!roadMusic) return;
-  try {
-    roadMusic.pause();
-    roadMusic.currentTime = 0;
-  } catch {}
-}
-function playMenuDojoMusic(){
-  try {
-    stopRoadMusic();
-    if (!menuDojoMusic){
-      menuDojoMusic = new Audio(MENU_DOJO_MUSIC_SRC);
-      menuDojoMusic.loop = true;
-      menuDojoMusic.volume = 0.36;
+
+    function bass(t, gain = 1, freq = 55) {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(freq * 2, t);
+      o.frequency.exponentialRampToValueAtTime(freq, t + 0.04);
+      const ws = ctx.createWaveShaper(); ws.curve = sat;
+      const g = decayGain(t, gain * 0.9, 0.6);
+      o.connect(ws).connect(g).connect(out); o.start(t); o.stop(t + 0.65);
     }
-    const p = menuDojoMusic.play();
-    if (p && p.catch) p.catch(()=>{});
-  } catch {}
-}
-function stopMenuDojoMusic(){
-  if (!menuDojoMusic) return;
-  try {
-    menuDojoMusic.pause();
-    menuDojoMusic.currentTime = 0;
-  } catch {}
-}
+
+    function snare(t, gain = 1) {
+      const n = noise(), f = ctx.createBiquadFilter();
+      f.type = 'highpass'; f.frequency.value = 1500;
+      const ng = decayGain(t, gain * 0.8, 0.18);
+      n.connect(f).connect(ng).connect(out); n.start(t); n.stop(t + 0.2);
+      const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = 180;
+      const og = decayGain(t, gain * 0.5, 0.1);
+      o.connect(og).connect(out); o.start(t); o.stop(t + 0.12);
+    }
+
+    const hat = (t, gain, dur) => {
+      const n = noise(), f = ctx.createBiquadFilter();
+      f.type = 'highpass'; f.frequency.value = 7000;
+      const g = decayGain(t, gain * 0.5, dur);
+      n.connect(f).connect(g).connect(out); n.start(t); n.stop(t + dur + 0.02);
+    };
+    const hatClosed = (t, gain = 1) => hat(t, gain, 0.045);
+    const hatOpen = (t, gain = 1) => hat(t, gain, 0.35);
+
+    function clap(t, gain = 1) {
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1200; f.Q.value = 1.4;
+      const g = ctx.createGain(); f.connect(g).connect(out);
+      const n = noise(); n.connect(f); n.start(t); n.stop(t + 0.25);
+      g.gain.setValueAtTime(0.0001, t);
+      [0, 0.009, 0.018].forEach(o => {
+        g.gain.setValueAtTime(gain * 0.9, t + o);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + o + 0.011);
+      });
+      g.gain.setValueAtTime(gain * 0.7, t + 0.027);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    }
+
+    function cowbell(t, gain = 1) {
+      const mk = f => { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f; return o; };
+      const o1 = mk(540), o2 = mk(800);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2640; bp.Q.value = 1;
+      const g = decayGain(t, gain * 0.4, 0.3);
+      o1.connect(bp); o2.connect(bp); bp.connect(g).connect(out);
+      o1.start(t); o2.start(t); o1.stop(t + 0.32); o2.stop(t + 0.32);
+    }
+
+    function clave(t, gain = 1) {
+      const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = 1180;
+      const g = decayGain(t, gain * 0.8, 0.05);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.06);
+    }
+
+    function tom(t, gain = 1, freq = 150) {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(freq * 1.5, t);
+      o.frequency.exponentialRampToValueAtTime(freq, t + 0.04);
+      const g = decayGain(t, gain, 0.22);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.24);
+    }
+
+    // melodic voice, two detuned oscillators through a lowpass with an AD envelope.
+    // `dur` is the note length in seconds (set by the song engine from note ties).
+    function synth(t, gain = 1, freq = 440, opts = {}) {
+      const { wave = 'sawtooth', dur = 0.25, cutoff = 3000, detune = 6 } = opts;
+      const rel = Math.min(0.08, dur * 0.4), a = 0.006;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass';
+      f.frequency.setValueAtTime(Math.max(cutoff, 200), t);
+      f.frequency.exponentialRampToValueAtTime(Math.max(cutoff * 0.45, 200), t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(gain, 0.0002), t + a);
+      g.gain.setValueAtTime(Math.max(gain, 0.0002), t + Math.max(dur - rel, a));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      f.connect(g).connect(out);
+      for (const d of [-detune, detune]) {
+        const o = ctx.createOscillator(); o.type = wave; o.frequency.value = freq; o.detune.value = d;
+        o.connect(f); o.start(t); o.stop(t + dur + 0.05);
+      }
+    }
+
+    return { kick, bass, snare, hatClosed, hatOpen, clap, cowbell, clave, tom, synth };
+  }
+
+  // note name -> frequency (equal temperament, A4 = 440)
+  const SEMI = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+  function noteFreq(name, octave) {
+    return 440 * Math.pow(2, (SEMI[name] + (octave - 4) * 12 - 9) / 12);
+  }
+
+  // THUDWORKS, the song language + player.
+  //
+  // A song is plain code. You call play(instrument, pattern, opts?) for each part;
+  // tempo()/swing() set the clock. Patterns are read one 16th-note per cell:
+  //
+  //   drums, one character per step:  'x' (or any non-'.') = hit, '.' = rest.
+  //              spaces are ignored, so you can group beats:  "x... x... x... x..."
+  //   pitched, whitespace-separated tokens, one per step:
+  //              note "C4" / "F#3" / "Bb2" = play it, '.' = rest, '-' = hold (tie).
+  //
+  // Every part loops to fill the longest part, so a 1-bar drum loop repeats under a
+  // 16-bar melody automatically. Build arrangements by composing strings with rep().
+
+
+
+  // instrument name -> { fn: kit method, pitched, opts: default voice tweaks }
+  const VOICES = {
+    kick:    { fn: 'kick',      pitched: false },
+    snare:   { fn: 'snare',     pitched: false },
+    clap:    { fn: 'clap',      pitched: false },
+    hat:     { fn: 'hatClosed', pitched: false },
+    openhat: { fn: 'hatOpen',   pitched: false },
+    cowbell: { fn: 'cowbell',   pitched: false },
+    clave:   { fn: 'clave',     pitched: false },
+    tom:     { fn: 'tom',       pitched: false },
+    bass:    { fn: 'bass',      pitched: true  },                                   // 808 sub
+    synth:   { fn: 'synth',     pitched: true  },
+    lead:    { fn: 'synth',     pitched: true, opts: { wave: 'sawtooth', cutoff: 3500, detune: 8 } },
+    pad:     { fn: 'synth',     pitched: true, opts: { wave: 'sawtooth', cutoff: 1400, detune: 12 } },
+    pluck:   { fn: 'synth',     pitched: true, opts: { wave: 'triangle', cutoff: 2400, detune: 4 } },
+    pulse:   { fn: 'synth',     pitched: true, opts: { wave: 'square',   cutoff: 7000, detune: 0 } },  // NES pulse 1
+    pulse2:  { fn: 'synth',     pitched: true, opts: { wave: 'square',   cutoff: 5000, detune: 0 } },  // NES pulse 2
+    tri:     { fn: 'synth',     pitched: true, opts: { wave: 'triangle', cutoff: 2600, detune: 0 } },  // NES triangle
+  };
+  const INSTRUMENTS = Object.keys(VOICES);
+  const PITCHED = INSTRUMENTS.filter(k => VOICES[k].pitched);   // need a note, not just 'x'
+
+  const FLAT = { Cb: 'B', Db: 'C#', Eb: 'D#', Fb: 'E', Gb: 'F#', Ab: 'G#', Bb: 'A#' };
+  const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  function tokenFreq(tok) {
+    const m = tok.match(/^([A-Ga-g])([#b]?)(-?\d)$/);
+    if (!m) throw new Error(`bad note "${tok}"`);
+    let name = m[1].toUpperCase() + (m[2] || '');
+    if (name.length === 2 && name[1] === 'b') name = FLAT[name] || name;
+    return noteFreq(name, +m[3]);
+  }
+
+  const parseDrum = str => [...str].filter(c => !/\s/.test(c)).map(c => (c === '.' || c === '_' ? null : { vel: 1 }));
+  const parsePitched = str => str.trim().split(/\s+/).filter(Boolean).map(t =>
+    (t === '.' || t === '_') ? { rest: true }
+    : (t === '-' || t === '~') ? { tie: true }
+    : { freqs: t.split('+').map(tokenFreq) });                                     // "C4+E4+G4" = a chord
+
+  // Run the user's code with the DSL helpers in scope; collect the parts.
+  function compile(code) {
+    let bpm = 120, swing = 0, lengthBars = 0;
+    const tracks = [];
+    const rep = (s, n) => Array.from({ length: n }, () => s).join(' ');
+    const seq = (...parts) => parts.join(' ');                                     // glue sections in order
+    const euclid = (hits, steps, rot = 0) => {                                     // even-spread rhythm
+      let s = '';
+      for (let i = 0; i < steps; i++) s += ((i * hits) % steps) < hits ? 'x' : '.';
+      return s.slice(rot % steps) + s.slice(0, rot % steps);
+    };
+    const tempo = v => { bpm = +v; };
+    const swingFn = v => { swing = +v; };
+    const length = v => { lengthBars = Math.max(1, Math.floor(+v)); };             // fix total song length
+    const cellsOf = (inst, pattern) => {
+      const meta = VOICES[inst];
+      if (!meta) throw new Error(`unknown instrument "${inst}", try: ${INSTRUMENTS.join(', ')}`);
+      return meta.pitched ? parsePitched(pattern) : parseDrum(pattern);
+    };
+    const play = (inst, pattern, opts = {}) => {
+      const cells = cellsOf(inst, pattern);
+      if (!cells.length) throw new Error(`"${inst}" pattern is empty`);
+      tracks.push({ meta: VOICES[inst], cells, opts });
+    };
+
+    // section(name, { instrument: pattern | [pattern, opts] }) defines a reusable block;
+    // arrange(...names) plays those blocks in order, tiling each part to the block's length.
+    const sections = {};
+    const pat = v => Array.isArray(v) ? v[0] : v;
+    const section = (name, parts) => {
+      let bars = 1;
+      for (const [inst, v] of Object.entries(parts)) bars = Math.max(bars, Math.ceil(cellsOf(inst, pat(v)).length / 16));
+      sections[name] = { parts, bars };
+    };
+    const arrange = (...names) => {
+      const secs = names.map(n => { if (!sections[n]) throw new Error(`unknown section "${n}"`); return sections[n]; });
+      const used = {};
+      for (const s of secs) for (const k of Object.keys(s.parts)) used[k] = true;
+      for (const inst of Object.keys(used)) {
+        const meta = VOICES[inst]; const cells = []; let opts = {};
+        for (const s of secs) {
+          const target = s.bars * 16;
+          if (inst in s.parts) {
+            const v = s.parts[inst], cs = cellsOf(inst, pat(v));
+            if (Array.isArray(v) && v[1]) opts = { ...opts, ...v[1] };
+            for (let i = 0; i < target; i++) cells.push(cs[i % cs.length]);
+          } else {
+            for (let i = 0; i < target; i++) cells.push(meta.pitched ? { rest: true } : null);
+          }
+        }
+        tracks.push({ meta, cells, opts });
+      }
+    };
+    // transpose a pitched pattern by N semitones (chords and ties pass through)
+    const transpose = (pattern, semis) => pattern.trim().split(/\s+/).map(tok =>
+      /^[.\-_~]$/.test(tok) ? tok : tok.split('+').map(nt => {
+        const m = nt.match(/^([A-Ga-g])([#b]?)(-?\d)$/);
+        if (!m) throw new Error(`bad note "${nt}"`);
+        let name = m[1].toUpperCase() + (m[2] || '');
+        if (name.length === 2 && name[1] === 'b') name = FLAT[name] || name;
+        const abs = (+m[3]) * 12 + NAMES.indexOf(name) + (+semis);
+        return NAMES[((abs % 12) + 12) % 12] + Math.floor(abs / 12);
+      }).join('+')).join(' ');
+
+    new Function('tempo', 'swing', 'play', 'rep', 'euclid', 'seq', 'length', 'section', 'arrange', 'transpose', code)
+      (tempo, swingFn, play, rep, euclid, seq, length, section, arrange, transpose);
+    if (!tracks.length) throw new Error('no play() calls, nothing to play');
+    return { bpm: Math.max(20, bpm), swing: Math.min(70, Math.max(0, swing)),
+             cells: lengthBars * 16, tracks };                                     // cells 0 = auto (longest part)
+  }
+
+  class SongPlayer {
+    constructor(ctx, kit) { this.ctx = ctx; this.kit = kit; this.playing = false; this.timer = null; }
+
+    load(song) {
+      this.bpm = song.bpm;
+      const six = (60 / song.bpm) / 4;
+      const cells = song.cells || Math.max(...song.tracks.map(t => t.cells.length));
+      this.six = six; this.bars = Math.ceil(cells / 16); this.songDur = cells * six;
+
+      const events = [];
+      for (const tr of song.tracks) {
+        const n = tr.cells.length, gain = tr.opts.gain ?? 1, fn = this.kit[tr.meta.fn];
+        const swing = Math.min(70, Math.max(0, tr.opts.swing ?? song.swing));      // per-part swing override
+        for (let c = 0; c < cells; c++) {
+          const cell = tr.cells[c % n];
+          if (!cell || cell.rest || cell.tie) continue;
+          const time = c * six + (c % 2 ? six * (swing / 100) : 0);
+          if (tr.meta.pitched) {
+            let dur = 1;                                                           // extend over following ties
+            while (tr.cells[(c + dur) % n] && tr.cells[(c + dur) % n].tie && c + dur < cells) dur++;
+            const opts = { ...(tr.meta.opts || {}), ...tr.opts, dur: dur * six * 0.92 };
+            const vg = gain / Math.sqrt(cell.freqs.length);                        // keep a chord's loudness in check
+            for (const freq of cell.freqs) events.push({ time, run: when => fn(when, vg, freq, opts) });
+          } else {
+            events.push({ time, run: when => fn(when, gain * cell.vel) });
+          }
+        }
+      }
+      events.sort((a, b) => a.time - b.time);
+      this.events = events;
+    }
+
+    start() {
+      if (this.playing || !this.events || !this.events.length) return;
+      this.playing = true; this.idx = 0;
+      this.songStart = this.loopStart = this.ctx.currentTime + 0.1;
+      this.timer = setInterval(() => this._tick(), 25);
+    }
+
+    stop() { this.playing = false; clearInterval(this.timer); }
+
+    bar() {                                                                        // 1-based bar for display
+      if (!this.playing) return 0;
+      const elapsed = this.ctx.currentTime - this.songStart;
+      if (elapsed < 0) return 1;
+      return Math.floor(((elapsed / this.six) % (this.bars * 16)) / 16) + 1;
+    }
+
+    _tick() {
+      const ahead = this.ctx.currentTime + 0.12;
+      while (this.playing) {
+        if (this.idx >= this.events.length) { this.loopStart += this.songDur; this.idx = 0; }
+        const ev = this.events[this.idx];
+        const when = this.loopStart + ev.time;
+        if (when >= ahead) break;
+        ev.run(when); this.idx++;
+      }
+    }
+  }
+
+  const DOJO_SONG = `
+  tempo(78)
+  // koto-style melody, D minor pentatonic (D F G A C)
+  play('pluck', seq(
+    "D5 - - . A4 - . . F4 . G4 . A4 - - .",
+    "C5 - - . A4 - . . G4 . F4 . D4 - - .",
+    "F4 . G4 . A4 - C5 . D5 - - . A4 - - .",
+    "G4 . A4 . C5 - A4 . G4 . F4 . D4 - - ."), { gain: 0.4 })
+  // soft strings pad - Dm, Dm, F, Dm
+  play('pad', seq(
+    "D3+F3+A3 - - - - - - - - - - - - - - -",
+    "D3+F3+A3 - - - - - - - - - - - - - - -",
+    "F3+A3+C4 - - - - - - - - - - - - - - -",
+    "D3+F3+A3 - - - - - - - - - - - - - - -"), { gain: 0.15 })
+  // triangle bass on the roots
+  play('tri', seq(
+    "D2 . . . . . . . D2 . . . . . . .",
+    "D2 . . . . . . . A1 . . . . . . .",
+    "F2 . . . . . . . C2 . . . . . . .",
+    "D2 . . . . . . . A1 . . . . . . ."), { gain: 0.5 })
+  // soft woodblock pulse
+  play('clave', seq(
+    "x.......x.......",
+    "x...............",
+    "x.......x.......",
+    "x.............x."), { gain: 0.2 })
+  `;
+
+  const ROAD_SONG = `
+  tempo(132)
+  section('build', {
+    tri: ["C#2 . . . C#2 . . . C#2 . . . C#2 . . .", { gain: 0.5 }],
+    hat: "x.x.x.x.x.x.x.x.",
+    pulse2: ["C#4 E4 G#4 E4 C#4 E4 G#4 E4 C#4 E4 G#4 E4 C#4 E4 G#4 E4", { gain: 0.2 }],
+  })
+  section('main', {
+    kick:   "x...x...x...x...",
+    snare:  "....x.......x...",
+    hat:    "x.x.x.x.x.x.x.x.",
+    tri:    [seq("C#2 . C#2 . C#2 . C#2 . C#2 . C#2 . C#2 . C#2 .",
+                 "D2 . D2 . D2 . D2 . C#2 . C#2 . C#2 . C#2 ."), { gain: 0.5 }],
+    pulse2: [seq("C#4 E4 G#4 E4 C#4 E4 G#4 E4 C#4 E4 G#4 E4 C#4 E4 G#4 E4",
+                 "D4 F#4 A4 F#4 D4 F#4 A4 F#4 C#4 E4 G#4 E4 C#4 E4 G#4 E4"), { gain: 0.22 }],
+    pulse:  [seq("C#5 . . D5 . . C#5 . B4 . C#5 . G#4 . . .",
+                 "A4 . . . G#4 . F#4 . E4 . F#4 . G#4 . . ."), { gain: 0.38 }],
+  })
+  section('siren', {
+    kick:    "x...x...x.x.x...",
+    snare:   "....x.......x...",
+    hat:     "xxxxxxxxxxxxxxxx",
+    openhat: "..x...x...x...x.",
+    tri:     [seq("C#2 . C#2 C#2 . C#2 . C#2 C#2 . C#2 . C#2 C#2 . C#2",
+                 "D2 . D2 D2 . D2 . D2 C#2 . C#2 . C#2 C#2 . C#2"), { gain: 0.5 }],
+    pulse2:  [seq("C#4 E4 G#4 E4 C#4 E4 G#4 E4 C#4 E4 G#4 E4 C#4 E4 G#4 E4",
+                 "D4 F#4 A4 F#4 D4 F#4 A4 F#4 C#4 E4 G#4 E4 C#4 E4 G#4 E4"), { gain: 0.22 }],
+    pulse:   [seq("C#6 - - B5 - - G#5 - A5 - - G#5 - F#5 - E5",
+                 "F#5 - - G#5 - A5 - - G#5 - - - C#6 - - -"), { gain: 0.4 }],
+  })
+  arrange('build', 'main', 'main', 'siren', 'main', 'siren')
+  `;
+
+  const DOJO_VOL = 0.5, ROAD_VOL = 0.5;
+  let mctx = null, mkit = null, mplayer = null, mgain = null, songs = null, cur = null;
+  function ensureEngine(){
+    if (mctx) return true;
+    try {
+      mctx = new (window.AudioContext || window.webkitAudioContext)();
+      mgain = mctx.createGain(); mgain.gain.value = 1;
+      const comp = mctx.createDynamicsCompressor();
+      mgain.connect(comp).connect(mctx.destination);
+      mkit = createKit(mctx, mgain);
+      mplayer = new SongPlayer(mctx, mkit);
+      songs = { dojo: compile(DOJO_SONG), road: compile(ROAD_SONG) };
+    } catch(e){ return false; }
+    return true;
+  }
+  function playSong(which, vol){
+    if (!ensureEngine()) return;
+    if (mctx.state === 'suspended') { try { mctx.resume(); } catch(e){} }
+    if (cur === which && mplayer.playing) return;
+    mplayer.stop();
+    mgain.gain.value = vol;
+    mplayer.load(songs[which]);
+    mplayer.start();
+    cur = which;
+  }
+  function stopSong(which){ if (mplayer && cur === which){ mplayer.stop(); cur = null; } }
+  playRoadMusic     = function(){ playSong('road', ROAD_VOL); };
+  stopRoadMusic     = function(){ stopSong('road'); };
+  playMenuDojoMusic = function(){ playSong('dojo', DOJO_VOL); };
+  stopMenuDojoMusic = function(){ stopSong('dojo'); };
+})();
+
 function playMenuDojoMusicIfVisible(){
   const titleVisible = !elTitle.classList.contains('hidden');
   const dojoVisible = game && game.dojoMode;
