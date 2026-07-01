@@ -1,0 +1,11 @@
+# Local-only editing tool (not part of the deployed static site)
+edit-server.js
+
+# Drafts kept out of the public site
+NEWSLETTER.md
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+node_modules/
+*.log

@@ -8,6 +8,20 @@
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="canonical" href="https://mattdanusergrant.com/resume-builder.html" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://mattdanusergrant.com/resume-builder.html" />
+<meta property="og:title" content="Resume Builder · Matt Danuser-Grant" />
+<meta property="og:description" content="A plain-text resume builder by Matt Danuser-Grant. Write on the left, watch a clean, ATS-safe resume build on the right, save straight to PDF. No account." />
+<meta property="og:image" content="https://mattdanusergrant.com/og.png" />
+<meta property="og:image:alt" content="Matt Danuser-Grant — Principal Game Designer" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Resume Builder · Matt Danuser-Grant" />
+<meta name="twitter:description" content="A plain-text resume builder by Matt Danuser-Grant. Write on the left, watch a clean, ATS-safe resume build on the right, save straight to PDF. No account." />
+<meta name="twitter:image" content="https://mattdanusergrant.com/og.png" />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <!-- #LLM-generated - Matt Danuser-Grant Labs (resume builder) -->
 <style>
@@ -191,7 +205,7 @@
   <nav class="nav no-print">
     <a class="brand" href="/">Matt Danuser-Grant</a>
     <div class="links">
-      <a class="active" href="/design-lab.html">Design Lab</a>
+      <a href="/design-lab.html">Design Lab</a>
       <a href="/consulting.html">Consulting</a>
       <a href="/resume.html">Resume</a>
     </div>
@@ -438,7 +452,10 @@
   document.getElementById('btn-import').addEventListener('click',function(){ file.click(); });
   file.addEventListener('change',function(){
     var f=file.files[0]; if(!f)return;
-    var r=new FileReader(); r.onload=function(){ editor.value=r.result; update(); }; r.readAsText(f); file.value='';
+    var r=new FileReader();
+    r.onload=function(){ editor.value=r.result; update(); };
+    r.onerror=function(){ alert('Sorry — that file could not be read. Try a plain-text (.txt or .md) file.'); };
+    r.readAsText(f); file.value='';
   });
 })();
 </script>
