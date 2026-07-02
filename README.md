@@ -1,5 +1,7 @@
 # Matt Danuser-Grant
 
+[![Checks](https://github.com/mattdanusergrant/mattdanusergrant/actions/workflows/check.yml/badge.svg)](https://github.com/mattdanusergrant/mattdanusergrant/actions/workflows/check.yml)
+
 **Principal Game Designer** — 10+ years in mobile F2P, now building full-stack with AI.
 
 Character, combat, and systems design on some of mobile's biggest games — *Marvel Strike Force*,
@@ -15,6 +17,16 @@ built end to end.
 - 📄 **Resume:** [mattdanusergrant.com/resume.html](https://mattdanusergrant.com/resume.html)
 - 🤝 **Consulting:** [mattdanusergrant.com/consulting.html](https://mattdanusergrant.com/consulting.html)
 - 💼 **LinkedIn:** [linkedin.com/in/mattdanusergrant](https://linkedin.com/in/mattdanusergrant)
+
+### Develop
+
+No build step — open any `.html` directly, or serve the root with `python3 -m http.server`.
+CI (`.github/workflows/check.yml`) runs on every push/PR; run the same checks locally:
+
+```bash
+npx html-validate@11.5.5 "*.html" "case-studies/*.html"   # HTML validation
+node tools/check-links.mjs .                               # internal link/asset check
+```
 
 ---
 

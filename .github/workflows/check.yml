@@ -1,0 +1,28 @@
+name: Checks
+
+# Static-site quality gate on every push to main and every PR:
+#   1. HTML validation (html-validate, config in .htmlvalidate.json) over the
+#      pages we author — catches unclosed tags, duplicate IDs, missing required
+#      attributes, etc. Vendored game builds under games/** are out of scope.
+#   2. Internal link/asset check (tools/check-links.mjs, network-free) — catches
+#      dead Play/Experimental links and moved assets before they reach the live
+#      site. External links are intentionally not checked here (they flake); add
+#      a lychee job later if that coverage is wanted.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate HTML
+        run: npx --yes html-validate@11.5.5 "*.html" "case-studies/*.html"
+      - name: Check internal links
+        run: node tools/check-links.mjs .
