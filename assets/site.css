@@ -1,0 +1,60 @@
+/* site.css — shared theme system: CSS variables, theme-toggle widget, theme-switch FX.
+   Single source of truth (was duplicated, with drift, in every page's inline <style>).
+   :root is the superset of all pages' vars; page-specific base type & components stay inline.
+   Extracted 2026-07-02. */
+
+:root{
+  --bg:#FBF8F2;
+  --paper:#FFFFFF;
+  --ink:#15161C;
+  --ink-2:#2A2A2A;
+  --muted:#6A6A6A;
+  --line:#E5E0D2;
+  --line-2:#CBC4B2;
+  --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+  --shadow-hover:0 18px 48px rgba(15,16,28,.10);
+  --accent:#1A1A1A;
+  --code-bg:#F4F0E6;
+}
+[data-theme="dark"]{
+  --bg:#13110E;--paper:#1D1A16;
+  --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#8A857B;
+  --line:#2C2924;--line-2:#3C3830;
+  --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+  --shadow-hover:0 18px 48px rgba(0,0,0,.5);
+  --accent:#EDE8DF;
+  --code-bg:#252219;
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13110E;--paper:#1D1A16;
+    --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#8A857B;
+    --line:#2C2924;--line-2:#3C3830;
+    --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+    --shadow-hover:0 18px 48px rgba(0,0,0,.5);
+    --accent:#EDE8DF;
+    --code-bg:#252219;
+  }
+}
+
+/* ── Theme toggle widget ───────────────────────────── */
+.theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+.toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+.toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
+[data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(20px)}}
+.toggle-thumb svg{width:11px;height:11px;display:block}
+.t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
+.t-sun circle{fill:#E8A317;stroke:none}
+.t-moon{fill:#3A3550;display:none}
+[data-theme="dark"] .t-sun{display:none}
+[data-theme="dark"] .t-moon{display:block}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
+
+/* ── Theme switch FX ───────────────────────────── */
+html.mode-shift,html.mode-shift *{transition:background-color 2.5s ease,color 2.5s ease,border-color 2.5s ease,box-shadow 2.5s ease,fill 2.5s ease !important}
+.fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;will-change:opacity,transform}
+.fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.22) 0%,rgba(255,201,133,.12) 40%,rgba(255,224,178,.05) 70%,transparent 100%);animation:fx-rise 3.5s ease-in-out forwards}
+.fx-sunset{background:linear-gradient(0deg,rgba(90,60,100,.2) 0%,rgba(70,55,90,.11) 40%,rgba(50,45,75,.04) 70%,transparent 100%);animation:fx-set 3.5s ease-in-out forwards}
+@keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
+@keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
