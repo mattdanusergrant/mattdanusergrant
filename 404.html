@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Page not found · Matt Danuser-Grant</title>
+<meta name="description" content="That page wandered off. Back to the work." />
+<meta name="robots" content="noindex" />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF8F2;--paper:#FFFFFF;--ink:#15161C;--ink-2:#2A2A2A;--muted:#6A6A6A;
+    --line:#E5E0D2;--line-2:#CBC4B2;
+  }
+  [data-theme="dark"]{
+    --bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#8A857B;
+    --line:#2C2924;--line-2:#3C3830;
+  }
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#13110E;--paper:#1D1A16;--ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#8A857B;
+      --line:#2C2924;--line-2:#3C3830;
+    }
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;
+    min-height:100vh;display:flex;flex-direction:column;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:760px;margin:0 auto;width:100%;padding:0 28px 80px;flex:1;display:flex;flex-direction:column}
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .center{flex:1;display:flex;flex-direction:column;justify-content:center;max-width:560px;padding:48px 0}
+  .code{font-family:'Fraunces',serif;font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 18px}
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(36px,6vw,52px);line-height:1.1;letter-spacing:-0.02em;margin:0 0 18px}
+  h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .lede{color:var(--muted);font-size:18px;line-height:1.6;margin:0 0 28px}
+  .actions{display:flex;flex-wrap:wrap;gap:12px}
+  .btn{font-family:'Fraunces',serif;font-size:15px;font-weight:500;color:var(--ink);border:1.5px solid var(--line-2);border-radius:999px;padding:10px 20px;transition:border-color .15s,transform .15s}
+  .btn:hover{border-color:var(--ink);transform:translateY(-2px)}
+  @media (max-width:480px){.wrap{padding:0 22px 60px}.nav .links a{margin-left:14px;font-size:13px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="/#games-h">Games</a>
+      <a href="/case-studies.html">Case Studies</a>
+      <a href="/resume.html">Resume</a>
+    </div>
+  </nav>
+  <main class="center">
+    <p class="code">404</p>
+    <h1>That page <em>wandered off.</em></h1>
+    <p class="lede">The link's broken or the page moved. No dead ends here — pick up the trail below.</p>
+    <div class="actions">
+      <a class="btn" href="/">← Home</a>
+      <a class="btn" href="/more-games.html">Play something</a>
+      <a class="btn" href="/case-studies.html">Case studies</a>
+    </div>
+  </main>
+</div>
+</body>
+</html>
