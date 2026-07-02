@@ -111,6 +111,19 @@
   .work-head .more span{display:inline-block;transition:transform .18s}
   .work-head .more:hover span{transform:translateX(3px)}
 
+  /* "More games" word-toy card — ported from the design lab; drifts through M-D-G phrases */
+  .more-link{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    font-family:'Fraunces',serif;font-weight:500;font-size:15px;color:var(--ink);
+    background:var(--paper);border:1.5px dashed var(--line-2);border-radius:14px;
+    padding:18px;box-shadow:var(--shadow);margin:16px 0 0;
+    transition:border-color .18s,transform .18s;
+  }
+  .more-link:hover{border-color:var(--ink);transform:translateY(-2px)}
+  .more-link .more-text{display:inline-block;min-width:14em;text-align:center}
+  .more-link .arr{display:inline-block;transition:transform .18s}
+  .more-link:hover .arr{transform:translateX(3px)}
+
   .shelf{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:14px}
   .tile{
     background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
@@ -296,7 +309,6 @@
   <section class="work" aria-labelledby="games-h">
     <div class="work-head">
       <h2 id="games-h">Must Design Games</h2>
-      <a class="more" href="/more-games.html">All games <span>→</span></a>
     </div>
     <div class="shelf">
       <article class="tile">
@@ -315,6 +327,7 @@
         <div class="btn-row"><a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a></div>
       </article>
     </div>
+    <a class="more-link" id="more-games" href="/more-games.html"><span class="more-text">More Decent Games</span> <span class="arr">→</span></a>
   </section>
 
   <section class="work" aria-labelledby="apps-h">
@@ -778,6 +791,50 @@
     localStorage.setItem('theme',next);
     fx(next);
   });
+})();
+</script>
+<script>
+/* The "More Games" button is a little MDG word-toy (ported from the design lab).
+   It decodes into a new M-D-G phrase on hover, and drifts to another on its own. */
+(function(){
+  var link=document.getElementById('more-games');
+  if(!link)return;
+  var slot=link.querySelector('.more-text');
+  var PHRASES=[
+    'More Decent Games',        // default on load
+    'Mostly Dropped Gadgets',
+    'Mainly Defective Gizmos',
+    'My Derelict Garbage',
+    'Many Discarded Gambles',
+    'Mildly Dubious Gambits'
+  ];
+  var GLYPHS='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var cur=0, busy=false, idle;
+
+  function nextIndex(){ var n; do{ n=(Math.random()*PHRASES.length)|0; } while(n===cur); return n; }
+
+  function morph(to){
+    if(busy)return;
+    cur=to;
+    var target=PHRASES[to];
+    if(reduce){ slot.textContent=target; return; }
+    busy=true;
+    var f=0, steps=16, iv=setInterval(function(){
+      f++;
+      var shown=Math.round(target.length*f/steps), out='';
+      for(var i=0;i<target.length;i++){
+        out += target[i]===' ' ? ' ' : i<shown ? target[i] : GLYPHS[(Math.random()*GLYPHS.length)|0];
+      }
+      slot.textContent=out;
+      if(f>=steps){ clearInterval(iv); slot.textContent=target; busy=false; }
+    },40);
+  }
+
+  function rearm(){ clearTimeout(idle); if(reduce)return; idle=setTimeout(function(){ morph(nextIndex()); rearm(); },7000); }
+
+  link.addEventListener('mouseenter',function(){ morph(nextIndex()); rearm(); });
+  rearm();
 })();
 </script>
 </body>
