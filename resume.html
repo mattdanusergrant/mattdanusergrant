@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Resume · Matt Danuser-Grant</title>
-<meta name="description" content="Matt Danuser-Grant · Principal Game Designer. 10+ years in mobile F2P. Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer's Arena." />
+<meta name="description" content="Matt Danuser-Grant — 10+ years designing characters, combat & systems in mobile F2P (Marvel Strike Force, Star Wars: Galaxy of Heroes), now building AI-native full-stack products solo." />
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,36 +15,29 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://mattdanusergrant.com/resume.html" />
 <meta property="og:title" content="Resume · Matt Danuser-Grant" />
-<meta property="og:description" content="Matt Danuser-Grant · Principal Game Designer. 10+ years in mobile F2P. Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer&#x27;s Arena." />
+<meta property="og:description" content="Matt Danuser-Grant — 10+ years designing characters, combat &amp; systems in mobile F2P (Marvel Strike Force, Star Wars: Galaxy of Heroes), now building AI-native full-stack products solo." />
 <meta property="og:image" content="https://mattdanusergrant.com/og.png" />
 <meta property="og:image:alt" content="Matt Danuser-Grant — Principal Game Designer" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Resume · Matt Danuser-Grant" />
-<meta name="twitter:description" content="Matt Danuser-Grant · Principal Game Designer. 10+ years in mobile F2P. Marvel Strike Force, Star Wars: Galaxy of Heroes, Disney Sorcerer&#x27;s Arena." />
+<meta name="twitter:description" content="Matt Danuser-Grant — 10+ years designing characters, combat &amp; systems in mobile F2P (Marvel Strike Force, Star Wars: Galaxy of Heroes), now building AI-native full-stack products solo." />
 <meta name="twitter:image" content="https://mattdanusergrant.com/og.png" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Matt Danuser-Grant",
+  "url": "https://mattdanusergrant.com",
+  "jobTitle": "Game Designer & AI-Native Builder",
+  "sameAs": [
+    "https://github.com/mattdanusergrant",
+    "https://linkedin.com/in/mattdanusergrant"
+  ]
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/site.css" />
 <style>
-  :root{
-    --bg:#FBF8F2;
-    --paper:#FFFFFF;
-    --ink:#15161C;
-    --ink-2:#2A2A2A;
-    --muted:#6A6A6A;
-    --line:#E5E0D2;
-    --line-2:#CBC4B2;
-  }
-  [data-theme="dark"]{
-    --bg:#13110E;--paper:#1D1A16;
-    --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#8A857B;
-    --line:#2C2924;--line-2:#3C3830;
-  }
-  @media(prefers-color-scheme:dark){
-    :root:not([data-theme="light"]){
-      --bg:#13110E;--paper:#1D1A16;
-      --ink:#EDE8DF;--ink-2:#CAC5BC;--muted:#8A857B;
-      --line:#2C2924;--line-2:#3C3830;
-    }
-  }
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
@@ -134,26 +127,6 @@
   .qa-block{margin-bottom:.07in}
   .qa-titles{font-size:9pt;color:var(--muted);font-style:italic;padding-left:1em;line-height:1.4}
 
-  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
-  .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
-  .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
-  [data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
-  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .toggle-thumb{transform:translateX(20px)}}
-  .toggle-thumb svg{width:11px;height:11px;display:block}
-  .t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
-  .t-sun circle{fill:#E8A317;stroke:none}
-  .t-moon{fill:#3A3550;display:none}
-  [data-theme="dark"] .t-sun{display:none}
-  [data-theme="dark"] .t-moon{display:block}
-  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-sun{display:none}:root:not([data-theme="light"]) .t-moon{display:block}}
-
-  html.mode-shift,html.mode-shift *{transition:background-color 2.5s ease,color 2.5s ease,border-color 2.5s ease,box-shadow 2.5s ease,fill 2.5s ease !important}
-  .fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;will-change:opacity,transform}
-  .fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.22) 0%,rgba(255,201,133,.12) 40%,rgba(255,224,178,.05) 70%,transparent 100%);animation:fx-rise 3.5s ease-in-out forwards}
-  .fx-sunset{background:linear-gradient(0deg,rgba(90,60,100,.2) 0%,rgba(70,55,90,.11) 40%,rgba(50,45,75,.04) 70%,transparent 100%);animation:fx-set 3.5s ease-in-out forwards}
-  @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
-  @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
-
   .foot{
     margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);
     display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
@@ -201,6 +174,7 @@
       <a href="/">Home</a>
       <a href="/#games-h">Games</a>
       <a href="/#apps-h">Apps</a>
+      <a href="/case-studies.html">Case Studies</a>
       <a href="/consulting.html">Consulting</a>
       <a class="active" href="/resume.html">Resume</a>
     </div>
@@ -232,6 +206,20 @@
     </div>
 
     <div class="section-label">Experience</div>
+
+    <div class="job">
+      <div class="job-meta">
+        <div><span class="company">Independent</span><span class="job-title">, AI-Native Design &amp; Engineering</span></div>
+        <span class="dates">Aug 2025 – Present</span>
+      </div>
+      <div class="game-credit">mattdanusergrant.com &nbsp;·&nbsp; Conductive (personal OS) &nbsp;·&nbsp; 12-repo portfolio</div>
+      <ul class="bullets">
+        <li>Design and ship original games, apps, and creative-coding tools at mattdanusergrant.com — vanilla JS + Canvas, no build step, continuously deployed on GitHub Pages.</li>
+        <li>Built Conductive, a multi-agent personal operating system on a Markdown knowledge graph, directing AI (Claude Code) as an engineering team across a 12-repo portfolio.</li>
+        <li>Shipped full-stack products solo — a live team-scheduling app and an invite-only artist portal — on serverless Postgres (Neon / Supabase) with row-level-security auth and no dedicated servers.</li>
+        <li>Advise founders and designers on AI-native build workflows and game systems design.</li>
+      </ul>
+    </div>
 
     <div class="job">
       <div class="job-meta">
@@ -372,29 +360,6 @@
   <p class="byo no-print">Like this resume? <a href="/resume-builder.html">Build your own →</a></p>
 
 </div>
-<script>
-(function(){
-  var btn=document.getElementById('theme-toggle');
-  if(!btn)return;
-  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  function fx(theme){
-    if(reduce)return;
-    var o=document.createElement('div');
-    o.className='fx-overlay '+(theme==='light'?'fx-sunrise':'fx-sunset');
-    document.body.appendChild(o);
-    setTimeout(function(){o.remove();},3600);
-  }
-  btn.addEventListener('click',function(){
-    var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
-    if(!reduce){
-      document.documentElement.classList.add('mode-shift');
-      setTimeout(function(){document.documentElement.classList.remove('mode-shift');},2600);
-    }
-    document.documentElement.setAttribute('data-theme',next);
-    localStorage.setItem('theme',next);
-    fx(next);
-  });
-})();
-</script>
+<script src="/assets/site.js" defer></script>
 </body>
 </html>
