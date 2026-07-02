@@ -452,7 +452,7 @@
         ctx.beginPath();ctx.moveTo(l,bot);ctx.lineTo(l,top);ctx.lineTo(r,top);ctx.lineTo(r,bot);ctx.stroke();
       }
     };
-    // Lorenz Attractor - the butterfly of chaos (MILDLY DUBIOUS GAMBIT).
+    // Lorenz Attractor - the butterfly of chaos (MULTIPLE DIMENSIONS GENERATED).
     SK.lorenz=function(w,h,t){
       var sg=10,rho=28,bt=8/3,dt=0.006,x=0.1,y=0,z=0,i,dx,dy,dz;
       for(i=0;i<400;i++){dx=sg*(y-x);dy=x*(rho-z)-y;dz=x*y-bt*z;x+=dx*dt;y+=dy*dt;z+=dz*dt;}
@@ -461,7 +461,7 @@
       for(i=0;i<5200;i++){dx=sg*(y-x);dy=x*(rho-z)-y;dz=x*y-bt*z;x+=dx*dt;y+=dy*dt;z+=dz*dt;var px=cx+(x*cr-y*sr)*sc,py=cy+(z-25)*sc;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
       ctx.stroke();
     };
-    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes (MULTIPLE DIMENSIONS GENERATED).
+    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes (MINIMAL DIGITAL GOODS).
     SK.lissajous=function(w,h,t){
       var cx=w/2,cy=h/2,R=Math.min(w,h)*0.42,a=3,b=2,ph=t*0.5,N=420;
       ctx.lineCap='round';ctx.shadowColor=col(0,0.5);ctx.strokeStyle=col(0,0.85);ctx.lineWidth=1.5;ctx.beginPath();
@@ -567,7 +567,8 @@
     {words:['MAKE','DOPE','GROOVES'],            sketch:'waves'},
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketch:'doors'},
-    {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lissajous'},
+    {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
+    {words:['MINIMAL','DIGITAL','GOODS'],        sketch:'lissajous'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
     {words:['MATH','DRAWS','GRAPHICS'],          sketch:'fourier'}
   ];
