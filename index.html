@@ -461,12 +461,24 @@
       for(i=0;i<5200;i++){dx=sg*(y-x);dy=x*(rho-z)-y;dz=x*y-bt*z;x+=dx*dt;y+=dy*dt;z+=dz*dt;var px=cx+(x*cr-y*sr)*sc,py=cy+(z-25)*sc;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
       ctx.stroke();
     };
-    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes (MINIMAL DIGITAL GOODS).
+    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes (unused; free for a future bridge).
     SK.lissajous=function(w,h,t){
       var cx=w/2,cy=h/2,R=Math.min(w,h)*0.42,a=3,b=2,ph=t*0.5,N=420;
       ctx.lineCap='round';ctx.shadowColor=col(0,0.5);ctx.strokeStyle=col(0,0.85);ctx.lineWidth=1.5;ctx.beginPath();
       for(var i=0;i<=N;i++){var th=i/N*TAU,x=cx+Math.sin(a*th+ph)*R,y=cy+Math.sin(b*th)*R;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
       ctx.stroke();
+    };
+    // Sierpinski Triangle - remove each triangle's middle, forever (depth 7); slow turn (MODULAR DIGITAL GOODS).
+    SK.sierpinski=function(w,h,t){
+      var depth=7,R=Math.min(w,h)*0.46,cx=w/2,cy=h/2+R*0.12,rot=t*0.08,v=[],k;
+      for(k=0;k<3;k++){var a=-Math.PI/2+k*TAU/3+rot;v.push([cx+Math.cos(a)*R,cy+Math.sin(a)*R]);}
+      ctx.shadowColor=col(0,0.4);ctx.fillStyle=col(0,0.9);ctx.beginPath();
+      function tri(a,b,c,n){
+        if(n===0){ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(c[0],c[1]);ctx.closePath();return;}
+        var ab=[(a[0]+b[0])/2,(a[1]+b[1])/2],bc=[(b[0]+c[0])/2,(b[1]+c[1])/2],ca=[(c[0]+a[0])/2,(c[1]+a[1])/2];
+        tri(a,ab,ca,n-1);tri(ab,b,bc,n-1);tri(ca,bc,c,n-1);
+      }
+      tri(v[0],v[1],v[2],depth);ctx.fill();
     };
     // Metatron's Cube - sacred geometry of 13 circles (MANIFEST DIVINE GEOMETRY).
     SK.metatron=function(w,h,t){
@@ -568,7 +580,7 @@
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketch:'doors'},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
-    {words:['MINIMAL','DIGITAL','GOODS'],        sketch:'lissajous'},
+    {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
     {words:['MATH','DRAWS','GRAPHICS'],          sketch:'fourier'}
   ];
