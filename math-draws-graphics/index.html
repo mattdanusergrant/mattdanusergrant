@@ -1008,6 +1008,143 @@ for (let i = 0; i < verts.length; i++) {
     ctx.beginPath(); ctx.arc(P[i][0], P[i][1], 1.2 + 1.8 * f, 0, TAU); ctx.fill();
   }
 }`;
+const LINE_SKETCH =
+`// Straight line, y = m·x + b. The simplest equation: a constant slope.
+// Animate ON to sweep the slope. ctx, w, h, t, TAU.
+
+const cx = w / 2, cy = h / 2;
+const scale = Math.min(w, h) / 6;   // pixels per unit
+
+// axes
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.14)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+ctx.stroke();
+
+const m = Math.sin(t * 0.4) * 2;    // slope gently sweeps -2..2
+
+ctx.strokeStyle = 'hsla(200, 85%, 62%, 0.95)';
+ctx.lineWidth = 2.4;
+ctx.beginPath();
+for (let px = 0; px <= w; px += 4) {
+  const x = (px - cx) / scale;
+  const py = cy - (m * x) * scale;
+  if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+}
+ctx.stroke();`;
+
+const PARABOLA_SKETCH =
+`// Parabola, y = a·x². The quadratic: the slope grows with x, so it bends.
+// Animate ON to breathe the curvature. ctx, w, h, t, TAU.
+
+const cx = w / 2, cy = h * 0.72;
+const scale = Math.min(w, h) / 7;
+
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.14)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+ctx.stroke();
+
+const a = 0.5 + 0.4 * Math.sin(t * 0.5);
+
+ctx.strokeStyle = 'hsla(45, 90%, 62%, 0.95)';
+ctx.lineWidth = 2.4;
+ctx.beginPath();
+for (let px = 0; px <= w; px += 3) {
+  const x = (px - cx) / scale;
+  const py = cy - (a * x * x) * scale;
+  if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+}
+ctx.stroke();`;
+
+const SINE_CURVE_SKETCH =
+`// Sine curve, y = sin(x). The pure wave, repeating every 2π.
+// Animate ON to scroll the phase. ctx, w, h, t, TAU.
+
+const cx = w / 2, cy = h / 2;
+const scale = Math.min(w, h) / 6;
+
+ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.14)';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+ctx.stroke();
+
+ctx.strokeStyle = 'hsla(320, 80%, 66%, 0.95)';
+ctx.lineWidth = 2.4;
+ctx.beginPath();
+for (let px = 0; px <= w; px += 3) {
+  const x = (px - cx) / scale;
+  const py = cy - Math.sin(x + t) * scale;
+  if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+}
+ctx.stroke();`;
+
+const WAVEFORMS_SKETCH =
+`// Waveforms, the four classic synth shapes: sine, square, triangle, saw.
+// Hard corners, unlike the smooth Sound Waves. Animate ON to scroll.
+// ctx, w, h, t, TAU.
+
+const lanes = 4;
+const laneH = h / lanes;
+const hues = [200, 320, 130, 40];
+const step = Math.max(2, Math.floor(w / 300));
+const freq = 3;   // cycles across the width
+
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+
+for (let k = 0; k < lanes; k++) {
+  const mid = laneH * (k + 0.5);
+  const amp = laneH * 0.32;
+  ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(w, mid); ctx.stroke();
+
+  ctx.strokeStyle = 'hsla(' + hues[k] + ', 85%, 62%, 0.95)';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  for (let x = 0; x <= w; x += step) {
+    const p = (x / w) * freq * TAU + t * 1.2;
+    const ph = p / TAU - Math.floor(p / TAU);   // 0..1 within the cycle
+    let s;
+    if (k === 0) s = Math.sin(p);
+    else if (k === 1) s = ph < 0.5 ? 1 : -1;
+    else if (k === 2) s = 4 * Math.abs(ph - 0.5) - 1;
+    else s = 2 * ph - 1;
+    const y = mid - s * amp;
+    if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}`;
+
+const RAINBOW_SKETCH =
+`// Maximum Rainbows, concentric arcs sweeping the full hue wheel, twice over,
+// with the whole spectrum rotating. Animate ON. ctx, w, h, t, TAU.
+
+const cx = w / 2, cy = h / 2;
+const maxR = Math.hypot(w, h) / 2;
+const rings = 60;
+
+ctx.lineCap = 'butt';
+ctx.lineWidth = maxR / rings + 1.5;
+
+for (let i = rings; i >= 1; i--) {
+  const r = (i / rings) * maxR;
+  const hue = ((i / rings) * 720 + t * 60) % 360;   // two full spectra, rotating
+  const a0 = t * 0.6 + i * 0.15;
+  const a1 = a0 + TAU * (0.55 + 0.4 * Math.sin(t * 0.4 + i * 0.1));
+  ctx.strokeStyle = 'hsla(' + hue.toFixed(0) + ', 90%, 60%, 0.9)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, a0, a1);
+  ctx.stroke();
+}`;
+
 const SKETCHES = [
   { name: 'Stellated Rhombic Dodecahedron', code: STELLATED_RD_SKETCH, info: `The first <b>stellation</b> of the rhombic dodecahedron, known as <b>Escher's solid</b>: raise a spike on each of the 12 rhombic faces by extending the faces until neighbours meet. The tips land at <code>(±2, ±2, 0)</code> and its permutations. Remarkably, copies of it still <b>tile 3D space</b> with no gaps.` },
   { name: 'Mandelbrot',      code: MANDELBROT_SKETCH,  info: `For each point <code>c</code>, iterate <code>z → z² + c</code> from <code>z = 0</code>; colour by how fast it escapes. Points that never escape (black) form the <b>Mandelbrot set</b>, endless detail at every zoom. <i>Raster: use PNG export.</i>` },
@@ -1032,6 +1169,11 @@ const SKETCHES = [
   { name: 'Turning Hall',    code: TURNING_HALL_SKETCH,info: `A corridor whose centre-line bends by <code>sin(z·k − t)</code>, weighted by <code>(1 − z/N)</code> so the far end stays pinned to the vanishing point while the near hall swings, and the bend travels toward you.` },
   { name: 'Swinging Doors',  code: SWINGING_DOORS_SKETCH, info: `A perspective corridor where each door hinges open as you reach it. The free edge foreshortens by <code>cos(θ)</code> as it swings, and a filled leaf occludes the doors behind it.` },
   { name: 'Sound Waves',     code: SOUND_WAVES_SKETCH, info: `Overlaid sine waves <code>sin(2π·f·x + t)</code> at rising frequencies, each multiplied by a window <code>sin(πx)</code> that tapers both ends, like an oscilloscope tracing a packet of sound.` },
+  { name: 'Straight Line',   code: LINE_SKETCH,        info: `The simplest equation, <code>y = m·x + b</code>: a constant <b>slope</b> <code>m</code> and intercept <code>b</code>. The slope sweeps as it animates. Every straight line on a graph is just those two numbers.` },
+  { name: 'Parabola',        code: PARABOLA_SKETCH,    info: `The quadratic <code>y = a·x²</code>. Unlike a line, the slope <b>grows with x</b>, so the curve bends; <code>a</code> (breathing here) sets how tightly. It's the path of anything thrown under gravity.` },
+  { name: 'Sine Curve',      code: SINE_CURVE_SKETCH,  info: `<code>y = sin(x)</code>, the pure wave: smooth, repeating every <code>2π</code>, swinging between −1 and 1. Scroll the <b>phase</b> to watch it travel. The building block every other wave is made from.` },
+  { name: 'Waveforms',       code: WAVEFORMS_SKETCH,   info: `The four classic synth <b>waveforms</b> — sine, square, triangle, sawtooth. Same pitch, very different shape (and sound), because each stacks its harmonics differently. Unlike the smooth Sound Waves, three have hard corners.` },
+  { name: 'Maximum Rainbows',code: RAINBOW_SKETCH,     info: `<b>Maximum rainbows.</b> Concentric arcs sweep the full <code>hue</code> wheel — <code>0°→360°</code>, twice over — and the whole spectrum rotates. No deep math, just colour: <code>hsl(hue, 90%, 60%)</code> stepped around the circle.` },
 ];
 const CODE_KEY='spiroloom.sketch';
 let codeText = (function(){ try{ return localStorage.getItem(CODE_KEY) || STELLATED_RD_SKETCH; }catch(e){ return STELLATED_RD_SKETCH; } })(), codeFn = null;
