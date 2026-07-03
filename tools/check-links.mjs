@@ -10,7 +10,7 @@ import { dirname, resolve, join } from 'node:path';
 
 const ROOT = resolve(process.argv[2] || '.');
 const OWNED = [
-  'index.html', '404.html', 'consulting.html', 'resume.html', 'resume-builder.html',
+  'index.html', '404.html', 'design-lab.html', 'consulting.html', 'resume.html', 'resume-builder.html',
   'case-studies.html', 'more-games.html', 'tools.html', 'tool.html', 'experience.html',
   'case-studies/building-with-ai.html',
   'case-studies/living-atlas-fantasy-rpg.html',
