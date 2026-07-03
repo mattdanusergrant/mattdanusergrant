@@ -23,3 +23,21 @@
     fx(next);
   });
 })();
+
+/* Responsive nav: hamburger toggle on small screens. */
+(function(){
+  var nav=document.querySelector('.nav');
+  if(!nav)return;
+  var btn=nav.querySelector('.nav-toggle');
+  var links=document.getElementById('nav-links');
+  if(!btn||!links)return;
+  function set(open){
+    if(open)nav.setAttribute('data-open','');else nav.removeAttribute('data-open');
+    btn.setAttribute('aria-expanded',open?'true':'false');
+  }
+  btn.addEventListener('click',function(e){e.stopPropagation();set(!nav.hasAttribute('data-open'));});
+  links.addEventListener('click',function(e){if(e.target.closest('a'))set(false);});
+  document.addEventListener('click',function(e){if(nav.hasAttribute('data-open')&&!nav.contains(e.target))set(false);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false);});
+  window.addEventListener('resize',function(){if(window.innerWidth>640)set(false);});
+})();

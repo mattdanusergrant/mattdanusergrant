@@ -58,3 +58,26 @@ html.mode-shift,html.mode-shift *{transition:background-color 2.5s ease,color 2.
 .fx-sunset{background:linear-gradient(0deg,rgba(90,60,100,.2) 0%,rgba(70,55,90,.11) 40%,rgba(50,45,75,.04) 70%,transparent 100%);animation:fx-set 3.5s ease-in-out forwards}
 @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
 @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
+
+/* ── Responsive nav — hamburger on small screens ───────────── */
+/* #nav-links is targeted by id so these rules win over each page's inline
+   `.nav .links` block (inline <style> loads after this file). */
+.nav{position:relative}
+.nav-toggle{display:none;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--ink);padding:6px;margin-left:auto;flex-shrink:0}
+.nav-toggle svg{display:block}
+.nav-toggle .i-x{display:none}
+@media(max-width:640px){
+  .nav-toggle{display:inline-flex}
+  #nav-links{
+    position:absolute;top:calc(100% + 10px);right:0;z-index:60;
+    display:none;flex-direction:column;align-items:stretch;gap:2px;
+    min-width:190px;padding:10px;
+    background:var(--paper);border:1.5px solid var(--line);border-radius:12px;
+    box-shadow:0 14px 40px rgba(0,0,0,.16);
+  }
+  .nav[data-open] #nav-links{display:flex}
+  .nav[data-open] .nav-toggle .i-bars{display:none}
+  .nav[data-open] .nav-toggle .i-x{display:inline}
+  #nav-links a{margin-left:0;padding:9px 12px;border-radius:8px;font-size:15px}
+  #nav-links a:hover{background:var(--bg);color:var(--ink)}
+}
