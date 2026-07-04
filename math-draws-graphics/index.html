@@ -124,6 +124,11 @@
   }
   #ex-select:hover{border-color:var(--ink)}
   #ex-select:focus{outline:none; border-color:var(--ink)}
+  #ex-share{margin-top:10px; width:100%; font-size:12.5px; padding:8px 12px;
+    background:transparent; color:var(--ink-2); border:1.5px solid var(--line-2);
+    border-radius:999px; cursor:pointer; transition:.15s}
+  #ex-share:hover{border-color:var(--ink); color:var(--ink)}
+  #ex-share.copied{border-color:var(--accent); color:var(--accent)}
   .exstep{flex:none; width:40px; padding:8px 0; font-size:12px; color:var(--muted)}
   .exstep:hover{color:var(--ink); border-color:var(--ink)}
 
@@ -183,6 +188,7 @@
         <span class="selwrap"><select id="ex-select" aria-label="Choose example"></select></span>
         <button id="ex-next" class="exstep" title="Next (→)" aria-label="Next example">▶</button>
       </div>
+      <button id="ex-share" title="Copy a shareable link that opens this example directly">🔗 Copy link to this example</button>
     </div>
 
     <div class="section">
@@ -1411,10 +1417,22 @@ function buildEditor(box){
   const err=el('div','err'); err.id='err';
   box.append(hint,ta,err); setCodeErr('');
 }
+function slug(name){ return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+function exampleFromSlug(s){ if(!s) return -1; const q=slug(s); return SKETCHES.findIndex(k=>slug(k.name)===q); }
+function syncURL(i){ try{ const u = i>=0 ? location.pathname+'?ex='+slug(SKETCHES[i].name) : location.pathname;
+  history.replaceState(null,'',u); }catch(e){} }
+function shareLink(){ const i=SKETCHES.findIndex(s=>s.code===codeText);
+  return location.origin+location.pathname+(i>=0 ? '?ex='+slug(SKETCHES[i].name) : ''); }
+function copyShare(){ const link=shareLink(), btn=$('#ex-share');
+  const ok=()=>{ if(!btn) return; btn.textContent='✓ Link copied'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='🔗 Copy link to this example'; btn.classList.remove('copied'); },1500); };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(ok,()=>prompt('Copy this link:',link));
+  else prompt('Copy this link:',link);
+}
 function loadExample(i){
   codeText=SKETCHES[i].code;
   const ta=$('#code'); if(ta) ta.value=codeText;
-  saveSketch(); compileCode(); refreshInfo(); anim.phase=0; dirty=true;
+  saveSketch(); compileCode(); refreshInfo(); anim.phase=0; dirty=true; syncURL(i);
 }
 function buildExamples(){
   const sel=$('#ex-select'); if(!sel) return;
@@ -1424,6 +1442,7 @@ function buildExamples(){
   const prev=$('#ex-prev'), next=$('#ex-next');
   if(prev) prev.onclick=()=>stepEx(-1);
   if(next) next.onclick=()=>stepEx(1);
+  const sh=$('#ex-share'); if(sh) sh.onclick=copyShare;
 }
 function tryLoad(i){
   if(SKETCHES.findIndex(x=>x.code===codeText)<0 &&
@@ -1623,6 +1642,7 @@ function wire(){
 }
 
 /* ---- init ---- */
+(function(){ const i=exampleFromSlug(new URLSearchParams(location.search).get('ex')); if(i>=0) codeText=SKETCHES[i].code; })();
 buildExamples(); compileCode(); buildEditor($('#editor')); refreshInfo(); syncStatic(); wire(); resize();
 requestAnimationFrame(loop);
 </script>
