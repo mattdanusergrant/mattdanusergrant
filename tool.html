@@ -78,12 +78,13 @@
   </footer>
 <script>
 /* Frame a known toolbox tool inside the site shell. Whitelisted so the ?app
-   param can only load tools that live on this site. */
+   param can only load a vetted tool — a local path or a first-party subdomain. */
 (function(){
   var TOOLS={
     'math-draws-graphics':        { name:'Math Draws Graphics', src:'/math-draws-graphics/' },
     'make-dope-grooves':          { name:'Make Dope Grooves',   src:'/make-dope-grooves/' },
-    'manufacture-digital-grooves':{ name:'Make Dope Grooves',   src:'/make-dope-grooves/' } // legacy alias for old links
+    'manufacture-digital-grooves':{ name:'Make Dope Grooves',   src:'/make-dope-grooves/' }, // legacy alias for old links
+    'multiplayer-deck-gateway':   { name:'Multiplayer Deck Gateway', src:'https://mustdesigngames.mattdanusergrant.com/card-workshop/' }
   };
   var key=new URLSearchParams(location.search).get('app');
   var t=TOOLS[key];
