@@ -341,6 +341,60 @@ for (let i = N; i >= 1; i--) {
   ctx.moveTo(freeX, top - tilt); ctx.lineTo(freeX, bot + tilt);
   ctx.stroke();
 }`;
+const CARD_FAN_SKETCH =
+`// Card Fan, an endless hand of cards spread about a hinge below the frame.
+// Each card sits at fan angle theta and is rotated by the same theta, so the
+// deck opens into an arc; the rank cascades through the fan and recycles,
+// fanning out forever. Animate ON; try Trails. ctx, w, h, t, TAU.
+
+const hx = w / 2, hy = h * 1.16;          // hinge (pivot) just below the canvas
+const R  = Math.min(w, h) * 0.78;         // hinge -> card centre
+const cw = Math.min(w, h) * 0.155;        // card width
+const ch = cw * 1.45, rr = cw * 0.12;     // card height, corner radius
+const spread = TAU * 0.34;                // total fan sweep (~122 deg)
+const N = 23;                             // cards across the fan
+const flow = t * 0.14;                    // continuous cascade
+
+ctx.lineJoin = 'round';
+
+// rounded-rect path, top-left at (x, y)
+function rrect(x, y, ww, hh, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + ww, y, x + ww, y + hh, r);
+  ctx.arcTo(x + ww, y + hh, x, y + hh, r);
+  ctx.arcTo(x, y + hh, x, y, r);
+  ctx.arcTo(x, y, x + ww, y, r);
+  ctx.closePath();
+}
+
+// fan positions 0..1, drawn low-to-high so higher cards overlap (a real fan)
+const fs = [];
+for (let i = 0; i < N; i++) fs.push((((i / N + flow) % 1) + 1) % 1);
+fs.sort((a, b) => a - b);
+
+for (const f of fs) {
+  const ang = -spread / 2 + f * spread;   // fan angle from vertical, left -> right
+  const cx  = hx + Math.sin(ang) * R;
+  const cy  = hy - Math.cos(ang) * R;     // centre rides a circle about the hinge
+  const a   = Math.min(1, Math.min(f, 1 - f) / 0.05);  // fade both ends -> seamless loop
+  const hue = (f * 300 + t * 24) % 360;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(ang);
+  rrect(-cw / 2, -ch / 2, cw, ch, rr);
+  ctx.fillStyle   = \`hsla(\${hue}, 55%, 8%, \${0.94 * a})\`;   // dark face occludes cards behind
+  ctx.fill();
+  ctx.lineWidth   = Math.max(1, cw * 0.05);
+  ctx.strokeStyle = \`hsla(\${hue}, 85%, 62%, \${a})\`;
+  ctx.stroke();
+  ctx.beginPath();                                          // centre pip
+  ctx.arc(0, 0, cw * 0.15, 0, TAU);
+  ctx.fillStyle   = \`hsla(\${hue}, 85%, 64%, \${a})\`;
+  ctx.fill();
+  ctx.restore();
+}`;
 const WALK_SKETCH =
 `// Walk Through Doors, first-person POV down an endless corridor.
 // ARCHED = false -> squared corners; true -> round arches. Animate ON; try Trails.
@@ -1220,6 +1274,7 @@ const SKETCHES = [
   { name: 'Many Doors',      code: MANY_DOORS_SKETCH,  info: `A long hallway lined with doors on both walls, from the same <code>1/z</code> perspective. Each door's near and far stiles ride the converging wall line at depths <code>z</code> and <code>z+gap</code>, while its verticals stay vertical, so every door foreshortens into a trapezoid. The whole rank scrolls toward you as you "walk".` },
   { name: 'Turning Hall',    code: TURNING_HALL_SKETCH,info: `A corridor whose centre-line bends by <code>sin(z·k − t)</code>, weighted by <code>(1 − z/N)</code> so the far end stays pinned to the vanishing point while the near hall swings, and the bend travels toward you.` },
   { name: 'Swinging Doors',  code: SWINGING_DOORS_SKETCH, info: `A perspective corridor where each door hinges open as you reach it. The free edge foreshortens by <code>cos(θ)</code> as it swings, and a filled leaf occludes the doors behind it.` },
+  { name: 'Card Fan',        code: CARD_FAN_SKETCH,    info: `An endless hand of cards spread about a hinge below the frame. Each card sits at fan angle <code>θ = f·spread</code> and is <b>rotated by that same θ</b>, so its centre rides the circle <code>(sin θ, −cos θ)·R</code> about the pivot and the deck opens into an arc. The rank scrolls by <code>f = (i/N + t) mod 1</code> and fades to nothing at both ends, so cards stream through the fan and recycle — fanning out forever. Nearer cards draw last, so each overlaps the one behind, like a real hand.` },
   { name: 'Sound Waves',     code: SOUND_WAVES_SKETCH, info: `Overlaid sine waves <code>sin(2π·f·x + t)</code> at rising frequencies, each multiplied by a window <code>sin(πx)</code> that tapers both ends, like an oscilloscope tracing a packet of sound.` },
   { name: 'Straight Line',   code: LINE_SKETCH,        info: `The simplest equation, <code>y = m·x + b</code>: a constant <b>slope</b> <code>m</code> and intercept <code>b</code>. The slope sweeps as it animates. Every straight line on a graph is just those two numbers.` },
   { name: 'Parabola',        code: PARABOLA_SKETCH,    info: `The quadratic <code>y = a·x²</code>. Unlike a line, the slope <b>grows with x</b>, so the curve bends; <code>a</code> (breathing here) sets how tightly. It's the path of anything thrown under gravity.` },
