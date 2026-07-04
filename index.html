@@ -611,7 +611,7 @@
       // "incredibly slow" Game of Life that never quite stops. Phase accumulates so the
       // rate can change smoothly without the generation count ever jumping.
       var rate;
-      if(bgMode){var bgSec=(performance.now()-bgStart)/1000,floor=0.01;rate=floor+(1-floor)*Math.exp(-bgSec/75);}
+      if(bgMode){var bgSec=(performance.now()-bgStart)/1000,floor=0.01;rate=floor+(1-floor)*Math.exp(-bgSec/5);}
       else{rate=2-gFade;}
       S.phase+=Math.max(0,t-S.lastT)*rate;S.lastT=t;
       var target=Math.floor(S.phase);
