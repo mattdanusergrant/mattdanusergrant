@@ -141,7 +141,7 @@
 <body>
 <div class="app">
   <div class="stage">
-    <canvas id="c" title="Drag to spin in 3D · Shift-drag to pan · scroll to zoom · double-click to reset"></canvas>
+    <canvas id="c" title="Drag to pan · Shift-drag to spin in 3D · scroll to zoom · double-click to reset"></canvas>
     <button id="resetview" class="resetview" hidden>Reset view</button>
   </div>
 
@@ -1397,12 +1397,12 @@ function zoomAt(px,py,factor){
 }
 cv.addEventListener('contextmenu', e=>e.preventDefault());
 cv.addEventListener('wheel', e=>{ e.preventDefault(); const p=ptr(e); zoomAt(p.x,p.y, e.deltaY<0?1.12:1/1.12); }, {passive:false});
-const drag={on:false,x:0,y:0,pan:false}, pts=new Map(); let pinchD=0;
+const drag={on:false,x:0,y:0,spin:false}, pts=new Map(); let pinchD=0;
 cv.addEventListener('pointerdown', e=>{
   cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, ptr(e));
   if(pts.size===1){ const p=ptr(e); drag.on=true; drag.x=p.x; drag.y=p.y;
-    drag.pan = e.shiftKey || e.button===2;                 // shift / right-drag = pan; else spin
-    cv.style.cursor = drag.pan ? 'grabbing' : 'move'; }
+    drag.spin = e.shiftKey || e.button===2;                // shift / right-drag = spin; else pan
+    cv.style.cursor = drag.spin ? 'move' : 'grabbing'; }
   else { drag.on=false; const a=[...pts.values()]; pinchD=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); }
 });
 cv.addEventListener('pointermove', e=>{
@@ -1412,8 +1412,8 @@ cv.addEventListener('pointermove', e=>{
     if(pinchD>0) zoomAt((a[0].x+a[1].x)/2,(a[0].y+a[1].y)/2, d/pinchD); pinchD=d; return; }
   if(!drag.on) return;
   const dx=p.x-drag.x, dy=p.y-drag.y; drag.x=p.x; drag.y=p.y;
-  if(drag.pan){ view.x+=dx; view.y+=dy; dirty=true; }       // pan
-  else { view.ry+=dx*0.5; view.rx-=dy*0.5; applyCam(); }    // spin in 3D
+  if(drag.spin){ view.ry+=dx*0.5; view.rx-=dy*0.5; applyCam(); }  // spin in 3D
+  else { view.x+=dx; view.y+=dy; dirty=true; }                    // pan
   updateResetBtn();
 });
 function endPtr(e){ pts.delete(e.pointerId); if(pts.size<2) pinchD=0; if(pts.size===0){ drag.on=false; cv.style.cursor='grab'; } }
