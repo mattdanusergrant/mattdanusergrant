@@ -1146,39 +1146,46 @@ for (let i = rings; i >= 1; i--) {
 }`;
 
 const STRING_ART_SKETCH =
-`// String Art, the "times table" on a circle. Space n pins evenly round the
-// rim and run a thread from pin i to pin (i*m) mod n. Whole-number m draws a
-// classic curve, m=2 a cardioid, m=3 a nephroid; a drifting m weaves the
-// nested rotating loops of a nail-and-thread board. Animate ON.
-// ctx, w, h, t, TAU.
+`// String Art — a nail-and-thread board, drawn by maths. Space N pins evenly
+// round a circle; each "ring" runs a thread from pin i to pin i+step, and as
+// the step grows the chords reach deeper, their envelope spiralling into a
+// central hole. A small rotation per ring gives the vortex swirl. This one is
+// static — it draws the same picture every frame. ctx, w, h, t, TAU (t unused).
 
 const cx = w / 2, cy = h / 2;
 const R = Math.min(w, h) * 0.46;
-const n = 220;                                   // pins on the rim
+const N = 72;                        // pins on the rim
+const rings = 34;                    // concentric chord-length bands
+const swirl = 0.40;                  // per-ring rotation (the vortex)
 
-// A few thread colours, each its own multiplier, layered like real string art.
-const layers = [
-  { m: 2 + t * 0.020, hue: 14, sat: 62, light: 46 },   // rust
-  { m: 3 + t * 0.013, hue: 40, sat: 60, light: 48 },   // amber / gold
-  { m: 5 + t * 0.030, hue: 68, sat: 34, light: 40 },   // olive
-  { m: 7 + t * 0.008, hue: 150, sat: 26, light: 42 }   // muted teal
+// A handful of real thread colours, layered rim -> hole, like the board.
+const THREADS = [
+  [20, 58, 40],   // rust (rim)
+  [34, 54, 40],   // brown-gold
+  [110, 26, 36],  // olive-green band
+  [160, 22, 40],  // muted teal
+  [44, 62, 48],   // gold
+  [26, 68, 46],   // orange
+  [10, 62, 44]    // red (by the hole)
 ];
 
-function pin(k) {                                // k-th point on the circle
-  const a = (k / n) * TAU - Math.PI / 2;
+function pin(k, phase){
+  const a = (k / N) * TAU + phase - Math.PI / 2;
   return [cx + Math.cos(a) * R, cy + Math.sin(a) * R];
 }
 
 ctx.lineCap = 'round';
-ctx.lineWidth = 0.6;
+ctx.lineWidth = 0.65;
 
-for (let L = 0; L < layers.length; L++) {
-  const lay = layers[L];
-  ctx.strokeStyle = 'hsla(' + lay.hue + ', ' + lay.sat + '%, ' + lay.light + '%, 0.55)';
+for (let r = 0; r < rings; r++){
+  const step = 1 + r;                                   // deeper envelope each ring
+  const phase = r * swirl;                              // rotate each ring -> swirl
+  const c = THREADS[Math.floor(r / rings * THREADS.length)];
+  ctx.strokeStyle = 'hsla(' + c[0] + ', ' + c[1] + '%, ' + c[2] + '%, 0.6)';
   ctx.beginPath();
-  for (let i = 0; i < n; i++) {
-    const a = pin(i);
-    const b = pin((i * lay.m) % n);
+  for (let i = 0; i < N; i++){
+    const a = pin(i, phase);
+    const b = pin(i + step, phase);
     ctx.moveTo(a[0], a[1]);
     ctx.lineTo(b[0], b[1]);
   }
@@ -1186,7 +1193,7 @@ for (let L = 0; L < layers.length; L++) {
 }`;
 
 const SKETCHES = [
-  { name: 'String Art',      code: STRING_ART_SKETCH,  info: `<b>Nail-and-thread string art</b>, drawn by maths. Space <code>n</code> pins evenly round a circle and run a thread from pin <code>i</code> to pin <code>(i·m) mod n</code> — the "<b>times table</b> on a circle". A whole-number multiplier gives a classic envelope: <code>m=2</code> a <b>cardioid</b>, <code>m=3</code> a <b>nephroid</b>, <code>m=51</code> a 50-point star. Here four threads drift their multipliers apart, weaving the nested rotating loops of a real thread board.` },
+  { name: 'String Art',      code: STRING_ART_SKETCH,  info: `<b>Nail-and-thread string art</b>, drawn by maths — a static piece modelled on a real thread board. Space <code>N</code> pins evenly round a circle; each ring runs a thread from pin <code>i</code> to pin <code>i+step</code>. A chord spanning a wider gap sits <b>closer to the centre</b> — its family of chords has an inner <b>envelope</b> of radius <code>R·cos(π·step/N)</code> — so growing the step ring by ring spirals the pattern into a central hole, while a small <b>rotation</b> per ring twists it into a vortex.` },
   { name: 'Stellated Rhombic Dodecahedron', code: STELLATED_RD_SKETCH, info: `The first <b>stellation</b> of the rhombic dodecahedron, known as <b>Escher's solid</b>: raise a spike on each of the 12 rhombic faces by extending the faces until neighbours meet. The tips land at <code>(±2, ±2, 0)</code> and its permutations. Remarkably, copies of it still <b>tile 3D space</b> with no gaps.` },
   { name: 'Mandelbrot',      code: MANDELBROT_SKETCH,  info: `For each point <code>c</code>, iterate <code>z → z² + c</code> from <code>z = 0</code>; colour by how fast it escapes. Points that never escape (black) form the <b>Mandelbrot set</b>, endless detail at every zoom. <i>Raster: use PNG export.</i>` },
   { name: 'Lorenz Attractor',code: LORENZ_SKETCH,      info: `A 3-equation weather model: <code>x'=σ(y−x)</code>, <code>y'=x(ρ−z)−y</code>, <code>z'=xy−βz</code>. It never repeats yet stays trapped on a butterfly-shaped <b>strange attractor</b>, the birthplace of chaos theory and the "butterfly effect".` },
