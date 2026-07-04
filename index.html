@@ -601,6 +601,9 @@
       for(var i=0;i<S.trace.length;i++){var X=waveX0+i*dx,Y=S.trace[i];i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}
       ctx.stroke();
     };
+    // Background GoL tick schedule: Fibonacci gaps 1,1,2,3,5,8,...,144s, then hold at 144s.
+    // FIB_T holds the cumulative tick times: [1,2,4,7,12,20,33,54,88,143,232,376].
+    var FIB_T=(function(){var g=[1,1,2,3,5,8,13,21,34,55,89,144],a=0,o=[];for(var i=0;i<g.length;i++){a+=g[i];o.push(a);}return o;})();
     // Conway's Game of Life - the final reveal: MUST DESIGN GAMES.
     SK.life=function(w,h,t){
       var cell=Math.max(5,Math.round(Math.min(w,h)/60)),cols=Math.max(8,Math.floor(w/cell)),rows=Math.max(8,Math.floor(h/cell)),S=lifeS;
@@ -612,13 +615,13 @@
           for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++)if(dx||dy)nb+=g[(y+dy+rows)%rows][(x+dx+cols)%cols];
           var alive=g[y][x]?(nb===2||nb===3):(nb===3);row.push(alive?1:0);if(alive)pop++;}ng.push(row);}
         S.grid=ng;S.gen++;if(pop===0||S.gen-S.seedGen>140)seed();}
-      // Timing. Intro reveal: a smooth 2/s -> 1/s. Background: ticks at growing gaps of
-      // 1s, 2s, 3s ... up to 100s (nth tick at n(n+1)/2 seconds), then every 100s forever —
-      // the Life keeps slowing with each step but never stops.
+      // Timing. Intro reveal: a smooth 2/s -> 1/s. Background: ticks at Fibonacci gaps —
+      // 1,1,2,3,5,8,13,21,34,55,89,144 seconds — then holds at every 144s forever.
       if(bgMode){
         if(S.bgTicks===undefined)S.bgTicks=0;
-        var bgSec=(performance.now()-bgStart)/1000;
-        var want=bgSec<1?0:bgSec<=5050?Math.floor((Math.sqrt(1+8*bgSec)-1)/2):100+Math.floor((bgSec-5050)/100);
+        var bgSec=(performance.now()-bgStart)/1000,last=FIB_T[FIB_T.length-1],want;
+        if(bgSec>=last){want=FIB_T.length+Math.floor((bgSec-last)/144);}   // past the 12th tick: every 144s
+        else{want=0;for(var wi=0;wi<FIB_T.length&&FIB_T[wi]<=bgSec;wi++)want++;}
         while(S.bgTicks<want){step();S.bgTicks++;}
       }else{
         var rate=2-gFade;S.phase+=Math.max(0,t-S.lastT)*rate;S.lastT=t;
