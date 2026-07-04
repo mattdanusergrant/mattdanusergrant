@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Pixel Art · Math Draws Graphics</title>
+<script>!function(){try{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}catch(e){}}()</script>
+<style>
+  :root{ --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink-2:#CAC5BC; --muted:#7A756D;
+    --line:#2E2A24; --line-2:#3A352E; --accent:#E8A317; --stage:#0a0a14; }
+  :root[data-theme="light"]{ --bg:#FBF8F2; --paper:#FFFFFF; --ink:#15161C; --ink-2:#2A2A2A;
+    --muted:#6A6A6A; --line:#E5E0D2; --line-2:#CBC4B2; --accent:#C9820A; --stage:#12121c; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:14px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:var(--ink);background:var(--bg);overflow:hidden;display:flex;flex-direction:column;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+  #app{flex:1;min-height:0;display:flex;flex-direction:column}
+  .umbrella{height:42px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;
+    background:var(--paper);border-bottom:1.5px solid var(--line-2)}
+  .ub-brand{font-weight:700;font-size:13px;letter-spacing:.01em;color:var(--ink);white-space:nowrap}
+  .ub-tabs{display:flex;gap:6px}
+  .ub-tab{font-size:12.5px;text-decoration:none;color:var(--muted);padding:5px 11px;
+    border:1.5px solid transparent;border-radius:999px;white-space:nowrap}
+  .ub-tab:hover{color:var(--ink);border-color:var(--line-2)}
+  .ub-tab.on{color:var(--ink);border-color:var(--line-2);background:var(--bg)}
+  header#bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;
+    background:var(--paper);border-bottom:1.5px solid var(--line-2)}
+  .brand{font-weight:700;letter-spacing:.02em}
+  .brand small{color:var(--muted);font-weight:500;margin-left:6px}
+  .spacer{flex:1 1 20px}
+  header#bar label{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
+  select,button,input[type=color]{font:inherit;color:var(--ink);background:transparent;
+    border:1.5px solid var(--line-2);border-radius:8px;padding:5px 9px;cursor:pointer}
+  select{font-size:13px}
+  button:hover{border-color:var(--ink)}
+  button.on{background:var(--accent);border-color:var(--accent);color:#1a1400}
+  input[type=color]{padding:2px;width:34px;height:30px}
+  .fileimport{position:relative;overflow:hidden;border:1.5px solid var(--line-2);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:12px}
+  .fileimport input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  #body{flex:1;display:flex;min-height:0}
+  #tools{display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--paper);border-right:1.5px solid var(--line-2)}
+  #tools button{width:42px;height:42px;font-size:18px;display:flex;align-items:center;justify-content:center;padding:0}
+  #stage{flex:1;overflow:auto;background:var(--stage);display:flex;align-items:center;justify-content:center;min-width:0}
+  #c{image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 0 0 1px var(--line-2), 0 8px 30px rgba(0,0,0,.4);cursor:crosshair;touch-action:none}
+  #side{width:190px;flex:none;padding:12px;background:var(--paper);border-left:1.5px solid var(--line-2);overflow-y:auto}
+  #side h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 8px}
+  #current{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  #curSwatch{width:34px;height:34px;border-radius:7px;border:1.5px solid var(--line-2)}
+  #curSwatch.transp{background:
+    linear-gradient(45deg,#888 25%,transparent 25%,transparent 75%,#888 75%),
+    linear-gradient(45deg,#888 25%,#ccc 25%,#ccc 75%,#888 75%);
+    background-size:10px 10px;background-position:0 0,5px 5px}
+  #palette{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:10px}
+  .sw{aspect-ratio:1;border-radius:5px;border:1.5px solid rgba(0,0,0,.35);cursor:pointer;position:relative}
+  .sw.sel{outline:2px solid var(--accent);outline-offset:1px}
+  .addrow{display:flex;gap:6px;align-items:center}
+  .hint{color:var(--muted);font-size:11px;line-height:1.5;margin-top:14px}
+  .hint code{background:var(--bg);border:1px solid var(--line-2);border-radius:4px;padding:0 4px}
+  @media (max-width:720px){
+    #side{width:150px}
+    #tools button{width:38px;height:38px;font-size:16px}
+  }
+</style>
+</head>
+<body>
+<nav class="umbrella">
+  <span class="ub-brand">Math Draws Graphics</span>
+  <div class="ub-tabs">
+    <a class="ub-tab" href="/code-art/">Code Art</a>
+    <a class="ub-tab on" href="/pixel-art/">Pixel Art</a>
+  </div>
+</nav>
+<div id="app">
+  <header id="bar">
+    <span class="brand">Pixel Art<small>make sprites</small></span>
+    <span class="spacer"></span>
+    <label>Canvas
+      <select id="size">
+        <option value="16">16×16</option>
+        <option value="24">24×24</option>
+        <option value="32" selected>32×32</option>
+        <option value="48">48×48</option>
+        <option value="64">64×64</option>
+      </select>
+    </label>
+    <button id="clear" title="New blank canvas">Clear</button>
+    <button id="undo" title="Undo (⌘/Ctrl+Z)">Undo</button>
+    <button id="redo" title="Redo (⌘/Ctrl+Shift+Z)">Redo</button>
+    <label>Zoom <button id="zout" title="Zoom out">−</button><button id="zin" title="Zoom in">+</button></label>
+    <button id="grid" class="on" title="Toggle grid (,)">Grid</button>
+    <button id="mirror" title="Mirror across vertical axis (M)">Mirror</button>
+    <label>Export
+      <select id="scale"><option value="1">1×</option><option value="4">4×</option><option value="8" selected>8×</option><option value="16">16×</option></select>
+      <button id="png" title="Download PNG (S)">PNG</button>
+    </label>
+    <label class="fileimport">Import<input type="file" id="imp" accept="image/*"></label>
+  </header>
+  <div id="body">
+    <div id="tools">
+      <button class="tool on" data-tool="pencil" title="Pencil (B)">✏️</button>
+      <button class="tool" data-tool="eraser" title="Eraser (E)">🧽</button>
+      <button class="tool" data-tool="fill" title="Fill bucket (G)">🪣</button>
+      <button class="tool" data-tool="pick" title="Eyedropper (I)">💧</button>
+      <button class="tool" data-tool="line" title="Line (L)">╱</button>
+      <button class="tool" data-tool="rect" title="Rectangle (R)">▭</button>
+      <button id="filled" title="Filled shapes">▪</button>
+    </div>
+    <div id="stage"><canvas id="c"></canvas></div>
+    <div id="side">
+      <h3>Colour</h3>
+      <div id="current"><div id="curSwatch"></div><span id="curHex" style="font-size:12px;color:var(--muted)"></span></div>
+      <h3>Palette</h3>
+      <div id="palette"></div>
+      <div class="addrow"><input type="color" id="pick" value="#e43b44"><button id="addcol" title="Add current colour to palette">+ Add</button></div>
+      <div class="hint">
+        <b>Draw:</b> click / drag. <b>Erase:</b> pick 🧽.<br>
+        <code>B</code> pencil · <code>E</code> erase · <code>G</code> fill · <code>I</code> pick · <code>L</code> line · <code>R</code> rect · <code>M</code> mirror<br>
+        <code>⌘Z</code> undo · autosaves locally.
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s), cv=$('#c'), ctx=cv.getContext('2d');
+const KEY='mdg.pixelart.v1';
+// DawnBringer-32 — a versatile game palette
+const PALETTE=['#000000','#222034','#45283c','#663931','#8f563b','#df7126','#d9a066','#eec39a',
+'#fbf236','#99e550','#6abe30','#37946e','#4b692f','#524b24','#323c39','#3f3f74','#306082','#5b6ee1',
+'#639bff','#5fcde4','#cbdbfc','#ffffff','#9badb7','#847e87','#696a6a','#595652','#76428a','#ac3232',
+'#d95763','#d77bba','#8f974a','#8a6f30'];
+const S={ w:32,h:32, px:new Array(32*32).fill(null), tool:'pencil', color:'#ac3232',
+  filled:false, mirror:false, grid:true, cell:16, palette:PALETTE.slice(), undo:[], redo:[] };
+
+/* ---------- persistence ---------- */
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify({w:S.w,h:S.h,px:S.px,palette:S.palette})); }catch(e){} }
+function load(){ try{ const d=JSON.parse(localStorage.getItem(KEY)); if(d&&d.px&&d.px.length===d.w*d.h){
+  S.w=d.w; S.h=d.h; S.px=d.px; if(d.palette) S.palette=d.palette; $('#size').value=String(d.w); } }catch(e){} }
+
+/* ---------- history ---------- */
+function snapshot(){ S.undo.push(S.px.slice()); if(S.undo.length>60) S.undo.shift(); S.redo.length=0; }
+function undo(){ if(!S.undo.length) return; S.redo.push(S.px.slice()); S.px=S.undo.pop(); draw(); save(); }
+function redo(){ if(!S.redo.length) return; S.undo.push(S.px.slice()); S.px=S.redo.pop(); draw(); save(); }
+
+/* ---------- drawing model ---------- */
+function idx(x,y){ return y*S.w+x; }
+function inb(x,y){ return x>=0&&y>=0&&x<S.w&&y<S.h; }
+function setCell(x,y,c){ if(inb(x,y)) S.px[idx(x,y)]=c;
+  if(S.mirror){ const mx=S.w-1-x; if(inb(mx,y)) S.px[idx(mx,y)]=c; } }
+function applyColor(){ return S.tool==='eraser' ? null : S.color; }
+
+function floodFill(x,y,to){
+  const from=S.px[idx(x,y)]; if(from===to) return;
+  const st=[[x,y]];
+  while(st.length){ const [cx,cy]=st.pop(); if(!inb(cx,cy)||S.px[idx(cx,cy)]!==from) continue;
+    S.px[idx(cx,cy)]=to; st.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]); }
+}
+function lineCells(x0,y0,x1,y1,fn){          // Bresenham
+  let dx=Math.abs(x1-x0), dy=-Math.abs(y1-y0), sx=x0<x1?1:-1, sy=y0<y1?1:-1, err=dx+dy;
+  while(true){ fn(x0,y0); if(x0===x1&&y0===y1) break; const e2=2*err;
+    if(e2>=dy){ err+=dy; x0+=sx; } if(e2<=dx){ err+=dx; y0+=sy; } }
+}
+
+/* ---------- render ---------- */
+function draw(preview){
+  cv.width=S.w*S.cell; cv.height=S.h*S.cell;
+  ctx.imageSmoothingEnabled=false;
+  for(let y=0;y<S.h;y++) for(let x=0;x<S.w;x++){
+    const c=S.px[idx(x,y)];
+    if(c===null){                                   // transparency checker
+      const t=((x+y)&1)===0;
+      ctx.fillStyle = t?'#20202c':'#191922';
+    } else ctx.fillStyle=c;
+    ctx.fillRect(x*S.cell,y*S.cell,S.cell,S.cell);
+  }
+  if(preview){ ctx.fillStyle = S.tool==='eraser' ? 'rgba(255,255,255,.35)' : S.color;
+    preview.forEach(([x,y])=>{ if(inb(x,y)) ctx.fillRect(x*S.cell,y*S.cell,S.cell,S.cell);
+      if(S.mirror){ const mx=S.w-1-x; if(inb(mx,y)) ctx.fillRect(mx*S.cell,y*S.cell,S.cell,S.cell); } }); }
+  if(S.grid && S.cell>=6){ ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=1;
+    for(let x=0;x<=S.w;x++){ ctx.beginPath(); ctx.moveTo(x*S.cell+.5,0); ctx.lineTo(x*S.cell+.5,cv.height); ctx.stroke(); }
+    for(let y=0;y<=S.h;y++){ ctx.beginPath(); ctx.moveTo(0,y*S.cell+.5); ctx.lineTo(cv.width,y*S.cell+.5); ctx.stroke(); }
+  }
+}
+
+/* ---------- palette / colour UI ---------- */
+function renderPalette(){
+  const p=$('#palette'); p.innerHTML='';
+  S.palette.forEach(hex=>{ const b=document.createElement('div'); b.className='sw'+(hex===S.color?' sel':'');
+    b.style.background=hex; b.title=hex; b.onclick=()=>setColor(hex); p.appendChild(b); });
+}
+function setColor(hex){ S.color=hex; if(S.tool==='eraser') selectTool('pencil');
+  $('#curSwatch').style.background=hex; $('#curSwatch').classList.remove('transp');
+  $('#curHex').textContent=hex; $('#pick').value=hex; renderPalette(); }
+function showEraser(){ $('#curSwatch').classList.add('transp'); $('#curSwatch').style.background='';
+  $('#curHex').textContent='erase'; }
+
+/* ---------- tools ---------- */
+function selectTool(t){ S.tool=t; document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));
+  if(t==='eraser') showEraser(); else if($('#curHex').textContent==='erase') setColor(S.color); }
+
+/* ---------- pointer interaction ---------- */
+let drawing=false, mode=null, start=null, last=null;
+function cellAt(e){ const r=cv.getBoundingClientRect();
+  return [Math.floor((e.clientX-r.left)/S.cell), Math.floor((e.clientY-r.top)/S.cell)]; }
+cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId);
+  const [x,y]=cellAt(e); if(!inb(x,y)) return;
+  if(S.tool==='pick'){ const c=S.px[idx(x,y)]; if(c) setColor(c); return; }
+  snapshot(); drawing=true; start=[x,y]; last=[x,y]; mode=S.tool;
+  if(mode==='fill'){ floodFill(x,y,applyColor()); drawing=false; draw(); save(); }
+  else if(mode==='pencil'||mode==='eraser'){ setCell(x,y,applyColor()); draw(); }
+  else draw(previewShape(x,y));            // line / rect preview
+});
+cv.addEventListener('pointermove',e=>{ if(!drawing) return; const [x,y]=cellAt(e);
+  if(mode==='pencil'||mode==='eraser'){ if(last){ lineCells(last[0],last[1],x,y,(px,py)=>setCell(px,py,applyColor())); }
+    last=[x,y]; draw(); }
+  else draw(previewShape(x,y));
+});
+function endStroke(e){ if(!drawing) return; drawing=false;
+  if(mode==='line'||mode==='rect'){ const [x,y]=cellAt(e); previewShape(x,y).forEach(([px,py])=>setCell(px,py,applyColor())); }
+  draw(); save();
+}
+cv.addEventListener('pointerup',endStroke); cv.addEventListener('pointercancel',endStroke);
+function previewShape(x,y){ const cells=[]; const [sx,sy]=start;
+  if(mode==='line'){ lineCells(sx,sy,x,y,(px,py)=>cells.push([px,py])); }
+  else if(mode==='rect'){ const x0=Math.min(sx,x),x1=Math.max(sx,x),y0=Math.min(sy,y),y1=Math.max(sy,y);
+    for(let i=x0;i<=x1;i++) for(let j=y0;j<=y1;j++){ if(S.filled||i===x0||i===x1||j===y0||j===y1) cells.push([i,j]); } }
+  return cells;
+}
+
+/* ---------- canvas size / zoom / export ---------- */
+function fitZoom(){ const st=$('#stage'); const pad=40;
+  S.cell=Math.max(3, Math.floor(Math.min((st.clientWidth-pad)/S.w,(st.clientHeight-pad)/S.h))); }
+function newDoc(n){ S.w=n; S.h=n; S.px=new Array(n*n).fill(null); S.undo.length=0; S.redo.length=0;
+  fitZoom(); draw(); save(); }
+function exportPNG(scale){ const o=document.createElement('canvas'); o.width=S.w; o.height=S.h;
+  const octx=o.getContext('2d');
+  for(let y=0;y<S.h;y++) for(let x=0;x<S.w;x++){ const c=S.px[idx(x,y)]; if(c){ octx.fillStyle=c; octx.fillRect(x,y,1,1); } }
+  const big=document.createElement('canvas'); big.width=S.w*scale; big.height=S.h*scale;
+  const bctx=big.getContext('2d'); bctx.imageSmoothingEnabled=false; bctx.drawImage(o,0,0,big.width,big.height);
+  const a=document.createElement('a'); a.href=big.toDataURL('image/png');
+  a.download='sprite-'+S.w+'x'+S.h+(scale>1?('@'+scale+'x'):'')+'.png'; a.click();
+}
+function importImage(file){ const img=new Image(); img.onload=()=>{ snapshot();
+  const o=document.createElement('canvas'); o.width=S.w; o.height=S.h; const octx=o.getContext('2d');
+  octx.imageSmoothingEnabled=false; octx.drawImage(img,0,0,S.w,S.h);
+  const d=octx.getImageData(0,0,S.w,S.h).data;
+  for(let i=0;i<S.w*S.h;i++){ const a=d[i*4+3]; if(a<128){ S.px[i]=null; }
+    else { const r=d[i*4],g=d[i*4+1],b=d[i*4+2]; S.px[i]='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); } }
+  draw(); save(); }; img.src=URL.createObjectURL(file); }
+
+/* ---------- wire up ---------- */
+document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>selectTool(b.dataset.tool));
+$('#filled').onclick=()=>{ S.filled=!S.filled; $('#filled').classList.toggle('on',S.filled); };
+$('#grid').onclick=()=>{ S.grid=!S.grid; $('#grid').classList.toggle('on',S.grid); draw(); };
+$('#mirror').onclick=()=>{ S.mirror=!S.mirror; $('#mirror').classList.toggle('on',S.mirror); };
+$('#undo').onclick=undo; $('#redo').onclick=redo;
+$('#zin').onclick=()=>{ S.cell=Math.min(48,S.cell+2); draw(); };
+$('#zout').onclick=()=>{ S.cell=Math.max(3,S.cell-2); draw(); };
+$('#size').onchange=e=>{ const n=+e.target.value;
+  if(S.px.some(c=>c) && !confirm('Start a new '+n+'×'+n+' canvas? Current art will be cleared (export first if you want to keep it).')){ e.target.value=String(S.w); return; }
+  newDoc(n); };
+$('#clear').onclick=()=>{ if(S.px.some(c=>c) && !confirm('Clear the canvas?')) return; newDoc(S.w); };
+$('#png').onclick=()=>exportPNG(+$('#scale').value);
+$('#pick').oninput=e=>setColor(e.target.value);
+$('#addcol').onclick=()=>{ if(!S.palette.includes(S.color)){ S.palette.push(S.color); renderPalette(); save(); } };
+$('#imp').onchange=e=>{ if(e.target.files[0]) importImage(e.target.files[0]); e.target.value=''; };
+addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+  const k=e.key.toLowerCase();
+  if((e.metaKey||e.ctrlKey)&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
+  if((e.metaKey||e.ctrlKey)&&k==='y'){ e.preventDefault(); redo(); return; }
+  if(k==='b') selectTool('pencil'); else if(k==='e') selectTool('eraser');
+  else if(k==='g') selectTool('fill'); else if(k==='i') selectTool('pick');
+  else if(k==='l') selectTool('line'); else if(k==='r') selectTool('rect');
+  else if(k==='m') $('#mirror').click(); else if(k===',') $('#grid').click();
+  else if(k==='s'){ e.preventDefault(); exportPNG(+$('#scale').value); }
+});
+addEventListener('resize',()=>{ fitZoom(); draw(); });
+
+/* ---------- init ---------- */
+load(); fitZoom(); setColor(S.color); renderPalette(); draw();
+</script>
+</body>
+</html>
