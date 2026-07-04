@@ -1152,54 +1152,52 @@ for (let i = rings; i >= 1; i--) {
 }`;
 
 const STRING_ART_SKETCH =
-`// String Art — a nail-and-thread board, drawn by maths. Space N pins evenly
-// round a circle; each "ring" runs a thread from pin i to pin i+step, and as
-// the step grows the chords reach deeper, their envelope spiralling into a
-// central hole. A small rotation per ring gives the vortex swirl. This one is
-// static — it draws the same picture every frame. ctx, w, h, t, TAU (t unused).
+`// String Art — a reproduction of my grandpa's nail-and-thread board. 80 nails
+// sit evenly round the rim; each pass joins nail i to nail i+k. The chords of
+// one pass are all the same length, so they're all tangent to a circle of
+// radius R*cos(pi*k/N) — bump the skip k and that circle tightens toward the
+// centre, drawing concentric ring after ring down to the hole. Coloured in
+// bands, exactly as he wound it. Static — same picture every frame.
+// ctx, w, h, t, TAU (t unused).
 
 const cx = w / 2, cy = h / 2;
 const R = Math.min(w, h) * 0.46;
-const N = 72;                        // pins on the rim
-const rings = 34;                    // concentric chord-length bands
-const swirl = 0.40;                  // per-ring rotation (the vortex)
+const N = 80;                       // nails on the rim
+const kMax = 32;                    // deepest skip -> the central hole (~0.31 R)
 
-// A handful of real thread colours, layered rim -> hole, like the board.
-const THREADS = [
-  [20, 58, 40],   // rust (rim)
-  [34, 54, 40],   // brown-gold
-  [110, 26, 36],  // olive-green band
-  [160, 22, 40],  // muted teal
-  [44, 62, 48],   // gold
-  [26, 68, 46],   // orange
-  [10, 62, 44]    // red (by the hole)
-];
-
-function pin(k, phase){
-  const a = (k / N) * TAU + phase - Math.PI / 2;
-  return [cx + Math.cos(a) * R, cy + Math.sin(a) * R];
+// Thread colour by skip k (rim -> hole). Feature rings are brighter so they
+// read as clean circles on the dark centre. [hue, sat%, light%, alpha]
+function band(k){
+  if (k <=  6) return [32, 18, 42, 0.28];   // pale tan sawtooth rim
+  if (k <= 15) return [22, 26, 30, 0.26];   // brown
+  if (k <= 19) return [14, 34, 36, 0.36];   // rust
+  if (k <= 21) return [ 8, 46, 40, 0.52];   // red-orange outer ring
+  if (k <= 25) return [100, 16, 41, 0.42];  // olive-green band
+  if (k <= 27) return [198, 22, 45, 0.44];  // blue-green
+  if (k <= 29) return [205, 32, 50, 0.52];  // steel-blue ring
+  if (k <= 30) return [44, 44, 52, 0.52];   // gold ring
+  if (k <= 31) return [28, 42, 46, 0.44];   // amber
+  return [10, 54, 48, 0.60];                // red-orange ring at the hole
 }
 
 ctx.lineCap = 'round';
-ctx.lineWidth = 0.65;
+ctx.lineWidth = 0.5;
 
-for (let r = 0; r < rings; r++){
-  const step = 1 + r;                                   // deeper envelope each ring
-  const phase = r * swirl;                              // rotate each ring -> swirl
-  const c = THREADS[Math.floor(r / rings * THREADS.length)];
-  ctx.strokeStyle = 'hsla(' + c[0] + ', ' + c[1] + '%, ' + c[2] + '%, 0.6)';
+for (let k = 1; k <= kMax; k++){
+  const c = band(k);
+  ctx.strokeStyle = 'hsla(' + c[0] + ', ' + c[1] + '%, ' + c[2] + '%, ' + c[3] + ')';
   ctx.beginPath();
   for (let i = 0; i < N; i++){
-    const a = pin(i, phase);
-    const b = pin(i + step, phase);
-    ctx.moveTo(a[0], a[1]);
-    ctx.lineTo(b[0], b[1]);
+    const a0 = (i / N) * TAU - Math.PI / 2;
+    const a1 = ((i + k) / N) * TAU - Math.PI / 2;
+    ctx.moveTo(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R);
+    ctx.lineTo(cx + Math.cos(a1) * R, cy + Math.sin(a1) * R);
   }
   ctx.stroke();
 }`;
 
 const SKETCHES = [
-  { name: 'String Art',      code: STRING_ART_SKETCH,  info: `<b>Nail-and-thread string art</b>, drawn by maths — a static piece modelled on a real thread board. Space <code>N</code> pins evenly round a circle; each ring runs a thread from pin <code>i</code> to pin <code>i+step</code>. A chord spanning a wider gap sits <b>closer to the centre</b> — its family of chords has an inner <b>envelope</b> of radius <code>R·cos(π·step/N)</code> — so growing the step ring by ring spirals the pattern into a central hole, while a small <b>rotation</b> per ring twists it into a vortex.` },
+  { name: 'String Art',      code: STRING_ART_SKETCH,  info: `<b>Nail-and-thread string art</b> — a faithful reproduction of my grandpa's board (measured from a photo: <b>80 nails</b>). Each pass joins nail <code>i</code> to nail <code>i+k</code>. Every chord in a pass is the same length, so they're all tangent to a circle of radius <code>R·cos(π·k/N)</code>; bumping the skip <code>k</code> tightens that circle toward the middle, drawing <b>concentric ring after ring</b> down to the central hole. The warm-cool-warm colour bands — rust, olive, steel-blue, gold, red — are wound in the order he chose. Static: it draws the same picture every frame.` },
   { name: 'Stellated Rhombic Dodecahedron', code: STELLATED_RD_SKETCH, info: `The first <b>stellation</b> of the rhombic dodecahedron, known as <b>Escher's solid</b>: raise a spike on each of the 12 rhombic faces by extending the faces until neighbours meet. The tips land at <code>(±2, ±2, 0)</code> and its permutations. Remarkably, copies of it still <b>tile 3D space</b> with no gaps.` },
   { name: 'Mandelbrot',      code: MANDELBROT_SKETCH,  info: `For each point <code>c</code>, iterate <code>z → z² + c</code> from <code>z = 0</code>; colour by how fast it escapes. Points that never escape (black) form the <b>Mandelbrot set</b>, endless detail at every zoom. <i>Raster: use PNG export.</i>` },
   { name: 'Lorenz Attractor',code: LORENZ_SKETCH,      info: `A 3-equation weather model: <code>x'=σ(y−x)</code>, <code>y'=x(ρ−z)−y</code>, <code>z'=xy−βz</code>. It never repeats yet stays trapped on a butterfly-shaped <b>strange attractor</b>, the birthplace of chaos theory and the "butterfly effect".` },
