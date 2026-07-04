@@ -318,7 +318,7 @@
         <div class="btn-row"><a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a></div>
       </article>
     </div>
-    <a class="more-link" id="more-games" href="/design-lab.html#games"><span class="more-text">All games in the Design Lab</span> <span class="arr">→</span></a>
+    <a class="more-link" id="more-games" href="/design-lab.html#games"><span class="more-text">More Decent Games</span> <span class="arr">→</span></a>
   </section>
 
   <section class="work" aria-labelledby="apps-h">
@@ -796,7 +796,8 @@
 </script>
 <script>
 /* The "More Games" button is a little MDG word-toy (ported from the design lab).
-   It decodes into a new M-D-G phrase on hover, and drifts to another on its own. */
+   It stays on "More Decent Games" until interacted with, then decodes into a
+   new M-D-G phrase on hover/focus. */
 (function(){
   var link=document.getElementById('more-games');
   if(!link)return;
@@ -811,7 +812,7 @@
   ];
   var GLYPHS='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  var cur=0, busy=false, idle;
+  var cur=0, busy=false;
 
   function nextIndex(){ var n; do{ n=(Math.random()*PHRASES.length)|0; } while(n===cur); return n; }
 
@@ -832,10 +833,8 @@
     },40);
   }
 
-  function rearm(){ clearTimeout(idle); if(reduce)return; idle=setTimeout(function(){ morph(nextIndex()); rearm(); },7000); }
-
-  link.addEventListener('mouseenter',function(){ morph(nextIndex()); rearm(); });
-  rearm();
+  link.addEventListener('mouseenter',function(){ morph(nextIndex()); });
+  link.addEventListener('focus',function(){ morph(nextIndex()); });
 })();
 </script>
 <script src="/assets/site.js" defer></script>
