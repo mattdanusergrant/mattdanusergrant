@@ -606,20 +606,24 @@
       var cell=Math.max(5,Math.round(Math.min(w,h)/60)),cols=Math.max(8,Math.floor(w/cell)),rows=Math.max(8,Math.floor(h/cell)),S=lifeS;
       function seed(){S.grid=[];for(var y=0;y<rows;y++){var row=[];for(var x=0;x<cols;x++)row.push(Math.random()<0.15?1:0);S.grid.push(row);}S.cols=cols;S.rows=rows;S.seedGen=S.gen||0;}
       if(S.cols!==cols||S.rows!==rows||!S.grid){S.gen=0;S.phase=0;S.lastT=t;seed();}
-      // generation rate: 2/s (bright reveal) -> 1/s as it fades in; then, once it's the
-      // background, it keeps easing down over time toward a near-still floor — an
-      // "incredibly slow" Game of Life that never quite stops. Phase accumulates so the
-      // rate can change smoothly without the generation count ever jumping.
-      var rate;
-      if(bgMode){var bgSec=(performance.now()-bgStart)/1000,floor=0.01;rate=floor+(1-floor)*Math.exp(-bgSec/5);}
-      else{rate=2-gFade;}
-      S.phase+=Math.max(0,t-S.lastT)*rate;S.lastT=t;
-      var target=Math.floor(S.phase);
-      while(S.gen<target){var g=S.grid,ng=[],pop=0;
+      // One generation of Conway's Life.
+      function step(){var g=S.grid,ng=[],pop=0;
         for(var y=0;y<rows;y++){var row=[];for(var x=0;x<cols;x++){var nb=0;
           for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++)if(dx||dy)nb+=g[(y+dy+rows)%rows][(x+dx+cols)%cols];
           var alive=g[y][x]?(nb===2||nb===3):(nb===3);row.push(alive?1:0);if(alive)pop++;}ng.push(row);}
         S.grid=ng;S.gen++;if(pop===0||S.gen-S.seedGen>140)seed();}
+      // Timing. Intro reveal: a smooth 2/s -> 1/s. Background: ticks at growing gaps of
+      // 1s, 2s, 3s ... up to 100s (nth tick at n(n+1)/2 seconds), then every 100s forever —
+      // the Life keeps slowing with each step but never stops.
+      if(bgMode){
+        if(S.bgTicks===undefined)S.bgTicks=0;
+        var bgSec=(performance.now()-bgStart)/1000;
+        var want=bgSec<1?0:bgSec<=5050?Math.floor((Math.sqrt(1+8*bgSec)-1)/2):100+Math.floor((bgSec-5050)/100);
+        while(S.bgTicks<want){step();S.bgTicks++;}
+      }else{
+        var rate=2-gFade;S.phase+=Math.max(0,t-S.lastT)*rate;S.lastT=t;
+        var target=Math.floor(S.phase);while(S.gen<target)step();
+      }
       var lc=lifeCol(gFade);ctx.shadowColor=lc;ctx.fillStyle=lc;var pad=Math.max(1,cell*0.1);
       for(var y2=0;y2<rows;y2++)for(var x2=0;x2<cols;x2++)if(S.grid[y2][x2])ctx.fillRect(x2*cell+pad,y2*cell+pad,cell-2*pad,cell-2*pad);
     };
