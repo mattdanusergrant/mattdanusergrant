@@ -434,7 +434,7 @@
     var DPR=Math.min(2,window.devicePixelRatio||1);
     var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
     var TAU=Math.PI*2;
-    var raf=0,t0=0,running=false,cur='fern',lifeS={},fernS={},fourierS={};
+    var raf=0,t0=0,running=false,cur='fern',lifeS={},fernS={},fourierS={},hilbertS={};
     // crossfade: a snapshot of the outgoing sketch dissolves out over the incoming one
     var snap=null,sctx=null,fadeUntil=0,fadeDur=750;
     var bgMode=false,lastDraw=0,bgStart=0;  // bgMode: the Game of Life lives on as the site background; bgStart: when it began
@@ -583,6 +583,41 @@
       for(var i=0;i<=N;i++){var th=i/N*TAU,x=cx+Math.sin(a*th+ph)*R,y=cy+Math.sin(b*th)*R;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
       ctx.stroke();
     };
+    // Wave Grid - a lattice lifted into a rippling surface z=sin(x)*cos(y), drawn in isometric projection (MAKE DOPE GROOVES).
+    SK.grid=function(w,h,t){
+      var N=16,cx=w/2,cy=h/2,sc=Math.min(w,h)*0.030,za=Math.min(w,h)*0.11,o=(N-1)/2,i,j,p;
+      function P(i,j){var x=i-o,y=j-o,z=Math.sin(x*0.6+t*0.9)*Math.cos(y*0.6+t*0.7);return [cx+(x-y)*sc*1.12,cy+(x+y)*sc*0.52-z*za];}
+      ctx.shadowBlur=0;ctx.lineCap='round';ctx.lineWidth=1.1;ctx.strokeStyle=col(210,0.55);
+      for(i=0;i<N;i++){
+        ctx.beginPath();for(j=0;j<N;j++){p=P(i,j);j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}ctx.stroke();
+        ctx.beginPath();for(j=0;j<N;j++){p=P(j,i);j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}ctx.stroke();
+      }
+      ctx.fillStyle=col(210,0.85);
+      for(i=0;i<N;i++)for(j=0;j<N;j++){p=P(i,j);ctx.beginPath();ctx.arc(p[0],p[1],1.5,0,TAU);ctx.fill();}
+    };
+    // Hilbert Curve - a space-filling fractal (order 6) drawn out by a travelling pen, then restarts (MASTER DATA GRID).
+    SK.hilbert=function(w,h,t){
+      var S=hilbertS,order=6,m=Math.min(w,h)*0.86,key=Math.round(w)+'x'+Math.round(h);
+      if(S.key!==key){S.key=key;S.pts=[];var P=S.pts;
+        (function hil(x,y,xi,xj,yi,yj,n){
+          if(n<=0){P.push([x+(xi+yi)/2,y+(xj+yj)/2]);return;}
+          hil(x,y,yi/2,yj/2,xi/2,xj/2,n-1);
+          hil(x+xi/2,y+xj/2,xi/2,xj/2,yi/2,yj/2,n-1);
+          hil(x+xi/2+yi/2,y+xj/2+yj/2,xi/2,xj/2,yi/2,yj/2,n-1);
+          hil(x+xi/2+yi,y+xj/2+yj,-yi/2,-yj/2,-xi/2,-xj/2,n-1);
+        })(w/2-m/2,h/2-m/2,m,0,0,m,order);
+      }
+      var pts=S.pts,N=pts.length,cyc=12,ph=(t%cyc)/cyc,draw=Math.min(1,ph/0.82);   // trace out over 82% of the loop, then hold full
+      var upto=draw*(N-1),full=Math.floor(upto),frac=upto-full,i;
+      ctx.shadowBlur=0;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=col(0,0.35);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);   // faint ghost of the full curve behind the pen
+      for(i=1;i<N;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();
+      ctx.strokeStyle=col(0,0.92);ctx.lineWidth=1.7;
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+      for(i=1;i<=full;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+      if(full<N-1){var a=pts[full],b=pts[full+1];ctx.lineTo(a[0]+(b[0]-a[0])*frac,a[1]+(b[1]-a[1])*frac);}
+      ctx.stroke();
+    };
     // Sierpinski Triangle - remove each triangle's middle, forever (depth 7); slow turn (MODULAR DIGITAL GOODS).
     SK.sierpinski=function(w,h,t){
       var depth=7,R=Math.min(w,h)*0.46,cx=w/2,cy=h/2+R*0.12,rot=t*0.08,v=[],k;
@@ -703,10 +738,11 @@
 
   // Each phrase pairs with a Math Draws Graphics sketch; MANY DOORS GUILD RNGs among three door sketches.
   var BRIDGE_SETS=[
-    {words:['MAKE','DOPE','GROOVES'],            sketch:'waves'},
+    {words:['MAKE','DOPE','GROOVES'],            sketch:'grid'},
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
     {words:['MULTIPLAYER','DECK','GATEWAY'],     sketch:'cards'},
+    {words:['MASTER','DATA','GRID'],             sketch:'hilbert'},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
     {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
