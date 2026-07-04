@@ -71,6 +71,8 @@
   }
   .sec-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:26px;letter-spacing:-0.01em;color:var(--ink);margin:0}
   .sec-head .count{font-size:13px;color:var(--muted);white-space:nowrap}
+  .sec-head .arcade{font-size:13px;color:var(--muted);white-space:nowrap;transition:color .15s}
+  .sec-head .arcade:hover{color:var(--ink)}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;grid-auto-rows:1fr}
 
@@ -144,7 +146,7 @@
   </header>
 
   <section class="sec" id="games" aria-labelledby="games-h">
-    <div class="sec-head"><h2 id="games-h">Must Design Games</h2><span class="count">8 games</span></div>
+    <div class="sec-head"><h2 id="games-h">Must Design Games</h2><a class="arcade" href="https://mustdesigngames.mattdanusergrant.com/" target="_blank" rel="noopener">The full arcade →</a></div>
     <div class="grid">
 
       <article class="card">
