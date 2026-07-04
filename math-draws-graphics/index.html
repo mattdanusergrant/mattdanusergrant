@@ -30,8 +30,8 @@
     -webkit-tap-highlight-color:transparent; -webkit-font-smoothing:antialiased;
   }
   .app{display:flex; height:100dvh}
-  .stage{flex:1; position:relative; background:var(--stage); min-width:0}
-  #c{cursor:grab; touch-action:none}
+  .stage{flex:1; position:relative; background:var(--stage); min-width:0; overflow:hidden}
+  #c{cursor:grab; touch-action:none; transform-origin:center center; will-change:transform}
   .resetview{position:absolute; top:10px; right:10px; z-index:5; font:inherit; font-size:12px;
     background:var(--paper); color:var(--ink); border:1.5px solid var(--line-2);
     border-radius:999px; padding:6px 12px; cursor:pointer; opacity:.92}
@@ -141,7 +141,7 @@
 <body>
 <div class="app">
   <div class="stage">
-    <canvas id="c" title="Scroll to zoom · drag to pan · double-click to reset"></canvas>
+    <canvas id="c" title="Drag to spin in 3D · Shift-drag to pan · scroll to zoom · double-click to reset"></canvas>
     <button id="resetview" class="resetview" hidden>Reset view</button>
   </div>
 
@@ -1282,7 +1282,7 @@ function refreshInfo(){
 /* ---- canvas ---- */
 const cv=$('#c'), ctx=cv.getContext('2d'), stage=$('.stage');
 let dpr=1, stageR=0, dirty=true;
-const view={s:1,x:0,y:0};   // pan/zoom: screen = dpr*(view.s*world + view.{x,y})
+const view={s:1,x:0,y:0,rx:0,ry:0};   // s/x/y = zoom+pan (2D ctx); rx/ry = 3D tilt (CSS)
 function resize(){
   const r=stage.getBoundingClientRect();
   dpr=Math.min(window.devicePixelRatio||1,2);
@@ -1325,21 +1325,29 @@ function loop(now){
 function triggerDraw(){ dirty=true; }
 function replay(){ anim.phase=0; dirty=true; }
 
-/* ---- pan & zoom ---- */
-function updateResetBtn(){ const b=$('#resetview'); if(b) b.hidden = (view.s===1 && view.x===0 && view.y===0); }
-function resetView(){ view.s=1; view.x=0; view.y=0; dirty=true; updateResetBtn(); }
-function ptr(e){ const r=cv.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
+/* ---- spin (3D tilt) + pan + zoom ----
+   Zoom/pan live in the 2D context (crisp); the 3D spin is a CSS perspective
+   tilt of the whole canvas plane, so it works for every example. */
+function applyCam(){ cv.style.transform =
+  'perspective(1100px) rotateX(' + view.rx.toFixed(2) + 'deg) rotateY(' + view.ry.toFixed(2) + 'deg)'; }
+function isDefault(){ return view.s===1 && view.x===0 && view.y===0 && view.rx===0 && view.ry===0; }
+function updateResetBtn(){ const b=$('#resetview'); if(b) b.hidden = isDefault(); }
+function resetView(){ view.s=1; view.x=0; view.y=0; view.rx=0; view.ry=0; applyCam(); dirty=true; updateResetBtn(); }
+function ptr(e){ const r=stage.getBoundingClientRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; }
 function zoomAt(px,py,factor){
   const ns=Math.max(0.5,Math.min(view.s*factor,50));
   const wx=(px-view.x)/view.s, wy=(py-view.y)/view.s;   // world point under the cursor
   view.s=ns; view.x=px-wx*ns; view.y=py-wy*ns;          // keep it pinned there
   dirty=true; updateResetBtn();
 }
+cv.addEventListener('contextmenu', e=>e.preventDefault());
 cv.addEventListener('wheel', e=>{ e.preventDefault(); const p=ptr(e); zoomAt(p.x,p.y, e.deltaY<0?1.12:1/1.12); }, {passive:false});
-const drag={on:false,x:0,y:0}, pts=new Map(); let pinchD=0;
+const drag={on:false,x:0,y:0,pan:false}, pts=new Map(); let pinchD=0;
 cv.addEventListener('pointerdown', e=>{
   cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, ptr(e));
-  if(pts.size===1){ const p=ptr(e); drag.on=true; drag.x=p.x; drag.y=p.y; cv.style.cursor='grabbing'; }
+  if(pts.size===1){ const p=ptr(e); drag.on=true; drag.x=p.x; drag.y=p.y;
+    drag.pan = e.shiftKey || e.button===2;                 // shift / right-drag = pan; else spin
+    cv.style.cursor = drag.pan ? 'grabbing' : 'move'; }
   else { drag.on=false; const a=[...pts.values()]; pinchD=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); }
 });
 cv.addEventListener('pointermove', e=>{
@@ -1347,7 +1355,11 @@ cv.addEventListener('pointermove', e=>{
   const p=ptr(e); pts.set(e.pointerId,p);
   if(pts.size>=2){ const a=[...pts.values()], d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
     if(pinchD>0) zoomAt((a[0].x+a[1].x)/2,(a[0].y+a[1].y)/2, d/pinchD); pinchD=d; return; }
-  if(drag.on){ view.x+=p.x-drag.x; view.y+=p.y-drag.y; drag.x=p.x; drag.y=p.y; dirty=true; updateResetBtn(); }
+  if(!drag.on) return;
+  const dx=p.x-drag.x, dy=p.y-drag.y; drag.x=p.x; drag.y=p.y;
+  if(drag.pan){ view.x+=dx; view.y+=dy; dirty=true; }       // pan
+  else { view.ry+=dx*0.5; view.rx-=dy*0.5; applyCam(); }    // spin in 3D
+  updateResetBtn();
 });
 function endPtr(e){ pts.delete(e.pointerId); if(pts.size<2) pinchD=0; if(pts.size===0){ drag.on=false; cv.style.cursor='grab'; } }
 cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
