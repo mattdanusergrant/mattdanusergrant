@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Pixel Art · MDG</title>
+<title>Pixel Art · Math Draws Graphics</title>
 <script>!function(){try{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}catch(e){}}()</script>
 <style>
   :root{ --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink-2:#CAC5BC; --muted:#7A756D;
@@ -13,8 +13,16 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{font:14px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    color:var(--ink);background:var(--bg);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
-  #app{display:flex;flex-direction:column;height:100%}
+    color:var(--ink);background:var(--bg);overflow:hidden;display:flex;flex-direction:column;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+  #app{flex:1;min-height:0;display:flex;flex-direction:column}
+  .umbrella{height:42px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;
+    background:var(--paper);border-bottom:1.5px solid var(--line-2)}
+  .ub-brand{font-weight:700;font-size:13px;letter-spacing:.01em;color:var(--ink);white-space:nowrap}
+  .ub-tabs{display:flex;gap:6px}
+  .ub-tab{font-size:12.5px;text-decoration:none;color:var(--muted);padding:5px 11px;
+    border:1.5px solid transparent;border-radius:999px;white-space:nowrap}
+  .ub-tab:hover{color:var(--ink);border-color:var(--line-2)}
+  .ub-tab.on{color:var(--ink);border-color:var(--line-2);background:var(--bg)}
   header#bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;
     background:var(--paper);border-bottom:1.5px solid var(--line-2)}
   .brand{font-weight:700;letter-spacing:.02em}
@@ -55,6 +63,13 @@
 </style>
 </head>
 <body>
+<nav class="umbrella">
+  <span class="ub-brand">Math Draws Graphics</span>
+  <div class="ub-tabs">
+    <a class="ub-tab" href="/tool.html?app=math-draws-graphics" target="_top">Code Art</a>
+    <a class="ub-tab on" href="/tool.html?app=pixel-art" target="_top">Pixel Art</a>
+  </div>
+</nav>
 <div id="app">
   <header id="bar">
     <span class="brand">Pixel Art<small>make sprites</small></span>
