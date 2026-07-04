@@ -1250,8 +1250,60 @@ for (let k = 1; k <= kMax; k++){
   ctx.stroke();
 }`;
 
+const SPRITE_FORGE_SKETCH =
+`// Sprite Forge — procedural pixel-art creatures. Fill the LEFT half of a small
+// grid at random, then MIRROR it to the right: symmetry alone makes the blob
+// read as a critter. Each gets a palette + a dark outline + eyes. Animate ON
+// forges a fresh batch each second. ctx, w, h, t, TAU.
+
+function rng(seed){ var s = seed >>> 0; return function(){
+  s = (s + 0x6D2B79F5) >>> 0; var x = s;
+  x = Math.imul(x ^ (x >>> 15), x | 1);
+  x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+  return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
+
+var cols = 5, rows = 4, epoch = Math.floor(t * 0.8);
+var halfW = 4, gw = halfW * 2, gh = 8;
+var cellW = w / cols, cellH = h / rows;
+
+for (var cyi = 0; cyi < rows; cyi++){
+  for (var cxi = 0; cxi < cols; cxi++){
+    var rand = rng(((cyi * cols + cxi + 1) * 2654435761 ^ (epoch * 40503 + 1)) >>> 0);
+    var hue = Math.floor(rand() * 360);
+    var body = 'hsl(' + hue + ', 62%, 58%)';
+    var edge = 'hsl(' + hue + ', 55%, 20%)';
+    var eyeC = 'hsl(' + ((hue + 180) % 360) + ', 85%, 78%)';
+
+    var g = []; for (var x = 0; x < gw; x++) g[x] = [];
+    for (var x = 0; x < halfW; x++) for (var y = 0; y < gh; y++){
+      var bias = (y === 0 || y === gh - 1) ? 0.28 : 0.55;   // sparser top/bottom
+      var on = rand() < bias ? 1 : 0;
+      g[x][y] = on; g[gw - 1 - x][y] = on;
+    }
+
+    var pix = Math.min(cellW / (gw + 2), cellH / (gh + 2));
+    var ox = cellW * cxi + (cellW - gw * pix) / 2;
+    var oy = cellH * cyi + (cellH - gh * pix) / 2;
+    function X(i){ return Math.round(ox + i * pix); }
+    function Y(j){ return Math.round(oy + j * pix); }
+    function cell(x, y){ ctx.fillRect(X(x), Y(y), X(x + 1) - X(x), Y(y + 1) - Y(y)); }
+
+    ctx.fillStyle = edge;                        // outline: empty cells touching a filled one
+    for (var x = 0; x < gw; x++) for (var y = 0; y < gh; y++){
+      if (g[x][y]) continue;
+      if ((x>0&&g[x-1][y]) || (x<gw-1&&g[x+1][y]) || (y>0&&g[x][y-1]) || (y<gh-1&&g[x][y+1])) cell(x, y);
+    }
+    ctx.fillStyle = body;                         // body
+    for (var x = 0; x < gw; x++) for (var y = 0; y < gh; y++) if (g[x][y]) cell(x, y);
+
+    var ey = 2 + Math.floor(rand() * 2), ex = 1 + Math.floor(rand() * (halfW - 1));
+    if (g[ex][ey]){ ctx.fillStyle = eyeC; cell(ex, ey); cell(gw - 1 - ex, ey); }
+  }
+}`;
+
 const SKETCHES = [
   { name: 'String Art',      code: STRING_ART_SKETCH,  info: `<b>Nail-and-thread string art</b> — a faithful reproduction of my grandpa's board (measured from a photo: <b>80 nails</b>). Each pass joins nail <code>i</code> to nail <code>i+k</code>. Every chord in a pass is the same length, so they're all tangent to a circle of radius <code>R·cos(π·k/N)</code>; bumping the skip <code>k</code> tightens that circle toward the middle, drawing <b>concentric ring after ring</b> down to the central hole. The warm-cool-warm colour bands — rust, olive, steel-blue, gold, red — are wound in the order he chose. Static: it draws the same picture every frame.` },
+  { name: 'Sprite Forge',    code: SPRITE_FORGE_SKETCH, info: `<b>Procedural pixel-art creatures.</b> Each sprite fills the <b>left half</b> of an 8×8 grid at random, then <b>mirrors</b> it to the right — bilateral <b>symmetry</b> alone is enough for the eye to read a random blob as a face or creature. A per-sprite palette adds a body colour, a dark outline (empty cells touching a filled one) and complementary eyes. It's the trick behind classic sprite generators. Turn <b>Animate</b> on to forge a fresh batch each second; press <b>S</b> to save the grid as a PNG.` },
   { name: 'Stellated Rhombic Dodecahedron', code: STELLATED_RD_SKETCH, info: `The first <b>stellation</b> of the rhombic dodecahedron, known as <b>Escher's solid</b>: raise a spike on each of the 12 rhombic faces by extending the faces until neighbours meet. The tips land at <code>(±2, ±2, 0)</code> and its permutations. Remarkably, copies of it still <b>tile 3D space</b> with no gaps.` },
   { name: 'Mandelbrot',      code: MANDELBROT_SKETCH,  info: `For each point <code>c</code>, iterate <code>z → z² + c</code> from <code>z = 0</code>; colour by how fast it escapes. Points that never escape (black) form the <b>Mandelbrot set</b>, endless detail at every zoom. <i>Raster: use PNG export.</i>` },
   { name: 'Lorenz Attractor',code: LORENZ_SKETCH,      info: `A 3-equation weather model: <code>x'=σ(y−x)</code>, <code>y'=x(ρ−z)−y</code>, <code>z'=xy−βz</code>. It never repeats yet stays trapped on a butterfly-shaped <b>strange attractor</b>, the birthplace of chaos theory and the "butterfly effect".` },
