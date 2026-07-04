@@ -395,6 +395,47 @@ for (const f of fs) {
   ctx.fill();
   ctx.restore();
 }`;
+const WAVE_GRID_SKETCH =
+`// Wave Grid, a lattice of nodes lifted into a rippling surface.
+// Each node's height is z = sin(x) * cos(y), a travelling sine field, and the
+// flat (i, j) grid is drawn in isometric projection so it reads as a 3D mesh.
+// Animate ON; try Trails. ctx, w, h, t, TAU.
+
+const N  = 16;                          // nodes per side
+const cx = w / 2, cy = h / 2;
+const sc = Math.min(w, h) * 0.030;      // cell size on screen
+const za = Math.min(w, h) * 0.11;       // height of the ripple
+const o  = (N - 1) / 2;                 // centre the lattice on the origin
+
+// project lattice node (i, j) -> screen, lifting it by its wave height
+function P(i, j) {
+  const x = i - o, y = j - o;
+  const z = Math.sin(x * 0.6 + t * 0.9) * Math.cos(y * 0.6 + t * 0.7);
+  return [cx + (x - y) * sc * 1.12, cy + (x + y) * sc * 0.52 - z * za];
+}
+
+ctx.lineCap = 'round';
+ctx.lineWidth = 1.2;
+
+// mesh: one polyline down every row, then every column
+for (let i = 0; i < N; i++) {
+  const hue = (i / N * 120 + 180 + t * 24) % 360;
+  ctx.strokeStyle = \`hsla(\${hue}, 80%, 60%, 0.7)\`;
+  ctx.beginPath();
+  for (let j = 0; j < N; j++) { const p = P(i, j); j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+  ctx.stroke();
+  ctx.beginPath();
+  for (let j = 0; j < N; j++) { const p = P(j, i); j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+  ctx.stroke();
+}
+
+// bright node at every lattice point, brightest where the wave peaks
+for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+  const z = Math.sin((i - o) * 0.6 + t * 0.9) * Math.cos((j - o) * 0.6 + t * 0.7);
+  const p = P(i, j);
+  ctx.fillStyle = \`hsla(\${(z * 60 + 200 + t * 24) % 360}, 85%, \${55 + z * 14}%, 0.9)\`;
+  ctx.beginPath(); ctx.arc(p[0], p[1], 1.8, 0, TAU); ctx.fill();
+}`;
 const WALK_SKETCH =
 `// Walk Through Doors, first-person POV down an endless corridor.
 // ARCHED = false -> squared corners; true -> round arches. Animate ON; try Trails.
@@ -1326,6 +1367,7 @@ const SKETCHES = [
   { name: 'Many Doors',      code: MANY_DOORS_SKETCH,  info: `A long hallway lined with doors on both walls, from the same <code>1/z</code> perspective. Each door's near and far stiles ride the converging wall line at depths <code>z</code> and <code>z+gap</code>, while its verticals stay vertical, so every door foreshortens into a trapezoid. The whole rank scrolls toward you as you "walk".` },
   { name: 'Turning Hall',    code: TURNING_HALL_SKETCH,info: `A corridor whose centre-line bends by <code>sin(z·k − t)</code>, weighted by <code>(1 − z/N)</code> so the far end stays pinned to the vanishing point while the near hall swings, and the bend travels toward you.` },
   { name: 'Swinging Doors',  code: SWINGING_DOORS_SKETCH, info: `A perspective corridor where each door hinges open as you reach it. The free edge foreshortens by <code>cos(θ)</code> as it swings, and a filled leaf occludes the doors behind it.` },
+  { name: 'Wave Grid',       code: WAVE_GRID_SKETCH,   info: `A flat lattice of nodes lifted into a <b>rippling surface</b>: each node's height is the travelling sine field <code>z = sin(x)·cos(y)</code>. The <code>(i, j)</code> grid is drawn in <b>isometric projection</b> — screen <code>x ∝ (i−j)</code>, screen <code>y ∝ (i+j)</code> minus the height — so a 2D grid reads as a 3D mesh. One polyline runs down every row and every column, with a bright node at each crossing.` },
   { name: 'Card Fan',        code: CARD_FAN_SKETCH,    info: `An endless hand of cards spread about a hinge below the frame. Each card sits at fan angle <code>θ = f·spread</code> and is <b>rotated by that same θ</b>, so its centre rides the circle <code>(sin θ, −cos θ)·R</code> about the pivot and the deck opens into an arc. The rank scrolls by <code>f = (i/N + t) mod 1</code> and fades to nothing at both ends, so cards stream through the fan and recycle — fanning out forever. Nearer cards draw last, so each overlaps the one behind, like a real hand.` },
   { name: 'Sound Waves',     code: SOUND_WAVES_SKETCH, info: `Overlaid sine waves <code>sin(2π·f·x + t)</code> at rising frequencies, each multiplied by a window <code>sin(πx)</code> that tapers both ends, like an oscilloscope tracing a packet of sound.` },
   { name: 'Straight Line',   code: LINE_SKETCH,        info: `The simplest equation, <code>y = m·x + b</code>: a constant <b>slope</b> <code>m</code> and intercept <code>b</code>. The slope sweeps as it animates. Every straight line on a graph is just those two numbers.` },

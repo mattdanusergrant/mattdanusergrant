@@ -583,6 +583,18 @@
       for(var i=0;i<=N;i++){var th=i/N*TAU,x=cx+Math.sin(a*th+ph)*R,y=cy+Math.sin(b*th)*R;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
       ctx.stroke();
     };
+    // Wave Grid - a lattice lifted into a rippling surface z=sin(x)*cos(y), drawn in isometric projection (MASTER DATA GRID).
+    SK.grid=function(w,h,t){
+      var N=16,cx=w/2,cy=h/2,sc=Math.min(w,h)*0.030,za=Math.min(w,h)*0.11,o=(N-1)/2,i,j,p;
+      function P(i,j){var x=i-o,y=j-o,z=Math.sin(x*0.6+t*0.9)*Math.cos(y*0.6+t*0.7);return [cx+(x-y)*sc*1.12,cy+(x+y)*sc*0.52-z*za];}
+      ctx.shadowBlur=0;ctx.lineCap='round';ctx.lineWidth=1.1;ctx.strokeStyle=col(210,0.55);
+      for(i=0;i<N;i++){
+        ctx.beginPath();for(j=0;j<N;j++){p=P(i,j);j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}ctx.stroke();
+        ctx.beginPath();for(j=0;j<N;j++){p=P(j,i);j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}ctx.stroke();
+      }
+      ctx.fillStyle=col(210,0.85);
+      for(i=0;i<N;i++)for(j=0;j<N;j++){p=P(i,j);ctx.beginPath();ctx.arc(p[0],p[1],1.5,0,TAU);ctx.fill();}
+    };
     // Sierpinski Triangle - remove each triangle's middle, forever (depth 7); slow turn (MODULAR DIGITAL GOODS).
     SK.sierpinski=function(w,h,t){
       var depth=7,R=Math.min(w,h)*0.46,cx=w/2,cy=h/2+R*0.12,rot=t*0.08,v=[],k;
@@ -707,6 +719,7 @@
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
     {words:['MULTIPLAYER','DECK','GATEWAY'],     sketch:'cards'},
+    {words:['MASTER','DATA','GRID'],             sketch:'grid'},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
     {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
