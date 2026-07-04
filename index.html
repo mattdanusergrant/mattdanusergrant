@@ -645,7 +645,12 @@
   if(mdgBg)mdgBg.start();
 
   // Each phrase pairs with the Math Draws Graphics sketch that plays behind it.
+  // TEMP (door-sketch testing): MANY DOORS GUILD is the only bridge so every replay
+  // lands on it and cycles the three door sketches. Restore the full list below when done.
   var BRIDGE_SETS=[
+    {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']}
+  ];
+  /* var BRIDGE_SETS=[
     {words:['MAKE','DOPE','GROOVES'],            sketch:'waves'},
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
@@ -653,7 +658,7 @@
     {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
     {words:['MATH','DRAWS','GRAPHICS'],          sketch:'fourier'}
-  ];
+  ]; */
   var FINAL={words:['MUST','DESIGN','GAMES'], sketch:'life'};
 
   var FLAVORS=[
