@@ -490,6 +490,38 @@
         ctx.beginPath();ctx.moveTo(l,bot);ctx.lineTo(l,top);ctx.lineTo(r,top);ctx.lineTo(r,bot);ctx.stroke();
       }
     };
+    // Many Doors - a wall of doorways, each pulsing on its own (MANY DOORS GUILD variant).
+    SK.manyDoors=function(w,h,t){
+      ctx.shadowBlur=0;
+      var cols=8,rows=4,cw=w/cols,ch=h/rows,dw=cw*0.52,dh=ch*0.74;
+      for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
+        var cx=(c+0.5)*cw,cy=(r+0.5)*ch+dh*0.10;
+        var ph=0.5+0.5*Math.sin(t*1.1+c*0.6-r*0.9),a=0.22+0.6*ph;
+        var hw=dw/2,hh=dh/2,l=cx-hw,rr=cx+hw,top=cy-hh,bot=cy+hh;
+        ctx.strokeStyle=col(0,Math.min(0.9,a));ctx.lineWidth=1.4;
+        ctx.beginPath();ctx.moveTo(l,bot);ctx.lineTo(l,top);ctx.lineTo(rr,top);ctx.lineTo(rr,bot);ctx.stroke();
+        var iw=hw*0.5,ih=hh*0.7;
+        ctx.strokeStyle=col(0,Math.min(0.7,a*0.7));ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(cx-iw,bot);ctx.lineTo(cx-iw,cy-ih);ctx.lineTo(cx+iw,cy-ih);ctx.lineTo(cx+iw,bot);ctx.stroke();
+      }
+    };
+    // Turning Hall - a receding corridor of doorframes that twist as they recede (MANY DOORS GUILD variant).
+    SK.turningHall=function(w,h,t){
+      ctx.shadowBlur=0;
+      var N=20,focal=Math.min(w,h)*0.6,march=t*0.5,cx=w/2,cy=h/2;
+      for(var i=N;i>=1;i--){
+        var z=i-(march%1);
+        if(z<0.14)continue;
+        var a=Math.min(1,(z-0.14)*1.4)*(1-z/N);
+        if(a<=0.02)continue;
+        var s=focal/z,hw=0.30*s,hh=0.44*s,rot=i*0.16+t*0.15,cr=Math.cos(rot),sr=Math.sin(rot);
+        ctx.strokeStyle=col(0,Math.min(0.9,a));ctx.lineWidth=Math.min(12,Math.max(0.8,6/z));
+        var p=[[-hw,hh],[-hw,-hh],[hw,-hh],[hw,hh]];
+        ctx.beginPath();
+        for(var k=0;k<4;k++){var px=cx+p[k][0]*cr-p[k][1]*sr,py=cy+p[k][0]*sr+p[k][1]*cr;k?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+        ctx.closePath();ctx.stroke();
+      }
+    };
     // Lorenz Attractor - the butterfly of chaos (MULTIPLE DIMENSIONS GENERATED).
     SK.lorenz=function(w,h,t){
       var sg=10,rho=28,bt=8/3,dt=0.006,x=0.1,y=0,z=0,i,dx,dy,dz;
@@ -616,7 +648,7 @@
   var BRIDGE_SETS=[
     {words:['MAKE','DOPE','GROOVES'],            sketch:'waves'},
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
-    {words:['MANY','DOORS','GUILD'],             sketch:'doors'},
+    {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
     {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
@@ -702,7 +734,7 @@
     step++;
     var pick=step===1?BRIDGE_SETS[Math.floor(Math.random()*BRIDGE_SETS.length)]:FINAL;
     var targets=pick.words;
-    if(mdgBg)mdgBg.setSketch(pick.sketch);
+    if(mdgBg)mdgBg.setSketch(pick.sketches?pick.sketches[Math.floor(Math.random()*pick.sketches.length)]:pick.sketch);
     if(step===2)startBgReveal();   // start morphing the black backdrop toward the site bg as the GoL appears
     var flavor=pickFlavor();
     var pending=wordEls.length;
