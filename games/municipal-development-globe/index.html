@@ -31,6 +31,13 @@
   .legend .hd{font-family:'Fraunces',serif;font-size:12px;color:var(--muted);letter-spacing:.02em;margin-bottom:1px}
   .hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2;font-size:12px;color:var(--muted);background:var(--paper);border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;box-shadow:var(--shadow)}
   @media(max-width:640px){.intro{max-width:60vw}.legend{display:none}}
+  #fade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:6}
+  #ncard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
+  #ncard.on{display:flex}
+  .nc-inner{background:var(--paper);border:1.5px solid var(--line-2);border-radius:16px;padding:22px 24px;max-width:320px;box-shadow:var(--shadow-hover)}
+  .nc-inner h3{font-family:'Fraunces',serif;font-weight:600;margin:0 0 8px;font-size:20px;color:var(--ink);letter-spacing:-.01em}
+  .nc-inner p{margin:0 0 16px;color:var(--ink-2);font-size:14px;line-height:1.55}
+  .nc-inner button{font-family:'Fraunces',serif;font-size:13px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:7px 17px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -44,15 +51,18 @@
     <p class="eyebrow">Concept · world model</p>
     <h1>Municipal Development Globe</h1>
     <p>One shared world. Everyone builds on the same planet-sized grid — and you keep expanding until you run into your neighbours.</p>
-    <p class="tag">Drag to spin the globe. The other cities are other players.</p>
+    <p class="tag"><b>Click your city</b> to dive to its surface and build. Click a neighbour to meet them.</p>
   </div>
+
+  <div id="fade"></div>
+  <div id="ncard"><div class="nc-inner"><h3 id="nc-name"></h3><p id="nc-msg"></p><button id="nc-close" type="button">Close</button></div></div>
 
   <div class="legend">
     <span class="hd">On this world</span>
     <div class="row"><span class="dot" id="lg-you"></span> Your city</div>
     <div class="row"><span class="dot" id="lg-them"></span> Neighbours (other players)</div>
   </div>
-  <div class="hint">drag to spin · it wraps all the way around</div>
+  <div class="hint">drag to spin · click your city to build its surface</div>
 
   <div class="stage"><canvas id="globe"></canvas></div>
 
@@ -199,24 +209,41 @@
   }
   function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
-  // ---- interaction ----
-  function down(e){dragging=true;idleT=0;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);}
-  function move(e){if(!dragging)return;yaw+=(e.clientX-lastX)*0.35;pitch=Math.max(-1.2,Math.min(1.2,pitch+(e.clientY-lastY)*0.006));lastX=e.clientX;lastY=e.clientY;}
-  function up(){dragging=false;}
-  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);
-  window.addEventListener('pointerup',up);
+  // ---- interaction: drag to spin, click a city ----
+  var mode='world', divT=0, zx=0, zy=0, navigated=false, movedDist=0;
+  function clamp(v){return Math.max(-1.2,Math.min(1.2,v));}
+  function sxy(e){var r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+  function hittest(x,y){var best=null,bd=1e9;for(var i=0;i<CITIES.length;i++){var c=CITIES[i],p=proj(c.lat,c.lon);if(p.z<=0.06)continue;var rad=(c.you?7:5)*(0.7+0.5*p.z)+9,d=Math.hypot(p.sx-x,p.sy-y);if(d<rad&&d<bd){bd=d;best=c;}}return best;}
+  function down(e){if(mode!=='world')return;dragging=true;idleT=0;lastX=e.clientX;lastY=e.clientY;movedDist=0;canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);}
+  function move(e){var s=sxy(e);
+    if(dragging){var dx=e.clientX-lastX,dy=e.clientY-lastY;movedDist+=Math.abs(dx)+Math.abs(dy);yaw+=dx*0.35;pitch=clamp(pitch+dy*0.006);lastX=e.clientX;lastY=e.clientY;}
+    else if(mode==='world'){canvas.style.cursor=hittest(s.x,s.y)?'pointer':'grab';}}
+  function up(e){if(!dragging)return;dragging=false;if(mode!=='world')return;
+    if(movedDist<5){var s=sxy(e),c=hittest(s.x,s.y);if(c){if(c.you)startDive(s.x,s.y);else showNeighbour(c);}}}
+  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
+
+  function startDive(x,y){mode='diving';divT=0;zx=x;zy=y;navigated=false;}
+  var fadeEl=document.getElementById('fade');
+  function showNeighbour(c){document.getElementById('nc-name').textContent=c.name;
+    document.getElementById('nc-msg').textContent='A neighbour’s city — another player on the shared globe. In the online build you’ll lay rail across the map and open a trade route here.';
+    document.getElementById('ncard').classList.add('on');}
+  document.getElementById('nc-close').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');});
+  document.getElementById('ncard').addEventListener('click',function(e){if(e.target.id==='ncard')this.classList.remove('on');});
 
   // ---- loop ----
   var last=performance.now();
   function frame(now){
     var dt=Math.min(0.05,(now-last)/1000);last=now;
-    if(dragging)idleT=0; else {idleT+=dt; if(idleT>1.2)yaw+=idleSpin*dt*60;}
+    if(mode==='world'){ if(dragging)idleT=0; else {idleT+=dt; if(idleT>1.2)yaw+=idleSpin*dt*60;} }
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+    if(mode==='diving'){divT+=dt/0.8;var z=1+11*(divT*divT);ctx.translate(zx,zy);ctx.scale(z,z);ctx.translate(-zx,-zy);
+      if(fadeEl)fadeEl.style.opacity=Math.min(1,divT*1.25);
+      if(divT>=1&&!navigated){navigated=true;window.location.href='/games/municipal-district-grid/';}}
     fillSphere();
     clipSphere(); drawLand(); graticule(); ctx.restore();
     rim();
     drawCities(now);
-    surfaceInset();
+    if(mode!=='diving')surfaceInset();
     requestAnimationFrame(frame);
   }
 
