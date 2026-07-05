@@ -1,0 +1,110 @@
+/* Make Dope Grooves - styled to match mattdanusergrant.com (cream/ink, Fraunces + Inter).
+   Theme-aware: follows the site's data-theme / localStorage 'theme'. */
+:root{
+  --bg:#FBF8F2; --paper:#FFFFFF; --ink:#15161C; --ink-2:#2A2A2A; --muted:#6A6A6A;
+  --line:#E5E0D2; --line-2:#CBC4B2; --accent:#E8A317;
+  --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+[data-theme="dark"]{
+  --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink-2:#CAC5BC; --muted:#7A756D;
+  --line:#2C2924; --line-2:#3C3830;
+  --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink-2:#CAC5BC; --muted:#7A756D;
+  --line:#2C2924; --line-2:#3C3830;
+  --shadow:0 1px 0 rgba(0,0,0,.15),0 14px 36px rgba(0,0,0,.35);
+}}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  padding: 32px clamp(14px, 4vw, 40px) 60px;
+}
+/* Title card + transport, side by side */
+.topbar { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; max-width: 920px; margin: 0 auto 14px; }
+.titlecard {
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+  padding: 18px 24px; display: flex; flex-direction: column; justify-content: center;
+}
+.titlecard h1 {
+  margin: 0; font-family: 'Fraunces', Georgia, serif; font-weight: 500;
+  font-size: clamp(22px, 3.4vw, 30px); line-height: 1.02; letter-spacing: -0.01em; color: var(--ink);
+}
+.titlecard .tag { margin: 10px 0 0; color: var(--muted); font-style: italic; font-size: 14px; }
+
+.transport, .examples {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px;
+  padding: 14px 18px; margin: 0 auto 14px; max-width: 920px; box-shadow: var(--shadow);
+}
+.transport { flex: 1 1 320px; margin: 0; max-width: none; }
+.transport label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+input[type=range] { accent-color: var(--ink); width: 110px; vertical-align: middle; }
+.status { color: var(--muted); font: 13px var(--mono); min-width: 12ch; }
+.status.err { color: #b4543a; }
+
+button { cursor: pointer; font: inherit; border: none; border-radius: 999px; transition: .15s; }
+.play {
+  background: var(--ink); color: var(--bg); font-family: 'Fraunces', serif; font-weight: 500;
+  border: 1.5px solid var(--ink); padding: 9px 22px; font-size: 15px;
+}
+.play:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.play.on { background: var(--accent); border-color: var(--accent); color: #2a1c00; }
+.ghost {
+  background: transparent; color: var(--muted); border: 1.5px solid var(--line-2);
+  font-family: 'Fraunces', serif; font-size: 13.5px; padding: 8px 15px;
+}
+.ghost:hover { border-color: var(--ink); color: var(--ink); }
+.linkish { text-decoration: none; display: inline-block; }
+
+/* Code Crafter */
+.parts { max-width: 940px; margin: 0 auto; }
+.craft-part {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px;
+  padding: 10px 12px; margin: 0 auto 8px; box-shadow: var(--shadow);
+}
+.craft-steps { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; flex: 1; min-width: 240px; }
+.cstep { aspect-ratio: 1; min-width: 0; border-radius: 6px; border: 1.5px solid var(--line); background: var(--bg); }
+.cstep.beat { background: var(--line); }
+.cstep:hover { border-color: var(--ink); }
+.cstep.on { background: var(--accent); border-color: var(--accent); }
+.craft-actions { max-width: 940px; margin: 4px auto 14px; display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.codeout { max-width: 940px; margin: 0 auto; background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+.codehdr { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.codehdr > :nth-child(2) { margin-left: auto; }
+.codeprev { margin: 0; background: var(--bg); border: 1.5px solid var(--line); border-radius: 10px; padding: 12px 14px; color: var(--ink); font: 13px/1.6 var(--mono); white-space: pre; overflow-x: auto; min-height: 2em; }
+.plabel { color: var(--muted); font-size: 13px; }
+.examples { flex-direction: column; gap: 8px; }
+.exrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+.glabel { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; min-width: 58px; text-align: right; }
+.ex { background: transparent; color: var(--ink); border: 1.5px solid var(--line-2); font-family: 'Fraunces', serif; font-size: 13.5px; padding: 7px 14px; }
+.ex:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.editor { max-width: 920px; margin: 0 auto; }
+#code {
+  width: 100%; height: min(56vh, 520px); resize: vertical;
+  background: var(--paper); color: var(--ink); border: 1.5px solid var(--line-2); border-radius: 14px;
+  padding: 16px 18px; font: 13.5px/1.6 var(--mono); tab-size: 2; white-space: pre; box-shadow: var(--shadow);
+}
+#code:focus { outline: none; border-color: var(--ink); }
+
+.cheat { max-width: 920px; margin: 14px auto 0; background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+.cheat summary { cursor: pointer; padding: 12px 16px; color: var(--ink); font-family: 'Fraunces', serif; font-size: 14px; user-select: none; }
+.cheat summary:hover { color: var(--muted); }
+.cheatbody { padding: 0 18px 14px; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.cheatbody p { margin: 8px 0; }
+.cheatbody ul { margin: 8px 0; padding-left: 20px; }
+.cheatbody li { margin: 4px 0; }
+.cheatbody code { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; font: 12px var(--mono); color: var(--ink-2); }
+.cheatbody strong { color: var(--ink); }
+
+footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 24px; }
+
+@media (max-width: 620px) {
+  #code { height: 50vh; font-size: 12.5px; }
+}
