@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Municipal District Grid</title>
-<meta name="description" content="A streamlined 2D city builder — zone the grid, watch the district grow. From Must Design Games." />
+<meta name="description" content="A streamlined 2D city builder — zone the grid, feed the demand, watch the district grow. From Must Design Games." />
 <!-- theme-init: read saved theme before paint (matches the rest of MDG.com) -->
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,9 +21,9 @@
     transition:background .5s ease,color .5s ease;
   }
 
-  /* ---- top bar (slim, site-styled) ---- */
+  /* ---- top bar ---- */
   .bar{
-    display:flex;align-items:center;gap:14px;
+    display:flex;align-items:center;gap:clamp(8px,2vw,16px);
     padding:10px clamp(12px,3vw,22px);
     border-bottom:1.5px solid var(--line);
     background:var(--bg);flex-shrink:0;
@@ -31,9 +31,17 @@
   .bar .home{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--muted);text-decoration:none;letter-spacing:-.01em;transition:color .15s;white-space:nowrap}
   .bar .home:hover{color:var(--ink)}
   .bar .title{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(14px,3.6vw,19px);letter-spacing:-.02em;color:var(--ink);white-space:nowrap}
-  .bar .title b{color:var(--ink)}
   .bar .spacer{flex:1}
-  .stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05}
+
+  /* RCI demand meters */
+  .rci{display:flex;gap:9px;align-items:flex-end}
+  .meter{display:flex;flex-direction:column;align-items:center;gap:3px;width:20px}
+  .meter .bar{width:100%;height:26px;background:var(--line);border-radius:3px;overflow:hidden;position:relative;display:flex;align-items:flex-end}
+  .meter .bar i{display:block;width:100%;height:8%;transition:height .5s ease,opacity .3s}
+  .meter b{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+  @media(max-width:520px){.rci{display:none}}
+
+  .stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05;min-width:60px}
   .stat .n{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(16px,4.4vw,22px);color:var(--ink);font-variant-numeric:tabular-nums}
   .stat .l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500}
 
@@ -51,8 +59,7 @@
     display:flex;align-items:center;gap:7px;cursor:pointer;
     font-family:'Inter',sans-serif;font-size:13px;font-weight:500;color:var(--ink-2);
     background:var(--paper);border:1.5px solid var(--line-2);border-radius:9px;
-    padding:7px 11px;transition:border-color .15s,transform .1s,background .15s;
-    user-select:none;
+    padding:7px 11px;transition:border-color .15s,transform .1s,background .15s;user-select:none;
   }
   .tool:hover{border-color:var(--ink)}
   .tool:active{transform:translateY(1px)}
@@ -61,19 +68,23 @@
   .tool .key{font-size:10px;color:var(--muted);border:1px solid var(--line-2);border-radius:4px;padding:0 4px;line-height:15px}
   .tool.sel .key{color:var(--bg);border-color:rgba(255,255,255,.35)}
   .tools .spacer{flex:1}
-  .hint{font-size:12px;color:var(--muted);max-width:340px;line-height:1.4}
-  @media(max-width:560px){.hint{display:none}}
-
-  /* the theme toggle inherits site.css styling; just space it */
-  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;flex-shrink:0}
+  .reset{cursor:pointer;font-size:12px;color:var(--muted);background:none;border:none;font-family:inherit;text-decoration:underline;text-underline-offset:2px}
+  .reset:hover{color:var(--ink)}
+  .hint{font-size:12px;color:var(--muted);max-width:360px;line-height:1.4}
+  @media(max-width:620px){.hint{display:none}}
 </style>
 </head>
 <body>
 
   <header class="bar">
     <a class="home" href="/" title="Back to mattdanusergrant.com">← MDG</a>
-    <span class="title">Municipal&nbsp;<b>District&nbsp;Grid</b></span>
+    <span class="title">Municipal&nbsp;District&nbsp;Grid</span>
     <span class="spacer"></span>
+    <div class="rci" id="rci" title="Demand — build what the district wants next">
+      <div class="meter"><span class="bar"><i id="dem-res"></i></span><b>R</b></div>
+      <div class="meter"><span class="bar"><i id="dem-com"></i></span><b>C</b></div>
+      <div class="meter"><span class="bar"><i id="dem-ind"></i></span><b>I</b></div>
+    </div>
     <div class="stat"><span class="n" id="pop">0</span><span class="l">Population</span></div>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </header>
@@ -86,48 +97,53 @@
     <div class="tool" data-brush="com"><span class="sw" data-sw="com"></span>Shops<span class="key">3</span></div>
     <div class="tool" data-brush="ind"><span class="sw" data-sw="ind"></span>Works<span class="key">4</span></div>
     <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">5</span></div>
+    <button class="reset" id="reset" type="button">Reset city</button>
     <span class="spacer"></span>
-    <span class="hint">Paint <b>roads</b>, then zone beside them — buildings grow where a zone touches a road. Drag to paint.</span>
+    <span class="hint">Roads carry demand. Zone <b>Homes</b> for people, <b>Shops</b> &amp; <b>Works</b> for jobs — each grows fastest when the district wants it and neighbours complement it.</span>
   </footer>
 
 <script>
 /* ============================================================
-   Municipal District Grid — v0.1
-   A streamlined 2D city builder. Zone the grid, watch it grow.
-   Vanilla JS, zero-build. Themed to MDG.com (light/dark toggle).
+   Municipal District Grid — v0.2
+   Streamlined 2D city builder. Zone the grid, feed the demand,
+   watch it grow. Vanilla JS, zero-build. Themed to MDG.com.
+
+   v0.2 adds: RCI demand model + neighbour interplay, taller
+   distinct buildings with a level-up pop, auto-connecting
+   roads, and autosave to localStorage.
    ============================================================ */
 (function(){
   'use strict';
 
   var canvas=document.getElementById('city'), ctx=canvas.getContext('2d');
-  var CELL=30;               // logical px per cell (scaled to DPR on draw)
-  var cols=0, rows=0, dpr=1;
-  var grid=[];               // flat array of cells
-  var brush='road';
-  var painting=false, lastPaint=-1;
+  var CELL=32, cols=0, rows=0, dpr=1;
+  var grid=[];
+  var brush='road', painting=false, lastPaint=-1;
+  var dirty=true, animating=true;
+  var SAVE_KEY='mdg-district-grid-v1';
 
-  // cell: {t:'empty'|'road'|'res'|'com'|'ind', lvl:0, grow:0, seed:0}
   function idx(c,r){return r*cols+c;}
-  function inBounds(c,r){return c>=0&&r>=0&&c<cols&&r<rows;}
+  function inB(c,r){return c>=0&&r>=0&&c<cols&&r<rows;}
+  var ZONES={res:1,com:1,ind:1};
 
-  // ---- theme-aware palettes (buildings). Grid/paper read from CSS vars. ----
+  // ---- theme-aware palettes ----
   var PAL={
     light:{
-      road:'#B9B3A2', roadEdge:'#A49E8C', roadLine:'#E7E2D4',
-      res:['#6FA36A','#5C9256','#4C8047'], resRoof:'#3C6A38', win:'#F5EFDE',
-      com:['#5C8FBE','#4E7FAE','#41709C'], comRoof:'#365B7E',
-      ind:['#C99A54','#BC8A43','#A9792F'], indRoof:'#7E5B24',
-      lot:'rgba(0,0,0,.045)'
+      road:'#B9B3A2', curb:'#9E9788', lane:'#EFEADB',
+      res:['#79AE72','#5F9A5A','#4C8047'], resRoof:'#3C6A38', win:'#FBF6E6',
+      com:['#6699C6','#5285B6','#41709C'], comRoof:'#365B7E',
+      ind:['#D2A45C','#BF8F45','#A9792F'], indRoof:'#7E5B24',
+      lot:'rgba(0,0,0,.05)', starve:'rgba(190,120,70,.5)', side:'rgba(0,0,0,.14)'
     },
     dark:{
-      road:'#514C43', roadEdge:'#403C34', roadLine:'#6A6459',
-      res:['#6FA96E','#5E9760','#4F8553'], resRoof:'#39663B', win:'#EDE8DF',
-      com:['#5F97C8','#5286B6','#4676A2'], comRoof:'#31567A',
-      ind:['#D8A455','#C89446','#B27F33'], indRoof:'#7C5822',
-      lot:'rgba(255,255,255,.05)'
+      road:'#524D44', curb:'#3D392F', lane:'#726B5E',
+      res:['#77B076','#5F9A61','#4F8553'], resRoof:'#39663B', win:'#F2EDE2',
+      com:['#69A0D0','#5589BA','#4676A2'], comRoof:'#31567A',
+      ind:['#E0AB5B','#CA9647','#B27F33'], indRoof:'#7C5822',
+      lot:'rgba(255,255,255,.055)', starve:'rgba(220,150,90,.5)', side:'rgba(0,0,0,.35)'
     }
   };
-  var SWATCH={road:'#9c968a',res:'#5C9256',com:'#4E7FAE',ind:'#BC8A43',bulldoze:'#c96a5a'};
+  var SWATCH={road:'#9c968a',res:'#5F9A5A',com:'#5285B6',ind:'#BF8F45',bulldoze:'#c96a5a'};
 
   function themeName(){
     var d=document.documentElement.getAttribute('data-theme');
@@ -138,11 +154,11 @@
   var pal, C={};
   function readTheme(){
     pal=PAL[themeName()];
-    C.bg=cssVar('--bg'); C.paper=cssVar('--paper');
-    C.line=cssVar('--line'); C.line2=cssVar('--line-2'); C.muted=cssVar('--muted');
+    C.bg=cssVar('--bg'); C.line=cssVar('--line'); C.line2=cssVar('--line-2');
+    dirty=true;
   }
 
-  // ---- sizing ----
+  // ---- sizing (preserves cells by coordinate on resize) ----
   function resize(){
     var st=canvas.parentNode.getBoundingClientRect();
     dpr=Math.min(window.devicePixelRatio||1,2);
@@ -154,11 +170,12 @@
       var old=grid, oc=cols, or=rows;
       cols=nc; rows=nr; grid=new Array(cols*rows);
       for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
-        grid[idx(c,r)]=(old&&c<oc&&r<or)?old[r*oc+c]:{t:'empty',lvl:0,grow:0,seed:(c*7+r*13)%97};
+        grid[idx(c,r)]=(old&&c<oc&&r<or)?old[r*oc+c]:newCell(c,r);
       }
     }
-    draw();
+    dirty=true;
   }
+  function newCell(c,r){return {t:'empty',lvl:0,grow:0,seed:(c*7+r*13)%97,pulse:0};}
 
   // ---- interaction ----
   function cellFromEvent(e){
@@ -168,17 +185,15 @@
     return {c:Math.floor(x/CELL), r:Math.floor(y/CELL)};
   }
   function paintAt(c,r){
-    if(!inBounds(c,r))return;
+    if(!inB(c,r))return;
     var i=idx(c,r); if(i===lastPaint)return; lastPaint=i;
     var cell=grid[i];
     if(brush==='bulldoze'){cell.t='empty';cell.lvl=0;cell.grow=0;}
     else if(brush==='road'){cell.t='road';cell.lvl=0;cell.grow=0;}
-    else{ // zone
-      if(cell.t!==brush){cell.t=brush;cell.lvl=0;cell.grow=0;}
-    }
-    draw();
+    else if(cell.t!==brush){cell.t=brush;cell.lvl=0;cell.grow=0;}
+    dirty=true; scheduleSave();
   }
-  function down(e){e.preventDefault();painting=true;lastPaint=-1;var p=cellFromEvent(e);paintAt(p.c,p.r);}
+  function down(e){e.preventDefault();painting=true;lastPaint=-1;canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);var p=cellFromEvent(e);paintAt(p.c,p.r);}
   function move(e){if(!painting)return;var p=cellFromEvent(e);paintAt(p.c,p.r);}
   function up(){painting=false;lastPaint=-1;}
   canvas.addEventListener('pointerdown',down);
@@ -201,138 +216,199 @@
     var m={'1':'road','2':'res','3':'com','4':'ind','5':'bulldoze'}[e.key];
     if(m)selectBrush(m);
   });
+  document.getElementById('reset').addEventListener('click',function(){
+    if(!confirm('Clear the whole city?'))return;
+    for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
+    dirty=true; scheduleSave();
+  });
 
-  // ---- simulation: zones grow if orthogonally adjacent to a road ----
+  // ---- simulation ----
   function nearRoad(c,r){
-    return (inBounds(c-1,r)&&grid[idx(c-1,r)].t==='road')||
-           (inBounds(c+1,r)&&grid[idx(c+1,r)].t==='road')||
-           (inBounds(c,r-1)&&grid[idx(c,r-1)].t==='road')||
-           (inBounds(c,r+1)&&grid[idx(c,r+1)].t==='road');
+    return (inB(c-1,r)&&grid[idx(c-1,r)].t==='road')||(inB(c+1,r)&&grid[idx(c+1,r)].t==='road')||
+           (inB(c,r-1)&&grid[idx(c,r-1)].t==='road')||(inB(c,r+1)&&grid[idx(c,r+1)].t==='road');
   }
-  var GROW_STEPS=6, MAXLVL=3;
+  // complementary neighbour bonus: Homes thrive by jobs/shops; Shops & Works thrive by people
+  function complement(c,r,t){
+    var wants = t==='res' ? {com:1,ind:1} : {res:1};
+    for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){
+      if(!dc&&!dr)continue;
+      if(inB(c+dc,r+dr)){var n=grid[idx(c+dc,r+dr)]; if(n.lvl>0&&wants[n.t])return true;}
+    }
+    return false;
+  }
+  var MAXLVL=3, demand={res:0,com:0,ind:0};
+  function computeDemand(){
+    var R=0,Cc=0,I=0;
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
+      if(g.t==='res')R+=g.lvl; else if(g.t==='com')Cc+=g.lvl; else if(g.t==='ind')I+=g.lvl;}
+    // housing follows jobs; shops follow people; works follow people (with a base so the city can start)
+    demand.res=(Cc+I)+3 - R;
+    demand.com=(R*0.6)+2 - Cc;
+    demand.ind=(R*0.5)+1 - I;
+  }
+  var GROW_NEED=6;
   function tick(){
-    var changed=false;
+    computeDemand();
     for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
       var cell=grid[idx(c,r)];
-      if(cell.t==='res'||cell.t==='com'||cell.t==='ind'){
-        if(cell.lvl<MAXLVL && nearRoad(c,r)){
-          cell.grow++;
-          if(cell.grow>=GROW_STEPS){cell.grow=0;cell.lvl++;changed=true;}
-        }
-      }
+      if(!ZONES[cell.t]||cell.lvl>=MAXLVL)continue;
+      if(!nearRoad(c,r))continue;
+      var d=demand[cell.t];
+      var rate = d>0 ? 1 : 0.28;                 // in demand → full; oversupplied → slow (never stalls: cozy)
+      if(complement(c,r,cell.t)) rate*=1.6;      // spatial payoff
+      cell.grow += rate;
+      if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=performance.now();dirty=true;scheduleSave();}
     }
-    updatePop();
-    if(changed)draw();
+    updatePop(); updateDemandUI();
   }
+
+  // ---- population + demand UI ----
   var popEl=document.getElementById('pop'), popShown=0, popTarget=0;
   function updatePop(){
     var p=0;
-    for(var i=0;i<grid.length;i++){
-      var cell=grid[i]; if(!cell)continue;
-      if(cell.t==='res')p+=cell.lvl*cell.lvl*45;
-      else if(cell.t==='com')p+=cell.lvl*20;
-      else if(cell.t==='ind')p+=cell.lvl*14;
-    }
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
+      if(g.t==='res')p+=g.lvl*g.lvl*45; else if(g.t==='com')p+=g.lvl*22; else if(g.t==='ind')p+=g.lvl*16;}
     popTarget=p;
   }
-  // smooth count-up for the headline number
-  function animPop(){
-    if(popShown!==popTarget){
-      var d=popTarget-popShown;
-      popShown+= Math.abs(d)<=2 ? d : Math.ceil(d/8);
-      popEl.textContent=popShown.toLocaleString();
-    }
-    requestAnimationFrame(animPop);
+  var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
+  var demColor={res:'#5F9A5A',com:'#5285B6',ind:'#BF8F45'};
+  function updateDemandUI(){
+    ['res','com','ind'].forEach(function(t){
+      var fill=Math.max(0.08,Math.min(1,demand[t]/8));
+      var el=demBars[t]; el.style.height=(fill*100)+'%';
+      el.style.background=demColor[t];
+      el.style.opacity=demand[t]>0.3?1:0.35;
+    });
   }
 
   // ---- rendering ----
   function px(v){return Math.round(v);}
   function drawGridPaper(){
     ctx.fillStyle=C.bg; ctx.fillRect(0,0,cols*CELL,rows*CELL);
-    // minor lines every cell, major every 5 (engineering grid paper)
     ctx.lineWidth=1;
-    for(var c=0;c<=cols;c++){
-      ctx.strokeStyle=(c%5===0)?C.line2:C.line;
-      ctx.beginPath();ctx.moveTo(px(c*CELL)+0.5,0);ctx.lineTo(px(c*CELL)+0.5,rows*CELL);ctx.stroke();
-    }
-    for(var r=0;r<=rows;r++){
-      ctx.strokeStyle=(r%5===0)?C.line2:C.line;
-      ctx.beginPath();ctx.moveTo(0,px(r*CELL)+0.5);ctx.lineTo(cols*CELL,px(r*CELL)+0.5);ctx.stroke();
-    }
+    for(var c=0;c<=cols;c++){ctx.strokeStyle=(c%5===0)?C.line2:C.line;
+      ctx.beginPath();ctx.moveTo(px(c*CELL)+0.5,0);ctx.lineTo(px(c*CELL)+0.5,rows*CELL);ctx.stroke();}
+    for(var r=0;r<=rows;r++){ctx.strokeStyle=(r%5===0)?C.line2:C.line;
+      ctx.beginPath();ctx.moveTo(0,px(r*CELL)+0.5);ctx.lineTo(cols*CELL,px(r*CELL)+0.5);ctx.stroke();}
   }
+  function isRoad(c,r){return inB(c,r)&&grid[idx(c,r)].t==='road';}
   function drawRoad(x,y,c,r){
+    var N=isRoad(c,r-1),S=isRoad(c,r+1),E=isRoad(c+1,r),W=isRoad(c-1,r);
     ctx.fillStyle=pal.road; ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
-    ctx.fillStyle=pal.roadEdge; ctx.fillRect(x+2,y+2,CELL-4,2); ctx.fillRect(x+2,y+CELL-4,CELL-4,2);
-    // dashed centre line, oriented toward connected neighbours
-    var horiz=(inBounds(c-1,r)&&grid[idx(c-1,r)].t==='road')||(inBounds(c+1,r)&&grid[idx(c+1,r)].t==='road');
-    ctx.fillStyle=pal.roadLine; var mid=CELL/2;
-    if(horiz||!( (inBounds(c,r-1)&&grid[idx(c,r-1)].t==='road')||(inBounds(c,r+1)&&grid[idx(c,r+1)].t==='road') )){
-      for(var dx=4;dx<CELL-4;dx+=8) ctx.fillRect(x+dx,y+mid-1,4,2);
-    } else {
-      for(var dy=4;dy<CELL-4;dy+=8) ctx.fillRect(x+mid-1,y+dy,2,4);
-    }
+    // arms bridge the 2px gaps toward road neighbours so the network connects
+    if(N)ctx.fillRect(x+2,y,CELL-4,3); if(S)ctx.fillRect(x+2,y+CELL-3,CELL-4,3);
+    if(E)ctx.fillRect(x+CELL-3,y+2,3,CELL-4); if(W)ctx.fillRect(x,y+2,3,CELL-4);
+    // curbs only on open sides
+    ctx.fillStyle=pal.curb;
+    if(!N)ctx.fillRect(x+2,y+2,CELL-4,2); if(!S)ctx.fillRect(x+2,y+CELL-4,CELL-4,2);
+    if(!E)ctx.fillRect(x+CELL-4,y+2,2,CELL-4); if(!W)ctx.fillRect(x+2,y+2,2,CELL-4);
+    // lane dashes along whichever axis connects
+    ctx.fillStyle=pal.lane; var m=CELL/2;
+    if(E||W){for(var dx=4;dx<CELL-4;dx+=8)ctx.fillRect(x+dx,y+m-1,4,2);}
+    if(N||S){for(var dy=4;dy<CELL-4;dy+=8)ctx.fillRect(x+m-1,y+dy,2,4);}
+    if(!N&&!S&&!E&&!W){ctx.fillRect(x+m-2,y+m-2,4,4);} // lone tile: a little plaza dot
   }
-  // pixel-art building: chunky body scaled by level, roof band, window dots
   function drawBuilding(x,y,cell){
     var kind=cell.t, lvl=cell.lvl;
-    ctx.fillStyle=pal.lot; ctx.fillRect(x+2,y+2,CELL-4,CELL-4); // zoned lot tint
-    if(lvl<1)return; // zoned but not yet built — just the lot
-    var body=pal[kind][lvl-1];
-    var roof=kind==='res'?pal.resRoof:kind==='com'?pal.comRoof:pal.indRoof;
-    var pxs=Math.round(CELL/10);                 // one "pixel" of the sprite
-    var w=(3+lvl)*pxs, h=(3+lvl)*pxs;            // footprint grows with level
-    var bx=px(x+(CELL-w)/2), by=px(y+(CELL-h)/2);
-    // shadow
-    ctx.fillStyle='rgba(0,0,0,.10)'; ctx.fillRect(bx+pxs,by+h-pxs,w,pxs);
-    // body
-    ctx.fillStyle=body; ctx.fillRect(bx,by,w,h);
-    // roof band
-    ctx.fillStyle=roof; ctx.fillRect(bx,by,w,pxs*1.4);
-    // outline
-    ctx.fillStyle='rgba(0,0,0,.16)';
-    ctx.fillRect(bx,by,w,1); ctx.fillRect(bx,by+h-1,w,1);
-    ctx.fillRect(bx,by,1,h); ctx.fillRect(bx+w-1,by,1,h);
-    // windows — a little grid of lit pixels, more with level
-    ctx.fillStyle=kind==='res'?pal.win:'rgba(255,255,255,.72)';
-    var cellsAcross=lvl+1;
-    var gap=pxs, wsz=pxs*0.9;
-    var startX=bx+pxs, startY=by+pxs*2;
-    for(var wy=0;wy<cellsAcross;wy++)for(var wx=0;wx<cellsAcross;wx++){
-      var lx=startX+wx*(wsz+gap*0.4), ly=startY+wy*(wsz+gap*0.4);
-      if(ly+wsz<by+h-pxs*0.5 && lx+wsz<bx+w-pxs*0.4 && (cell.seed+wx*3+wy*7)%5!==0)
-        ctx.fillRect(px(lx),px(ly),Math.max(2,px(wsz)),Math.max(2,px(wsz)));
+    ctx.fillStyle=pal.lot; ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+    if(lvl<1){                                   // zoned, not yet built
+      // hint the player when a zone can't grow (no road) or isn't wanted
+      if(!nearRoadCache(cell.__c,cell.__r)){ctx.fillStyle=pal.starve;ctx.fillRect(x+CELL/2-1,y+4,2,6);ctx.fillRect(x+CELL/2-1,y+12,2,2);}
+      return;
+    }
+    var pxs=Math.max(2,Math.round(CELL/12));
+    var w=(4+lvl)*pxs;
+    var h=(3+lvl*1.8)*pxs;                        // taller with level → level-3 reads as a tower
+    // level-up pop: brief overshoot scale
+    var t=performance.now()-cell.pulse;
+    if(t<420){var k=1+0.22*Math.sin(Math.min(t/420,1)*Math.PI); w*=k; h*=k;}
+    w=px(w); h=px(h);
+    var bx=px(x+(CELL-w)/2), by=px(y+CELL-4-h);   // grounded at the lot's base
+    ctx.fillStyle=pal.side; ctx.fillRect(bx+pxs,by+h,w,pxs);           // ground shadow
+    ctx.fillStyle=pal[kind][lvl-1]; ctx.fillRect(bx,by,w,h);          // body
+    ctx.fillStyle=kind==='res'?pal.resRoof:kind==='com'?pal.comRoof:pal.indRoof;
+    ctx.fillRect(bx,by,w,Math.round(pxs*1.4));                         // roof band
+    ctx.fillStyle=pal.side;                                            // outline
+    ctx.fillRect(bx,by,w,1);ctx.fillRect(bx,by+h-1,w,1);ctx.fillRect(bx,by,1,h);ctx.fillRect(bx+w-1,by,1,h);
+    // windows — rows scale with level
+    ctx.fillStyle=kind==='res'?pal.win:'rgba(255,255,255,.78)';
+    var cols_=lvl+1, rows_=lvl+1, ws=Math.max(2,px(pxs*0.9)), gap=pxs*0.7;
+    var sx=bx+pxs, sy=by+Math.round(pxs*2.2);
+    for(var wy=0;wy<rows_+1;wy++)for(var wx=0;wx<cols_;wx++){
+      var lx=sx+wx*(ws+gap), ly=sy+wy*(ws+gap);
+      if(lx+ws<=bx+w-pxs*0.6 && ly+ws<=by+h-pxs*0.6 && (cell.seed+wx*3+wy*7)%5!==0)
+        ctx.fillRect(px(lx),px(ly),ws,ws);
     }
   }
+  // small cache so drawBuilding can flag road access without recomputing coords
+  var _nr={};
+  function nearRoadCache(c,r){return _nr[c+'_'+r];}
   function draw(){
     if(!cols)return;
-    ctx.save();
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.imageSmoothingEnabled=false;
+    ctx.save(); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.imageSmoothingEnabled=false;
     drawGridPaper();
+    _nr={};
     for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
       var cell=grid[idx(c,r)]; if(!cell||cell.t==='empty')continue;
+      cell.__c=c; cell.__r=r; _nr[c+'_'+r]=nearRoad(c,r);
       var x=c*CELL, y=r*CELL;
-      if(cell.t==='road')drawRoad(x,y,c,r);
-      else drawBuilding(x,y,cell);
+      if(cell.t==='road')drawRoad(x,y,c,r); else drawBuilding(x,y,cell);
     }
     ctx.restore();
   }
 
-  // ---- swatches on the toolbar ----
+  // ---- swatches ----
   Array.prototype.forEach.call(document.querySelectorAll('[data-sw]'),function(el){
     el.style.background=SWATCH[el.getAttribute('data-sw')];
   });
 
-  // ---- react to theme toggle: re-read palette + redraw ----
-  new MutationObserver(function(){readTheme();draw();})
-    .observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-  matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(){readTheme();draw();});
+  // ---- theme reactions ----
+  new MutationObserver(readTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  matchMedia('(prefers-color-scheme:dark)').addEventListener('change',readTheme);
+
+  // ---- save / load ----
+  var saveTimer=0;
+  function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
+  function save(){
+    try{
+      var out=[];
+      for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
+        var g=grid[idx(c,r)]; if(g&&g.t!=='empty')out.push([c,r,g.t,g.lvl]);
+      }
+      localStorage.setItem(SAVE_KEY,JSON.stringify(out));
+    }catch(e){}
+  }
+  function load(){
+    try{
+      var raw=localStorage.getItem(SAVE_KEY); if(!raw)return;
+      JSON.parse(raw).forEach(function(a){
+        var c=a[0],r=a[1]; if(inB(c,r)){var g=grid[idx(c,r)];g.t=a[2];g.lvl=a[3]||0;g.grow=0;}
+      });
+      dirty=true;
+    }catch(e){}
+  }
+
+  // ---- unified animation loop (draws when dirty or a pulse is active) ----
+  function anyPulse(){
+    var now=performance.now();
+    for(var i=0;i<grid.length;i++){if(grid[i]&&now-grid[i].pulse<420)return true;}
+    return false;
+  }
+  function frame(){
+    if(popShown!==popTarget){
+      var d=popTarget-popShown; popShown+= Math.abs(d)<=2?d:Math.ceil(d/8);
+      popEl.textContent=popShown.toLocaleString(); dirty=true;
+    }
+    if(dirty||anyPulse()){draw(); dirty=false;}
+    requestAnimationFrame(frame);
+  }
 
   // ---- boot ----
   readTheme();
-  window.addEventListener('resize',resize);
-  resize();
-  updatePop(); requestAnimationFrame(animPop);
+  window.addEventListener('resize',function(){resize();});
+  resize(); load();
+  updatePop(); computeDemand(); updateDemandUI();
+  requestAnimationFrame(frame);
   setInterval(tick,650);
 })();
 </script>
