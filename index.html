@@ -303,8 +303,8 @@
     </div>
     <div class="shelf">
       <article class="tile">
-        <h3>Municipal District Grid</h3>
-        <p>A city builder stripped to the good part. Paint roads, zone beside them, and watch the district grow itself on grid paper.</p>
+        <h3>Municipal Development Globe</h3>
+        <p>A city builder on one shared world. Run the supply chain, lay rail, ship your surplus by train — and expand until you meet your neighbours.</p>
         <div class="btn-row"><a class="btn btn-play" href="/games/municipal-district-grid/" target="_blank" rel="noopener">Play</a></div>
       </article>
       <article class="tile">
@@ -581,7 +581,7 @@
       for(i=0;i<5200;i++){dx=sg*(y-x);dy=x*(rho-z)-y;dz=x*y-bt*z;x+=dx*dt;y+=dy*dt;z+=dz*dt;var px=cx+(x*cr-y*sr)*sc,py=cy+(z-25)*sc;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
       ctx.stroke();
     };
-    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes; woven lattice reads as a street grid (MUNICIPAL DISTRICT GRID).
+    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes; a looping orbit reads as a world (MUNICIPAL DEVELOPMENT GLOBE).
     SK.lissajous=function(w,h,t){
       var cx=w/2,cy=h/2,R=Math.min(w,h)*0.42,a=3,b=2,ph=t*0.5,N=420;
       ctx.lineCap='round';ctx.shadowColor=col(0,0.5);ctx.strokeStyle=col(0,0.85);ctx.lineWidth=1.5;ctx.beginPath();
@@ -736,7 +736,7 @@
     {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
     {words:['MULTIPLAYER','DECK','GATEWAY'],     sketch:'cards'},
     {words:['MASTER','DATA','GRAPH'],            sketch:'hilbert'},
-    {words:['MUNICIPAL','DISTRICT','GRID'],      sketch:'lissajous'},
+    {words:['MUNICIPAL','DEVELOPMENT','GLOBE'], sketch:'lissajous'},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
     {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},

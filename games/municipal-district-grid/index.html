@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Municipal District Grid</title>
-<meta name="description" content="A streamlined 2D city builder — connect to the highway, power and water your district, watch it grow. From Must Design Games." />
+<title>Municipal Development Globe</title>
+<meta name="description" content="A streamlined 2D city builder on one shared world — build your district, run the supply chain, lay rail, and ship your surplus out by train. From Must Design Games." />
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,7 +57,8 @@
 
   <header class="bar">
     <a class="home" href="/" title="Back to mattdanusergrant.com">← MDG</a>
-    <span class="title">Municipal&nbsp;District&nbsp;Grid</span>
+    <span class="title">Municipal&nbsp;Development&nbsp;Globe</span>
+    <a class="home" href="/games/municipal-development-globe/" title="See the whole world">🌍&nbsp;world</a>
     <span class="spacer"></span>
     <div class="rci" id="rci" title="Demand — build what the district wants next">
       <div class="meter"><span class="bar"><i id="dem-res"></i></span><b>R</b></div>
@@ -67,6 +68,7 @@
     <div class="res" id="res" title="Supply chain — Works make Materials, Factories turn Materials into Goods, Shops sell Goods">
       <div class="rstat"><span class="rn" id="mat">0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Materials</span></div>
       <div class="rstat"><span class="rn" id="goods">0</span><span class="rl"><span class="dot" style="background:#7C6CB0"></span>Goods</span></div>
+      <div class="rstat"><span class="rn" id="exp">0</span><span class="rl"><span class="dot" style="background:#5C8A55"></span>Exports</span></div>
     </div>
     <div class="stat"><span class="n" id="pop">0</span><span class="l">Population</span></div>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
@@ -79,27 +81,29 @@
 
   <footer class="tools" id="tools">
     <div class="tool sel" data-brush="road"><span class="sw" data-sw="road"></span>Road<span class="key">1</span></div>
-    <div class="tool" data-brush="res"><span class="sw" data-sw="res"></span>Homes<span class="key">2</span></div>
-    <div class="tool" data-brush="com"><span class="sw" data-sw="com"></span>Shops<span class="key">3</span></div>
-    <div class="tool" data-brush="ind"><span class="sw" data-sw="ind"></span>Works<span class="key">4</span></div>
-    <div class="tool" data-brush="fac"><span class="sw" data-sw="fac"></span>Factory<span class="key">5</span></div>
-    <div class="tool" data-brush="park"><span class="sw" data-sw="park"></span>Park<span class="key">6</span></div>
-    <div class="tool" data-brush="power"><span class="sw" data-sw="power"></span>Power<span class="key">7</span></div>
-    <div class="tool" data-brush="water"><span class="sw" data-sw="water"></span>Water<span class="key">8</span></div>
-    <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">9</span></div>
+    <div class="tool" data-brush="rail"><span class="sw" data-sw="rail"></span>Rail<span class="key">2</span></div>
+    <div class="tool" data-brush="res"><span class="sw" data-sw="res"></span>Homes<span class="key">3</span></div>
+    <div class="tool" data-brush="com"><span class="sw" data-sw="com"></span>Shops<span class="key">4</span></div>
+    <div class="tool" data-brush="ind"><span class="sw" data-sw="ind"></span>Works<span class="key">5</span></div>
+    <div class="tool" data-brush="fac"><span class="sw" data-sw="fac"></span>Factory<span class="key">6</span></div>
+    <div class="tool" data-brush="park"><span class="sw" data-sw="park"></span>Park<span class="key">7</span></div>
+    <div class="tool" data-brush="power"><span class="sw" data-sw="power"></span>Power<span class="key">8</span></div>
+    <div class="tool" data-brush="water"><span class="sw" data-sw="water"></span>Water<span class="key">9</span></div>
+    <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
     <button class="reset" id="reset" type="button">Reset</button>
     <span class="spacer"></span>
-    <span class="hint"><b>Works</b> make Materials → <b>Factories</b> make Goods → <b>Shops</b> sell them. Keep the chain fed; balance is the game.</span>
+    <span class="hint"><b>Works</b>→Materials→<b>Factory</b>→Goods→<b>Shops</b>. Lay <b>rail</b> to the highway to export your surplus by train.</span>
   </footer>
 
 <script>
 /* ============================================================
-   Municipal District Grid — v0.4
-   Streamlined 2D city builder. Now with a world connection and
-   utilities: link your roads to the fixed HIGHWAY, and cover
-   zones with POWER (plant) and WATER (tower) to let them grow.
-   Coverage-based, not wire-dragging — kept in the streamlined
-   spirit. Vanilla JS, zero-build. Themed to MDG.com.
+   Municipal Development Globe — v0.6  (surface build)
+   Streamlined 2D city builder, one patch of a shared world.
+   Supply chain (Works→Materials→Factory→Goods→Shops), utilities
+   (power/water coverage), the fixed HIGHWAY world-link, and now
+   RAIL: lay track to the highway and freight TRAINS ship your
+   surplus Goods out as Exports — the seed of inter-city trade.
+   Vanilla JS, zero-build. Themed to MDG.com.
    ============================================================ */
 (function(){
   'use strict';
@@ -109,7 +113,8 @@
   var SAVE_KEY='mdg-district-grid-v1';
   var ZONES={res:1,com:1,ind:1,fac:1};
   var RP=5, RW=5;                                  // power / water coverage radius (Chebyshev)
-  var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999;
+  var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
+  var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
 
   function idx(c,r){return r*cols+c;}
   function inB(c,r){return c>=0&&r>=0&&c<cols&&r<rows;}
@@ -128,6 +133,7 @@
       plantBody:'#8A8478',plantRoof:'#6E5A45',plantStack:'#B85C4A',plantGlow:'#E7C24A',
       towerLeg:'#5F574B',towerTank:'#6E93A6',towerHi:'#A6C3CE',
       lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
+      railBed:'#C9C2B0',tie:'#9A8E78',rail:'#7C7566',trainEngine:'#3E3D48',
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
     },
     dark:{
@@ -141,10 +147,11 @@
       plantBody:'#5B554B',plantRoof:'#463A2C',plantStack:'#B85E4C',plantGlow:'#E7C24A',
       towerLeg:'#4B443A',towerTank:'#5E8496',towerHi:'#8FB0BC',
       lot:'rgba(255,255,255,.055)',starve:'#D08A50',cuePow:'#E8B653',cueWat:'#5CA6DB',cueMat:'#CA9647',cueGood:'#8474BA',side:'rgba(0,0,0,.4)',
+      railBed:'#3A362E',tie:'#544E42',rail:'#8A8272',trainEngine:'#5A5866',
       car:['#D9664C','#5D93C4','#E4B85F','#EDE7DA','#6AA062']
     }
   };
-  var SWATCH={road:'#9c968a',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',water:'#4C88B8',bulldoze:'#c96a5a'};
+  var SWATCH={road:'#9c968a',rail:'#8A8272',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',water:'#4C88B8',bulldoze:'#c96a5a'};
 
   function themeName(){var d=document.documentElement.getAttribute('data-theme');return d?(d==='dark'?'dark':'light'):(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
   function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
@@ -184,9 +191,9 @@
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
-    if(cell.t==='road'&&brush!=='road'&&brush!=='bulldoze')return; // protect the road network — only Clear removes a road
+    if((cell.t==='road'||cell.t==='rail')&&brush!=='road'&&brush!=='rail'&&brush!=='bulldoze')return; // protect infrastructure — only Road/Rail/Clear change it
     if(brush==='bulldoze'){cell.t='empty';cell.lvl=0;cell.grow=0;}
-    else if(brush==='road'){cell.t='road';cell.lvl=0;cell.grow=0;}
+    else if(brush==='road'||brush==='rail'){cell.t=brush;cell.lvl=0;cell.grow=0;}
     else if(brush==='park'||brush==='power'||brush==='water'){cell.t=brush;cell.lvl=(brush==='park'?1:0);cell.grow=0;}
     else if(cell.t!==brush){cell.t=brush;cell.lvl=0;cell.grow=0;}
     dirty=true;svcDirty=true;scheduleSave();
@@ -202,11 +209,11 @@
   var tools=document.getElementById('tools');
   function selectBrush(b){brush=b;Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){el.classList.toggle('sel',el.getAttribute('data-brush')===b);});}
   tools.addEventListener('click',function(e){var t=e.target.closest('.tool');if(t)selectBrush(t.getAttribute('data-brush'));});
-  window.addEventListener('keydown',function(e){var m={'1':'road','2':'res','3':'com','4':'ind','5':'fac','6':'park','7':'power','8':'water','9':'bulldoze'}[e.key];if(m)selectBrush(m);});
+  window.addEventListener('keydown',function(e){var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze'}[e.key];if(m)selectBrush(m);});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();seedRampIfEmpty();maxMS=-1;cars=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();seedRampIfEmpty();maxMS=-1;cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -228,6 +235,13 @@
       if(t==='power')stamp(powered,cx,r,RP);
       else if(t==='water')stamp(watered,cx,r,RW);
     }
+    // rail network: BFS from highway through rail/highway → what's linked to the world for export
+    railConn=new Uint8Array(n);connectedRailCount=0;railToWorld=false;
+    var rq=[];for(var c3=0;c3<cols;c3++){if(grid[idx(c3,0)].t==='highway'){railConn[idx(c3,0)]=1;rq.push(idx(c3,0));}}
+    var rhd=0;
+    while(rhd<rq.length){var id2=rq[rhd++],cc2=id2%cols,cr2=(id2/cols)|0,nb2=[[cc2-1,cr2],[cc2+1,cr2],[cc2,cr2-1],[cc2,cr2+1]];
+      for(var k2=0;k2<4;k2++){var a2=nb2[k2][0],b2=nb2[k2][1];if(inB(a2,b2)){var t2=grid[idx(a2,b2)].t;if((t2==='rail'||t2==='highway')&&!railConn[idx(a2,b2)]){railConn[idx(a2,b2)]=1;rq.push(idx(a2,b2));}}}}
+    for(var i3=0;i3<n;i3++){if(railConn[i3]&&grid[i3]&&grid[i3].t==='rail'){connectedRailCount++;railToWorld=true;}}
   }
   function stamp(arr,cx,cy,rad){
     for(var dy=-rad;dy<=rad;dy++)for(var dx=-rad;dx<=rad;dx++){var a=cx+dx,b=cy+dy;if(inB(a,b))arr[idx(a,b)]=1;}
@@ -257,6 +271,9 @@
     matStock-=drawn; goodsStock+=drawn*(2/3);            // Factories convert 3 Materials → 2 Goods
     var need=shops*1.5, sold=Math.min(goodsStock,need);
     goodsStock-=sold;
+    // rail exports: a rail line reaching the highway ships surplus Goods out to the world (seed of inter-city trade)
+    exportRate=0;
+    if(railToWorld&&goodsStock>0.01){var cap=Math.min(connectedRailCount*1.2,60);exportRate=Math.min(goodsStock,cap);goodsStock-=exportRate;}
     matStock=Math.max(0,Math.min(matStock,CAPRES)); goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));
     matHealthy=(facCap-drawn)<=0.01;                     // factories got all the Materials they wanted
     goodsHealthy=(need-sold)<=0.01;                      // shops got all the Goods they wanted
@@ -279,10 +296,11 @@
   }
   var GROW_NEED=6, roadList=[];
   function tick(){
-    computeServices();computeDemand();computeResources();roadList=[];
+    computeServices();computeDemand();computeResources();roadList=[];railList=[];
     for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
       var cell=grid[idx(c,r)];
       if(cell.t==='road'||cell.t==='highway')roadList.push([c,r]);
+      if(cell.t==='rail'||cell.t==='highway')railList.push([c,r]);
       if(!ZONES[cell.t]||cell.lvl>=MAXLVL)continue;
       if(blocker(c,r))continue;                          // connection + power + water + supply chain
       var rate=demand[cell.t]>0?1:0.28;
@@ -291,17 +309,18 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=performance.now();dirty=true;scheduleSave();}
     }
-    updatePop();updateDemandUI();updateResourceUI();checkMilestone();manageCars();
+    updatePop();updateDemandUI();updateResourceUI();checkMilestone();manageCars();manageTrains();
   }
 
   // ---- population, demand UI, milestones ----
   var popEl=document.getElementById('pop'),popShown=0,popTarget=0;
   function updatePop(){var p=0;for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
     if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;}
+    p+=Math.round(exportRate*35);                         // trade income from rail exports sustains extra population
     popTarget=p;}
-  var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods');
-  function updateResourceUI(){matEl.textContent=Math.round(matStock);goodsEl.textContent=Math.round(goodsStock);
-    matEl.style.color=matHealthy?'':'#C85A42';goodsEl.style.color=goodsHealthy?'':'#C85A42';}
+  var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp');
+  function updateResourceUI(){matEl.textContent=Math.round(matStock);goodsEl.textContent=Math.round(goodsStock);expEl.textContent=Math.round(exportRate);
+    matEl.style.color=matHealthy?'':'#C85A42';goodsEl.style.color=goodsHealthy?'':'#C85A42';expEl.style.color=exportRate>0.5?'#4C8047':'';}
   var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
   var demColor={res:'#63A05C',com:'#5589BB',ind:'#BF8F45'};
   function updateDemandUI(){['res','com','ind'].forEach(function(t){var el=demBars[t];el.style.height=(Math.max(0.08,Math.min(1,demand[t]/8))*100)+'%';el.style.background=demColor[t];el.style.opacity=demand[t]>0.3?1:0.35;});}
@@ -326,6 +345,25 @@
         car.pc=car.cc;car.pr=car.cr;car.tc=nt[0];car.tr=nt[1];}
     }
   }
+
+  // ---- freight trains (run the rail network + highway) ----
+  function isRail(c,r){if(!inB(c,r))return false;var t=grid[idx(c,r)].t;return t==='rail'||t==='highway';}
+  function adjRail(c,r){var o=[];if(isRail(c-1,r))o.push([c-1,r]);if(isRail(c+1,r))o.push([c+1,r]);if(isRail(c,r-1))o.push([c,r-1]);if(isRail(c,r+1))o.push([c,r+1]);return o;}
+  function spawnTrain(){if(!railList.length)return null;var s=railList[(Math.random()*railList.length)|0],a=adjRail(s[0],s[1]);var t=a.length?a[(Math.random()*a.length)|0]:[s[0],s[1]];
+    return {trail:[[s[0],s[1]],[s[0],s[1]],[s[0],s[1]]],tgt:t,p:Math.random()};}
+  function manageTrains(){var want=Math.max(0,Math.min(6,Math.floor(railList.length/6)));while(trains.length<want){var t=spawnTrain();if(!t)break;trains.push(t);}while(trains.length>want)trains.pop();}
+  function updateTrains(dt){
+    for(var i=trains.length-1;i>=0;i--){var tr=trains[i];
+      if(!isRail(tr.trail[0][0],tr.trail[0][1])){var s=spawnTrain();if(s)trains[i]=s;else trains.splice(i,1);continue;}
+      tr.p+=dt*1.35;
+      while(tr.p>=1){tr.p-=1;tr.trail.unshift([tr.tgt[0],tr.tgt[1]]);if(tr.trail.length>4)tr.trail.pop();
+        var a=adjRail(tr.trail[0][0],tr.trail[0][1]);
+        if(a.length>1&&tr.trail[1])a=a.filter(function(n){return !(n[0]===tr.trail[1][0]&&n[1]===tr.trail[1][1]);});
+        if(!a.length)a=adjRail(tr.trail[0][0],tr.trail[0][1]);
+        tr.tgt=a.length?a[(Math.random()*a.length)|0]:[tr.trail[0][0],tr.trail[0][1]];}
+    }
+  }
+  function tseg(a,b,p){return {x:(a[0]+(b[0]-a[0])*p+0.5)*CELL, y:(a[1]+(b[1]-a[1])*p+0.5)*CELL};}
 
   // ---- rendering ----
   function px(v){return Math.round(v);}
@@ -354,6 +392,18 @@
     if(E||W)for(var dx=4;dx<CELL-4;dx+=8)ctx.fillRect(x+dx,y+m-1,4,2);
     if(N||S)for(var dy=4;dy<CELL-4;dy+=8)ctx.fillRect(x+m-1,y+dy,2,4);
     if(!N&&!S&&!E&&!W)ctx.fillRect(x+m-2,y+m-2,4,4);
+  }
+  function drawRail(x,y,c,r){
+    var N=isRail(c,r-1),S=isRail(c,r+1),E=isRail(c+1,r),W=isRail(c-1,r),m=CELL/2;
+    ctx.fillStyle=pal.railBed;ctx.fillRect(x+3,y+3,CELL-6,CELL-6);
+    if(E||W||(!N&&!S)){ // horizontal ties + two rails
+      ctx.fillStyle=pal.tie;for(var tx=x+3;tx<x+CELL-3;tx+=5)ctx.fillRect(tx,y+m-5,2,10);
+      ctx.fillStyle=pal.rail;ctx.fillRect(x,y+m-3,CELL,2);ctx.fillRect(x,y+m+2,CELL,2);
+    }
+    if(N||S){ // vertical ties + two rails
+      ctx.fillStyle=pal.tie;for(var ty=y+3;ty<y+CELL-3;ty+=5)ctx.fillRect(x+m-5,ty,10,2);
+      ctx.fillStyle=pal.rail;ctx.fillRect(x+m-3,y,2,CELL);ctx.fillRect(x+m+2,y,2,CELL);
+    }
   }
   function py(v){return Math.round(v);}
   function drawPark(x,y,cell){
@@ -429,7 +479,8 @@
       ctx.fillStyle=brush==='power'?'rgba(224,169,62,.15)':'rgba(76,154,209,.15)';
       for(r=0;r<rows;r++)for(c=0;c<cols;c++)if(arr[idx(c,r)])ctx.fillRect(c*CELL+1,r*CELL+1,CELL-2,CELL-2);
     }
-    // roads + highway first
+    // rail (under roads so a road crossing reads on top), then roads + highway
+    for(r=0;r<rows;r++)for(c=0;c<cols;c++){cell=grid[idx(c,r)];if(cell&&cell.t==='rail')drawRail(c*CELL,r*CELL,c,r);}
     for(r=0;r<rows;r++)for(c=0;c<cols;c++){cell=grid[idx(c,r)];if(!cell)continue;x=c*CELL;y=r*CELL;
       if(cell.t==='highway')drawHighway(x,y,c);else if(cell.t==='road')drawRoad(x,y,c,r);}
     // structures
@@ -446,6 +497,13 @@
     }
     // cars on top
     for(var i=0;i<cars.length;i++){var car=cars[i];var fx=(car.cc+(car.tc-car.cc)*car.p+0.5)*CELL,fy=(car.cr+(car.tr-car.cr)*car.p+0.5)*CELL;ctx.fillStyle=pal.car[car.tint];ctx.fillRect(px(fx-2),px(fy-2),4,4);}
+    // freight trains: engine + a Materials car + a Goods car, trailing along the rails
+    for(var ti=0;ti<trains.length;ti++){var tr=trains[ti];
+      var e=tseg(tr.trail[0],tr.tgt,tr.p),c1=tseg(tr.trail[1]||tr.trail[0],tr.trail[0],tr.p),c2=tseg(tr.trail[2]||tr.trail[1]||tr.trail[0],tr.trail[1]||tr.trail[0],tr.p);
+      ctx.fillStyle=pal.cueMat;ctx.fillRect(px(c1.x-3),px(c1.y-3),5,5);
+      ctx.fillStyle=pal.cueGood;ctx.fillRect(px(c2.x-3),px(c2.y-3),5,5);
+      ctx.fillStyle=pal.trainEngine;ctx.fillRect(px(e.x-3),px(e.y-3),6,6);
+    }
     ctx.restore();
   }
 
@@ -472,8 +530,9 @@
     if(svcDirty){computeServices();svcDirty=false;dirty=true;}
     if(popShown!==popTarget){var d=popTarget-popShown;popShown+=Math.abs(d)<=2?d:Math.ceil(d/8);popEl.textContent=popShown.toLocaleString();dirty=true;}
     if(cars.length)updateCars(dt);
+    if(trains.length)updateTrains(dt);
     if(dirty||anyPulse()){draw();dirty=false;lastAmbient=now;}
-    else if(cars.length&&now-lastAmbient>33){draw();lastAmbient=now;}
+    else if((cars.length||trains.length)&&now-lastAmbient>33){draw();lastAmbient=now;}
     requestAnimationFrame(frame);
   }
 
@@ -482,8 +541,8 @@
   window.addEventListener('resize',resize);
   resize();load();ensureHighway();seedRampIfEmpty();
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();
-  roadList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);}
-  manageCars();
+  roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);if(tt==='rail'||tt==='highway')railList.push([c0,r0]);}
+  manageCars();manageTrains();
   requestAnimationFrame(frame);
   setInterval(tick,650);
 })();
