@@ -27,6 +27,12 @@
   .stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05;min-width:60px}
   .stat .n{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(16px,4.4vw,22px);color:var(--ink);font-variant-numeric:tabular-nums}
   .stat .l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  .res{display:flex;gap:13px}
+  .rstat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05;gap:1px}
+  .rstat .rn{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums;transition:color .3s}
+  .rstat .rl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:3px}
+  .rstat .rl .dot{width:7px;height:7px;border-radius:2px}
+  @media(max-width:860px){.res{display:none}}
   .stage{position:relative;flex:1;min-height:0}
   canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
   .toast{position:absolute;top:16px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:14px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;white-space:nowrap;z-index:5}
@@ -58,6 +64,10 @@
       <div class="meter"><span class="bar"><i id="dem-com"></i></span><b>C</b></div>
       <div class="meter"><span class="bar"><i id="dem-ind"></i></span><b>I</b></div>
     </div>
+    <div class="res" id="res" title="Supply chain — Works make Materials, Factories turn Materials into Goods, Shops sell Goods">
+      <div class="rstat"><span class="rn" id="mat">0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Materials</span></div>
+      <div class="rstat"><span class="rn" id="goods">0</span><span class="rl"><span class="dot" style="background:#7C6CB0"></span>Goods</span></div>
+    </div>
     <div class="stat"><span class="n" id="pop">0</span><span class="l">Population</span></div>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </header>
@@ -72,13 +82,14 @@
     <div class="tool" data-brush="res"><span class="sw" data-sw="res"></span>Homes<span class="key">2</span></div>
     <div class="tool" data-brush="com"><span class="sw" data-sw="com"></span>Shops<span class="key">3</span></div>
     <div class="tool" data-brush="ind"><span class="sw" data-sw="ind"></span>Works<span class="key">4</span></div>
-    <div class="tool" data-brush="park"><span class="sw" data-sw="park"></span>Park<span class="key">5</span></div>
-    <div class="tool" data-brush="power"><span class="sw" data-sw="power"></span>Power<span class="key">6</span></div>
-    <div class="tool" data-brush="water"><span class="sw" data-sw="water"></span>Water<span class="key">7</span></div>
-    <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">8</span></div>
+    <div class="tool" data-brush="fac"><span class="sw" data-sw="fac"></span>Factory<span class="key">5</span></div>
+    <div class="tool" data-brush="park"><span class="sw" data-sw="park"></span>Park<span class="key">6</span></div>
+    <div class="tool" data-brush="power"><span class="sw" data-sw="power"></span>Power<span class="key">7</span></div>
+    <div class="tool" data-brush="water"><span class="sw" data-sw="water"></span>Water<span class="key">8</span></div>
+    <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">9</span></div>
     <button class="reset" id="reset" type="button">Reset</button>
     <span class="spacer"></span>
-    <span class="hint">Link roads to the <b>highway</b> up top, then cover your zones with <b>power</b> &amp; <b>water</b>. Icons show what a zone is missing.</span>
+    <span class="hint"><b>Works</b> make Materials → <b>Factories</b> make Goods → <b>Shops</b> sell them. Keep the chain fed; balance is the game.</span>
   </footer>
 
 <script>
@@ -96,8 +107,9 @@
   var CELL=32, cols=0, rows=0, dpr=1;
   var grid=[], brush='road', painting=false, lastPaint=-1, dirty=true, svcDirty=false;
   var SAVE_KEY='mdg-district-grid-v1';
-  var ZONES={res:1,com:1,ind:1};
+  var ZONES={res:1,com:1,ind:1,fac:1};
   var RP=5, RW=5;                                  // power / water coverage radius (Chebyshev)
+  var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999;
 
   function idx(c,r){return r*cols+c;}
   function inB(c,r){return c>=0&&r>=0&&c<cols&&r<rows;}
@@ -111,10 +123,11 @@
       res:['#7EB277','#63A05C','#4C8047'],resRoof:['#B85C4A','#A8503E','#8F4433'],win:'#FBF6E6',door:'#6B4A38',
       com:['#6C9FCB','#5589BB','#41709C'],comRoof:'#33587C',awning:['#E4A65A','#D98F6E','#7FB0C4'],
       ind:['#D2A45C','#BF8F45','#A9792F'],indRoof:'#7E5B24',stack:'#8A8378',smoke:'rgba(120,110,95,.5)',
+      fac:['#9585BE','#7C6CB0','#655499'],facRoof:'#4B3D77',facPipe:'#B6ADCB',
       park:'#5E9E52',parkTrunk:'#7A5537',parkDark:'#4A8341',grass:'rgba(95,158,82,.16)',
       plantBody:'#8A8478',plantRoof:'#6E5A45',plantStack:'#B85C4A',plantGlow:'#E7C24A',
       towerLeg:'#5F574B',towerTank:'#6E93A6',towerHi:'#A6C3CE',
-      lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',side:'rgba(0,0,0,.14)',
+      lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
     },
     dark:{
@@ -123,14 +136,15 @@
       res:['#79B075','#61A05F','#4F8553'],resRoof:['#B85E4C','#9E4E3E','#874536'],win:'#F2EDE2',door:'#B99A82',
       com:['#6FA4D2','#5589BA','#4676A2'],comRoof:'#2E5276',awning:['#E0A659','#D18C6C','#77A6BC'],
       ind:['#E0AB5B','#CA9647','#B27F33'],indRoof:'#7C5822',stack:'#5B554B',smoke:'rgba(180,170,150,.45)',
+      fac:['#9C8CC6','#8474BA','#6E5DA4'],facRoof:'#463878',facPipe:'#B8AFD2',
       park:'#5FA054',parkTrunk:'#8A6343',parkDark:'#478542',grass:'rgba(95,160,84,.20)',
       plantBody:'#5B554B',plantRoof:'#463A2C',plantStack:'#B85E4C',plantGlow:'#E7C24A',
       towerLeg:'#4B443A',towerTank:'#5E8496',towerHi:'#8FB0BC',
-      lot:'rgba(255,255,255,.055)',starve:'#D08A50',cuePow:'#E8B653',cueWat:'#5CA6DB',side:'rgba(0,0,0,.4)',
+      lot:'rgba(255,255,255,.055)',starve:'#D08A50',cuePow:'#E8B653',cueWat:'#5CA6DB',cueMat:'#CA9647',cueGood:'#8474BA',side:'rgba(0,0,0,.4)',
       car:['#D9664C','#5D93C4','#E4B85F','#EDE7DA','#6AA062']
     }
   };
-  var SWATCH={road:'#9c968a',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',park:'#4A8341',power:'#D9AE52',water:'#4C88B8',bulldoze:'#c96a5a'};
+  var SWATCH={road:'#9c968a',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',water:'#4C88B8',bulldoze:'#c96a5a'};
 
   function themeName(){var d=document.documentElement.getAttribute('data-theme');return d?(d==='dark'?'dark':'light'):(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
   function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
@@ -170,6 +184,7 @@
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
+    if(cell.t==='road'&&brush!=='road'&&brush!=='bulldoze')return; // protect the road network — only Clear removes a road
     if(brush==='bulldoze'){cell.t='empty';cell.lvl=0;cell.grow=0;}
     else if(brush==='road'){cell.t='road';cell.lvl=0;cell.grow=0;}
     else if(brush==='park'||brush==='power'||brush==='water'){cell.t=brush;cell.lvl=(brush==='park'?1:0);cell.grow=0;}
@@ -187,7 +202,7 @@
   var tools=document.getElementById('tools');
   function selectBrush(b){brush=b;Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){el.classList.toggle('sel',el.getAttribute('data-brush')===b);});}
   tools.addEventListener('click',function(e){var t=e.target.closest('.tool');if(t)selectBrush(t.getAttribute('data-brush'));});
-  window.addEventListener('keydown',function(e){var m={'1':'road','2':'res','3':'com','4':'ind','5':'park','6':'power','7':'water','8':'bulldoze'}[e.key];if(m)selectBrush(m);});
+  window.addEventListener('keydown',function(e){var m={'1':'road','2':'res','3':'com','4':'ind','5':'fac','6':'park','7':'power','8':'water','9':'bulldoze'}[e.key];if(m)selectBrush(m);});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
@@ -226,7 +241,27 @@
     if(!nearConnected(c,r))return 'disc';
     if(!powered[idx(c,r)])return 'pow';
     if(!watered[idx(c,r)])return 'wat';
+    var t=grid[idx(c,r)].t;
+    if(t==='com'&&!(goodsStock>0.01||goodsHealthy))return 'goods';  // shops need Goods
+    if(t==='fac'&&!(matStock>0.01||matHealthy))return 'mat';        // factories need Materials
     return '';
+  }
+  // supply chain: Works → Materials → Factories → Goods → Shops (city-wide pools, no routing)
+  var matWanted=false;
+  function computeResources(){
+    var works=0,facs=0,shops=0;
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
+      if(g.t==='ind')works+=g.lvl;else if(g.t==='fac')facs+=g.lvl;else if(g.t==='com')shops+=g.lvl;}
+    matStock+=works*2;                                   // Works extract Materials
+    var facCap=facs*3, drawn=Math.min(matStock,facCap);
+    matStock-=drawn; goodsStock+=drawn*(2/3);            // Factories convert 3 Materials → 2 Goods
+    var need=shops*1.5, sold=Math.min(goodsStock,need);
+    goodsStock-=sold;
+    matStock=Math.max(0,Math.min(matStock,CAPRES)); goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));
+    matHealthy=(facCap-drawn)<=0.01;                     // factories got all the Materials they wanted
+    goodsHealthy=(need-sold)<=0.01;                      // shops got all the Goods they wanted
+    matWanted=(facCap-drawn>0.01);                       // Works in demand when factories are starved
+    demand.fac=(shops>0&&(!goodsHealthy||goodsStock<need+1))?3:(facs<shops?1:-1);  // grow factories to feed shops
   }
 
   function complement(c,r,t){
@@ -244,25 +279,29 @@
   }
   var GROW_NEED=6, roadList=[];
   function tick(){
-    computeServices();computeDemand();roadList=[];
+    computeServices();computeDemand();computeResources();roadList=[];
     for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
       var cell=grid[idx(c,r)];
       if(cell.t==='road'||cell.t==='highway')roadList.push([c,r]);
       if(!ZONES[cell.t]||cell.lvl>=MAXLVL)continue;
-      if(blocker(c,r))continue;                          // needs connection + power + water
+      if(blocker(c,r))continue;                          // connection + power + water + supply chain
       var rate=demand[cell.t]>0?1:0.28;
+      if(cell.t==='ind'&&matWanted)rate=1;               // Works speed up when Materials are short
       if(complement(c,r,cell.t))rate*=1.6;
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=performance.now();dirty=true;scheduleSave();}
     }
-    updatePop();updateDemandUI();checkMilestone();manageCars();
+    updatePop();updateDemandUI();updateResourceUI();checkMilestone();manageCars();
   }
 
   // ---- population, demand UI, milestones ----
   var popEl=document.getElementById('pop'),popShown=0,popTarget=0;
   function updatePop(){var p=0;for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-    if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='park')p+=8;}
+    if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;}
     popTarget=p;}
+  var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods');
+  function updateResourceUI(){matEl.textContent=Math.round(matStock);goodsEl.textContent=Math.round(goodsStock);
+    matEl.style.color=matHealthy?'':'#C85A42';goodsEl.style.color=goodsHealthy?'':'#C85A42';}
   var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
   var demColor={res:'#63A05C',com:'#5589BB',ind:'#BF8F45'};
   function updateDemandUI(){['res','com','ind'].forEach(function(t){var el=demBars[t];el.style.height=(Math.max(0.08,Math.min(1,demand[t]/8))*100)+'%';el.style.background=demColor[t];el.style.opacity=demand[t]>0.3?1:0.35;});}
@@ -363,10 +402,21 @@
     ctx.fillStyle=pal.stack;ctx.fillRect(sx,b.by-sh,Math.max(2,px(b.pxs*0.8)),sh);
     ctx.fillStyle=pal.smoke;ctx.beginPath();ctx.arc(sx+1,b.by-sh-2,Math.max(2,b.pxs*0.9),0,6.2832);ctx.fill();
     windows(b,lvl+1,Math.max(1,lvl-1),cell.seed,'rgba(255,255,255,.66)');}
+  function drawFactory(x,y,cell){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl);
+    b.bx=px(b.bx-b.pxs*0.5);b.w=px(b.w+b.pxs);           // a touch wider than a house
+    shadow(b);ctx.fillStyle=pal.fac[lvl-1];ctx.fillRect(b.bx,b.by,b.w,b.h);
+    ctx.fillStyle=pal.facRoof;ctx.fillRect(b.bx,b.by,b.w,Math.round(b.pxs*1.2));outline(b);
+    // twin vent pipes — distinguishes a Factory from Works' single stack
+    var pw=Math.max(2,px(b.pxs*0.7));
+    ctx.fillStyle=pal.facPipe;ctx.fillRect(b.bx+b.pxs,b.by-Math.round(b.pxs*1.4),pw,Math.round(b.pxs*1.4));
+    ctx.fillRect(b.bx+b.w-b.pxs*2,b.by-Math.round(b.pxs*2),pw,Math.round(b.pxs*2));
+    windows(b,lvl+1,Math.max(1,lvl),cell.seed,'rgba(255,255,255,.72)');}
   function drawCue(x,y,kind){var cx=x+CELL/2;
     if(kind==='disc'){ctx.fillStyle=pal.starve;ctx.fillRect(cx-1,y+4,2,6);ctx.fillRect(cx-1,y+12,2,2);}
     else if(kind==='pow'){ctx.fillStyle=pal.cuePow;ctx.fillRect(cx,y+4,2,4);ctx.fillRect(cx-2,y+7,4,2);ctx.fillRect(cx-1,y+8,2,4);}
-    else if(kind==='wat'){ctx.fillStyle=pal.cueWat;ctx.fillRect(cx-1,y+4,2,2);ctx.fillRect(cx-2,y+6,4,2);ctx.fillRect(cx-1,y+8,2,2);}}
+    else if(kind==='wat'){ctx.fillStyle=pal.cueWat;ctx.fillRect(cx-1,y+4,2,2);ctx.fillRect(cx-2,y+6,4,2);ctx.fillRect(cx-1,y+8,2,2);}
+    else if(kind==='mat'){ctx.fillStyle=pal.cueMat;ctx.fillRect(cx-2,y+5,4,4);}                       // solid cube = Materials
+    else if(kind==='goods'){ctx.fillStyle=pal.cueGood;ctx.fillRect(cx-2,y+5,4,1);ctx.fillRect(cx-2,y+8,4,1);ctx.fillRect(cx-2,y+5,1,4);ctx.fillRect(cx+1,y+5,1,4);}}  // hollow box = Goods
 
   function draw(){
     if(!cols)return;
@@ -391,7 +441,7 @@
       if(t==='water'){drawTower(x,y,cell);continue;}
       // zones: draw lot/building, then a cue for what's missing
       if(cell.lvl<1){ctx.fillStyle=pal.lot;ctx.fillRect(x+2,y+2,CELL-4,CELL-4);}
-      else if(t==='res')drawHome(x,y,cell);else if(t==='com')drawShop(x,y,cell);else drawWorks(x,y,cell);
+      else if(t==='res')drawHome(x,y,cell);else if(t==='com')drawShop(x,y,cell);else if(t==='ind')drawWorks(x,y,cell);else drawFactory(x,y,cell);
       if(cell.lvl<MAXLVL){var bl=connected?blocker(c,r):'';if(bl)drawCue(x,y,bl);}
     }
     // cars on top
@@ -407,9 +457,10 @@
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
   function save(){try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];if(g&&g.t!=='empty'&&g.t!=='highway')out.push([c,r,g.t,g.lvl]);}
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:4,ms:maxMS,cells:out}));}catch(e){}}
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:5,ms:maxMS,mat:matStock,goods:goodsStock,cells:out}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
+    if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;}
     list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway')return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;}});
     dirty=true;}catch(e){}}
 
@@ -430,7 +481,7 @@
   readTheme();
   window.addEventListener('resize',resize);
   resize();load();ensureHighway();seedRampIfEmpty();
-  computeServices();updatePop();computeDemand();updateDemandUI();
+  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();
   roadList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);}
   manageCars();
   requestAnimationFrame(frame);
