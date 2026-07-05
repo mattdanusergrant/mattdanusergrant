@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Municipal Development Globe — concept</title>
+<meta name="description" content="One shared world. Build your city until you meet your neighbours. A world-model concept for Municipal Development Globe." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/site.css" />
+<style>
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease}
+  .bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:14px;padding:12px clamp(14px,3vw,24px);z-index:3}
+  .bar .home{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--muted);text-decoration:none;letter-spacing:-.01em;transition:color .15s;white-space:nowrap}
+  .bar .home:hover{color:var(--ink)}
+  .bar .spacer{flex:1}
+  .stage{position:absolute;inset:0}
+  canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  canvas:active{cursor:grabbing}
+  .intro{position:fixed;left:clamp(14px,3vw,32px);top:clamp(58px,10vh,90px);max-width:340px;z-index:2;pointer-events:none}
+  .intro .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 8px}
+  .intro h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(24px,5vw,38px);letter-spacing:-.02em;line-height:1.05;margin:0 0 12px;color:var(--ink)}
+  .intro p{font-size:15px;line-height:1.55;color:var(--ink-2);margin:0 0 8px}
+  .intro .tag{font-size:12.5px;color:var(--muted)}
+  .legend{position:fixed;right:clamp(14px,3vw,28px);bottom:clamp(14px,3vh,24px);z-index:2;display:flex;flex-direction:column;gap:7px;background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+  .legend .row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2)}
+  .legend .dot{width:11px;height:11px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.12)}
+  .legend .hd{font-family:'Fraunces',serif;font-size:12px;color:var(--muted);letter-spacing:.02em;margin-bottom:1px}
+  .hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2;font-size:12px;color:var(--muted);background:var(--paper);border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;box-shadow:var(--shadow)}
+  @media(max-width:640px){.intro{max-width:60vw}.legend{display:none}}
+</style>
+</head>
+<body>
+  <header class="bar">
+    <a class="home" href="/games/municipal-district-grid/" title="Back to the playable build">← the playable build</a>
+    <span class="spacer"></span>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </header>
+
+  <div class="intro">
+    <p class="eyebrow">Concept · world model</p>
+    <h1>Municipal Development Globe</h1>
+    <p>One shared world. Everyone builds on the same planet-sized grid — and you keep expanding until you run into your neighbours.</p>
+    <p class="tag">Drag to spin the globe. The other cities are other players.</p>
+  </div>
+
+  <div class="legend">
+    <span class="hd">On this world</span>
+    <div class="row"><span class="dot" id="lg-you"></span> Your city</div>
+    <div class="row"><span class="dot" id="lg-them"></span> Neighbours (other players)</div>
+  </div>
+  <div class="hint">drag to spin · it wraps all the way around</div>
+
+  <div class="stage"><canvas id="globe"></canvas></div>
+
+<script>
+/* ============================================================
+   Municipal Development Globe — world-model concept
+   A spinnable grid-paper planet: your city + neighbouring
+   players scattered across one shared world. Orthographic
+   sphere projection in plain 2D canvas (zero-build), themed
+   to MDG.com. Proof-of-concept, not the playable sim.
+   ============================================================ */
+(function(){
+  'use strict';
+  var canvas=document.getElementById('globe'), ctx=canvas.getContext('2d');
+  var W=0,H=0,dpr=1,cx=0,cy=0,R=0;
+  var yaw=20, pitch=-0.38;                 // rotation state (deg / rad)
+  var dragging=false, lastX=0, lastY=0, idleSpin=0.06, idleT=0;
+  var PI=Math.PI;
+
+  // ---- theme palette ----
+  function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+  function dark(){var d=document.documentElement.getAttribute('data-theme');return d?d==='dark':matchMedia('(prefers-color-scheme:dark)').matches;}
+  var P={};
+  function readTheme(){
+    var D=dark();
+    P.bg=cssVar('--bg'); P.ink=cssVar('--ink'); P.line=cssVar('--line'); P.line2=cssVar('--line-2');
+    P.ocean = D?'#243B45':'#AFC9D2';        // planet base
+    P.land  = D?'#3B5A3C':'#A7C089';        // continents
+    P.grat  = D?'rgba(230,232,225,.16)':'rgba(30,40,48,.16)';   // the "globe grid"
+    P.gratMaj = D?'rgba(230,232,225,.30)':'rgba(30,40,48,.28)';
+    P.rim  = D?'rgba(150,200,225,.35)':'rgba(120,160,185,.5)';
+    P.you='#5F9A5A';
+    P.them=['#5285B6','#BF8F45','#7C6CB0','#C86A5A','#3E9B8E','#B5843F'];
+  }
+
+  function resize(){
+    var r=canvas.getBoundingClientRect(); dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.round(r.width*dpr); canvas.height=Math.round(r.height*dpr);
+    W=r.width; H=r.height; cx=W/2; cy=H/2; R=Math.min(W,H)*0.40;
+  }
+
+  // ---- settlements (your city + neighbouring players) ----
+  var CITIES=[
+    {name:'Your City',    lat:14, lon:0,   you:true},
+    {name:'New Sprawlton',lat:32, lon:-46},
+    {name:'Gridholm',     lat:-8, lon:38},
+    {name:'Port Zoning',  lat:-30,lon:-18},
+    {name:'Fort Density', lat:48, lon:70},
+    {name:'Lake Parcel',  lat:6,  lon:128},
+    {name:'Trade Junction',lat:-22,lon:96},
+    {name:'Old Commons',  lat:24, lon:182},
+    {name:'Mount Civic',  lat:-46,lon:150}
+  ];
+  // stable "continent" blobs so the planet reads as land + sea
+  var LAND=[
+    {lat:20,lon:-30,r:34},{lat:-18,lon:20,r:30},{lat:40,lon:60,r:26},
+    {lat:-30,lon:120,r:32},{lat:10,lon:150,r:24},{lat:-40,lon:-60,r:22},
+    {lat:55,lon:150,r:20}
+  ];
+
+  // ---- projection (orthographic) ----
+  function proj(lat,lon){
+    var la=lat*PI/180, lo=(lon+yaw)*PI/180;
+    var x=Math.cos(la)*Math.sin(lo), y=Math.sin(la), z=Math.cos(la)*Math.cos(lo);
+    var cp=Math.cos(pitch), sp=Math.sin(pitch);
+    var y2=y*cp - z*sp, z2=y*sp + z*cp;
+    return {sx:cx+x*R, sy:cy-y2*R, z:z2};       // z>0 → front hemisphere
+  }
+
+  function fillSphere(){
+    // base disc with soft volume shading
+    var g=ctx.createRadialGradient(cx-R*0.35,cy-R*0.4,R*0.2, cx,cy,R*1.05);
+    g.addColorStop(0,P.ocean); g.addColorStop(1, shade(P.ocean,-18));
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,6.2832); ctx.fillStyle=g; ctx.fill();
+  }
+  function shade(hex,amt){var n=parseInt(hex.slice(1),16),r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt;
+    r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));return 'rgb('+r+','+g+','+b+')';}
+
+  function clipSphere(){ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.clip();}
+  function drawLand(){
+    for(var i=0;i<LAND.length;i++){var L=LAND[i],p=proj(L.lat,L.lon);if(p.z<=0)continue;
+      var sc=0.4+0.6*p.z, rad=L.r*(R/220)*sc;
+      ctx.fillStyle=P.land; ctx.globalAlpha=0.9*Math.min(1,p.z*1.4);
+      ctx.beginPath(); ctx.ellipse(p.sx,p.sy,rad*1.15,rad*0.85,0,0,6.2832); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+  function drawArc(pts){ // stroke only between consecutive front-facing samples
+    var started=false;
+    for(var i=0;i<pts.length;i++){var q=pts[i];
+      if(q.z>0.02){ if(!started){ctx.moveTo(q.sx,q.sy);started=true;} else ctx.lineTo(q.sx,q.sy);} else started=false;}
+  }
+  function graticule(){
+    ctx.lineWidth=1; var lat,lon,pts;
+    for(lat=-75;lat<=75;lat+=15){pts=[];for(lon=0;lon<=360;lon+=4)pts.push(proj(lat,lon));
+      ctx.beginPath();ctx.strokeStyle=(lat===0)?P.gratMaj:P.grat;drawArc(pts);ctx.stroke();}
+    for(lon=0;lon<360;lon+=15){pts=[];for(lat=-88;lat<=88;lat+=3)pts.push(proj(lat,lon));
+      ctx.beginPath();ctx.strokeStyle=(lon%45===0)?P.gratMaj:P.grat;drawArc(pts);ctx.stroke();}
+  }
+  function rim(){ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.lineWidth=2;ctx.strokeStyle=P.rim;ctx.stroke();}
+
+  function drawCities(t){
+    var list=CITIES.map(function(c,i){var p=proj(c.lat,c.lon);return {c:c,p:p,i:i};})
+                    .filter(function(o){return o.p.z>0.02;})
+                    .sort(function(a,b){return a.p.z-b.p.z;});          // far first
+    list.forEach(function(o){
+      var c=o.c,p=o.p,col=c.you?P.you:P.them[(o.i-1)%P.them.length];
+      var pop=c.you?1:0.62+0.32*((o.i*37)%10)/10;                       // vary marker size
+      var rad=(c.you?7:5)*(0.7+0.5*p.z);
+      // stem + shadow
+      ctx.globalAlpha=Math.min(1,p.z*1.6);
+      if(c.you){var pr=rad+4+2.5*Math.sin(t/380);ctx.beginPath();ctx.arc(p.sx,p.sy,pr,0,6.2832);ctx.strokeStyle=col;ctx.globalAlpha=0.5*Math.min(1,p.z*1.6);ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=Math.min(1,p.z*1.6);}
+      ctx.beginPath();ctx.arc(p.sx,p.sy,rad,0,6.2832);ctx.fillStyle=col;ctx.fill();
+      ctx.lineWidth=1.5;ctx.strokeStyle=P.bg;ctx.stroke();
+      // label
+      if(p.z>0.28){
+        ctx.font=(c.you?'600 13px ':'500 12px ')+"'Inter',sans-serif";
+        var tw=ctx.measureText(c.name).width, lx=p.sx+rad+6, ly=p.sy+4;
+        ctx.globalAlpha=Math.min(1,(p.z-0.28)*3);
+        ctx.fillStyle=P.bg; ctx.fillRect(lx-3,ly-11,tw+6,15);
+        ctx.fillStyle=c.you?P.you:P.ink; ctx.fillText(c.name,lx,ly);
+      }
+      ctx.globalAlpha=1;
+    });
+  }
+
+  // ---- surface inset: a pixel-art patch, tying the globe to the builder ----
+  function surfaceInset(){
+    var iw=170, ih=118, ix=18, iy=H-ih-18, cell=15;
+    ctx.save();
+    ctx.fillStyle=P.bg; ctx.strokeStyle=P.line2; ctx.lineWidth=1.5;
+    roundRect(ix,iy,iw,ih,10); ctx.fill(); ctx.stroke();
+    // grid paper
+    ctx.strokeStyle=P.line; ctx.lineWidth=1; ctx.beginPath();
+    for(var gx=ix+10;gx<ix+iw-6;gx+=cell){ctx.moveTo(gx,iy+24);ctx.lineTo(gx,iy+ih-10);}
+    for(var gy=iy+24;gy<iy+ih-6;gy+=cell){ctx.moveTo(ix+10,gy);ctx.lineTo(ix+iw-10,gy);}
+    ctx.stroke();
+    // a few pixel buildings
+    var b=[[0,1,'#5F9A5A'],[1,1,'#5285B6'],[2,0,'#BF8F45'],[3,1,'#7C6CB0'],[1,2,'#5F9A5A'],[4,2,'#5285B6']];
+    b.forEach(function(o){var bx=ix+12+o[0]*cell,by=iy+26+o[1]*cell;ctx.fillStyle=o[2];ctx.fillRect(bx+2,by+2,cell-5,cell-5);});
+    ctx.fillStyle=P.muted||P.line2; ctx.font="600 11px 'Inter',sans-serif"; ctx.fillStyle=cssVar('--muted');
+    ctx.fillText('Surface — build here',ix+12,iy+16);
+    ctx.restore();
+  }
+  function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+  // ---- interaction ----
+  function down(e){dragging=true;idleT=0;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);}
+  function move(e){if(!dragging)return;yaw+=(e.clientX-lastX)*0.35;pitch=Math.max(-1.2,Math.min(1.2,pitch+(e.clientY-lastY)*0.006));lastX=e.clientX;lastY=e.clientY;}
+  function up(){dragging=false;}
+  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);
+  window.addEventListener('pointerup',up);
+
+  // ---- loop ----
+  var last=performance.now();
+  function frame(now){
+    var dt=Math.min(0.05,(now-last)/1000);last=now;
+    if(dragging)idleT=0; else {idleT+=dt; if(idleT>1.2)yaw+=idleSpin*dt*60;}
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+    fillSphere();
+    clipSphere(); drawLand(); graticule(); ctx.restore();
+    rim();
+    drawCities(now);
+    surfaceInset();
+    requestAnimationFrame(frame);
+  }
+
+  // legend swatches
+  function paintLegend(){document.getElementById('lg-you').style.background=P.you;document.getElementById('lg-them').style.background=P.them[0];}
+
+  readTheme(); paintLegend();
+  new MutationObserver(function(){readTheme();paintLegend();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(){readTheme();paintLegend();});
+  window.addEventListener('resize',resize); resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+<script src="/assets/site.js"></script>
+</body>
+</html>
