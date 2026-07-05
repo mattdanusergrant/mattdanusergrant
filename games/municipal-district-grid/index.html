@@ -33,6 +33,11 @@
   .rstat .rl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:3px}
   .rstat .rl .dot{width:7px;height:7px;border-radius:2px}
   @media(max-width:860px){.res{display:none}}
+  .goal{display:flex;flex-direction:column;gap:3px;min-width:96px;max-width:130px}
+  .goal .gl{font-size:10px;letter-spacing:.02em;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .goal .gbar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+  .goal .gbar i{display:block;height:100%;width:0;background:var(--ink-2);transition:width .5s ease}
+  @media(max-width:740px){.goal{display:none}}
   .stage{position:relative;flex:1;min-height:0}
   canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
   .toast{position:absolute;top:16px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:14px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;white-space:nowrap;z-index:5}
@@ -51,6 +56,8 @@
   .reset:hover{color:var(--ink)}
   .hint{font-size:12px;color:var(--muted);max-width:330px;line-height:1.4}
   @media(max-width:760px){.hint{display:none}}
+  #worldfade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:50;transition:opacity .42s ease}
+  #worldfade.on{opacity:1;pointer-events:all}
 </style>
 </head>
 <body>
@@ -58,7 +65,7 @@
   <header class="bar">
     <a class="home" href="/" title="Back to mattdanusergrant.com">← MDG</a>
     <span class="title">Municipal&nbsp;Development&nbsp;Globe</span>
-    <a class="home" href="/games/municipal-development-globe/" title="See the whole world">🌍&nbsp;world</a>
+    <a class="home" id="worldlink" href="/games/municipal-development-globe/" title="See the whole world">🌍&nbsp;world</a>
     <span class="spacer"></span>
     <div class="rci" id="rci" title="Demand — build what the district wants next">
       <div class="meter"><span class="bar"><i id="dem-res"></i></span><b>R</b></div>
@@ -70,6 +77,7 @@
       <div class="rstat"><span class="rn" id="goods">0</span><span class="rl"><span class="dot" style="background:#7C6CB0"></span>Goods</span></div>
       <div class="rstat"><span class="rn" id="exp">0</span><span class="rl"><span class="dot" style="background:#5C8A55"></span>Exports</span></div>
     </div>
+    <div class="goal" id="goal" title="Your next milestone"><span class="gl" id="goal-label">Next: Hamlet</span><span class="gbar"><i id="goal-fill"></i></span></div>
     <div class="stat"><span class="n" id="pop">0</span><span class="l">Population</span></div>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </header>
@@ -78,6 +86,7 @@
     <canvas id="city"></canvas>
     <div class="toast" id="toast"></div>
   </div>
+  <div id="worldfade"></div>
 
   <footer class="tools" id="tools">
     <div class="tool sel" data-brush="road"><span class="sw" data-sw="road"></span>Road<span class="key">1</span></div>
@@ -332,7 +341,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=performance.now();dirty=true;scheduleSave();}
     }
-    updatePop();updateDemandUI();updateResourceUI();checkMilestone();manageCars();manageTrains();
+    updatePop();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();
   }
 
   // ---- population, demand UI, milestones ----
@@ -350,6 +359,12 @@
   var MS=[{n:150,l:'Hamlet'},{n:500,l:'Village'},{n:1500,l:'Town'},{n:4000,l:'City'},{n:9000,l:'Metropolis'},{n:20000,l:'Megacity'}];
   var maxMS=-1,toastEl=document.getElementById('toast'),toastTimer=0;
   function checkMilestone(){var reached=maxMS;for(var i=0;i<MS.length;i++)if(popTarget>=MS[i].n)reached=i;if(reached>maxMS){maxMS=reached;showToast(MS[reached].l,MS[reached].n);scheduleSave();}}
+  var goalLabel=document.getElementById('goal-label'),goalFill=document.getElementById('goal-fill');
+  function updateGoalUI(){var ni=maxMS+1;
+    if(ni>=MS.length){goalLabel.textContent='Megacity · top tier';goalFill.style.width='100%';return;}
+    var nx=MS[ni],prev=ni>0?MS[ni-1].n:0;
+    goalLabel.textContent='Next: '+nx.l+' · '+nx.n.toLocaleString();
+    goalFill.style.width=(Math.max(0,Math.min(1,(popTarget-prev)/(nx.n-prev)))*100)+'%';}
   function showToast(label,n){toastEl.innerHTML=label+' <b>'+n.toLocaleString()+' people</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);}
 
   // ---- ambient cars (drive roads + highway) ----
@@ -568,11 +583,15 @@
   readTheme();
   window.addEventListener('resize',resize);
   resize();load();ensureHighway();seedRampIfEmpty();
-  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();
+  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);if(tt==='rail'||tt==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
   requestAnimationFrame(frame);
   setInterval(tick,650);
+
+  // leaving to the globe: fade out (mirrors the globe's dive-in) for a connected round-trip
+  var wl=document.getElementById('worldlink'),wf=document.getElementById('worldfade');
+  if(wl&&wf)wl.addEventListener('click',function(e){e.preventDefault();wf.classList.add('on');setTimeout(function(){location.href=wl.getAttribute('href');},420);});
 })();
 </script>
 <script src="/assets/site.js"></script>
