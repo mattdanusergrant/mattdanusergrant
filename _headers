@@ -1,0 +1,15 @@
+# Cloudflare Pages — headers (https://developers.cloudflare.com/pages/configuration/headers/)
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+
+# shared CSS/JS: cached, but revalidate (they change between deploys; not content-hashed)
+/assets/*
+  Cache-Control: public, max-age=3600, must-revalidate
+
+# images / icons: cache a day
+/*.png
+  Cache-Control: public, max-age=86400
+/*.ico
+  Cache-Control: public, max-age=86400
