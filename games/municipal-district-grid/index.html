@@ -92,12 +92,16 @@
     <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
     <button class="reset" id="reset" type="button">Reset</button>
     <span class="spacer"></span>
-    <span class="hint"><b>Works</b>→Materials→<b>Factory</b>→Goods→<b>Shops</b>. Lay <b>rail</b> to the highway to export your surplus by train.</span>
+    <span class="hint"><b>Ore</b> &amp; <b>forest</b> tiles boost Works; <b>coasts</b> give free water. Run the chain, lay <b>rail</b> to the highway, export by train.</span>
   </footer>
 
 <script>
 /* ============================================================
-   Municipal Development Globe — v0.6  (surface build)
+   Municipal Development Globe — v0.7  (surface build)
+   + TERRAIN: deterministic biomes (plains/forest/ore/water).
+   Ore & forest boost Works' Materials yield; coasts give free
+   water but can't be built on — where you build sets your
+   specialisation (the in-game reason to trade).
    Streamlined 2D city builder, one patch of a shared world.
    Supply chain (Works→Materials→Factory→Goods→Shops), utilities
    (power/water coverage), the fixed HIGHWAY world-link, and now
@@ -118,7 +122,21 @@
 
   function idx(c,r){return r*cols+c;}
   function inB(c,r){return c>=0&&r>=0&&c<cols&&r<rows;}
-  function newCell(c,r){return {t:'empty',lvl:0,grow:0,seed:((c*73856)^(r*19349))>>>0,pulse:-9999};}
+  function newCell(c,r){return {t:'empty',lvl:0,grow:0,seed:((c*73856)^(r*19349))>>>0,pulse:-9999,terr:terrainAt(c,r)};}
+  // ---- terrain / biomes: deterministic (same every load), drives specialisation ----
+  function hash2(a,b){var h=((a|0)*374761393+(b|0)*668265263)>>>0;h=((h^(h>>>13))*1274126177)>>>0;return h/4294967295;}
+  function vnoise(c,r,s){var x=c/s,y=r/s,xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
+    var a=hash2(xi,yi),b=hash2(xi+1,yi),d=hash2(xi,yi+1),e=hash2(xi+1,yi+1);
+    var sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);
+    return (a*(1-sx)+b*sx)*(1-sy)+(d*(1-sx)+e*sx)*sy;}
+  function terrainAt(c,r){
+    if(r<=0)return 'plains';                                   // keep the highway row buildable/clear
+    var elev=vnoise(c,r,8)*0.6+vnoise(c+11,r+7,3.5)*0.4, moist=vnoise(c+80,r+40,6);
+    if(elev<0.36)return 'water';                               // coast/lake — free water, but no building
+    if(elev>0.68)return 'ore';                                 // hills/ore — best for Works (Materials)
+    if(moist>0.6)return 'forest';                              // forest — good for Works (timber)
+    return 'plains';
+  }
 
   // ---- palettes ----
   var PAL={
@@ -133,6 +151,7 @@
       plantBody:'#8A8478',plantRoof:'#6E5A45',plantStack:'#B85C4A',plantGlow:'#E7C24A',
       towerLeg:'#5F574B',towerTank:'#6E93A6',towerHi:'#A6C3CE',
       lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
+      terrWater:'rgba(88,150,182,.22)',terrOre:'rgba(150,120,88,.20)',terrForest:'rgba(92,150,78,.17)',
       railBed:'#C9C2B0',tie:'#9A8E78',rail:'#7C7566',trainEngine:'#3E3D48',
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
     },
@@ -147,6 +166,7 @@
       plantBody:'#5B554B',plantRoof:'#463A2C',plantStack:'#B85E4C',plantGlow:'#E7C24A',
       towerLeg:'#4B443A',towerTank:'#5E8496',towerHi:'#8FB0BC',
       lot:'rgba(255,255,255,.055)',starve:'#D08A50',cuePow:'#E8B653',cueWat:'#5CA6DB',cueMat:'#CA9647',cueGood:'#8474BA',side:'rgba(0,0,0,.4)',
+      terrWater:'rgba(92,152,186,.17)',terrOre:'rgba(162,136,100,.14)',terrForest:'rgba(96,160,84,.16)',
       railBed:'#3A362E',tie:'#544E42',rail:'#8A8272',trainEngine:'#5A5866',
       car:['#D9664C','#5D93C4','#E4B85F','#EDE7DA','#6AA062']
     }
@@ -164,8 +184,8 @@
     // if there are no roads yet, drop a short on-ramp so the player has an obvious place to begin
     for(var i=0;i<grid.length;i++)if(grid[i]&&grid[i].t==='road')return;
     var mid=Math.floor(cols/2);
-    if(inB(mid,1))grid[idx(mid,1)].t='road';
-    if(inB(mid,2))grid[idx(mid,2)].t='road';
+    for(var off=0;off<cols;off++){var cc=mid+(off%2?-1:1)*Math.ceil(off/2);
+      if(inB(cc,1)&&grid[idx(cc,1)].terr!=='water'){grid[idx(cc,1)].t='road';if(inB(cc,2)&&grid[idx(cc,2)].terr!=='water')grid[idx(cc,2)].t='road';break;}}
     dirty=true;
   }
 
@@ -191,6 +211,7 @@
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
+    if(cell.terr==='water'&&brush!=='bulldoze')return;    // can't build on water — route around it
     if((cell.t==='road'||cell.t==='rail')&&brush!=='road'&&brush!=='rail'&&brush!=='bulldoze')return; // protect infrastructure — only Road/Rail/Clear change it
     if(brush==='bulldoze'){cell.t='empty';cell.lvl=0;cell.grow=0;}
     else if(brush==='road'||brush==='rail'){cell.t=brush;cell.lvl=0;cell.grow=0;}
@@ -231,9 +252,10 @@
     }
     // coverage stamps
     for(var r=0;r<rows;r++)for(var cx=0;cx<cols;cx++){
-      var t=grid[idx(cx,r)].t;
+      var g4=grid[idx(cx,r)],t=g4.t;
       if(t==='power')stamp(powered,cx,r,RP);
       else if(t==='water')stamp(watered,cx,r,RW);
+      if(g4.terr==='water')stamp(watered,cx,r,1);        // coasts/lakes are a natural water source
     }
     // rail network: BFS from highway through rail/highway → what's linked to the world for export
     railConn=new Uint8Array(n);connectedRailCount=0;railToWorld=false;
@@ -263,10 +285,11 @@
   // supply chain: Works → Materials → Factories → Goods → Shops (city-wide pools, no routing)
   var matWanted=false;
   function computeResources(){
-    var works=0,facs=0,shops=0;
+    var works=0,facs=0,shops=0,matYield=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-      if(g.t==='ind')works+=g.lvl;else if(g.t==='fac')facs+=g.lvl;else if(g.t==='com')shops+=g.lvl;}
-    matStock+=works*2;                                   // Works extract Materials
+      if(g.t==='ind'){works+=g.lvl;var mult=g.terr==='ore'?1.8:g.terr==='forest'?1.4:1;matYield+=g.lvl*2*mult;} // terrain specialisation
+      else if(g.t==='fac')facs+=g.lvl;else if(g.t==='com')shops+=g.lvl;}
+    matStock+=matYield;                                  // Works extract Materials (ore/forest yield more)
     var facCap=facs*3, drawn=Math.min(matStock,facCap);
     matStock-=drawn; goodsStock+=drawn*(2/3);            // Factories convert 3 Materials → 2 Goods
     var need=shops*1.5, sold=Math.min(goodsStock,need);
@@ -370,7 +393,12 @@
   function easeOutBack(p){var c1=1.70158,c3=c1+1;return 1+c3*Math.pow(p-1,3)+c1*Math.pow(p-1,2);}
   function growScale(cell){var t=performance.now()-cell.pulse;if(t<0||t>=380)return 1;return Math.max(0,easeOutBack(t/380));}
   function drawGridPaper(){
-    ctx.fillStyle=C.bg;ctx.fillRect(0,0,cols*CELL,rows*CELL);ctx.lineWidth=1;
+    ctx.fillStyle=C.bg;ctx.fillRect(0,0,cols*CELL,rows*CELL);
+    // terrain tints under the grid (water / ore / forest; plains = bare paper)
+    for(var tr=0;tr<rows;tr++)for(var tc=0;tc<cols;tc++){var g=grid[idx(tc,tr)];if(!g)continue;
+      var tt=g.terr;if(tt==='water')ctx.fillStyle=pal.terrWater;else if(tt==='ore')ctx.fillStyle=pal.terrOre;else if(tt==='forest')ctx.fillStyle=pal.terrForest;else continue;
+      ctx.fillRect(tc*CELL,tr*CELL,CELL,CELL);}
+    ctx.lineWidth=1;
     for(var c=0;c<=cols;c++){ctx.strokeStyle=(c%5===0)?C.line2:C.line;ctx.beginPath();ctx.moveTo(px(c*CELL)+0.5,0);ctx.lineTo(px(c*CELL)+0.5,rows*CELL);ctx.stroke();}
     for(var r=0;r<=rows;r++){ctx.strokeStyle=(r%5===0)?C.line2:C.line;ctx.beginPath();ctx.moveTo(0,px(r*CELL)+0.5);ctx.lineTo(cols*CELL,px(r*CELL)+0.5);ctx.stroke();}
   }
@@ -519,7 +547,7 @@
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;}
-    list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway')return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;}});
+    list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway'||g.terr==='water')return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;}});
     dirty=true;}catch(e){}}
 
   // ---- animation loop ----
