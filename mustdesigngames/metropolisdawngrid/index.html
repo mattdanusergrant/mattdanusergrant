@@ -106,7 +106,7 @@
     <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
     <button class="reset" id="reset" type="button">Reset</button>
     <span class="spacer"></span>
-    <span class="hint"><b>Ore</b> &amp; <b>forest</b> tiles boost Works; <b>coasts</b> give free water. Run the chain, lay <b>rail</b> to the highway, export by train.</span>
+    <span class="hint"><b>Road &amp; rail:</b> click start, then click end. <b>Ore</b> &amp; <b>forest</b> boost Works; lay rail to the highway to export by train.</span>
   </footer>
 
 <script>
@@ -133,6 +133,7 @@
   var canvas=document.getElementById('city'), ctx=canvas.getContext('2d');
   var CELL=32, cols=0, rows=0, dpr=1;
   var grid=[], brush='road', painting=false, lastPaint=-1, dirty=true, svcDirty=false;
+  var lineAnchor=null, downCell=null, movedSinceDown=false, hoverCell=null;   // road/rail line-tool state
   // ---- region: where this patch sits on the shared world (carried in from the globe dive) ----
   var REGION=(function(){try{
     var q=new URLSearchParams(location.search);
@@ -263,18 +264,55 @@
     else if(cell.t!==brush){cell.t=brush;cell.lvl=0;cell.grow=0;}
     dirty=true;svcDirty=true;scheduleSave();
   }
-  function down(e){e.preventDefault();painting=true;lastPaint=-1;if(canvas.setPointerCapture)canvas.setPointerCapture(e.pointerId);var p=cellFromEvent(e);paintAt(p.c,p.r);}
-  function move(e){if(!painting)return;var p=cellFromEvent(e);paintAt(p.c,p.r);}
-  function up(){painting=false;lastPaint=-1;}
+  // ---- line tool (road / rail): click start → click end, snaps to a clean L-shape.
+  //      Drag-and-release also works. Every other brush stays freehand drag-paint. ----
+  var LINE={road:1,rail:1};
+  function isLineBrush(){return !!LINE[brush];}
+  function linePath(a,b){                              // L-shaped path, long leg first
+    var cells=[],c=a.c,r=a.r,dc=b.c-a.c,dr=b.r-a.r,sc=dc<0?-1:1,sr=dr<0?-1:1;
+    cells.push([c,r]);
+    if(Math.abs(dc)>=Math.abs(dr)){while(c!==b.c){c+=sc;cells.push([c,r]);}while(r!==b.r){r+=sr;cells.push([c,r]);}}
+    else{while(r!==b.r){r+=sr;cells.push([c,r]);}while(c!==b.c){c+=sc;cells.push([c,r]);}}
+    return cells;
+  }
+  function placeLineCell(c,r){if(!inB(c,r))return false;var cell=grid[idx(c,r)];
+    if(cell.t==='highway'||cell.terr==='water'||cell.t===brush)return false;   // highway fixed, route around water, skip no-ops
+    cell.t=brush;cell.lvl=0;cell.grow=0;return true;}
+  function commitLine(a,b){var path=linePath(a,b),any=false;
+    for(var i=0;i<path.length;i++)if(placeLineCell(path[i][0],path[i][1]))any=true;
+    if(any){dirty=true;svcDirty=true;scheduleSave();}}
+  function cancelLine(){lineAnchor=null;downCell=null;movedSinceDown=false;dirty=true;}
+
+  function down(e){e.preventDefault();var p=cellFromEvent(e);hoverCell=p;
+    if(canvas.setPointerCapture)canvas.setPointerCapture(e.pointerId);
+    if(isLineBrush()){downCell=p;movedSinceDown=false;dirty=true;return;}   // line tool decides on pointerup
+    painting=true;lastPaint=-1;paintAt(p.c,p.r);}
+  function move(e){var p=cellFromEvent(e);
+    if(!hoverCell||p.c!==hoverCell.c||p.r!==hoverCell.r){hoverCell=p;if(isLineBrush())dirty=true;}
+    if(isLineBrush()){if(downCell&&(p.c!==downCell.c||p.r!==downCell.r))movedSinceDown=true;return;}
+    if(!painting)return;paintAt(p.c,p.r);}
+  function up(e){
+    if(isLineBrush()){
+      if(downCell){var p=cellFromEvent(e);
+        if(movedSinceDown){commitLine(downCell,p);lineAnchor=null;}   // drag-release commits
+        else if(!lineAnchor){lineAnchor=p;}                           // 1st click sets the start
+        else{commitLine(lineAnchor,p);lineAnchor=null;}               // 2nd click sets the end
+        downCell=null;movedSinceDown=false;dirty=true;}
+      return;}
+    painting=false;lastPaint=-1;}
   canvas.addEventListener('pointerdown',down);
   canvas.addEventListener('pointermove',move);
   window.addEventListener('pointerup',up);
-  canvas.addEventListener('contextmenu',function(e){e.preventDefault();});
+  canvas.addEventListener('contextmenu',function(e){e.preventDefault();cancelLine();});   // right-click cancels a pending line
 
   var tools=document.getElementById('tools');
-  function selectBrush(b){brush=b;Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){el.classList.toggle('sel',el.getAttribute('data-brush')===b);});}
+  var _hinted={};
+  function lineHint(b){if(_hinted[b])return;_hinted[b]=1;
+    toastEl.innerHTML=(b==='road'?'Road':'Rail')+' <b>click start, then click end · Esc cancels</b>';
+    toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);}
+  function selectBrush(b){brush=b;cancelLine();Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){el.classList.toggle('sel',el.getAttribute('data-brush')===b);});if(LINE[b])lineHint(b);}
   tools.addEventListener('click',function(e){var t=e.target.closest('.tool');if(t)selectBrush(t.getAttribute('data-brush'));});
-  window.addEventListener('keydown',function(e){var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze'}[e.key];if(m)selectBrush(m);});
+  window.addEventListener('keydown',function(e){if(e.key==='Escape'){cancelLine();return;}var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze'}[e.key];if(m)selectBrush(m);});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
@@ -582,6 +620,15 @@
       ctx.fillStyle=pal.cueMat;ctx.fillRect(px(c1.x-3),px(c1.y-3),5,5);
       ctx.fillStyle=pal.cueGood;ctx.fillRect(px(c2.x-3),px(c2.y-3),5,5);
       ctx.fillStyle=pal.trainEngine;ctx.fillRect(px(e.x-3),px(e.y-3),6,6);
+    }
+    // line-tool preview (road/rail): ghost the L-path from the pending start to the cursor
+    if(isLineBrush()&&hoverCell){
+      var ps=lineAnchor||((downCell&&movedSinceDown)?downCell:null);
+      if(ps){var pp=linePath(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
+        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway'||qcl.terr==='water')continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
+        ctx.globalAlpha=1;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(ps.c*CELL+2.5,ps.r*CELL+2.5,CELL-5,CELL-5);
+      } else if(!downCell&&inB(hoverCell.c,hoverCell.r)){var hcl=grid[idx(hoverCell.c,hoverCell.r)];
+        if(hcl&&hcl.t!=='highway'&&hcl.terr!=='water'){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
     }
     ctx.restore();
   }
