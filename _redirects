@@ -11,3 +11,9 @@
 /games/mosslings/*         https://mustdesigngames.mattdanusergrant.com/mosslings/:splat 301
 /games/bloom-again/*       https://mustdesigngames.mattdanusergrant.com/bloom-again/:splat 301
 /games/prism-pond/*        https://mustdesigngames.mattdanusergrant.com/prism-pond/:splat 301
+
+# Deduped brand slugs — collapse dashed variants to the canonical no-dash paths
+/make-dope-grooves/*           /makedopegrooves/:splat 301
+/manufacture-digital-grooves/* /makedopegrooves/:splat 301
+/math-draws-graphics/*         https://mathdrawsgraphics.mattdanusergrant.com/code-art/:splat 301
+/pixel-art/*                   https://mathdrawsgraphics.mattdanusergrant.com/pixel-art/:splat 301
