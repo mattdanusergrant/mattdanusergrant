@@ -588,7 +588,7 @@
       for(var i=0;i<=N;i++){var th=i/N*TAU,x=cx+Math.sin(a*th+ph)*R,y=cy+Math.sin(b*th)*R;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
       ctx.stroke();
     };
-    // Hilbert Curve - a space-filling fractal (order 6) drawn out by a travelling pen, then restarts; one unbroken path visiting every cell of a grid in one unbroken path (MASTER DATA GRID).
+    // Hilbert Curve - a space-filling fractal (order 6) drawn out by a travelling pen, then restarts; one long unbroken path folding to fill the plane, like a strand folded to fit (MASTER DATA GENOME).
     SK.hilbert=function(w,h,t){
       var S=hilbertS,order=6,m=Math.min(w,h)*0.86,key=Math.round(w)+'x'+Math.round(h);
       if(S.key!==key){S.key=key;S.pts=[];var P=S.pts;
@@ -735,7 +735,7 @@
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
     {words:['MULTIPLAYER','DECK','GATEWAY'],     sketch:'cards'},
-    {words:['MASTER','DATA','GRID'],             sketch:'hilbert'},
+    {words:['MASTER','DATA','GENOME'],           sketch:'hilbert'},
     {words:['METROPOLIS','DAWN','GRID'],         sketch:'lissajous'},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
     {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
