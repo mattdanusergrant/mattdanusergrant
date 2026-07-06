@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f3e7d3">
-<title>Mosslings</title>
+<title>Moss Dew Garden</title>
 <!-- PWA: installable home-screen app, offline-capable via service worker -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Mosslings">
+<meta name="apple-mobile-web-app-title" content="Moss Dew Garden">
 <meta name="description" content="A cozy virtual pet — adopt a little plant-creature and keep it fed, happy, and rested.">
 <script>
   if ('serviceWorker' in navigator) {
@@ -188,7 +188,7 @@
 <div id="app">
   <div id="hud">
     <div class="hudtop">
-      <div id="petname">Mosslings</div>
+      <div id="petname">Moss Dew Garden</div>
       <div id="hudright">
         <button id="mute" title="sound">🔇</button>
         <div id="coins"><span class="c"></span><span id="coinval">0</span></div>
@@ -820,7 +820,7 @@ cv.addEventListener('pointercancel', ()=>{ if (feedTray) trayRelease(); });
 function refresh(){
   if (!P){
     $('coinval').textContent = S ? Math.floor(S.coins) : 0;
-    $('petname').textContent = 'Mosslings';
+    $('petname').textContent = 'Moss Dew Garden';
     $('moodtag').textContent = '…';
     $('bFull').style.width = $('bHappy').style.width = $('bEnergy').style.width = '0%';
     return;
