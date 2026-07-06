@@ -32,12 +32,15 @@
   .hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2;font-size:12px;color:var(--muted);background:var(--paper);border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;box-shadow:var(--shadow)}
   @media(max-width:640px){.intro{max-width:60vw}.legend{display:none}}
   #fade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:6}
-  #ncard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
-  #ncard.on{display:flex}
-  .nc-inner{background:var(--paper);border:1.5px solid var(--line-2);border-radius:16px;padding:22px 24px;max-width:320px;box-shadow:var(--shadow-hover)}
+  #ncard,#fcard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
+  #ncard.on,#fcard.on{display:flex}
+  .nc-inner{background:var(--paper);border:1.5px solid var(--line-2);border-radius:16px;padding:22px 24px;max-width:330px;box-shadow:var(--shadow-hover)}
   .nc-inner h3{font-family:'Fraunces',serif;font-weight:600;margin:0 0 8px;font-size:20px;color:var(--ink);letter-spacing:-.01em}
   .nc-inner p{margin:0 0 16px;color:var(--ink-2);font-size:14px;line-height:1.55}
+  .nc-inner p b{color:var(--ink)}
   .nc-inner button{font-family:'Fraunces',serif;font-size:13px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:7px 17px;cursor:pointer}
+  .nc-inner button.ghost{background:transparent;color:var(--ink-2);border:1.5px solid var(--line-2)}
+  .nc-actions{display:flex;gap:10px}
 </style>
 </head>
 <body>
@@ -51,28 +54,32 @@
     <p class="eyebrow">Concept · world model</p>
     <h1>Metropolis Dawn Grid</h1>
     <p>One shared world. Everyone builds on the same planet-sized grid — and you keep expanding until you run into your neighbours.</p>
-    <p class="tag"><b>Click your city</b> to drop to its surface and build — your terrain is set by where you sit on the world. Click a neighbour to see what they trade.</p>
+    <p class="tag"><b>Click empty land or sea</b> to found your city — its terrain, and what it can make cheaply, is set by where you settle. <b>Click your city</b> to drop in and build. Click a neighbour to see what they trade.</p>
   </div>
 
   <div id="fade"></div>
   <div id="ncard"><div class="nc-inner"><h3 id="nc-name"></h3><p id="nc-msg"></p><button id="nc-close" type="button">Close</button></div></div>
+  <div id="fcard"><div class="nc-inner"><h3 id="fc-name">Found your city here</h3><p id="fc-msg"></p><div class="nc-actions"><button id="fc-build" type="button">Build here →</button><button id="fc-cancel" type="button" class="ghost">Keep looking</button></div></div></div>
 
   <div class="legend">
     <span class="hd">On this world</span>
     <div class="row"><span class="dot" id="lg-you"></span> Your city</div>
     <div class="row"><span class="dot" id="lg-them"></span> Neighbours (other players)</div>
   </div>
-  <div class="hint">drag to spin · click your city to build its surface</div>
+  <div class="hint">drag to spin · click empty world to found your city · click it to build</div>
 
   <div class="stage"><canvas id="globe"></canvas></div>
 
 <script>
 /* ============================================================
-   Metropolis Dawn Grid — world-model concept
+   Metropolis Dawn Grid — world-model (interactive)
    A spinnable grid-paper planet: your city + neighbouring
    players scattered across one shared world. Orthographic
    sphere projection in plain 2D canvas (zero-build), themed
-   to MDG.com. Proof-of-concept, not the playable sim.
+   to MDG.com. Click empty world to FOUND your city there
+   (inverse-projected to lat/lon); the site is labelled by the
+   builder's own terrain rule (mirrored here) and diving carries
+   that location into the surface. Where you settle = what you make.
    ============================================================ */
 (function(){
   'use strict';
@@ -116,6 +123,30 @@
     {name:'Old Commons',  lat:24, lon:182, spec:'Old town — steady Goods, light on ore'},
     {name:'Mount Civic',  lat:-46,lon:150, spec:'Mountain ore — heavy Materials exporter'}
   ];
+  // ---- terrain sampler — MIRRORS the builder (../index.html). Lets the globe label any
+  //      clicked site by the same rule the surface uses. Keep in sync: hash2/vnoise/terrainAt,
+  //      the WOX/WOY offset formula, and the relative-dominance regionSpec.
+  function thash(a,b){var h=((a|0)*374761393+(b|0)*668265263)>>>0;h=((h^(h>>>13))*1274126177)>>>0;return h/4294967295;}
+  function tnoise(c,r,s){var x=c/s,y=r/s,xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
+    var a=thash(xi,yi),b=thash(xi+1,yi),d=thash(xi,yi+1),e=thash(xi+1,yi+1);
+    var sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);return (a*(1-sx)+b*sx)*(1-sy)+(d*(1-sx)+e*sx)*sy;}
+  function terrAt(c,r,ox,oy){if(r<=0)return 'plains';var wc=c+ox,wr=r+oy;
+    var elev=tnoise(wc,wr,8)*0.6+tnoise(wc+11,wr+7,3.5)*0.4,moist=tnoise(wc+80,wr+40,6);
+    if(elev<0.36)return 'water';if(elev>0.68)return 'ore';if(moist>0.6)return 'forest';return 'plains';}
+  function siteSpec(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919,ct={plains:0,forest:0,ore:0,water:0};
+    for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrAt(c,r,ox,oy)]++;
+    var land=ct.plains+ct.forest+ct.ore||1,oS=(ct.ore/land)/0.15,fS=(ct.forest/land)/0.26,wS=(ct.water/(ct.water+land))/0.17,mx=Math.max(oS,fS,wS);
+    if(mx<1.15)return 'open plains · balanced start';
+    if(mx===oS)return 'ore-rich highlands · Works thrive';
+    if(mx===fS)return 'forested belt · timber Works';
+    return 'coastal shelf · free water, tight land';}
+
+  // remember where the player founded their city, so the marker + dive persist across visits
+  var HOME_KEY='mdg-home-region';
+  function saveHome(){try{localStorage.setItem(HOME_KEY,JSON.stringify({lat:CITIES[0].lat,lon:CITIES[0].lon}));}catch(e){}}
+  (function loadHome(){try{var h=JSON.parse(localStorage.getItem(HOME_KEY)||'null');
+    if(h&&typeof h.lat==='number'&&typeof h.lon==='number'){CITIES[0].lat=h.lat;CITIES[0].lon=h.lon;}}catch(e){}})();
+
   // stable "continent" blobs so the planet reads as land + sea
   var LAND=[
     {lat:20,lon:-30,r:34},{lat:-18,lon:20,r:30},{lat:40,lon:60,r:26},
@@ -130,6 +161,16 @@
     var cp=Math.cos(pitch), sp=Math.sin(pitch);
     var y2=y*cp - z*sp, z2=y*sp + z*cp;
     return {sx:cx+x*R, sy:cy-y2*R, z:z2};       // z>0 → front hemisphere
+  }
+  // inverse: a screen point on the front hemisphere → {lat,lon} (null if off the disc)
+  function unproj(sx,sy){
+    var x=(sx-cx)/R, y2=(cy-sy)/R, s=1-x*x-y2*y2;
+    if(s<0)return null;
+    var z2=Math.sqrt(s), cp=Math.cos(pitch), sp=Math.sin(pitch);
+    var y=y2*cp+z2*sp, z=-y2*sp+z2*cp;
+    var lat=Math.asin(Math.max(-1,Math.min(1,y)))*180/PI, lon=Math.atan2(x,z)*180/PI-yaw;
+    lon=((lon+180)%360+360)%360-180;
+    return {lat:lat,lon:lon};
   }
 
   function fillSphere(){
@@ -217,9 +258,11 @@
   function down(e){if(mode!=='world')return;dragging=true;idleT=0;lastX=e.clientX;lastY=e.clientY;movedDist=0;canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);}
   function move(e){var s=sxy(e);
     if(dragging){var dx=e.clientX-lastX,dy=e.clientY-lastY;movedDist+=Math.abs(dx)+Math.abs(dy);yaw+=dx*0.35;pitch=clamp(pitch+dy*0.006);lastX=e.clientX;lastY=e.clientY;}
-    else if(mode==='world'){canvas.style.cursor=hittest(s.x,s.y)?'pointer':'grab';}}
+    else if(mode==='world'){canvas.style.cursor=hittest(s.x,s.y)?'pointer':(unproj(s.x,s.y)?'crosshair':'grab');}}
   function up(e){if(!dragging)return;dragging=false;if(mode!=='world')return;
-    if(movedDist<5){var s=sxy(e),c=hittest(s.x,s.y);if(c){if(c.you)startDive(s.x,s.y,c);else showNeighbour(c);}}}
+    if(movedDist<5){var s=sxy(e),c=hittest(s.x,s.y);
+      if(c){if(c.you)startDive(s.x,s.y,c);else showNeighbour(c);}
+      else{var loc=unproj(s.x,s.y);if(loc)foundHere(loc);}}}    // empty click → found your city here
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
 
   var diveCity=null;
@@ -230,6 +273,17 @@
     document.getElementById('ncard').classList.add('on');}
   document.getElementById('nc-close').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');});
   document.getElementById('ncard').addEventListener('click',function(e){if(e.target.id==='ncard')this.classList.remove('on');});
+
+  // found / relocate your city at a clicked spot — moves the marker, saves it, offers to build there
+  var fcard=document.getElementById('fcard');
+  function foundHere(loc){
+    CITIES[0].lat=loc.lat;CITIES[0].lon=loc.lon;saveHome();
+    document.getElementById('fc-msg').innerHTML='<b>'+siteSpec(loc.lat,loc.lon)+'</b><br>Your terrain — and what you can make cheaply — is set by where you settle. Drop in and build, or keep looking for a site that suits your strategy.';
+    fcard.classList.add('on');
+  }
+  document.getElementById('fc-build').addEventListener('click',function(){fcard.classList.remove('on');var p=proj(CITIES[0].lat,CITIES[0].lon);startDive(p.sx,p.sy,CITIES[0]);});
+  document.getElementById('fc-cancel').addEventListener('click',function(){fcard.classList.remove('on');});
+  fcard.addEventListener('click',function(e){if(e.target.id==='fcard')this.classList.remove('on');});
 
   // ---- loop ----
   var last=performance.now();
