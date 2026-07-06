@@ -114,14 +114,14 @@
   // ---- settlements (your city + neighbouring players) ----
   var CITIES=[
     {name:'Your City',    lat:14, lon:0,   you:true},
-    {name:'New Sprawlton',lat:32, lon:-46, spec:'Ore highlands — exports Steel, short on Goods'},
-    {name:'Gridholm',     lat:-8, lon:38,  spec:'Forested belt — timber & Materials to spare'},
-    {name:'Port Zoning',  lat:-30,lon:-18, spec:'Coastal — rich in Goods, buys raw Materials'},
-    {name:'Fort Density', lat:48, lon:70,  spec:'Dense plains — hungry for imported Goods'},
-    {name:'Lake Parcel',  lat:6,  lon:128, spec:'Lakeside — water to spare, needs Steel'},
-    {name:'Trade Junction',lat:-22,lon:96, spec:'Rail hub — brokers surplus in every direction'},
-    {name:'Old Commons',  lat:24, lon:182, spec:'Old town — steady Goods, light on ore'},
-    {name:'Mount Civic',  lat:-46,lon:150, spec:'Mountain ore — heavy Materials exporter'}
+    {name:'New Sprawlton',lat:32, lon:-46},
+    {name:'Gridholm',     lat:-8, lon:38 },
+    {name:'Port Zoning',  lat:-30,lon:-18},
+    {name:'Fort Density', lat:48, lon:70 },
+    {name:'Lake Parcel',  lat:6,  lon:128},
+    {name:'Trade Junction',lat:-22,lon:96},
+    {name:'Old Commons',  lat:24, lon:182},
+    {name:'Mount Civic',  lat:-46,lon:150}
   ];
   // ---- terrain sampler — MIRRORS the builder (../index.html). Lets the globe label any
   //      clicked site by the same rule the surface uses. Keep in sync: hash2/vnoise/terrainAt,
@@ -133,13 +133,16 @@
   function terrAt(c,r,ox,oy){if(r<=0)return 'plains';var wc=c+ox,wr=r+oy;
     var elev=tnoise(wc,wr,8)*0.6+tnoise(wc+11,wr+7,3.5)*0.4,moist=tnoise(wc+80,wr+40,6);
     if(elev<0.36)return 'water';if(elev>0.68)return 'ore';if(moist>0.6)return 'forest';return 'plains';}
-  function siteSpec(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919,ct={plains:0,forest:0,ore:0,water:0};
+  function terrainClass(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919,ct={plains:0,forest:0,ore:0,water:0};
     for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrAt(c,r,ox,oy)]++;
     var land=ct.plains+ct.forest+ct.ore||1,oS=(ct.ore/land)/0.15,fS=(ct.forest/land)/0.26,wS=(ct.water/(ct.water+land))/0.17,mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'open plains · no terrain bonus';
-    if(mx===oS)return 'ore-rich highlands · Works +80% Materials';
-    if(mx===fS)return 'forested belt · Works +40% Materials';
-    return 'coastal shelf · free water, tight land';}
+    if(mx<1.15)return 'plains';if(mx===oS)return 'ore';if(mx===fS)return 'forest';return 'coast';}
+  // Both the found-card label and every neighbour blurb are DERIVED from terrainClass — no hand-written
+  // per-city text that can drift from the sim. SPEC strings mirror the builder's regionSpec (keep in sync).
+  var SPEC={ore:'ore-rich highlands · Works +80% Materials',forest:'forested belt · Works +40% Materials',coast:'coastal shelf · free water, tight land',plains:'open plains · no terrain bonus'};
+  var TRADE={ore:'Exports raw Materials; buys finished Goods.',forest:'Timber Materials to spare; trades for Goods.',coast:'Dense in Goods; short on raw Materials.',plains:'Balanced land — no terrain edge; trades opportunistically.'};
+  function siteSpec(lat,lon){return SPEC[terrainClass(lat,lon)];}
+  function neighbourSpec(lat,lon){var k=terrainClass(lat,lon);return SPEC[k]+' — '+TRADE[k];}
 
   // remember where the player founded their city, so the marker + dive persist across visits
   var HOME_KEY='mdg-home-region';
@@ -269,7 +272,7 @@
   function startDive(x,y,c){mode='diving';divT=0;zx=x;zy=y;navigated=false;diveCity=c||null;}
   var fadeEl=document.getElementById('fade');
   function showNeighbour(c){document.getElementById('nc-name').textContent=c.name;
-    document.getElementById('nc-msg').textContent=(c.spec?c.spec+'. ':'')+'A neighbour on the shared globe — another player. In the online build you’ll lay rail across the map and open a trade route to swap what each of you makes best.';
+    document.getElementById('nc-msg').textContent=neighbourSpec(c.lat,c.lon)+' A neighbour on the shared globe — another player. In the online build you’ll lay rail across the map and open a trade route to swap what each of you makes best.';
     document.getElementById('ncard').classList.add('on');}
   document.getElementById('nc-close').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');});
   document.getElementById('ncard').addEventListener('click',function(e){if(e.target.id==='ncard')this.classList.remove('on');});
