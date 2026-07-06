@@ -230,33 +230,67 @@
     return SK;
   }
 
-  // Build a grid of looping intro cards into `grid`. One shared rAF drives them all.
+  // Draw one frame of a target {cv,ctx,SK,name,t0} at its CSS size.
+  function drawTarget(tg,now,reduce){
+    var w=tg.cv.clientWidth,h=tg.cv.clientHeight; if(!w||!h)return;
+    if(!tg.t0)tg.t0=now; var t=(now-tg.t0)/1000;
+    tg.ctx.clearRect(0,0,w,h); tg.ctx.save(); tg.ctx.lineCap='butt'; tg.ctx.lineJoin='round'; tg.ctx.shadowBlur=reduce?0:6;
+    (tg.SK[tg.name]||function(){})(w,h,t); tg.ctx.restore();
+  }
+  function sizeCanvas(tg){var r=tg.cv.getBoundingClientRect(); if(!r.width)return; var dpr=Math.min(2,window.devicePixelRatio||1);
+    tg.cv.width=Math.round(r.width*dpr); tg.cv.height=Math.round(r.height*dpr); tg.ctx.setTransform(dpr,0,0,dpr,0,0); tg.t0=0;}
+
+  // Build a grid of looping intro cards, each click-to-embiggen into a lightbox.
+  // One shared rAF drives the grid; while the lightbox is open only it draws.
   function mountViewer(grid){
     if(!grid||grid.dataset.mounted)return; grid.dataset.mounted='1';
     var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches, cards=[];
+
+    // ---- lightbox ("embiggen") ----
+    var modal=document.createElement('div'); modal.className='intro-modal'; modal.hidden=true;
+    var inner=document.createElement('div'); inner.className='intro-modal-inner';
+    var mcv=document.createElement('canvas'); inner.appendChild(mcv);
+    var mcap=document.createElement('figcaption'); mcap.className='intro-words'; inner.appendChild(mcap);
+    var cycleBtn=document.createElement('button'); cycleBtn.type='button'; cycleBtn.className='intro-cycle-btn'; cycleBtn.hidden=true; inner.appendChild(cycleBtn);
+    var closeBtn=document.createElement('button'); closeBtn.type='button'; closeBtn.className='intro-close'; closeBtn.setAttribute('aria-label','Close'); closeBtn.innerHTML='&times;';
+    modal.appendChild(inner); modal.appendChild(closeBtn); document.body.appendChild(modal);
+    var big={cv:mcv,ctx:mcv.getContext('2d'),name:null,t0:0}; big.SK=makeSketches(big.ctx);
+    var mOpen=false, mVariants=null, mVi=0;
+
+    function cycleLabel(){ if(mVariants){cycleBtn.hidden=false; cycleBtn.textContent='⟳ next sketch ('+(mVi+1)+'/'+mVariants.length+')';} else cycleBtn.hidden=true; }
+    function openModal(intro){
+      mcap.innerHTML=''; intro.words.forEach(function(word){var s=document.createElement('span'); s.textContent=word; mcap.appendChild(s);});
+      mVariants=intro.variants||null; mVi=0; big.name=mVariants?mVariants[0]:intro.sketch;
+      mOpen=true; modal.hidden=false; document.body.style.overflow='hidden'; cycleLabel();
+      requestAnimationFrame(function(){sizeCanvas(big); if(reduce)drawTarget(big,performance.now(),reduce);});
+    }
+    function closeModal(){ mOpen=false; modal.hidden=true; document.body.style.overflow=''; }
+    function cycle(){ if(!mVariants)return; mVi=(mVi+1)%mVariants.length; big.name=mVariants[mVi]; big.t0=0; cycleLabel(); }
+    cycleBtn.addEventListener('click',function(e){e.stopPropagation(); cycle();});
+    closeBtn.addEventListener('click',closeModal);
+    modal.addEventListener('click',function(e){ if(e.target===modal)closeModal(); });        // backdrop
+    mcv.addEventListener('click',function(){ if(mVariants)cycle(); });                        // click sketch cycles (variant only)
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&mOpen)closeModal(); });
+
+    // ---- grid ----
     INTROS.forEach(function(intro){
       var fig=document.createElement('figure'); fig.className='intro-card';
       var cv=document.createElement('canvas'); fig.appendChild(cv);
       var cap=document.createElement('figcaption'); cap.className='intro-words';
       intro.words.forEach(function(word){var s=document.createElement('span'); s.textContent=word; cap.appendChild(s);});
       fig.appendChild(cap);
-      var card={cv:cv,ctx:cv.getContext('2d'),name:intro.sketch,variants:intro.variants||null,vi:0,t0:0};
-      card.SK=makeSketches(card.ctx);
-      if(card.variants){
-        fig.className+=' has-variants'; fig.title='Click to cycle this phrase’s sketches';
-        var badge=document.createElement('span'); badge.className='intro-cycle'; badge.textContent='⟳'; fig.appendChild(badge);
-        fig.addEventListener('click',function(){card.vi=(card.vi+1)%card.variants.length; card.name=card.variants[card.vi]; card.t0=0;});
-      }
+      var card={cv:cv,ctx:cv.getContext('2d'),name:intro.sketch,t0:0}; card.SK=makeSketches(card.ctx);
+      if(intro.variants){var badge=document.createElement('span'); badge.className='intro-cycle'; badge.textContent='⟳'; fig.appendChild(badge);}
+      fig.title='Embiggen'; fig.setAttribute('role','button'); fig.tabIndex=0;
+      fig.addEventListener('click',function(){openModal(intro);});
+      fig.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openModal(intro);}});
       grid.appendChild(fig); cards.push(card);
     });
-    function size(card){var r=card.cv.getBoundingClientRect(); if(!r.width)return; var dpr=Math.min(2,window.devicePixelRatio||1);
-      card.cv.width=Math.round(r.width*dpr); card.cv.height=Math.round(r.height*dpr); card.ctx.setTransform(dpr,0,0,dpr,0,0); card.t0=0;}
-    function sizeAll(){cards.forEach(size);}
+
+    function sizeAll(){cards.forEach(sizeCanvas); if(mOpen)sizeCanvas(big);}
     function frame(now){
-      for(var i=0;i<cards.length;i++){var c=cards[i],w=c.cv.clientWidth,h=c.cv.clientHeight; if(!w||!h)continue;
-        if(!c.t0)c.t0=now; var t=(now-c.t0)/1000;
-        c.ctx.clearRect(0,0,w,h); c.ctx.save(); c.ctx.lineCap='butt'; c.ctx.lineJoin='round'; c.ctx.shadowBlur=reduce?0:6;
-        (c.SK[c.name]||function(){})(w,h,t); c.ctx.restore();}
+      if(mOpen){ drawTarget(big,now,reduce); }
+      else { for(var i=0;i<cards.length;i++)drawTarget(cards[i],now,reduce); }
       if(!reduce)requestAnimationFrame(frame);
     }
     sizeAll();

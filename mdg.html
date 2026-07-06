@@ -66,13 +66,26 @@
   /* ── Intro viewer ── */
   .intro-viewer{margin-top:48px}
   .intro-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:16px}
-  .intro-card{position:relative;aspect-ratio:16/10;background:#0b0b0d;border:1.5px solid var(--line-2);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .intro-card{position:relative;aspect-ratio:16/10;background:#0b0b0d;border:1.5px solid var(--line-2);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}
+  .intro-card:hover{transform:translateY(-3px);border-color:var(--ink);box-shadow:var(--shadow-hover)}
+  .intro-card:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .intro-card canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .intro-words{position:absolute;inset:0;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;pointer-events:none;font-family:'Fraunces',serif;font-weight:600;color:#fff;letter-spacing:.02em;line-height:1.05;text-align:center;text-shadow:0 1px 12px rgba(0,0,0,.75),0 0 3px rgba(0,0,0,.85)}
   .intro-words span{font-size:clamp(13px,3.2vw,18px)}
-  .intro-card.has-variants{cursor:pointer}
-  .intro-card.has-variants:hover{border-color:var(--ink)}
   .intro-cycle{position:absolute;top:6px;right:9px;color:rgba(255,255,255,.55);font-size:14px;pointer-events:none}
+
+  /* Embiggen lightbox */
+  .intro-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,8,10,.82);animation:introfade .2s ease both}
+  @keyframes introfade{from{opacity:0}to{opacity:1}}
+  .intro-modal[hidden]{display:none}
+  .intro-modal-inner{position:relative;width:min(94vw,1040px);aspect-ratio:16/10;max-height:78vh;background:#0b0b0d;border:1.5px solid rgba(255,255,255,.14);border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .intro-modal-inner canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .intro-modal .intro-words span{font-size:clamp(28px,7vw,64px);line-height:1.02}
+  .intro-close{position:absolute;top:12px;right:18px;z-index:2;background:none;border:none;color:rgba(255,255,255,.85);font-size:36px;line-height:1;cursor:pointer;padding:2px 8px;font-family:inherit}
+  .intro-close:hover{color:#fff}
+  .intro-cycle-btn{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:2;font-family:'Fraunces',serif;font-size:13.5px;color:#fff;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.3);border-radius:999px;padding:7px 16px;cursor:pointer}
+  .intro-cycle-btn[hidden]{display:none}
+  .intro-cycle-btn:hover{background:rgba(255,255,255,.24)}
 
   /* ── Footer ── */
   .foot{margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
@@ -124,7 +137,7 @@
 
   <section class="intro-viewer">
     <p class="mdg-sub">Intro viewer</p>
-    <p class="mdg-intro" style="margin-top:0">Every phrase the homepage intro can open with, each behind its live Math&nbsp;Draws&nbsp;Graphics sketch — browse them all here instead of reloading for the RNG. Many Doors Guild has three door sketches; click it to cycle.</p>
+    <p class="mdg-intro" style="margin-top:0">Every phrase the homepage intro can open with, each behind its live Math&nbsp;Draws&nbsp;Graphics sketch — browse them all here instead of reloading for the RNG. Click any to <em>embiggen</em> it (Esc or click away to close); Many Doors Guild cycles its three door sketches once enlarged.</p>
     <div id="intro-grid" class="intro-grid"></div>
   </section>
 
