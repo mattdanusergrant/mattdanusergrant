@@ -97,6 +97,15 @@
   .work-head .more span{display:inline-block;transition:transform .18s}
   .work-head .more:hover span{transform:translateX(3px)}
 
+  /* Sub-group heading inside a section (e.g. Tools / Standalone Projects under Modular Digital Goods) */
+  .subhead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:28px 0 12px}
+  .subhead.first{margin-top:6px}
+  .subhead h3{font-family:'Fraunces',serif;font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+  .subhead .more{font-size:13px;color:var(--muted);white-space:nowrap;transition:color .15s}
+  .subhead .more:hover{color:var(--ink)}
+  .subhead .more span{display:inline-block;transition:transform .18s}
+  .subhead .more:hover span{transform:translateX(3px)}
+
   /* "More games" word-toy card — ported from the design lab; drifts through M-D-G phrases */
   .more-link{
     display:flex;align-items:center;justify-content:center;gap:8px;
@@ -303,6 +312,11 @@
     </div>
     <div class="shelf">
       <article class="tile">
+        <h3>Multiplayer Deck Gateway</h3>
+        <p>Build and playtest card games in the browser — a shared engine (real deck, poker evaluator, online multiplayer) with a dozen games and design tools plugged in. Spin up a variant, then deal it to friends over a room code.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=multiplayer-deck-gateway">Play</a></div>
+      </article>
+      <article class="tile">
         <h3>Metropolis Dawn Grid</h3>
         <p>A city builder on one shared world. Run the supply chain, lay rail, ship your surplus by train — and expand until you meet your neighbours.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/" target="_blank" rel="noopener">Play</a></div>
@@ -312,16 +326,6 @@
         <p>The part of card games everyone secretly loves most, on its own. Open packs, chase the rare, sort the spill, then go again.</p>
         <div class="btn-row"><a class="btn btn-play" href="/games/keeprippingpacks/" target="_blank" rel="noopener">Play</a></div>
       </article>
-      <article class="tile">
-        <h3>Ronin Survivor</h3>
-        <p>A survivor-like: play a lone ronin as the screen fills with enemies. Upgrade between waves and chase the run that finally goes the distance.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/games/ronin-survivor/" target="_blank" rel="noopener">Play</a></div>
-      </article>
-      <article class="tile">
-        <h3>Sigil Tactics</h3>
-        <p>A tactical card-battler for mobile web. Collect sigils, build a hand, and fight turn-based skirmishes where position and timing decide it.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a></div>
-      </article>
     </div>
     <a class="more-link" id="more-games" href="https://mustdesigngames.mattdanusergrant.com/" target="_blank" rel="noopener"><span class="more-text">More Decent Games</span> <span class="arr">→</span></a>
   </section>
@@ -329,6 +333,32 @@
   <section class="work" aria-labelledby="apps-h">
     <div class="work-head">
       <h2 id="apps-h">Modular Digital Goods</h2>
+    </div>
+
+    <div class="subhead first">
+      <h3>Tools</h3>
+      <a class="more" href="/design-lab.html#tools">Full toolbox <span>→</span></a>
+    </div>
+    <div class="shelf">
+      <article class="tile">
+        <h3>Math Draws Graphics</h3>
+        <p>Two tools for making pictures with a computer: Code Art (animated math sketches with live, editable code) and Pixel Art (a sprite editor). The studio behind this site's intro art.</p>
+        <div class="btn-row"><a class="btn btn-play" href="https://mathdrawsgraphics.mattdanusergrant.com/">Open</a></div>
+      </article>
+      <article class="tile">
+        <h3>Make Dope Grooves</h3>
+        <p>Write a whole song as code — drums, bass, melodies, chords — and it plays back, every sound synthesized live in your browser.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=make-dope-grooves">Open</a></div>
+      </article>
+      <article class="tile">
+        <h3>Markdown Document Generator</h3>
+        <p>A plain-text resume builder: write on the left, watch a clean, ATS-safe resume build on the right, save straight to PDF. No account.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/resume-builder.html">Open</a></div>
+      </article>
+    </div>
+
+    <div class="subhead">
+      <h3>Standalone Projects</h3>
     </div>
     <div class="shelf">
       <article class="tile">
@@ -345,30 +375,6 @@
         <h3>Dank Omphalos</h3>
         <p>A digital arthouse where Magic: The Gathering cards become canvases — hand-painted alters, original paintings, and the artists behind them.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://dankomphalos.com/" target="_blank" rel="noopener">Open</a></div>
-      </article>
-    </div>
-  </section>
-
-  <section class="work" aria-labelledby="tools-h">
-    <div class="work-head">
-      <h2 id="tools-h">Tools</h2>
-      <a class="more" href="/design-lab.html#tools">Full toolbox <span>→</span></a>
-    </div>
-    <div class="shelf">
-      <article class="tile">
-        <h3>Multiplayer<br>Deck<br>Gateway</h3>
-        <p>Build and playtest card games in the browser — a shared engine (real deck, poker evaluator, online multiplayer) with a dozen games and design tools plugged in. Spin up a variant, then deal it to friends over a room code.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=multiplayer-deck-gateway">Open</a></div>
-      </article>
-      <article class="tile">
-        <h3>Math<br>Draws<br>Graphics</h3>
-        <p>Two tools for making pictures with a computer: Code Art (animated math sketches with live, editable code) and Pixel Art (a sprite editor). The studio behind this site's intro art.</p>
-        <div class="btn-row"><a class="btn btn-play" href="https://mathdrawsgraphics.mattdanusergrant.com/">Open</a></div>
-      </article>
-      <article class="tile">
-        <h3>Make<br>Dope<br>Grooves</h3>
-        <p>Write a whole song as code — drums, bass, melodies, chords — and it plays back, every sound synthesized live in your browser.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=make-dope-grooves">Open</a></div>
       </article>
     </div>
   </section>
