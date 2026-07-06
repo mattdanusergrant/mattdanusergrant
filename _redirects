@@ -2,3 +2,12 @@
 /games/municipal-development-globe/*  https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/world/:splat 301
 /games/metropolis-dawn-grid-world/*   https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/world/:splat 301
 /games/metropolis-dawn-grid/*         https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/:splat 301
+
+# Games consolidated to the mustdesigngames subdomain (canonical home)
+/games/keeprippingpacks/*  https://mustdesigngames.mattdanusergrant.com/keeprippingpacks/:splat 301
+/games/sigil-tactics/*     https://mustdesigngames.mattdanusergrant.com/sigil-tactics/:splat 301
+/games/switchback-td/*     https://mustdesigngames.mattdanusergrant.com/switchback-td/:splat 301
+/games/baduk-blitz/*       https://mustdesigngames.mattdanusergrant.com/baduk-blitz/:splat 301
+/games/mosslings/*         https://mustdesigngames.mattdanusergrant.com/mosslings/:splat 301
+/games/bloom-again/*       https://mustdesigngames.mattdanusergrant.com/bloom-again/:splat 301
+/games/prism-pond/*        https://mustdesigngames.mattdanusergrant.com/prism-pond/:splat 301
