@@ -70,7 +70,7 @@
   .intro-card:hover{transform:translateY(-3px);border-color:var(--ink);box-shadow:var(--shadow-hover)}
   .intro-card:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .intro-card canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .intro-words{position:absolute;inset:0;margin:0;display:flex;align-items:center;justify-content:center;padding:0 8%;pointer-events:none;font-family:'Fraunces',serif;font-weight:600;color:#fff;letter-spacing:.02em;line-height:1.05;text-shadow:0 1px 12px rgba(0,0,0,.75),0 0 3px rgba(0,0,0,.85)}
+  .intro-words{position:absolute;inset:0;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0 8%;pointer-events:none;font-family:'Fraunces',serif;font-weight:600;color:#fff;letter-spacing:.02em;line-height:1.05;text-shadow:0 1px 12px rgba(0,0,0,.75),0 0 3px rgba(0,0,0,.85)}
   .intro-words .iw-stack{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
   .intro-words span{font-size:clamp(13px,3.2vw,18px)}
   .intro-cycle{position:absolute;top:6px;right:9px;color:rgba(255,255,255,.55);font-size:14px;pointer-events:none}
@@ -290,7 +290,7 @@
   show(true);
 })();
 </script>
-<script src="/assets/mdg-intro.js"></script>
-<script src="/assets/site.js"></script>
+<script src="/assets/mdg-intro.js?v=2"></script>
+<script src="/assets/site.js?v=2"></script>
 </body>
 </html>
