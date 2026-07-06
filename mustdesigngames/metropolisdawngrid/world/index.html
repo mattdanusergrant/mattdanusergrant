@@ -51,7 +51,7 @@
     <p class="eyebrow">Concept · world model</p>
     <h1>Metropolis Dawn Grid</h1>
     <p>One shared world. Everyone builds on the same planet-sized grid — and you keep expanding until you run into your neighbours.</p>
-    <p class="tag"><b>Click your city</b> to dive to its surface and build. Click a neighbour to meet them.</p>
+    <p class="tag"><b>Click your city</b> to drop to its surface and build — your terrain is set by where you sit on the world. Click a neighbour to see what they trade.</p>
   </div>
 
   <div id="fade"></div>
@@ -107,14 +107,14 @@
   // ---- settlements (your city + neighbouring players) ----
   var CITIES=[
     {name:'Your City',    lat:14, lon:0,   you:true},
-    {name:'New Sprawlton',lat:32, lon:-46},
-    {name:'Gridholm',     lat:-8, lon:38},
-    {name:'Port Zoning',  lat:-30,lon:-18},
-    {name:'Fort Density', lat:48, lon:70},
-    {name:'Lake Parcel',  lat:6,  lon:128},
-    {name:'Trade Junction',lat:-22,lon:96},
-    {name:'Old Commons',  lat:24, lon:182},
-    {name:'Mount Civic',  lat:-46,lon:150}
+    {name:'New Sprawlton',lat:32, lon:-46, spec:'Ore highlands — exports Steel, short on Goods'},
+    {name:'Gridholm',     lat:-8, lon:38,  spec:'Forested belt — timber & Materials to spare'},
+    {name:'Port Zoning',  lat:-30,lon:-18, spec:'Coastal — rich in Goods, buys raw Materials'},
+    {name:'Fort Density', lat:48, lon:70,  spec:'Dense plains — hungry for imported Goods'},
+    {name:'Lake Parcel',  lat:6,  lon:128, spec:'Lakeside — water to spare, needs Steel'},
+    {name:'Trade Junction',lat:-22,lon:96, spec:'Rail hub — brokers surplus in every direction'},
+    {name:'Old Commons',  lat:24, lon:182, spec:'Old town — steady Goods, light on ore'},
+    {name:'Mount Civic',  lat:-46,lon:150, spec:'Mountain ore — heavy Materials exporter'}
   ];
   // stable "continent" blobs so the planet reads as land + sea
   var LAND=[
@@ -219,13 +219,14 @@
     if(dragging){var dx=e.clientX-lastX,dy=e.clientY-lastY;movedDist+=Math.abs(dx)+Math.abs(dy);yaw+=dx*0.35;pitch=clamp(pitch+dy*0.006);lastX=e.clientX;lastY=e.clientY;}
     else if(mode==='world'){canvas.style.cursor=hittest(s.x,s.y)?'pointer':'grab';}}
   function up(e){if(!dragging)return;dragging=false;if(mode!=='world')return;
-    if(movedDist<5){var s=sxy(e),c=hittest(s.x,s.y);if(c){if(c.you)startDive(s.x,s.y);else showNeighbour(c);}}}
+    if(movedDist<5){var s=sxy(e),c=hittest(s.x,s.y);if(c){if(c.you)startDive(s.x,s.y,c);else showNeighbour(c);}}}
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
 
-  function startDive(x,y){mode='diving';divT=0;zx=x;zy=y;navigated=false;}
+  var diveCity=null;
+  function startDive(x,y,c){mode='diving';divT=0;zx=x;zy=y;navigated=false;diveCity=c||null;}
   var fadeEl=document.getElementById('fade');
   function showNeighbour(c){document.getElementById('nc-name').textContent=c.name;
-    document.getElementById('nc-msg').textContent='A neighbour’s city — another player on the shared globe. In the online build you’ll lay rail across the map and open a trade route here.';
+    document.getElementById('nc-msg').textContent=(c.spec?c.spec+'. ':'')+'A neighbour on the shared globe — another player. In the online build you’ll lay rail across the map and open a trade route to swap what each of you makes best.';
     document.getElementById('ncard').classList.add('on');}
   document.getElementById('nc-close').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');});
   document.getElementById('ncard').addEventListener('click',function(e){if(e.target.id==='ncard')this.classList.remove('on');});
@@ -238,7 +239,7 @@
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
     if(mode==='diving'){divT+=dt/0.8;var z=1+11*(divT*divT);ctx.translate(zx,zy);ctx.scale(z,z);ctx.translate(-zx,-zy);
       if(fadeEl)fadeEl.style.opacity=Math.min(1,divT*1.25);
-      if(divT>=1&&!navigated){navigated=true;window.location.href='../';}}
+      if(divT>=1&&!navigated){navigated=true;var u='../';if(diveCity)u='../?lat='+encodeURIComponent(diveCity.lat)+'&lon='+encodeURIComponent(diveCity.lon)+'&name='+encodeURIComponent(diveCity.name);window.location.href=u;}}
     fillSphere();
     clipSphere(); drawLand(); graticule(); ctx.restore();
     rim();

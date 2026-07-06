@@ -17,6 +17,9 @@
   .bar .home{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--muted);text-decoration:none;letter-spacing:-.01em;transition:color .15s;white-space:nowrap}
   .bar .home:hover{color:var(--ink)}
   .bar .title{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(14px,3.6vw,19px);letter-spacing:-.02em;color:var(--ink);white-space:nowrap}
+  .bar .region{font-size:11px;color:var(--muted);border:1.5px solid var(--line-2);border-radius:999px;padding:3px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;font-weight:500}
+  .bar .region b{color:var(--ink-2);font-weight:600}
+  @media(max-width:680px){.bar .region{display:none}}
   .bar .spacer{flex:1}
   .rci{display:flex;gap:9px;align-items:flex-end}
   .meter{display:flex;flex-direction:column;align-items:center;gap:3px;width:20px}
@@ -66,6 +69,7 @@
     <a class="home" href="https://mattdanusergrant.com/" title="Back to mattdanusergrant.com">← MDG</a>
     <span class="title">Metropolis&nbsp;Dawn&nbsp;Grid</span>
     <a class="home" id="worldlink" href="world/" title="See the whole world">🌍&nbsp;world</a>
+    <span class="region" id="region" hidden></span>
     <span class="spacer"></span>
     <div class="rci" id="rci" title="Demand — build what the district wants next">
       <div class="meter"><span class="bar"><i id="dem-res"></i></span><b>R</b></div>
@@ -106,7 +110,12 @@
 
 <script>
 /* ============================================================
-   Metropolis Dawn Grid — v0.8  (surface build)
+   Metropolis Dawn Grid — v0.9  (surface build)
+   + REGION WIRE: a dive from the globe carries a world location
+   (?lat&lon&name) that offsets the terrain noise field — so where
+   you land on the shared world sets your biome mix, your named
+   specialisation (the header chip), and your own saved patch. The
+   first real link between the globe concept and the playable surface.
    + TERRAIN: deterministic biomes (plains/forest/ore/water).
    Ore & forest boost Works' Materials yield; coasts give free
    water but can't be built on — where you build sets your
@@ -123,7 +132,18 @@
   var canvas=document.getElementById('city'), ctx=canvas.getContext('2d');
   var CELL=32, cols=0, rows=0, dpr=1;
   var grid=[], brush='road', painting=false, lastPaint=-1, dirty=true, svcDirty=false;
-  var SAVE_KEY='mdg-district-grid-v1';
+  // ---- region: where this patch sits on the shared world (carried in from the globe dive) ----
+  var REGION=(function(){try{
+    var q=new URLSearchParams(location.search);
+    if(!q.has('lat')||!q.has('lon'))return null;
+    var lat=parseFloat(q.get('lat')),lon=parseFloat(q.get('lon'));
+    if(isNaN(lat)||isNaN(lon))return null;
+    return {lat:lat,lon:lon,name:(q.get('name')||'Your City'),
+      ox:Math.round(lon*137)+9973, oy:Math.round(lat*151)+7919,   // a big deterministic jump into the noise field per location
+      slug:(Math.round(lat*10)+'_'+Math.round(lon*10)).replace(/-/g,'n')};
+  }catch(e){return null;}})();
+  var WOX=REGION?REGION.ox:0, WOY=REGION?REGION.oy:0;
+  var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
   var ZONES={res:1,com:1,ind:1,fac:1};
   var RP=5, RW=5;                                  // power / water coverage radius (Chebyshev)
   var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
@@ -140,11 +160,25 @@
     return (a*(1-sx)+b*sx)*(1-sy)+(d*(1-sx)+e*sx)*sy;}
   function terrainAt(c,r){
     if(r<=0)return 'plains';                                   // keep the highway row buildable/clear
-    var elev=vnoise(c,r,8)*0.6+vnoise(c+11,r+7,3.5)*0.4, moist=vnoise(c+80,r+40,6);
+    var wc=c+WOX, wr=r+WOY;                                    // offset into the shared-world noise field (set by the globe dive)
+    var elev=vnoise(wc,wr,8)*0.6+vnoise(wc+11,wr+7,3.5)*0.4, moist=vnoise(wc+80,wr+40,6);
     if(elev<0.36)return 'water';                               // coast/lake — free water, but no building
     if(elev>0.68)return 'ore';                                 // hills/ore — best for Works (Materials)
     if(moist>0.6)return 'forest';                              // forest — good for Works (timber)
     return 'plains';
+  }
+  // terrain make-up over a representative window, scored against the cross-world baseline →
+  // a one-line "why here" label naming this patch's comparative advantage (the reason to trade)
+  function regionSpec(){
+    var ct={plains:0,forest:0,ore:0,water:0};
+    for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrainAt(c,r)]++;
+    var land=ct.plains+ct.forest+ct.ore||1;
+    var oS=(ct.ore/land)/0.15, fS=(ct.forest/land)/0.26, wS=(ct.water/(ct.water+land))/0.17;
+    var mx=Math.max(oS,fS,wS);
+    if(mx<1.15)return 'open plains · balanced start';
+    if(mx===oS)return 'ore-rich highlands · Works thrive';
+    if(mx===fS)return 'forested belt · timber Works';
+    return 'coastal shelf · free water, tight land';
   }
 
   // ---- palettes ----
@@ -586,6 +620,16 @@
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);if(tt==='rail'||tt==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
+  // region: name the header chip + welcome the player to their patch of the shared world
+  if(REGION){
+    var esc=function(s){return String(s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});};
+    var regEl=document.getElementById('region');
+    if(regEl){regEl.innerHTML='◉ <b>'+esc(REGION.name)+'</b> · '+regionSpec();regEl.hidden=false;}
+    document.title=REGION.name+' — Metropolis Dawn Grid';
+    toastEl.innerHTML='◉ '+esc(REGION.name)+' <b>your patch of the shared world</b>';
+    toastEl.classList.add('on');clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3400);
+  }
   requestAnimationFrame(frame);
   setInterval(tick,650);
 
