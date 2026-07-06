@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>Multiplayer Deck Gateway</title>
+<script>!function(){try{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}catch(e){}}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<!--
+  MULTIPLAYER DECK GATEWAY
+  A generic lab for prototyping card games — poker variants AND fully custom decks.
+  Self-contained static build (no build step). Lives at mustdesigngames/multiplayerdeckgateway/.
+
+  THE WORKSHOP PATTERN
+    - Shared ENGINE below: a real card model (standard 52 + jokers + custom subsets),
+      shuffle/deal helpers, a card renderer, and a 5-from-7 poker hand evaluator.
+    - A NET layer (host-authoritative) for testing with friends in the browser. Hotseat
+      always works; online uses room codes over an authoritative PartyKit room server
+      (see party/), with a PeerJS peer-to-peer fallback when it isn't configured.
+    - Each game is a plain object pushed into GAMES:
+        { id, title, players, tag, blurb, mount(root, ctx) -> optional cleanup() }
+      Add a game = write one mount() and push it to GAMES. That's the framework.
+
+  DEV HATCH
+    window.__cw exposes the pure engine (makeDeck, score5, best7, evalName, GAMES)
+    for headless smoke tests. See test note at the bottom.
+-->
+<style>
+  :root{
+    /* chrome — matches mattdanusergrant.com (warm paper/ink), light by default */
+    --bg:#FBF8F2; --panel:#FFFFFF; --panel2:#F4F0E6; --ink:#15161C; --muted:#6A6A6A;
+    --line:#E5E0D2; --accent:#15161C; --accent2:#B08D57; --good:#3ddc84; --bad:#ff6b6b;
+    /* game surfaces — theme-independent (felt table, card faces, suits) */
+    --felt:#16603f; --felt2:#0f4a30; --cardface:#fbfaf5; --red:#d23b3b; --black:#23263a;
+    --gold:#e6c078;
+  }
+  [data-theme="dark"]{ --bg:#13110E; --panel:#1D1A16; --panel2:#252219; --ink:#EDE8DF; --muted:#8A857B; --line:#2C2924; --accent:#EDE8DF; --accent2:#c9a24b; }
+  @media(prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --bg:#13110E; --panel:#1D1A16; --panel2:#252219; --ink:#EDE8DF; --muted:#8A857B; --line:#2C2924; --accent:#EDE8DF; --accent2:#c9a24b; } }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.45; }
+  #app{ max-width:1040px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; }
+  header{ display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; background:var(--bg); z-index:5; }
+  header .back{ font-size:22px; background:none; border:none; color:var(--ink); cursor:pointer; padding:2px 8px; display:none; }
+  header h1{ font-family:'Fraunces',Georgia,serif; font-size:18px; margin:0; font-weight:600; letter-spacing:-0.01em; }
+  header .sub{ font-size:12px; color:var(--muted); margin-top:1px; }
+  #view{ flex:1; padding:16px; }
+
+  /* Home launcher */
+  .lede{ color:var(--muted); font-size:13.5px; margin:0 2px 16px; }
+  .grid{ display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
+  .tile{ background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--line);
+    border-radius:14px; padding:14px; cursor:pointer; transition:transform .1s, border-color .12s; }
+  .tile:hover{ transform:translateY(-3px); border-color:var(--accent); }
+  .tile .nm{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:17px; letter-spacing:-0.01em; }
+  .tile .bl{ font-size:12px; color:var(--muted); margin-top:6px; min-height:32px; }
+  .tile .meta{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .chip{ font-size:11px; font-weight:700; border-radius:20px; padding:2px 9px; background:var(--panel2); color:var(--muted); border:1px solid var(--line); }
+
+  /* Buttons */
+  .btn{ font-family:'Fraunces',Georgia,serif; background:var(--accent); color:var(--bg); border:none; border-radius:11px; font-weight:600; font-size:15px;
+    padding:11px 16px; cursor:pointer; }
+  .btn:hover{ filter:brightness(1.08); }
+  .btn:disabled{ background:#39406090; color:#8990ad; cursor:default; }
+  .btn.alt{ background:var(--panel2); border:1px solid var(--line); color:var(--ink); }
+  .btn.good{ background:var(--good); color:#07120b; }
+  .btn.bad{ background:var(--bad); color:#2a0a0a; }
+  .btn.sm{ padding:7px 11px; font-size:13px; border-radius:9px; }
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .center{ text-align:center; }
+  .muted{ color:var(--muted); font-size:13px; }
+  .big{ font-family:'Fraunces',Georgia,serif; font-size:24px; font-weight:600; letter-spacing:-0.01em; }
+  .pill{ background:var(--panel2); border:1px solid var(--line); border-radius:20px; padding:6px 12px; font-weight:800; font-size:13px; }
+  .felt{ background:radial-gradient(circle at 50% 20%, var(--felt), var(--felt2)); border:1px solid #0a3a26;
+    border-radius:16px; padding:14px; }
+  .lane{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; min-height:78px; }
+  .slot{ width:52px; height:74px; border:2px dashed #ffffff33; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    color:#ffffff55; font-size:11px; text-align:center; }
+  .toast{ position:fixed; left:50%; bottom:30px; transform:translateX(-50%); background:#000a; color:#fff;
+    padding:10px 18px; border-radius:20px; font-weight:800; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; }
+  .toast.show{ opacity:1; }
+  .h2{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:15px; margin:14px 0 6px; color:var(--ink); letter-spacing:-0.01em; }
+  input.code{ background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:9px;
+    padding:9px 11px; font-size:15px; font-weight:800; letter-spacing:.12em; width:140px; text-transform:uppercase; }
+
+  /* CARD (standard suited) */
+  .card{ width:54px; height:76px; border-radius:8px; background:var(--cardface); position:relative;
+    box-shadow:0 2px 5px #0006; user-select:none; flex:0 0 auto; }
+  .card.lg{ width:66px; height:94px; }
+  .card .corner{ position:absolute; font-weight:900; line-height:1; font-size:13px; text-align:center; }
+  .card .corner.tl{ top:5px; left:6px; }
+  .card .corner.br{ bottom:5px; right:6px; transform:rotate(180deg); }
+  .card .corner .s{ font-size:12px; display:block; margin-top:1px; }
+  .card .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; }
+  .card.lg .mid{ font-size:38px; }
+  .card.red{ color:var(--red); }
+  .card.black{ color:var(--black); }
+  .card.back{ background:
+      repeating-linear-gradient(45deg,#3550c0,#3550c0 6px,#2a40a0 6px,#2a40a0 12px); box-shadow:0 2px 5px #0006; }
+  .card.back::after{ content:""; position:absolute; inset:6px; border:2px solid #ffffff55; border-radius:5px; }
+  .card.sel{ outline:3px solid var(--gold); outline-offset:1px; }
+  .card.playable{ cursor:pointer; }
+  .card.playable:hover{ transform:translateY(-4px); transition:transform .08s; }
+  .card .jk{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:26px;
+    flex-direction:column; color:#b98a4b; font-weight:900; }
+  .card .jk small{ font-size:9px; letter-spacing:.1em; }
+  .hand{ display:flex; gap:6px; flex-wrap:wrap; }
+  .deckpile{ position:relative; width:54px; height:76px; }
+  .deckpile .count{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }
+  .seatbox{ background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:10px; }
+  .seatbox.me{ border-color:var(--accent); }
+  .seatname{ font-weight:800; font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="back" id="back">‹</button>
+    <div>
+      <h1 id="title">Multiplayer Deck Gateway</h1>
+      <div class="sub" id="sub">Build, playtest &amp; deal card games to friends online.</div>
+    </div>
+  </header>
+  <div id="view"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   ENGINE — card model
+   ============================================================ */
+const SUITS = [
+  { id:'S', sym:'♠', color:'black' },
+  { id:'H', sym:'♥', color:'red'   },
+  { id:'D', sym:'♦', color:'red'   },
+  { id:'C', sym:'♣', color:'black' },
+];
+const SUIT = Object.fromEntries(SUITS.map(s=>[s.id,s]));
+// rank value: A high (14) for poker; A-low handled per-game where needed.
+const RANKS = [
+  {id:'A',v:14,t:'A'},{id:'2',v:2,t:'2'},{id:'3',v:3,t:'3'},{id:'4',v:4,t:'4'},
+  {id:'5',v:5,t:'5'},{id:'6',v:6,t:'6'},{id:'7',v:7,t:'7'},{id:'8',v:8,t:'8'},
+  {id:'9',v:9,t:'9'},{id:'10',v:10,t:'10'},{id:'J',v:11,t:'J'},{id:'Q',v:12,t:'Q'},{id:'K',v:13,t:'K'},
+];
+const RANK = Object.fromEntries(RANKS.map(r=>[r.id,r]));
+
+function mkCard(rid, sid){
+  const r=RANK[rid], s=SUIT[sid];
+  return { id:rid+sid, r:rid, s:sid, v:r.v, t:r.t, sym:s.sym, color:s.color };
+}
+function mkJoker(n){ return { id:'JK'+n, joker:true, t:'JOKER', color:'joker' }; }
+
+// makeDeck({ ranks:[ids]|'all', suits:[ids]|'all', jokers:0 })
+function makeDeck(opts={}){
+  const rids = (!opts.ranks || opts.ranks==='all') ? RANKS.map(r=>r.id) : opts.ranks;
+  const sids = (!opts.suits || opts.suits==='all') ? SUITS.map(s=>s.id) : opts.suits;
+  const d=[];
+  for(const sid of sids) for(const rid of rids) d.push(mkCard(rid,sid));
+  for(let i=0;i<(opts.jokers||0);i++) d.push(mkJoker(i+1));
+  return d;
+}
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const rand = n => Math.floor(Math.random()*n);
+
+/* ============================================================
+   ENGINE — poker hand evaluator (best 5 of up to 7)
+   score5 -> comparable array [category, ...tiebreakers]; bigger = better.
+   categories: 8 SF, 7 Quads, 6 Full, 5 Flush, 4 Straight, 3 Trips, 2 TwoPair, 1 Pair, 0 High
+   ============================================================ */
+const CAT_NAME = ['High Card','Pair','Two Pair','Three of a Kind','Straight','Flush','Full House','Four of a Kind','Straight Flush'];
+
+function straightHigh(vals){ // vals: sorted-desc unique rank values; returns high card of best straight or 0
+  const u=[...new Set(vals)].sort((a,b)=>b-a);
+  // Ace-low wheel: treat A(14) also as 1
+  const w = u.includes(14) ? [...u,1] : u;
+  let run=1;
+  for(let i=0;i<w.length-1;i++){
+    if(w[i]-1===w[i+1]){ run++; if(run>=5) return w[i-3]; }
+    else run=1;
+  }
+  return 0;
+}
+function score5(cards){ // exactly 5 real (non-joker) cards
+  const vals = cards.map(c=>c.v).sort((a,b)=>b-a);
+  const suits = cards.map(c=>c.s);
+  const flush = suits.every(s=>s===suits[0]);
+  const sHigh = straightHigh(vals);
+  // rank multiplicity
+  const cnt={}; vals.forEach(v=>cnt[v]=(cnt[v]||0)+1);
+  // groups sorted by (count desc, value desc)
+  const groups = Object.keys(cnt).map(v=>({v:+v,n:cnt[v]}))
+    .sort((a,b)=> b.n-a.n || b.v-a.v);
+  const shape = groups.map(g=>g.n).join('');
+  const kick = groups.map(g=>g.v);
+  if(flush && sHigh) return [8, sHigh];
+  if(shape.startsWith('4')) return [7, kick[0], kick[1]];
+  if(shape==='32') return [6, kick[0], kick[1]];
+  if(flush) return [5, ...vals];
+  if(sHigh) return [4, sHigh];
+  if(shape.startsWith('3')) return [3, kick[0], kick[1], kick[2]];
+  if(shape.startsWith('22')) return [2, kick[0], kick[1], kick[2]];
+  if(shape.startsWith('2')) return [1, ...kick];
+  return [0, ...vals];
+}
+function cmpScore(a,b){ const n=Math.max(a.length,b.length); for(let i=0;i<n;i++){ const x=a[i]||0,y=b[i]||0; if(x!==y) return x-y; } return 0; }
+function combos(arr,k){ const res=[]; (function go(start,acc){ if(acc.length===k){ res.push(acc.slice()); return; }
+  for(let i=start;i<arr.length;i++){ acc.push(arr[i]); go(i+1,acc); acc.pop(); } })(0,[]); return res; }
+function best7(cards){ // up to 7 cards (ignores jokers); returns {score, cards, name}
+  const real = cards.filter(c=>!c.joker);
+  if(real.length<5) return { score:[-1], cards:[], name:'(incomplete)' };
+  let best=null, bestC=null;
+  for(const combo of combos(real,5)){ const s=score5(combo); if(!best || cmpScore(s,best)>0){ best=s; bestC=combo; } }
+  return { score:best, cards:bestC, name:CAT_NAME[best[0]] };
+}
+const evalName = cards => best7(cards).name;
+
+/* Fae duel resolution (Kingmaker): the cycle King ▸ Queen ▸ Wyld ▸ King.
+   Same rank breaks by suit ♠>♥>♦>♣. Returns 1 (a wins), -1 (b wins), 0 (tie). */
+function faeBeats(a,b){
+  const cat = c => c.joker ? 'J' : c.r;       // 'K' | 'Q' | 'J'(wyld)
+  const ca=cat(a), cb=cat(b);
+  if(ca===cb){ if(ca==='J') return 0; const ord={S:4,H:3,D:2,C:1}; return Math.sign(ord[a.s]-ord[b.s]); }
+  const tri={ K:'Q', Q:'J', J:'K' };          // X beats tri[X]
+  return tri[ca]===cb ? 1 : -1;
+}
+
+/* ============================================================
+   ENGINE — rendering
+   ============================================================ */
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
+function cardEl(c, opts={}){
+  const d=el('div','card'+(opts.lg?' lg':''));
+  if(opts.faceUp===false || !c){ d.classList.add('back'); return d; }
+  if(c.joker){ d.classList.add('black'); d.innerHTML=`<div class="jk">★<small>JOKER</small></div>`; return d; }
+  d.classList.add(c.color);
+  d.innerHTML = `<div class="corner tl">${c.t}<span class="s">${c.sym}</span></div>
+                 <div class="mid">${c.sym}</div>
+                 <div class="corner br">${c.t}<span class="s">${c.sym}</span></div>`;
+  return d;
+}
+let toastTimer=null;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1300); }
+
+/* ============================================================
+   NET — host-authoritative transport (hotseat + online)
+   The shell wires this for the online games. Hotseat needs no network.
+   Online has two interchangeable transports behind one interface:
+     • PartyKit  — authoritative room server on Cloudflare's edge (reliable
+       WebSocket, no P2P/NAT/TURN failures). Used when PARTY_HOST is set. The
+       server owns the roster + caches the latest snapshot; game rules still run
+       in the host browser. See party/ for the server and deploy steps.
+     • PeerJS    — legacy peer-to-peer fallback (free public broker). Used when
+       PARTY_HOST is empty or the room server is unreachable.
+   Either way: host id = room code; clients connect; host broadcasts state,
+   clients send intents.
+   ============================================================ */
+/* Deployed PartyKit room-server host, e.g. 'multiplayerdeckgateway.<you>.partykit.dev'
+   (see party/README.md). Empty ⇒ use the PeerJS peer-to-peer fallback. */
+const PARTY_HOST = '';
+
+const Net = {
+  mode:'hotseat', transport:null, peer:null, conns:[], ws:null, isHost:false, code:null,
+  onState:null, onIntent:null, onJoin:null, onLeave:null,
+  usePartyServer(){ return !!PARTY_HOST; },
+  roomCode(){ const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=a[rand(a.length)]; return s; },
+
+  // ---- public API (transport-agnostic; games only touch these) ----
+  async host(){
+    if(this.usePartyServer()){ const r=await this._partyHost(); if(r.ok||!r.fallback) return r; }
+    return this._peerHost();
+  },
+  async join(code){
+    if(this.usePartyServer()){ const r=await this._partyJoin(code); if(r.ok||!r.fallback) return r; }
+    return this._peerJoin(code);
+  },
+  broadcastState(state){
+    if(this.transport==='party'){ if(this.ws&&this.ws.readyState===1){ try{ this.ws.send(JSON.stringify({type:'state',state})); }catch(e){} } return; }
+    this.conns.forEach(c=>{ try{ c.send({type:'state',state}); }catch(e){} });
+  },
+  sendIntent(intent){
+    if(this.transport==='party'){ if(this.ws&&this.ws.readyState===1){ try{ this.ws.send(JSON.stringify(intent)); }catch(e){} } return; }
+    const c=this.conns[0]; if(c){ try{ c.send(intent); }catch(e){} }
+  },
+  teardown(){
+    try{ if(this.ws){ this.ws.onopen=this.ws.onclose=this.ws.onerror=this.ws.onmessage=null; this.ws.close(); } }catch(e){}
+    try{ this.conns.forEach(c=>c.close()); }catch(e){}
+    try{ this.peer&&this.peer.destroy(); }catch(e){}
+    this.ws=null; this.peer=null; this.conns=[]; this.isHost=false; this.mode='hotseat'; this.transport=null; this.code=null;
+    this.onState=this.onIntent=this.onJoin=this.onLeave=null;
+  },
+
+  // ---- PartyKit transport (authoritative room server) ----
+  _partyUrl(code, asHost){
+    const local=/^(localhost|127\.|\[::1\]|0\.0\.0\.0)/.test(PARTY_HOST);
+    return `${local?'ws':'wss'}://${PARTY_HOST}/parties/main/${code}${asHost?'?host=1':''}`;
+  },
+  _partyHost(){ this.code=this.roomCode(); this.isHost=true; this.mode='online'; this.transport='party'; return this._partyConnect(this.code,true); },
+  _partyJoin(code){ this.isHost=false; this.mode='online'; this.transport='party'; this.code=code; return this._partyConnect(code,false); },
+  _partyConnect(code, asHost){
+    return new Promise((res)=>{
+      let ws; try{ ws=new WebSocket(this._partyUrl(code,asHost)); }catch(e){ this.transport=null; res({ ok:false, fallback:true }); return; }
+      this.ws=ws;
+      let settled=false; const done=v=>{ if(!settled){ settled=true; res(v); } };
+      const to=setTimeout(()=>done({ ok:false, err:'Timed out reaching the room server.' }), 9000);
+      ws.onopen=()=>{ clearTimeout(to); done(asHost?{ ok:true, code }:{ ok:true }); };
+      // A pre-open failure means the server is unreachable → let host()/join() fall back to PeerJS.
+      ws.onerror=()=>{ clearTimeout(to); if(!settled){ this.ws=null; this.transport=null; done({ ok:false, fallback:true }); } };
+      ws.onclose=()=>{ clearTimeout(to); if(!settled){ this.ws=null; this.transport=null; done({ ok:false, fallback:true }); } };
+      ws.onmessage=(ev)=>{
+        let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+        if(m.type==='welcome') return;
+        if(m.type==='state'){ if(this.onState) this.onState(m.state); return; }
+        if(m.type==='join'){ if(this.onJoin) this.onJoin({ id:m.id }); return; }
+        if(m.type==='leave'){ if(this.onLeave) this.onLeave({ id:m.id }); return; }
+        if(this.onIntent) this.onIntent(m, { id:m.__from }); // relayed client intent (host side)
+      };
+    });
+  },
+
+  // ---- PeerJS transport (legacy peer-to-peer fallback) ----
+  async loadPeer(){
+    if(window.Peer) return true;
+    return new Promise((res)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+      s.onload=()=>res(!!window.Peer); s.onerror=()=>res(false);
+      document.head.appendChild(s);
+    });
+  },
+  async _peerHost(){
+    if(!await this.loadPeer()) return { ok:false, err:'Could not load PeerJS (offline or blocked). Hotseat still works.' };
+    return new Promise((res)=>{
+      this.code=this.roomCode(); this.isHost=true; this.mode='online'; this.transport='peer';
+      this.peer=new window.Peer('cwksp-'+this.code);
+      this.peer.on('open',()=>res({ ok:true, code:this.code }));
+      this.peer.on('error',e=>res({ ok:false, err:String(e.type||e) }));
+      this.peer.on('connection',conn=>{
+        conn.on('open',()=>{ this.conns.push(conn); if(this.onJoin) this.onJoin(conn); });
+        conn.on('data',d=>{ if(this.onIntent) this.onIntent(d, conn); });
+        conn.on('close',()=>{ this.conns=this.conns.filter(c=>c!==conn); if(this.onLeave) this.onLeave(conn); });
+      });
+    });
+  },
+  async _peerJoin(code){
+    if(!await this.loadPeer()) return { ok:false, err:'Could not load PeerJS (offline or blocked).' };
+    return new Promise((res)=>{
+      this.isHost=false; this.mode='online'; this.transport='peer'; this.code=code;
+      this.peer=new window.Peer();
+      this.peer.on('open',()=>{
+        const conn=this.peer.connect('cwksp-'+code,{reliable:true});
+        this.conns=[conn];
+        conn.on('open',()=>res({ ok:true }));
+        conn.on('data',d=>{ if(d.type==='state' && this.onState) this.onState(d.state); });
+        conn.on('error',e=>res({ ok:false, err:String(e) }));
+      });
+      this.peer.on('error',e=>res({ ok:false, err:String(e.type||e) }));
+      setTimeout(()=>res({ ok:false, err:'Timed out reaching room '+code }), 9000);
+    });
+  },
+};
+
+/* ============================================================
+   SHELL — launcher + mount/unmount
+   ============================================================ */
+const GAMES = [];
+const view = document.getElementById('view');
+const backBtn = document.getElementById('back');
+const titleEl = document.getElementById('title');
+const subEl = document.getElementById('sub');
+let cleanup = null;
+
+backBtn.addEventListener('click', goHome);
+function goHome(){
+  if(cleanup){ try{cleanup();}catch(e){} cleanup=null; }
+  Net.teardown();
+  backBtn.style.display='none';
+  titleEl.textContent='Multiplayer Deck Gateway';
+  subEl.textContent='Build, playtest & deal card games to friends online.';
+  renderHome();
+}
+function openGame(g){
+  if(cleanup){ try{cleanup();}catch(e){} cleanup=null; }
+  view.innerHTML='';
+  backBtn.style.display='block';
+  titleEl.textContent=g.title;
+  subEl.textContent=g.players+' · '+g.tag;
+  cleanup = g.mount(view, {}) || null;
+}
+function renderHome(){
+  view.innerHTML='';
+  view.appendChild(el('p','lede','Build and playtest card games in the browser — a shared engine (real 52-card deck, poker hand evaluator, online multiplayer) with a dozen games and design tools plugged in. Tap one to play, spin up a variant, then deal it to friends over a room code.'));
+  const grid=el('div','grid');
+  GAMES.forEach(g=>{
+    const t=el('div','tile');
+    const chips = g.chips.map(c=>`<span class="chip ${c.k}">${c.t}</span>`).join('');
+    t.innerHTML=`<div class="nm">${g.title}</div><div class="bl">${g.blurb}</div>
+      <div class="meta">${chips}<span class="chip">${g.players}</span></div>`;
+    t.addEventListener('click',()=>openGame(g));
+    grid.appendChild(t);
+  });
+  view.appendChild(grid);
+}
+
+/* ============================================================
+   GAME — CATERPILLAR CLIMB  (solo, ages 4-6, 44-card A..J deck)
+   Build A(1)->10->J(butterfly) four times. Suits ignored. Reserve "leaves".
+   ============================================================ */
+GAMES.push({
+  id:'caterpillar', title:'Caterpillar Climb', players:'1 player', tag:'kids · A–J deck',
+  chips:[{k:'custom',t:'custom deck'}],
+  blurb:'Grow a caterpillar from A up to J (butterfly), four times. Counting-first solitaire for little kids.',
+  mount(root){
+    const cv = c => c.r==='A'?1 : c.r==='J'?11 : c.v; // A-low; J=11 = butterfly
+    let stock = shuffle(makeDeck({ ranks:['A','2','3','4','5','6','7','8','9','10','J'] })); // 44
+    const LEAVES=4;
+    let leaves=Array.from({length:LEAVES},()=>[]); // reserve piles (top is playable)
+    let climb=[]; let need=1; let done=0; let cur=null;
+
+    root.innerHTML=`
+      <p class="muted" id="msg">Flip the deck. Put A,2,3…10 on the Climb in order; the J is the butterfly!</p>
+      <div class="felt">
+        <div class="h2" style="color:#eaf6ee">🐛 The Climb <span class="muted" id="needlbl"></span></div>
+        <div class="lane" id="climb"></div>
+        <div class="h2" style="color:#eaf6ee">🍃 Leaf spots (tap a top card to use it)</div>
+        <div class="row" id="leaves" style="align-items:flex-start"></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <div class="deckpile"><div class="card back" id="deck"></div><div class="count" id="dc"></div></div>
+        <div id="curwrap"></div>
+        <button class="btn" id="flip">Flip a card</button>
+        <span class="pill" id="prog">Butterflies 0/4</span>
+      </div>`;
+    const $=s=>root.querySelector(s);
+    const msg=$('#msg'), climbEl=$('#climb'), leavesEl=$('#leaves'), dc=$('#dc'),
+          flip=$('#flip'), prog=$('#prog'), curwrap=$('#curwrap'), needlbl=$('#needlbl');
+
+    function placeOnClimb(c){
+      climb.push(c); cur=null;
+      if(cv(c)===11){ done++; toast('🦋 Butterfly! Caterpillar complete!'); climb=[]; need=1;
+        if(done>=4){ return finish(); } }
+      else need=cv(c)+1;
+      render();
+    }
+    function tryFromLeaves(i){
+      const pile=leaves[i]; if(!pile.length) return;
+      const top=pile[pile.length-1];
+      if(cv(top)===need){ pile.pop(); placeOnClimb(top); } else toast('That leaf card isn’t next yet.');
+    }
+    function flipCard(){
+      if(cur){ toast('Place the flipped card first.'); return; }
+      if(!stock.length) return;
+      cur=stock.pop();
+      if(cv(cur)===need){ placeOnClimb(cur); }
+      else { render(); checkStuck(); }
+    }
+    function toLeaf(i){
+      if(!cur) return;
+      leaves[i].push(cur); cur=null; render();
+    }
+    function checkStuck(){
+      const anyEmpty = leaves.some(p=>p.length===0);
+      if(cur && cv(cur)!==need && !anyEmpty){
+        msg.textContent='No room and not the next number — but in Cuddle mode you can always reset. (Tip: fewer caterpillars left wins!)';
+      }
+    }
+    function finish(){
+      root.innerHTML=`<div class="center"><div class="big">🦋🦋🦋🦋 All four butterflies flew away!</div>
+        <p class="muted">You counted all the way up four times. Great job!</p></div>`;
+      const again=el('button','btn','Play again'); again.onclick=()=>openGame(GAMES.find(g=>g.id==='caterpillar'));
+      const r=el('div','row center'); r.style.justifyContent='center'; r.appendChild(again); root.querySelector('.center').appendChild(r);
+    }
+    function render(){
+      dc.textContent=stock.length; prog.textContent=`Butterflies ${done}/4`;
+      needlbl.textContent = need<=10 ? `— needs ${need===1?'A':need}` : '— needs J (butterfly!)';
+      flip.disabled = !!cur || stock.length===0;
+      climbEl.innerHTML=''; climb.forEach(c=>climbEl.appendChild(cardEl(c)));
+      if(climb.length===0) climbEl.appendChild(el('div','slot','start with A'));
+      curwrap.innerHTML='';
+      if(cur){ const w=el('div','card sel'); w.replaceWith(); const ce=cardEl(cur); ce.classList.add('sel'); curwrap.appendChild(ce); }
+      leavesEl.innerHTML='';
+      leaves.forEach((pile,i)=>{
+        const col=el('div'); col.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px';
+        const top = pile.length ? cardEl(pile[pile.length-1]) : el('div','slot','leaf '+(i+1));
+        if(pile.length){ top.classList.add('playable'); top.onclick=()=>tryFromLeaves(i); }
+        else if(cur){ top.style.cursor='pointer'; top.onclick=()=>toLeaf(i); top.classList.add('playable'); }
+        col.appendChild(top);
+        const drop=el('button','btn alt sm', cur ? 'put here' : 'leaf '+(i+1));
+        drop.disabled=!cur; drop.onclick=()=>toLeaf(i);
+        col.appendChild(drop);
+        col.appendChild(el('div','muted', pile.length+' cards'));
+        leavesEl.appendChild(col);
+      });
+    }
+    flip.addEventListener('click',flipCard);
+    render();
+  }
+});
+
+/* ============================================================
+   GAME — BRAMBLEWAKE  (matching solitaire w/ hidden cards + stacking, 44-card deck)
+   Deal all 44 into 7 burrows face-down (sizes 5,6,7,8,7,6,5 → face-down after
+   auto-fill = 3,4,5,6,5,4,3, a pyramid peaking at the center burrow). Each hollow
+   AUTO-FILLS from the top card of the burrow directly beneath it
+   (same column) whenever it's empty — including at deal, giving 14 face-up cards
+   (7 hollows + 7 revealed burrow fronts). Clearing a hollow pulls up and reveals
+   the burrow's next card. NO draw pile. Hollows sit aligned above their burrows.
+   The Drawn slot holds ONE card: you can only draw when it's empty AND there's room
+   to place a card — an empty hollow or empty burrow (rule 1). 5 hollows are stacks:
+   a card can be added to a hollow if it's the SAME SUIT and one rank higher/lower
+   than the top (rule 2) — a way to consolidate and free hollows. Pick a burrow
+   front, the drawn card, or a hollow top: pair two of the SAME animal (colour +
+   rank), stack onto a hollow, or drop into an empty hollow/burrow. Clearing a
+   burrow front UNCOVERS the sleeper behind it. Clear all 22 pairs to win.
+   Any card can be placed on any hollow (no stacking constraint) — solver-verified
+   100% solvable. Unlimited undo.
+   ============================================================ */
+GAMES.push({
+  id:'bramblewake', title:'Bramblewake', players:'1 player', tag:'solitaire · pairs · no stacking',
+  chips:[{k:'custom',t:'fae deck'}],
+  blurb:'A fae matching solitaire: pair every animal across a two-part bestiary — red (Pegasus→Horse) and black (Unicorn→Seal). All 44 cards deal into 7 burrows with a hollow above each (14 face-up to start); dig to uncover critters, set blockers aside in the Meadow — one growing straight you extend ±1 from either end — and undo freely.',
+  mount(root){
+    // creature depends on COLOUR × RANK: red suits (♥♦) and black suits (♠♣) are
+    // two parallel families of eleven. Suits render as the normal four pips.
+    const CREAT = {
+      red: {
+        A:{e:'🐴',n:'Pegasus'}, '2':{e:'🐭',n:'Mouse'}, '3':{e:'🦆',n:'Duck'}, '4':{e:'🐿️',n:'Squirrel'},
+        '5':{e:'🐦',n:'Sparrow'}, '6':{e:'🦇',n:'Bat'}, '7':{e:'🦨',n:'Skunk'}, '8':{e:'🦊',n:'Fox'},
+        '9':{e:'🦝',n:'Raccoon'}, '10':{e:'🐺',n:'Wolf'}, J:{e:'🐎',n:'Horse'},
+      },
+      black: {
+        A:{e:'🦄',n:'Unicorn'}, '2':{e:'🐿️',n:'Chipmunk'}, '3':{e:'🐦',n:'Hummingbird'}, '4':{e:'🐇',n:'Rabbit'},
+        '5':{e:'🦉',n:'Owl'}, '6':{e:'🐦‍⬛',n:'Crow'}, '7':{e:'🦫',n:'Beaver'}, '8':{e:'🦊',n:'Arctic Fox'},
+        '9':{e:'🦡',n:'Badger'}, '10':{e:'🦌',n:'Stag'}, J:{e:'🦭',n:'Seal'},
+      },
+    };
+    const creatOf = c => CREAT[c.color][c.r];
+    // responsive sizing — fit all PILES columns to the screen width (shrink on mobile, grow on desktop)
+    let S=1, CW=54, CH=76, OVER=36;
+    function computeScale(){
+      const w=window.innerWidth||760, gap=8;
+      const usable=Math.min(w-60, 1000);                 // subtract #view (32) + felt (28) padding
+      const perCol=(usable-gap*(PILES-1))/PILES;          // width available per column
+      const cw=Math.max(30, Math.min(perCol, 86));        // clamp: never smaller than 30, never bigger than 86
+      S=cw/54; CW=Math.round(54*S); CH=Math.round(76*S); OVER=Math.round(36*S);
+    }
+    function box(cls){ const d=el('div',cls); d.style.width=CW+'px'; d.style.height=CH+'px'; d.style.flex='0 0 auto'; return d; }
+    function slotBox(txt){ const s=box('slot'); if(txt!=null) s.textContent=txt; s.style.fontSize=Math.round(11*S)+'px'; return s; }
+    function critEl(c, sel){
+      const cr=creatOf(c); const d=box('card'); if(sel) d.classList.add('sel');
+      const col = c.color==='red' ? '#c62b2b' : '#26344a'; const f=x=>Math.round(x*S);
+      d.style.background='linear-gradient(165deg,#f5fbf0,#e0f0e3)'; d.style.border='1px solid #b7d9c2';
+      d.innerHTML=`<div class="corner tl" style="color:${col};font-size:${f(13)}px">${c.t}<span class="s" style="font-size:${f(12)}px">${c.sym}</span></div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:${f(27)}px;line-height:1">${cr.e}</div>
+          <div style="font-size:${f(8.5)}px;font-weight:800;color:${col};margin-top:${f(2)}px">${cr.n}</div></div>
+        <div class="corner br" style="color:${col};font-size:${f(13)}px">${c.t}<span class="s" style="font-size:${f(12)}px">${c.sym}</span></div>`;
+      return d;
+    }
+    const match = (a,b) => a.color===b.color && a.r===b.r;   // pair = same animal (colour + rank)
+    const rv = c => c.r==='A'?1 : c.r==='J'?11 : +c.r;        // rank value 1..11 (for the meadow straight)
+    const HOLL=7, TOTAL=22, PILES=7;   // 7 burrows (ends 5 down+1 up, middles 4 down+1 up)=37, 7 hollows all seeded, no deck; 14 face-up at start
+
+    // ---- state ----
+    // pile = {arr,down} (front=arr[last], face-up; idx<down face-down). hollows[i]=stack (holds 0-1, no stacking).
+    // meadow = ONE ascending straight of consecutive-rank cards (any suits). Seed with any single card,
+    //   then extend one at a time by ±1 rank from either end; only the two ends are ever accessible.
+    let piles, stock, drawn, hollows, meadow, pairs, sel, history, over;
+    let auto=false, autoTimer=null;                          // "Auto" = match pairs only (never touches the meadow)
+    const canPark = c => meadow.length===0 || rv(c)===rv(meadow[0])-1 || rv(c)===rv(meadow[meadow.length-1])+1;
+    const parkMeadow = c => { if(!meadow.length || rv(c)===rv(meadow[0])-1) meadow.unshift(c); else meadow.push(c); };
+    const normalize = p => { if(p.arr.length===0) p.down=0; else if(p.down>=p.arr.length) p.down=p.arr.length-1; };
+    // each empty hollow reveals the FACE-DOWN card nearest it (top of the burrow, arr[0]) — the face-up front stays put
+    const settle = () => { for(let i=0;i<PILES;i++){ const p=piles[i]; if(hollows[i].length===0 && p.arr.length){ hollows[i].push(p.arr.shift()); if(p.down>0) p.down--; normalize(p); } } };
+    const drawRoom = () => hollows.some(h=>h.length===0) || piles.some(p=>!p.arr.length); // somewhere a drawn card can land
+    function refCard(ref){ if(!ref) return null;
+      if(ref.k==='pile'){ const p=piles[ref.i]; return p.arr.length? p.arr[p.arr.length-1] : null; }
+      if(ref.k==='drawn') return drawn;
+      if(ref.k==='holl'){ const s=hollows[ref.i]; return s.length? s[s.length-1] : null; }
+      if(ref.k==='res'){ if(!meadow.length) return null; return ref.i==='lo'? meadow[0] : meadow[meadow.length-1]; }
+      return null; }
+    const sameRef = (a,b) => a&&b&&a.k===b.k&&a.i===b.i;
+    function removeRef(ref){ if(ref.k==='pile'){ piles[ref.i].arr.pop(); normalize(piles[ref.i]); }
+      else if(ref.k==='drawn') drawn=null; else if(ref.k==='holl') hollows[ref.i].pop();
+      else if(ref.k==='res'){ if(ref.i==='lo') meadow.shift(); else meadow.pop(); } }
+    function pushHist(){ history.push({ piles:piles.map(p=>({arr:p.arr.slice(),down:p.down})),
+      stock:stock.slice(), drawn, hollows:hollows.map(h=>h.slice()), meadow:meadow.slice(), pairs }); if(history.length>400) history.shift(); }
+    function undo(){ if(!history.length) return; const s=history.pop();
+      piles=s.piles; stock=s.stock; drawn=s.drawn; hollows=s.hollows; meadow=s.meadow; pairs=s.pairs; sel=null; over=false; render(); }
+
+    function newDeal(){
+      computeScale();                                    // fit card size to the current screen width
+      const d=shuffle(makeDeck({ranks:['A','2','3','4','5','6','7','8','9','10','J']})); // 44
+      piles=[]; let i=0;
+      const SIZES=[5,6,7,8,7,6,5];  // after the first reveal, face-down per burrow = size-2 = 3,4,5,6,5,4,3
+      for(let p=0;p<PILES;p++){ const n=SIZES[p]; piles.push({arr:d.slice(i,i+n), down:n-1}); i+=n; } // one face-up front each; rest face-down
+      hollows=Array.from({length:HOLL},()=>[]);
+      meadow=[];                                        // empty — one straight, seeded by any card then extended ±1
+      stock=[]; drawn=null;                            // every card is dealt — no draw pile
+      pairs=0; sel=null; history=[]; over=false;
+      settle();                                        // each hollow auto-fills from its burrow → 14 face-up (7 hollows + 7 burrow fronts)
+      render();
+    }
+    // draw one card — only if the Drawn slot is empty AND there's room to place it (rule 1)
+    function draw(){ if(over||drawn||!stock.length||!drawRoom()) return; pushHist(); drawn=stock.pop(); sel=null; render(); }
+
+    function anyLegalMove(){
+      const acc=[]; piles.forEach(p=>{ if(p.arr.length) acc.push(p.arr[p.arr.length-1]); });
+      if(drawn) acc.push(drawn); hollows.forEach(h=>{ if(h.length) acc.push(h[h.length-1]); });
+      const ends = meadow.length ? (meadow.length===1?[meadow[0]]:[meadow[0],meadow[meadow.length-1]]) : [];
+      const all = acc.concat(ends);
+      for(let i=0;i<all.length;i++) for(let j=i+1;j<all.length;j++) if(match(all[i],all[j])) return true;
+      if(!drawn && stock.length && drawRoom()) return true;
+      if(acc.some(c=>canPark(c))) return true;     // can extend the meadow straight to dig
+      return false;
+    }
+    function afterMove(){ settle(); if(pairs===TOTAL){ over=true; stopAuto(); return finishWin(); } render(); }
+    // ---- Auto: match any available pair, one step at a time; never parks to the meadow ----
+    function findMatchPair(){
+      const refs=[];
+      piles.forEach((p,i)=>{ if(p.arr.length && p.down<p.arr.length) refs.push({k:'pile',i}); }); // face-up fronts only
+      if(drawn) refs.push({k:'drawn'});
+      hollows.forEach((h,i)=>{ if(h.length) refs.push({k:'holl',i}); });
+      if(meadow.length){ refs.push({k:'res',i:'lo'}); if(meadow.length>1) refs.push({k:'res',i:'hi'}); }
+      for(let a=0;a<refs.length;a++) for(let b=a+1;b<refs.length;b++){
+        const ca=refCard(refs[a]), cb=refCard(refs[b]);
+        if(ca&&cb&&match(ca,cb)) return [refs[a],refs[b]];
+      }
+      return null;
+    }
+    function stopAuto(){ auto=false; if(autoTimer){ clearTimeout(autoTimer); autoTimer=null; } if(root.querySelector('#prog')) render(); }
+    function startAuto(){ if(over) return; auto=true; sel=null; autoTick(); }
+    function autoTick(){
+      if(!auto) return;
+      if(over){ stopAuto(); return; }
+      const m=findMatchPair();
+      if(!m){ stopAuto(); return; }                 // no moves available → toggle off
+      pushHist(); removeRef(m[0]); removeRef(m[1]); pairs++; afterMove();
+      if(auto && !over) autoTimer=setTimeout(autoTick, 300);
+    }
+    function clickCard(ref){                                  // pile fronts & the drawn card: select / match
+      if(over) return; const card=refCard(ref); if(!card) return;
+      if(!sel){ sel=ref; render(); return; }
+      if(sameRef(sel,ref)){ sel=null; render(); return; }
+      const a=refCard(sel);
+      if(a && match(a,card)){ pushHist(); removeRef(sel); removeRef(ref); pairs++; sel=null; toast('Match! ✨'); afterMove(); return; }
+      sel=ref; render();
+    }
+    function clickHollow(hi){                                 // hollows hold one card: select / match only (no stacking)
+      if(over) return; const stack=hollows[hi], top=stack.length?stack[stack.length-1]:null;
+      if(!top) return;                                        // empty hollows auto-fill from the burrow — never a drop target
+      if(sel){
+        if(sameRef(sel,{k:'holl',i:hi})){ sel=null; render(); return; }
+        const selCard=refCard(sel);
+        if(match(selCard,top)){ pushHist(); removeRef(sel); stack.pop(); pairs++; sel=null; toast('Match! ✨'); afterMove(); return; }
+        sel={k:'holl',i:hi}; render(); return;
+      }
+      sel={k:'holl',i:hi}; render();
+    }
+    function clickMeadowEnd(which){                           // which='lo'|'hi' — select / match an end of the straight
+      if(over||!meadow.length) return; const ref={k:'res',i:which}; const cur=refCard(ref);
+      if(sel){
+        if(sameRef(sel,ref)){ sel=null; render(); return; }
+        const selCard=refCard(sel);
+        if(cur && match(selCard,cur)){ pushHist(); removeRef(sel); removeRef(ref); pairs++; sel=null; toast('Match! ✨'); afterMove(); return; }
+        sel=ref; render(); return;
+      }
+      sel=ref; render();
+    }
+    function clickMeadowDrop(){                               // park the selected card, extending the straight ±1
+      if(over||!sel) return; const selCard=refCard(sel);
+      if(sel.k==='res' || !selCard || !canPark(selCard)) return;
+      pushHist(); removeRef(sel); parkMeadow(selCard); sel=null; afterMove();
+    }
+    function clickEmptyPile(pi){ if(over||!sel||piles[pi].arr.length) return;
+      const card=refCard(sel); if(!card) return; pushHist(); removeRef(sel); piles[pi]={arr:[card],down:0}; sel=null; afterMove(); }
+
+    function finishWin(){
+      root.innerHTML=`<div class="center" style="padding-top:14px"><div class="big">🦄🐴🦊🦉🦭 Every animal is paired!</div>
+        <p class="muted">You uncovered and matched all 22 pairs. The Bramblewake glows.</p></div>`;
+      const again=el('button','btn','Play again'); again.onclick=()=>openGame(GAMES.find(g=>g.id==='bramblewake'));
+      const r=el('div','row'); r.style.justifyContent='center'; r.appendChild(again); root.querySelector('.center').appendChild(r);
+    }
+
+    root.innerHTML=`
+      <p class="muted">Match every pair of the <b>same animal</b> (same colour + number). Each <b>hollow</b> reveals the <b>face-down</b> critter nearest it in the <b>burrow</b> below — so clearing a hollow <b>uncovers</b> the next one (the face-up front stays put). Nothing stacks. The <b>Meadow</b> holds one <b>straight</b>: set aside any single card, then extend it one at a time by ±1 in number from either end (any suits). Only the two <b>ends</b> of the straight are in play. Clear all 22 pairs. Undo anytime.</p>
+      <div class="felt" style="background:radial-gradient(circle at 50% 6%, #1c4f33, #0c2a1b);width:fit-content;max-width:100%;margin:0 auto">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:20px">
+          <div class="row" id="deckrow" style="gap:12px;align-items:flex-start">
+            <div class="center"><div class="muted" style="margin-bottom:4px">Deck</div><div id="stock"></div></div>
+            <div class="center"><div class="muted" style="margin-bottom:4px">Drawn</div><div id="drawn"></div></div>
+          </div>
+          <span class="pill" id="prog">Pairs 0/${TOTAL}</span>
+        </div>
+        <div class="h2" style="color:#dffbe9;margin-top:8px">🌾 Meadow <span class="muted" style="font-weight:400;font-size:.8em">— one straight; extend ±1 from either end, only the ends play</span></div>
+        <div id="meadow" style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;padding-bottom:6px;min-height:10px"></div>
+        <div class="h2" style="color:#dffbe9;margin-top:8px">🕳️ Hollows &amp; 🌲 Burrows</div>
+        <div id="board" style="display:flex;gap:8px;align-items:flex-start;justify-content:center;overflow-x:auto;padding-bottom:6px"></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn alt" id="undo">↶ Undo</button>
+        <button class="btn alt" id="auto">▶ Auto-match</button>
+        <button class="btn alt" id="newgame">New game</button>
+        <span class="muted" id="hint"></span>
+      </div>`;
+    root.querySelector('#undo').onclick=()=>{ stopAuto(); undo(); };
+    root.querySelector('#auto').onclick=()=>{ if(auto) stopAuto(); else startAuto(); };
+    root.querySelector('#newgame').onclick=()=>{ stopAuto(); newDeal(); };
+
+    function render(){
+      const prog=root.querySelector('#prog'); if(!prog) return;       // win screen replaced the scaffold
+      const stockEl=root.querySelector('#stock'), drawnEl=root.querySelector('#drawn'),
+            boardEl=root.querySelector('#board'), meadowEl=root.querySelector('#meadow'), hint=root.querySelector('#hint');
+      prog.textContent=`Pairs ${pairs}/${TOTAL}`;
+      const autoBtn=root.querySelector('#auto'); if(autoBtn){ autoBtn.textContent = auto?'⏸ Auto-match (on)':'▶ Auto-match'; autoBtn.style.borderColor = auto?'#8fe0b0':''; }
+      const deckrow=root.querySelector('#deckrow'); if(deckrow) deckrow.style.display=(stock.length||drawn)?'':'none'; // hide when there's no draw pile
+      const selCard = sel ? refCard(sel) : null;
+      const canMatch = card => !!selCard && card!==selCard && match(selCard,card);
+      // deck — only enabled when there's room and no card already drawn (rule 1)
+      stockEl.innerHTML='';
+      if(stock.length){ const canDraw=!drawn && drawRoom(); const b=box('card back');
+        if(canDraw){ b.classList.add('playable'); b.onclick=draw; } else b.style.opacity='.4';
+        stockEl.appendChild(b); stockEl.appendChild(el('div','muted',stock.length+' left')); }
+      else stockEl.appendChild(slotBox('empty'));
+      // drawn — one card at a time
+      drawnEl.innerHTML='';
+      if(drawn){ const ce=critEl(drawn, sel&&sel.k==='drawn'); ce.classList.add('playable');
+        if(canMatch(drawn)) ce.style.outline='3px solid var(--good)'; ce.onclick=()=>clickCard({k:'drawn'}); drawnEl.appendChild(ce); }
+      else drawnEl.appendChild(slotBox('—'));
+      // meadow — one straight: seed with any card, extend ±1 from either end; only the ends are in play
+      meadowEl.innerHTML='';
+      const canDrop = !!selCard && sel.k!=='res' && canPark(selCard);
+      const dropLeft  = canDrop && meadow.length && rv(selCard)===rv(meadow[0])-1;
+      const dropRight = canDrop && meadow.length && rv(selCard)===rv(meadow[meadow.length-1])+1;
+      const dropSlot = () => { const s=slotBox('＋'); s.classList.add('playable'); s.style.borderColor='#cfe3a0'; s.onclick=clickMeadowDrop; return s; };
+      if(!meadow.length){
+        const s=slotBox('set aside');
+        if(canDrop){ s.classList.add('playable'); s.style.borderColor='#cfe3a0'; s.onclick=clickMeadowDrop; }
+        meadowEl.appendChild(s);
+      } else {
+        if(dropLeft) meadowEl.appendChild(dropSlot());
+        meadow.forEach((card,mi)=>{
+          const isLo=mi===0, isHi=mi===meadow.length-1, isEnd=isLo||isHi, which=isLo?'lo':'hi';
+          const selHere = !!sel && sel.k==='res' && ((sel.i==='lo'&&isLo)||(sel.i==='hi'&&isHi));
+          const ce=critEl(card, isEnd && selHere);
+          if(isEnd){ ce.classList.add('playable');
+            if(canMatch(card)) ce.style.outline='3px solid var(--good)';
+            ce.onclick=()=>clickMeadowEnd(which);
+          } else { ce.style.opacity='.82'; }        // middle cards locked inside the straight
+          meadowEl.appendChild(ce);
+        });
+        if(dropRight) meadowEl.appendChild(dropSlot());
+      }
+      // aligned columns: each column is a hollow (top) directly above its burrow (bottom)
+      boardEl.innerHTML='';
+      for(let ci=0; ci<PILES; ci++){
+        const col=el('div'); col.style.cssText='display:flex;flex-direction:column;align-items:center;flex:0 0 auto;gap:14px';
+        // --- hollow (top) ---
+        const stack=hollows[ci], hcell=el('div'); hcell.style.cssText='display:flex;flex-direction:column;align-items:center';
+        if(!stack.length){ hcell.appendChild(slotBox('hollow')); }   // empty hollows auto-fill — not a drop target
+        else stack.forEach((card,idx)=>{
+          const top=idx===stack.length-1;
+          const ce=critEl(card, top && !!sel && sel.k==='holl' && sel.i===ci);
+          if(idx>0) ce.style.marginTop='-'+OVER+'px';
+          if(top){ ce.classList.add('playable');
+            if(canMatch(card)) ce.style.outline='3px solid var(--good)';
+            ce.onclick=()=>clickHollow(ci); }
+          hcell.appendChild(ce);
+        });
+        col.appendChild(hcell);
+        // --- burrow (bottom) ---
+        const p=piles[ci], bcell=el('div'); bcell.style.cssText='display:flex;flex-direction:column;align-items:center';
+        if(!p.arr.length){ const s=slotBox(''); if(sel){ s.classList.add('playable'); s.style.borderColor='#8fe0b0'; s.onclick=()=>clickEmptyPile(ci); } bcell.appendChild(s); }
+        else p.arr.forEach((card,idx)=>{
+          const faceDown=idx<p.down, front=idx===p.arr.length-1;
+          const ce=faceDown ? box('card back') : critEl(card, front && !!sel && sel.k==='pile' && sel.i===ci);
+          if(idx>0) ce.style.marginTop='-'+OVER+'px';
+          if(front && !faceDown){ ce.classList.add('playable'); if(canMatch(card)) ce.style.outline='3px solid var(--good)'; ce.onclick=()=>clickCard({k:'pile',i:ci}); }
+          bcell.appendChild(ce);
+        });
+        col.appendChild(bcell);
+        boardEl.appendChild(col);
+      }
+      hint.textContent = !anyLegalMove() ? 'No moves — tap ↶ Undo or New game.' : '';
+    }
+    const onResize = () => { const p=CW; computeScale(); if(p!==CW && root.querySelector('#prog')) render(); };
+    if(window.addEventListener) window.addEventListener('resize', onResize);
+    newDeal();
+    return () => { if(autoTimer) clearTimeout(autoTimer); if(window.removeEventListener) window.removeEventListener('resize', onResize); };
+  }
+});
+
+/* ============================================================
+   GAME — KINGMAKER  (1v1 lane duel — vs AI or online, 10-card royals+wyld deck)
+   Uses all 10 cards over 5 rounds. Each round both sides are secretly dealt one
+   card and commit it to the Left, Center, or Right throne. Each throne is scored
+   as a pure POKER HAND (Wylds wild) — only Kings & Queens exist, so the ladder is
+   High card → Pair → Two pair → Trips → Full house → Four of a kind → Five of a
+   kind (no flush/straight). Better hand holds the throne (exact tie → neutral).
+   Hold more thrones to win; total hand-category strength breaks a tie.
+   NO local hotseat — opponent is either the AI (authoritative local) or a remote
+   peer over the Net layer (host-authoritative, redacted per-seat state so each
+   side sees only their own throne cards until the reveal). Online is P2P/beta.
+   ============================================================ */
+GAMES.push({
+  id:'kingmaker', title:'Kingmaker', players:'vs AI / online', tag:'lane duel · online',
+  chips:[{k:'poker',t:'vs AI'},{k:'net',t:'online'}],
+  blurb:'A 1v1 fae duel for three thrones — play the AI or a friend online. Each round, draw a card in secret and commit it left, center, or right. Kings and Queens build a throne’s power; the Wyld topples the enemy’s mightiest. Hold two thrones to be crowned.',
+  mount(root){
+    const NAME={ KS:'The Standing Stone', KH:'The Wild Hunt', KD:'The Frost Crown', KC:'The Bog Father',
+      QS:'The Thorn Queen', QH:'The Bloodmoon', QD:'The Hoarfrost Maiden', QC:'The Mire Witch' };
+    const GLYPH={ S:'🌲', H:'🦌', D:'❄️', C:'🍄' };
+    const nameOf = c => c.joker ? 'The Wyld' : NAME[c.id];
+    function faeCardEl(c, faceUp){
+      const d=el('div','card lg');
+      if(!faceUp || !c){ d.classList.add('back'); return d; }
+      d.style.cssText='background:linear-gradient(160deg,#241b3a,#0e1430);border:1px solid #4a3f6b';
+      if(c.joker){ d.innerHTML=`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#c9b3ff">
+        <div style="font-size:30px">🌀</div><div style="font-size:9px;font-weight:900;letter-spacing:.08em">WYLD</div></div>`; return d; }
+      const accent = c.r==='K' ? '#ffd86b' : '#c9b3ff';
+      d.innerHTML=`<div class="corner tl" style="color:${accent}">${c.t}<span class="s">${c.sym}</span></div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3px;color:#e8e0ff">
+          <div style="font-size:24px">${GLYPH[c.s]}</div>
+          <div style="font-size:8px;font-weight:800;line-height:1.15;margin-top:3px">${NAME[c.id]}</div></div>
+        <div class="corner br" style="color:${accent}">${c.t}<span class="s">${c.sym}</span></div>`;
+      return d;
+    }
+
+    const LANES=['L','C','R'], LNAME={ L:'Left', C:'Center', R:'Right' };
+    const $ = s => root.querySelector(s);
+    const freshDeck = () => shuffle([ ...makeDeck({ranks:['K','Q']}), mkJoker(1), mkJoker(2) ]); // 4K 4Q 2 Wyld = 10
+    function mini(c){
+      const d=el('div'); const accent = c.joker?'#c9b3ff' : c.r==='K'?'#ffd86b':'#c9b3ff';
+      d.style.cssText='display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:42px;height:58px;border-radius:7px;background:linear-gradient(160deg,#241b3a,#0e1430);border:1px solid #4a3f6b;color:#e8e0ff;';
+      d.innerHTML = c.joker
+        ? `<div style="font-size:17px">🌀</div><div style="font-size:7px;font-weight:900">WYLD</div>`
+        : `<div style="font-size:11px;font-weight:900;color:${accent}">${c.t}${c.sym}</div><div style="font-size:15px">${GLYPH[c.s]}</div>`;
+      return d;
+    }
+
+    // ---- pure poker resolution (Wylds wild). Only Kings & Queens exist, so the
+    //      reachable hands are High card → Pair → Two pair → Trips → Full house →
+    //      Four of a kind → Five of a kind. No flush/straight is possible. ----
+    function evalPiles(a,b){                 // a = #Kings, b = #Queens after assigning wilds
+      const hi=Math.max(a,b), lo=Math.min(a,b), hiRank=a>=b?2:1, loRank=a>=b?1:2;
+      let cat; if(hi>=5) cat=8; else if(hi===4) cat=7; else if(hi===3&&lo>=2) cat=6;
+      else if(hi===3) cat=3; else if(hi===2&&lo===2) cat=2; else if(hi===2) cat=1; else cat=0;
+      return [cat, hiRank, loRank, hi, lo];
+    }
+    function handScore(cards){
+      if(!cards.length) return [-1];
+      const kc=cards.filter(c=>!c.joker&&c.r==='K').length, qc=cards.filter(c=>!c.joker&&c.r==='Q').length, w=cards.filter(c=>c.joker).length;
+      let best=[-1]; for(let wk=0; wk<=w; wk++){ const s=evalPiles(kc+wk, qc+(w-wk)); if(cmpScore(s,best)>0) best=s; }
+      return best;                            // brute-force the wild split; take the strongest hand
+    }
+    function handName(sc){
+      if(sc[0]<0) return '—'; const R=r=> r===2?'King':'Queen';
+      switch(sc[0]){
+        case 8: return 'Five '+R(sc[1])+'s';
+        case 7: return 'Four '+R(sc[1])+'s';
+        case 6: return 'Full house — '+R(sc[1])+'s over '+R(sc[2])+'s';
+        case 3: return 'Three '+R(sc[1])+'s';
+        case 2: return 'Two pair';
+        case 1: return 'Pair of '+R(sc[1])+'s';
+        default: return R(sc[1])+' high';
+      }
+    }
+
+    // ---- lane = a poker hand; the better hand holds the throne (exact tie → neutral) ----
+    function laneResult(l){
+      const mine=lanes[0][l], opp=lanes[1][l];
+      const ms=handScore(mine), os=handScore(opp);
+      const owner = cmpScore(ms,os)>0 ? 0 : cmpScore(os,ms)>0 ? 1 : -1;
+      return { l, mine, opp, ms, os, mName:handName(ms), oName:handName(os), owner };
+    }
+    function tallies(){ const t=[0,0]; results.forEach(r=>{ if(r.owner>=0) t[r.owner]++; }); return t; }
+
+    // ---- AI opponent (seat 1). Wins contested thrones cheaply instead of over-
+    //      building one hand (which would concede the other two). ~74% vs random,
+    //      balanced vs equal play (validated headless). ----
+    function aiChoose(card){
+      let best='C', bs=-1e9;
+      for(const l of LANES){
+        const after=handScore(lanes[1][l].concat([card])), opp=handScore(lanes[0][l]), cur=handScore(lanes[1][l]);
+        const nowWin=cmpScore(cur,opp)>0, willWin=cmpScore(after,opp)>0;
+        let s = after[0]*2;                       // stronger resulting hand is better
+        if(!nowWin && willWin) s += 6;            // flipping a losing/tied throne to a win is prime
+        if(nowWin && willWin) s -= 2;             // don't over-invest in an already-won throne
+        s += lanes[1][l].length*0.5;              // mild concentration to build pairs
+        if(s>bs){ bs=s; best=l; }
+      }
+      return best;
+    }
+
+    // ---- state ----
+    let mode=null, deck, lanes, round, cards, placed, results, phase='menu', hostCode=null;
+    const cli={ card:null, lanes:null, round:0, waiting:false, results:null, tally:null };
+    const localSeat = () => mode==='client' ? 1 : 0;
+    const resetBoard = () => { lanes=[{L:[],C:[],R:[]},{L:[],C:[],R:[]}]; round=0; results=null; };
+    const myCard = () => mode==='client' ? cli.card : (cards?cards[0]:null);
+    const myLanes = () => (mode==='client' ? cli.lanes : lanes && lanes[0]) || {L:[],C:[],R:[]};
+    const roundNow = () => mode==='client' ? cli.round : round;
+
+    // ---- authoritative flow (ai + host) ----
+    function authDeal(){ cards=[deck.pop(), deck.pop()]; placed=[false,false]; phase='place'; if(mode==='host') pushClient(); render(); }
+    function authNext(){
+      if(placed[0] && placed[1]){ round++; if(round>=5){ resolve(); if(mode==='host') pushClient(); render(); } else authDeal(); }
+      else { phase='wait'; render(); }   // client is pushed only on a new round / reveal — avoids a stale re-enable race
+    }
+    function myPlace(lane){
+      if(mode==='client') return clientPlace(lane);
+      if(phase!=='place' || placed[0]) return;
+      lanes[0][lane].push(cards[0]); placed[0]=true;
+      if(mode==='ai'){ lanes[1][aiChoose(cards[1])].push(cards[1]); placed[1]=true; }
+      authNext();
+    }
+    function onClientPlace(lane){ if(!cards || placed[1]) return; lanes[1][lane].push(cards[1]); placed[1]=true; authNext(); }
+    function resolve(){ results=LANES.map(laneResult); phase='reveal'; }
+
+    // ---- client mirror ----
+    function pushClient(){
+      const v = phase==='reveal' ? { p:'reveal', results, tally:tallies() }
+        : { p:'place', round, card:cards[1], lanes:lanes[1], placed:placed[1] };
+      Net.broadcastState(v);
+    }
+    function onHostState(v){
+      if(v.p==='reveal'){ cli.results=v.results; cli.tally=v.tally; phase='reveal'; render(); return; }
+      cli.card=v.card; cli.lanes=v.lanes; cli.round=v.round; cli.waiting=v.placed;
+      phase = v.placed ? 'wait' : 'place'; render();
+    }
+    function clientPlace(lane){
+      if(cli.waiting || phase!=='place' || !cli.card) return;
+      (cli.lanes[lane]=cli.lanes[lane]||[]).push(cli.card); cli.card=null; cli.waiting=true; // optimistic
+      Net.sendIntent({t:'place', lane}); phase='wait'; render();
+    }
+
+    // ---- mode entry ----
+    function startAI(){ mode='ai'; deck=freshDeck(); resetBoard(); authDeal(); }
+    async function startHost(){
+      phase='lobby'; render();
+      const res=await Net.host();
+      if(!res.ok){ mode=null; phase='menu'; render(); toast(res.err); return; }
+      mode='host'; hostCode=res.code;
+      Net.onIntent=(intent)=>{ if(intent.t==='place') onClientPlace(intent.lane); else if(intent.t==='ready') pushClient(); else if(intent.t==='again') restartHost(); };
+      Net.onJoin=()=>{ if(!lanes){ deck=freshDeck(); resetBoard(); authDeal(); } else pushClient(); toast('Opponent joined.'); };
+      render();
+    }
+    function restartHost(){ deck=freshDeck(); resetBoard(); authDeal(); }
+    async function startJoin(code){
+      phase='connect'; render();
+      const res=await Net.join(code);
+      if(!res.ok){ mode=null; phase='menu'; render(); toast(res.err); return; }
+      mode='client'; Net.onState=onHostState; Net.sendIntent({t:'ready'}); phase='wait'; render();
+    }
+
+    // ---- rendering ----
+    function buildBoard(container, res){
+      res.forEach(r=>{
+        const panel=el('div','felt'); panel.style.cssText='margin:8px 0;background:radial-gradient(circle at 50% 0%, #241b3a, #0c1024)';
+        panel.appendChild(el('div','h2',`${LNAME[r.l]} Throne — ${r.owner<0?'⚖️ neutral':'👑 Player '+(r.owner+1)}`));
+        [['Player 1', r.mine, r.mName],['Player 2', r.opp, r.oName]].forEach(row=>{
+          const label=row[0], cs=row[1], hname=row[2];
+          const line=el('div'); line.style.cssText='display:flex;align-items:center;gap:6px;margin:4px 0;flex-wrap:wrap';
+          line.appendChild(el('div','muted',label));
+          if(!cs.length) line.appendChild(el('div','muted','—'));
+          cs.forEach(c=>line.appendChild(mini(c)));
+          line.appendChild(el('div','muted',hname));
+          panel.appendChild(line);
+        });
+        container.appendChild(panel);
+      });
+    }
+    function renderPlace(canPlace, waitMsg){
+      const card=myCard(), lanesMe=myLanes();
+      const modeLabel = mode==='ai'?'vs AI' : mode==='host'?('online · room '+hostCode) : 'online';
+      root.innerHTML=`
+        <div class="row" style="justify-content:space-between"><span class="pill">You — Player ${localSeat()+1}</span><span class="pill">Round ${roundNow()+1}/5 · ${modeLabel}</span></div>
+        <div class="felt" style="margin-top:10px;background:radial-gradient(circle at 50% 0%, #2a1f47, #0c1024)">
+          <div class="center"><div class="muted">${canPlace?'Your card — commit it to a throne':(waitMsg||'Waiting…')}</div>
+            <div id="cardwrap" style="display:flex;justify-content:center;margin:8px 0"></div>
+            <div class="muted" style="font-size:12px">${card?nameOf(card)+' — '+(card.joker?'Wyld: wild card (becomes any King or Queen)':'a '+(card.r==='K'?'King':'Queen')):''}</div></div>
+          <div class="row" id="thrones" style="justify-content:space-around;margin-top:14px;align-items:flex-start"></div>
+        </div>`;
+      if(card) $('#cardwrap').appendChild(faeCardEl(card,true));
+      const th=$('#thrones');
+      LANES.forEach(l=>{
+        const col=el('div'); col.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px;min-width:100px';
+        col.appendChild(el('div','muted',LNAME[l]+' Throne'));
+        const yours=el('div'); yours.style.cssText='display:flex;gap:3px;flex-wrap:wrap;justify-content:center;min-height:60px';
+        (lanesMe[l]||[]).forEach(c=>yours.appendChild(mini(c,false)));
+        if(!(lanesMe[l]||[]).length) yours.appendChild(el('div','muted','—'));
+        col.appendChild(yours);
+        col.appendChild(el('div','muted','opponent: 🂠 hidden'));
+        const b=el('button','btn sm','Place here'); b.disabled=!canPlace; b.onclick=()=>myPlace(l); col.appendChild(b);
+        th.appendChild(col);
+      });
+    }
+    function renderReveal(){
+      const rd = mode==='client' ? {results:cli.results, tally:cli.tally} : {results, tally:tallies()};
+      if(!rd.results){ return; }
+      const seat=localSeat(), t=rd.tally;
+      let winner; if(t[0]!==t[1]) winner=t[0]>t[1]?0:1;
+      else { const v=[rd.results.reduce((s,r)=>s+Math.max(r.ms[0],0),0), rd.results.reduce((s,r)=>s+Math.max(r.os[0],0),0)]; winner=v[0]!==v[1]?(v[0]>v[1]?0:1):-1; }
+      const head = winner<0 ? 'A drawn duel — the thrones stay contested.' : (winner===seat ? '👑 You are crowned Kingmaker!' : 'Player '+(winner+1)+' takes the crown.');
+      root.innerHTML=`<div class="center" style="margin-bottom:8px"><div class="big">${head}</div>
+        <div class="muted">Thrones — P1 ${t[0]} · P2 ${t[1]} &nbsp;(you are Player ${seat+1})</div></div>
+        <div id="board"></div>
+        <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" id="again">${mode==='client'?'Request rematch':'Duel again'}</button><button class="btn alt" id="menu">Menu</button></div>`;
+      buildBoard($('#board'), rd.results);
+      $('#again').onclick=()=>{ if(mode==='ai') startAI(); else if(mode==='host') restartHost(); else Net.sendIntent({t:'again'}); };
+      $('#menu').onclick=()=>{ Net.teardown(); mode=null; phase='menu'; render(); };
+    }
+    function render(){
+      if(phase==='menu'){
+        root.innerHTML=`<div class="felt" style="background:radial-gradient(circle at 50% 0%, #2a1f47, #0c1024)">
+          <div class="big center">👑 Kingmaker — Three Thrones</div>
+          <p class="muted" style="margin-top:8px">Over 5 rounds you're each dealt one fae card per round; commit it to the Left, Center, or Right throne (secretly). Each throne is scored as a <b>poker hand</b> — pairs, trips, full houses, four/five of a kind from Kings & Queens, with 🌀 <b>Wylds wild</b>. The better hand holds the throne; take two of three to be crowned.</p>
+          <div class="grid" style="margin-top:6px">
+            <div class="tile"><div class="nm">🤖 Play vs AI</div><div class="bl">Duel the Wyldwood AI on this device.</div><button class="btn" id="ai" style="margin-top:8px">Start</button></div>
+            <div class="tile"><div class="nm">🌐 Host online</div><div class="bl">Create a room; a friend joins by code.</div><button class="btn" id="host" style="margin-top:8px">Create room</button></div>
+            <div class="tile"><div class="nm">🔑 Join online</div><div class="bl">Enter a friend's room code.</div>
+              <div class="row" style="margin-top:8px"><input class="code" id="code" placeholder="CODE" maxlength="4"><button class="btn" id="join">Join</button></div></div>
+          </div>
+          <p class="muted" style="font-size:11px;margin-top:8px">Online is peer-to-peer (works best on home networks) and still in beta.</p></div>`;
+        $('#ai').onclick=startAI; $('#host').onclick=startHost;
+        $('#join').onclick=()=>{ const c=($('#code').value||'').toUpperCase().trim(); if(c.length===4) startJoin(c); else toast('Enter the 4-letter code.'); };
+        return;
+      }
+      if(phase==='lobby'){ root.innerHTML=`<div class="felt center" style="padding:28px 14px;background:radial-gradient(circle at 50% 0%, #2a1f47, #0c1024)">
+        <div class="muted">Your room code</div><div class="big" style="letter-spacing:.2em;margin:6px 0">${hostCode||'…'}</div>
+        <p class="muted">Share it with your rival. Waiting for them to join…</p>
+        <button class="btn alt sm" id="menu">Cancel</button></div>`;
+        $('#menu').onclick=()=>{ Net.teardown(); mode=null; phase='menu'; render(); }; return; }
+      if(phase==='connect'){ root.innerHTML=`<div class="felt center" style="padding:30px;background:radial-gradient(circle at 50% 0%, #2a1f47, #0c1024)"><div class="big">Connecting…</div></div>`; return; }
+      if(phase==='place') return renderPlace(true);
+      if(phase==='wait') return renderPlace(false, mode==='client'?'Waiting for the host…':'Waiting for your opponent…');
+      if(phase==='reveal') return renderReveal();
+    }
+    render();
+    return ()=>Net.teardown();
+  }
+});
+
+/* ============================================================
+   GAME — TEXAS HOLD'EM (showdown)  (1 player vs CPU, exercises evaluator)
+   Heads-up, simplified: deal holes, reveal flop/turn/river, fold option,
+   showdown via best7(). Chips + blinds; betting rounds are a later pass.
+   ============================================================ */
+GAMES.push({
+  id:'holdem', title:"Texas Hold'em", players:'1 vs CPU', tag:'poker · standard 52',
+  chips:[{k:'poker',t:'poker'},{k:'net',t:'online soon'}],
+  blurb:'Heads-up showdown hand. Proves the shared 5-of-7 hand evaluator. Online seats are the next pass.',
+  mount(root){
+    let you=100, cpu=100;
+    let deck, hole=[], opp=[], board=[], stage=0, over=false; // stage 0 pre,1 flop,2 turn,3 river,4 done
+    const POT=4;
+    root.innerHTML=`
+      <div class="row" style="justify-content:space-between"><span class="pill" id="chips"></span><span class="pill" id="potlbl"></span></div>
+      <div class="felt" style="margin-top:10px">
+        <div class="h2" style="color:#eaf6ee">CPU</div><div class="hand lg" id="opp"></div>
+        <div class="h2" style="color:#eaf6ee">Board</div><div class="hand lg" id="board" style="min-height:96px"></div>
+        <div class="h2" style="color:#eaf6ee">You <span class="muted" id="youeval"></span></div><div class="hand lg" id="you"></div>
+      </div>
+      <div class="center" id="msg" style="min-height:26px;margin:12px 0;font-weight:800"></div>
+      <div class="row" id="ctl" style="justify-content:center"></div>`;
+    const $=s=>root.querySelector(s);
+    const oppEl=$('#opp'), boardEl=$('#board'), youEl=$('#you'), msg=$('#msg'), ctl=$('#ctl'),
+          chips=$('#chips'), potlbl=$('#potlbl'), youeval=$('#youeval');
+
+    function deal(){
+      deck=shuffle(makeDeck()); hole=[deck.pop(),deck.pop()]; opp=[deck.pop(),deck.pop()];
+      board=[]; stage=0; over=false; msg.textContent='Your hole cards are dealt.'; render();
+    }
+    function next(){
+      if(stage===0){ board=[deck.pop(),deck.pop(),deck.pop()]; stage=1; msg.textContent='The flop.'; }
+      else if(stage===1){ board.push(deck.pop()); stage=2; msg.textContent='The turn.'; }
+      else if(stage===2){ board.push(deck.pop()); stage=3; msg.textContent='The river.'; }
+      else if(stage===3){ showdown(); return; }
+      render();
+    }
+    function showdown(){
+      stage=4; over=true;
+      const y=best7([...hole,...board]), o=best7([...opp,...board]);
+      const c=cmpScore(y.score,o.score);
+      if(c>0){ you+=POT/2; cpu-=POT/2; msg.innerHTML=`You win with <b>${y.name}</b> vs ${o.name} 🏆`; }
+      else if(c<0){ you-=POT/2; cpu+=POT/2; msg.innerHTML=`CPU wins with <b>${o.name}</b> vs your ${y.name}`; }
+      else msg.innerHTML=`Split pot — both ${y.name}`;
+      render();
+    }
+    function fold(){ over=true; stage=4; you-=POT/2; cpu+=POT/2; msg.textContent='You folded. CPU takes the pot.'; render(); }
+    function render(){
+      chips.textContent=`You ${you} · CPU ${cpu}`; potlbl.textContent=`Pot ${POT}`;
+      oppEl.innerHTML=''; opp.forEach(c=>oppEl.appendChild(cardEl(c,{lg:true,faceUp:over})));
+      boardEl.innerHTML=''; board.forEach(c=>boardEl.appendChild(cardEl(c,{lg:true})));
+      for(let i=board.length;i<5;i++) boardEl.appendChild(el('div','slot',''));
+      youEl.innerHTML=''; hole.forEach(c=>youEl.appendChild(cardEl(c,{lg:true})));
+      youeval.textContent = (hole.length&&board.length)?('— '+best7([...hole,...board]).name):'';
+      ctl.innerHTML='';
+      if(over){ const b=el('button','btn good','Next hand'); b.onclick=deal; ctl.appendChild(b); }
+      else {
+        const labels=['Deal flop','Deal turn','Deal river','Showdown'];
+        const go=el('button','btn',labels[stage]); go.onclick=next; ctl.appendChild(go);
+        const f=el('button','btn bad','Fold'); f.onclick=fold; ctl.appendChild(f);
+      }
+    }
+    deal();
+  }
+});
+
+/* ============================================================
+   GAME — FREE TABLE  (sandbox; hotseat + ONLINE via room codes)
+   No coded rules — a networked surface for playtesting ANY card game:
+   choose a deck, deal to seats, draw, flip to center, play cards. Host is
+   authoritative; online uses Net (PeerJS). Open hands (everyone sees all) —
+   hidden-hand mode is a later pass. This is the workhorse for testing designs.
+   ============================================================ */
+GAMES.push({
+  id:'freetable', title:'Free Table', players:'2–6 · online', tag:'sandbox · any deck',
+  chips:[{k:'net',t:'online'},{k:'custom',t:'any deck'}],
+  blurb:'A networked card surface with no fixed rules — deal any deck to friends by room code and play out a prototype live.',
+  mount(root){
+    // ---- shared state (host-authoritative) ----
+    const DECKS={
+      standard:{ label:'Standard 52', opts:{} },
+      withjokers:{ label:'52 + 2 Jokers', opts:{jokers:2} },
+      aToJ:{ label:'A–J (44, kids)', opts:{ranks:['A','2','3','4','5','6','7','8','9','10','J']} },
+      royals:{ label:'Royals+Jokers (10)', opts:{ranks:['K','Q'],jokers:2} },
+    };
+    let state=null; // { deck:[], center:[], seats:[{name,hand:[]}], deckKind }
+    let mySeat=0;   // which seat this client controls
+    let role='hotseat'; // hotseat | host | client
+
+    function freshState(kind, seats){
+      return { deckKind:kind, deck:shuffle(makeDeck(DECKS[kind].opts)), center:[],
+        seats:Array.from({length:seats},(_,i)=>({ name:'Seat '+(i+1), hand:[] })) };
+    }
+    // ---- intents (host applies; hotseat applies locally) ----
+    function apply(intent){
+      const s=state; if(!s) return;
+      if(intent.t==='deal'){ const n=intent.n; for(let r=0;r<n;r++) for(const seat of s.seats){ if(s.deck.length) seat.hand.push(s.deck.pop()); } }
+      else if(intent.t==='draw'){ if(s.deck.length) s.seats[intent.seat].hand.push(s.deck.pop()); }
+      else if(intent.t==='flip'){ if(s.deck.length) s.center.push(s.deck.pop()); }
+      else if(intent.t==='play'){ const h=s.seats[intent.seat].hand; if(h[intent.idx]) s.center.push(h.splice(intent.idx,1)[0]); }
+      else if(intent.t==='shuffle'){ s.deck=shuffle(s.deck.concat(s.center)); s.center=[]; }
+      else if(intent.t==='gather'){ s.seats.forEach(seat=>{ s.deck=s.deck.concat(seat.hand); seat.hand=[]; }); s.deck=shuffle(s.deck.concat(s.center)); s.center=[]; }
+      else if(intent.t==='newdeck'){ state=freshState(intent.kind, s.seats.length); return; }
+      else if(intent.t==='rename'){ s.seats[intent.seat].name=intent.name; }
+    }
+    function dispatch(intent){
+      if(role==='client'){ Net.sendIntent(intent); return; } // host echoes new state back
+      apply(intent); pushState();
+    }
+    function pushState(){ if(role==='host') Net.broadcastState(state); render(); }
+
+    // ---- UI ----
+    function lobby(){
+      root.innerHTML=`
+        <p class="muted">Test any card game with friends. Pick a mode. <b>Hotseat</b> = one screen (pass the device). <b>Online</b> = each player on their own browser via a 4-letter room code.</p>
+        <div class="grid">
+          <div class="tile"><div class="nm">🎲 Hotseat</div><div class="bl">One screen, switch seats with a tap. Always works.</div>
+            <div class="row" style="margin-top:8px"><label class="muted">Seats</label>
+            <select id="hsSeats" class="btn alt sm">${[2,3,4,5,6].map(n=>`<option>${n}</option>`).join('')}</select>
+            <select id="hsDeck" class="btn alt sm">${Object.entries(DECKS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></div>
+            <button class="btn" id="startHs" style="margin-top:10px">Start hotseat</button></div>
+          <div class="tile"><div class="nm">🌐 Host online</div><div class="bl">Create a room; friends join by code. You hold the deck.</div>
+            <div class="row" style="margin-top:8px">
+            <select id="hoSeats" class="btn alt sm">${[2,3,4,5,6].map(n=>`<option>${n}</option>`).join('')}</select>
+            <select id="hoDeck" class="btn alt sm">${Object.entries(DECKS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></div>
+            <button class="btn" id="startHo" style="margin-top:10px">Create room</button></div>
+          <div class="tile"><div class="nm">🔑 Join online</div><div class="bl">Enter a room code a friend shared with you.</div>
+            <div class="row" style="margin-top:8px"><input class="code" id="joinCode" placeholder="CODE" maxlength="4"></div>
+            <button class="btn" id="startJoin" style="margin-top:10px">Join room</button>
+            <div class="muted" id="joinMsg" style="margin-top:6px"></div></div>
+        </div>`;
+      const $=s=>root.querySelector(s);
+      $('#startHs').onclick=()=>{ role='hotseat'; state=freshState($('#hsDeck').value, +$('#hsSeats').value); mySeat=0; render(); };
+      $('#startHo').onclick=async()=>{
+        const btn=$('#startHo'); btn.disabled=true; btn.textContent='Opening room…';
+        const seats=+$('#hoSeats').value, kind=$('#hoDeck').value;
+        const res=await Net.host();
+        if(!res.ok){ btn.disabled=false; btn.textContent='Create room'; toast(res.err); return; }
+        role='host'; mySeat=0; state=freshState(kind, seats);
+        Net.onIntent=(intent)=>{ apply(intent); pushState(); };
+        Net.onJoin=()=>{ Net.broadcastState(state); toast('A player joined.'); };
+        render();
+      };
+      $('#startJoin').onclick=async()=>{
+        const code=($('#joinCode').value||'').toUpperCase().trim(); if(code.length!==4){ toast('Enter the 4-letter code.'); return; }
+        const jm=$('#joinMsg'); jm.textContent='Connecting…';
+        const res=await Net.join(code);
+        if(!res.ok){ jm.textContent=res.err; return; }
+        role='client'; mySeat=1; // host is seat 0; first joiner takes seat 1 (adjustable in UI)
+        Net.onState=(st)=>{ state=st; render(); };
+        jm.textContent='Connected!';
+      };
+    }
+
+    function render(){
+      if(!state){ lobby(); return; }
+      const online = role!=='hotseat';
+      const codeBadge = online ? `<span class="pill" style="background:#143a4a">Room ${Net.code||'—'} · ${role}</span>` : `<span class="pill">Hotseat</span>`;
+      root.innerHTML=`
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          ${codeBadge}
+          <span class="pill" id="deckpill"></span>
+        </div>
+        <div class="felt">
+          <div class="h2" style="color:#eaf6ee">Center</div>
+          <div class="lane" id="center"></div>
+          <div class="row" style="margin-top:8px">
+            <div class="deckpile"><div class="card back"></div><div class="count" id="dc"></div></div>
+            <button class="btn sm" id="flip">Flip top → center</button>
+            <button class="btn alt sm" id="shuf">Shuffle center back</button>
+            <button class="btn alt sm" id="gather">Gather all & reshuffle</button>
+          </div>
+        </div>
+        <div class="row" id="dealrow" style="margin-top:12px"></div>
+        <div id="seats" style="display:grid;gap:10px;margin-top:12px"></div>`;
+      const $=s=>root.querySelector(s);
+      $('#deckpill').textContent=DECKS[state.deckKind].label;
+      $('#dc').textContent=state.deck.length;
+      const center=$('#center'); state.center.forEach(c=>center.appendChild(cardEl(c)));
+      if(!state.center.length) center.appendChild(el('div','slot','center'));
+      $('#flip').onclick=()=>dispatch({t:'flip'});
+      $('#shuf').onclick=()=>dispatch({t:'shuffle'});
+      $('#gather').onclick=()=>dispatch({t:'gather'});
+
+      // deal controls (host/hotseat only)
+      const dealrow=$('#dealrow');
+      if(role!=='client'){
+        [1,2,3,5].forEach(n=>{ const b=el('button','btn sm','Deal '+n+' each'); b.onclick=()=>dispatch({t:'deal',n}); dealrow.appendChild(b); });
+        const nd=el('select','btn alt sm', Object.entries(DECKS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join(''));
+        nd.value=state.deckKind; nd.onchange=()=>dispatch({t:'newdeck',kind:nd.value});
+        dealrow.appendChild(nd);
+      } else dealrow.appendChild(el('div','muted','The host controls dealing. Play from your hand below.'));
+
+      const seatsEl=$('#seats');
+      state.seats.forEach((seat,i)=>{
+        const box=el('div','seatbox'+(i===mySeat?' me':''));
+        const ctrl = (role==='hotseat') || (i===mySeat);
+        box.innerHTML=`<div class="seatname"><span>${seat.name}${i===mySeat?' (you)':''}</span><span class="muted">${seat.hand.length} cards</span></div>`;
+        const hand=el('div','hand');
+        seat.hand.forEach((c,idx)=>{
+          // hotseat: show current seat's hand; online open-hands: show all
+          const faceUp = (role!=='hotseat') ? true : (i===mySeat);
+          const ce=cardEl(c,{faceUp});
+          if(ctrl){ ce.classList.add('playable'); ce.onclick=()=>dispatch({t:'play',seat:i,idx}); }
+          hand.appendChild(ce);
+        });
+        if(!seat.hand.length) hand.appendChild(el('div','slot','empty'));
+        box.appendChild(hand);
+        if(ctrl){ const dr=el('button','btn alt sm','Draw to '+(i===mySeat?'me':seat.name)); dr.onclick=()=>dispatch({t:'draw',seat:i}); box.appendChild(dr);
+          if(role==='hotseat'){ const sw=el('button','btn alt sm','Sit here'); sw.style.marginLeft='6px'; sw.onclick=()=>{ mySeat=i; render(); }; box.appendChild(sw); } }
+        seatsEl.appendChild(box);
+      });
+    }
+
+    render();
+    return ()=>Net.teardown();
+  }
+});
+
+/* ============================================================
+   GAME — MAU  (You vs 2 AI; Mau Mau / Crazy Eights shedding family, standard 52)
+   Shed your hand: play a card matching the top by SUIT or RANK, or a wild Jack.
+   Specials — 7: next player draws 2 (stackable); 8: skip; 9: reverse; J: wild
+   (choose the suit); A: normal. On your last card you must say "Mau!" — forget and
+   you're caught for +2 on the winning play. First to empty their hand wins.
+   (The real party game hides its rules — you learn them by penalty; here they're
+   shown, and the flavour lives in 7-stacks, wild Jacks, and the Mau call.)
+   ============================================================ */
+GAMES.push({
+  id:'mau', title:'Mau', players:'1 vs 2 AI', tag:'shedding · standard 52',
+  chips:[{k:'poker',t:'vs AI'}],
+  blurb:'A Mau Mau / Crazy Eights shedding duel vs two AI: match by suit or number, weaponize 7s (draw two, stackable), skips, reverses and wild Jacks — and don’t forget to say Mau on your last card.',
+  mount(root){
+    const NAMES=['You','Bramble','Thistle'];
+    const SUITN={S:'Spades',H:'Hearts',D:'Diamonds',C:'Clubs'}, SUITSYM={S:'♠',H:'♥',D:'♦',C:'♣'};
+    const isSpecial = r => r==='7'||r==='8'||r==='9'||r==='J';
+    let players, stock, discard, curSuit, dir, turn, drawPenalty, phase, pendingIdx=-1, youSaidMau, drewThisTurn, msg, over, winner=-1, timer=null, stallCount;
+
+    const top = () => discard[discard.length-1];
+    function canPlay(card){
+      if(drawPenalty>0) return card.r==='7';      // must stack a 7 or take the penalty
+      if(card.r==='J') return true;               // Jack is wild
+      return card.s===curSuit || card.r===top().r;
+    }
+    function reshuffle(){ if(discard.length<=1) return; const t=discard.pop(); stock=shuffle(discard); discard=[t]; }
+    function drawInto(pi,n){ let last=null; for(let k=0;k<n;k++){ if(!stock.length) reshuffle(); if(!stock.length) break; last=stock.pop(); players[pi].hand.push(last); } return last; }
+    function advance(steps){ turn = ((turn + dir*steps) % 3 + 3) % 3; }
+    const aiSuit = hand => { const c={S:0,H:0,D:0,C:0}; hand.forEach(x=>{ if(x.r!=='J') c[x.s]++; }); return ['S','H','D','C'].sort((a,b)=>c[b]-c[a])[0]; };
+
+    function start(){
+      const d=shuffle(makeDeck()); // 52
+      players=NAMES.map((name,i)=>({name, isAI:i>0, hand:d.splice(0,5)}));
+      let s; do{ s=d.shift(); if(isSpecial(s.r)) d.push(s); } while(isSpecial(s.r) && d.length); // start on a plain card
+      discard=[s]; stock=d; curSuit=s.s; dir=1; turn=0; drawPenalty=0; phase='play';
+      youSaidMau=false; drewThisTurn=false; over=false; winner=-1; stallCount=0;
+      beginTurn();
+    }
+    function beginTurn(){
+      const p=players[turn];
+      if(p.isAI){ msg=`${p.name} is thinking…`; render(); timer=setTimeout(aiMove,780); }
+      else { drewThisTurn=false; phase='play'; msg = drawPenalty>0 ? `A 7-stack is on you — play a 7 or take ${drawPenalty}.` : 'Your turn — match the suit or number, or play a Jack.'; render(); }
+    }
+    function finish(pi){ over=true; winner=pi; render(); }
+    function endByCount(){ let w=0; for(let i=1;i<3;i++) if(players[i].hand.length<players[w].hand.length) w=i; over=true; winner=w; render(); }
+    function passTurn(){ stallCount = stock.length===0 ? stallCount+1 : 0; if(stallCount>=3) return endByCount(); advance(1); beginTurn(); }
+
+    function playCard(pi, idx, chosenSuit){
+      stallCount=0;
+      const p=players[pi]; const card=p.hand.splice(idx,1)[0]; discard.push(card);
+      curSuit = card.r==='J' ? (chosenSuit || aiSuit(p.hand)) : card.s;
+      let steps=1;
+      if(card.r==='7') drawPenalty+=2; else if(card.r==='8') steps=2; else if(card.r==='9') dir=-dir;
+      if(pi>0 && p.hand.length===1) toast(`${p.name} says “Mau!”`);
+      if(p.hand.length===0){
+        if(pi===0 && !youSaidMau){ drawInto(0,2); youSaidMau=false; toast('Forgot to say Mau! +2'); msg='Caught — you forgot Mau and drew 2.'; advance(steps); return beginTurn(); }
+        return finish(pi);
+      }
+      if(pi===0 && p.hand.length>=2) youSaidMau=false;   // no longer in Mau range
+      advance(steps); beginTurn();
+    }
+    function aiMove(){
+      if(over) return; const p=players[turn];
+      if(drawPenalty>0){
+        const si=p.hand.findIndex(c=>c.r==='7');
+        if(si>=0){ toast(`${p.name} stacks a 7`); return playCard(turn, si); }
+        const n=drawPenalty; drawInto(turn,n); drawPenalty=0; stallCount=0; toast(`${p.name} takes ${n}`); advance(1); return beginTurn();
+      }
+      const valid=p.hand.map((c,i)=>({c,i})).filter(x=>canPlay(x.c));
+      if(!valid.length){ const drew=drawInto(turn,1); if(drew && canPlay(drew)) return playCard(turn, p.hand.indexOf(drew)); toast(`${p.name} draws`); return passTurn(); }
+      const nonJ=valid.filter(x=>x.c.r!=='J'); playCard(turn,(nonJ.length?nonJ:valid)[0].i);
+    }
+
+    // ---- human ----
+    function humanPlay(idx){ if(over||turn!==0||phase!=='play') return; const card=players[0].hand[idx]; if(!canPlay(card)) return;
+      if(card.r==='J'){ pendingIdx=idx; phase='chooseSuit'; render(); return; } playCard(0, idx); }
+    function chooseSuit(s){ if(phase!=='chooseSuit') return; const idx=pendingIdx; pendingIdx=-1; phase='play'; playCard(0, idx, s); }
+    function humanDraw(){ if(over||turn!==0) return;
+      if(drawPenalty>0){ const n=drawPenalty; drawInto(0,n); drawPenalty=0; stallCount=0; advance(1); return beginTurn(); }
+      if(drewThisTurn) return; drewThisTurn=true; const drew=drawInto(0,1);
+      msg = (drew && canPlay(drew)) ? 'You drew a playable card — play it or pass.' : 'Nothing to play — pass.'; render(); }
+    function humanPass(){ if(over||turn!==0||!drewThisTurn) return; passTurn(); }
+    function sayMau(){ if(players[0].hand.length===1){ youSaidMau=true; toast('You say “Mau!”'); render(); } }
+
+    // ---- render ----
+    function render(){
+      if(over){
+        root.innerHTML=`<div class="center" style="padding-top:14px"><div class="big">${winner===0?'🎉 Mau Mau! You win!':'🦊 '+players[winner].name+' sheds first — you lose this one.'}</div>
+          <p class="muted">Cards left — ${players.map(p=>p.name+' '+p.hand.length).join(' · ')}</p></div>`;
+        const again=el('button','btn','Play again'); again.onclick=()=>openGame(GAMES.find(g=>g.id==='mau'));
+        const r=el('div','row'); r.style.justifyContent='center'; r.appendChild(again); root.querySelector('.center').appendChild(r); return;
+      }
+      const you=players[0];
+      root.innerHTML=`
+        <div class="row" style="justify-content:space-between;align-items:center;gap:8px">
+          <span class="pill" style="${turn===1?'outline:2px solid var(--gold)':''}">🦊 ${players[1].name}: ${players[1].hand.length}</span>
+          <span class="pill" style="background:#143a4a">${dir>0?'↻ down':'↺ up'}${drawPenalty>0?' · draw '+drawPenalty:''}</span>
+          <span class="pill" style="${turn===2?'outline:2px solid var(--gold)':''}">🦔 ${players[2].name}: ${players[2].hand.length}</span>
+        </div>
+        <div class="felt" style="margin-top:10px">
+          <div class="row" style="justify-content:center;gap:20px;align-items:flex-start">
+            <div class="center"><div class="muted">Draw</div><div id="stock"></div></div>
+            <div class="center"><div class="muted">Must match: <b>${SUITSYM[curSuit]} ${SUITN[curSuit]}</b> or <b>${top().t}</b></div><div id="disc"></div></div>
+          </div>
+          <div class="center" id="msg" style="min-height:22px;margin-top:10px;font-weight:800"></div>
+          <div class="row" id="ctl" style="justify-content:center;margin-top:6px"></div>
+        </div>
+        <div class="h2" style="margin-top:10px">Your hand${you.hand.length===1?' — say Mau!':''}</div>
+        <div class="hand" id="hand"></div>`;
+      const st=root.querySelector('#stock'); st.appendChild(cardEl(null,{faceUp:false})); st.appendChild(el('div','muted',stock.length+' left'));
+      root.querySelector('#disc').appendChild(cardEl(top(),{faceUp:true}));
+      root.querySelector('#msg').textContent=msg;
+      const ctl=root.querySelector('#ctl');
+      if(phase==='chooseSuit'){
+        ctl.appendChild(el('div','muted','Wild Jack — choose a suit:'));
+        [['S','♠'],['H','♥'],['D','♦'],['C','♣']].forEach(([s,sym])=>{ const bt=el('button','btn sm',sym); bt.style.fontSize='18px'; bt.style.color=(s==='H'||s==='D')?'#ff9a9a':'#fff'; bt.onclick=()=>chooseSuit(s); ctl.appendChild(bt); });
+      } else if(turn===0){
+        if(drawPenalty>0){ const bt=el('button','btn','Take '+drawPenalty); bt.onclick=humanDraw; ctl.appendChild(bt); }
+        else { const bt=el('button','btn alt','Draw'); bt.disabled=drewThisTurn; bt.onclick=humanDraw; ctl.appendChild(bt);
+          if(drewThisTurn){ const ps=el('button','btn','Pass'); ps.onclick=humanPass; ctl.appendChild(ps); } }
+        if(you.hand.length===1 && !youSaidMau){ const m=el('button','btn good','🗣️ Mau!'); m.onclick=sayMau; ctl.appendChild(m); }
+      } else ctl.appendChild(el('div','muted',players[turn].name+' is playing…'));
+      const hand=root.querySelector('#hand'); hand.style.justifyContent='center';
+      you.hand.forEach((c,idx)=>{ const ce=cardEl(c,{faceUp:true});
+        if(turn===0 && phase==='play' && canPlay(c)){ ce.classList.add('playable'); ce.style.outline='2px solid var(--good)'; ce.onclick=()=>humanPlay(idx); }
+        else if(turn===0 && phase==='play') ce.style.opacity='.55';
+        hand.appendChild(ce); });
+    }
+
+    start();
+    return ()=>{ if(timer) clearTimeout(timer); };
+  }
+});
+
+/* ============================================================
+   GAME DESIGN DECK — a 60-card multi-tool + its flagship micro-game
+   60 = 52 standard + 4 suited jokers + 4 aces-low "1"s. Every card also
+   carries: d6, d20, d10, an element (Fire/Water/Earth), a design pillar with a
+   one-sentence lesson, a 12-point bearing, a same-rank/colour twin (30 pairs),
+   a 1-60 "seconds" stamp, a Mau rule,
+   and, on the 40 pip cards, a design lens.
+   60 is the most-divisible small number, so every system partitions evenly
+   (2 red/black · 3 elements · 4 suits · 5 design pillars A–E=1–5 · 6 d6 · 10 d10
+   · 12 bearing · 15 ranks · 20 d20 · 30 twin-pairs · 60 unique/seconds).
+   ============================================================ */
+// --- 3-slot ELEMENTS (×20 each): a fast triangle — Fire ▸ Earth ▸ Water ▸ Fire ---
+const GD_ELEMENTS = [
+  { id:'fire',  name:'Fire',  ic:'🔥', color:'#ef5350' },
+  { id:'water', name:'Water', ic:'💧', color:'#42a5f5' },
+  { id:'earth', name:'Earth', ic:'🌳', color:'#4caf50' },
+];
+const GD_ELEM = Object.fromEntries(GD_ELEMENTS.map(e=>[e.id,e]));
+const GD_ELEM_BEATS = { fire:'earth', earth:'water', water:'fire' }; // fire scorches earth, earth dams water, water douses fire
+const gdBeats = (a,b) => GD_ELEM_BEATS[a]===b;   // element a beats b (a mirror is a tie)
+
+// --- 5-slot DESIGN PILLARS (×12 each): the deck's designer-signature axis.
+//     Not a combat cycle — five categories, and every card is a one-sentence
+//     lesson on its pillar (12 distinct lessons per pillar → 60 unique). ---
+const GD_PILLARS = [                                    // the 5-slot also reads as an ordinal: A·B·C·D·E = 1·2·3·4·5 (a d5)
+  { id:'actions',    letter:'A', n:1, name:'Actions',    ic:'🎬', color:'#7c8cff' },
+  { id:'balance',    letter:'B', n:2, name:'Balance',    ic:'⚖️', color:'#e0b13a' },
+  { id:'craft',      letter:'C', n:3, name:'Craft',      ic:'✨', color:'#e05aa0' },
+  { id:'drama',      letter:'D', n:4, name:'Drama',      ic:'🎭', color:'#a07cff' },
+  { id:'experience', letter:'E', n:5, name:'Experience', ic:'🎯', color:'#36c2a0' },
+];
+const GD_PILLAR_BY = Object.fromEntries(GD_PILLARS.map(p=>[p.id,p]));
+const GD_PILLAR_LESSONS = {
+  actions:[
+    "A mechanic is a verb; if players can't say what they DO, the design isn't finished.",
+    "Your core loop must be fun on the third repetition, not just the first.",
+    "Every rule you add is a rule every player must learn — spend that budget wisely.",
+    "A real decision has at least two options a reasonable player would defend.",
+    "If one line of play dominates, you don't have a strategy — you have a solved puzzle.",
+    "Depth comes from mechanics interacting; mechanics in isolation are just chores.",
+    "Constrain options to make choices meaningful, not to punish the player.",
+    "The best mechanics teach themselves through consequences, not through text.",
+    "Cut any rule whose only job is to patch another rule.",
+    "Randomness adds drama to inputs and injustice to outputs — pick which end.",
+    "A turn should end with the player itching for the next one to start.",
+    "Simple rules with deep consequences beat complex rules with shallow ones.",
+  ],
+  balance:[
+    "Balance isn't sameness; it's every option getting a moment to shine.",
+    "Tune the outliers first — the best and worst options define the whole spread.",
+    "If a number never changed in playtest, you never actually tested it.",
+    "A dominant strategy is a balance bug wearing a strategy costume.",
+    "Give a losing player a path back, or the game ends long before it's over.",
+    "Cost must scale with power, or the powerful option is just the correct one.",
+    "Reward the leader and games end early; help the loser and they stay alive.",
+    "Measure balance by what players PICK, not by what your spreadsheet calls equal.",
+    "Snowballing is fun for one player and misery for everyone else at the table.",
+    "An economy leaks or floods — design the drains as carefully as the taps.",
+    "Perfect symmetry is balanced but often dull; aim for asymmetry with parity.",
+    "Data tells you WHAT is broken; players tell you HOW it feels broken.",
+  ],
+  craft:[
+    "Game feel is the gap between input and delight — keep it short.",
+    "Juice is feedback the player never asked for but instantly loves.",
+    "Every action deserves a reaction: a sound, a motion, a number popping.",
+    "If doing nothing but the core action feels good, you have a game.",
+    "Responsiveness beats realism; a snappy wrong number outshines a laggy right one.",
+    "Screen shake, particles, and squash-and-stretch are cheap and worth every frame.",
+    "The first ten seconds of touch decide whether the player trusts your game.",
+    "Anticipation and follow-through sell an action more than the action itself.",
+    "Polish the verb the player does a thousand times before the one they do once.",
+    "Audio is half of feel; mute the game and watch it lose its soul.",
+    "Make success feel earned and failure feel fair — both are feel, not logic.",
+    "If testers fidget with a mechanic during the tutorial, that mechanic feels right.",
+  ],
+  drama:[
+    "Theme is the promise on the box; every system should keep it.",
+    "Mechanics that fight the fiction confuse players faster than any rule.",
+    "A strong theme lets players guess the rules before you explain them.",
+    "Story is what happened; narrative is the space you leave players to make it theirs.",
+    "Art direction is a constraint, not a coat of paint — decide it early.",
+    "The best reskin changes what a game MEANS without touching what it DOES.",
+    "One coherent world beats a dozen clever references.",
+    "Give players a fantasy to inhabit, not just a task to complete.",
+    "Flavour text is free worldbuilding; waste none of it.",
+    "Cohesion is a feature — every mismatched font is a tiny broken promise.",
+    "Theme earns forgiveness: players excuse rough edges that fit the world.",
+    "If you can't say the fantasy in one sentence, players won't feel it in ten hours.",
+  ],
+  experience:[
+    "Design for a specific player, not for everyone — 'everyone' is nobody.",
+    "The tutorial is the first level; if it's boring, so is the promise.",
+    "Teach one thing at a time, and let the player use it before you teach the next.",
+    "Players don't read; they poke — design for the poke.",
+    "Onboarding is a funnel, and every rule you front-load is a leak.",
+    "Respect the player's time: cut the step that makes them wait to have fun.",
+    "Accessibility isn't charity; it's more players and sharper design for all of them.",
+    "Watch what players do, not what they say they'll do.",
+    "A confused player blames themselves, quits, and never tells you why.",
+    "Motivation is a loop of goal, action, reward — break any link and they leave.",
+    "The player's mental model is the real interface; design that, then the buttons.",
+    "The first-time experience happens exactly once — protect it above all.",
+  ],
+};
+
+// --- 60 unique Mau rules (idea seeds / a randomiser to assemble a ruleset) ---
+const GD_MAU = [
+  "Play a 2 to attack — the next player draws 2 (they may stack their own 2 to pass it on).",
+  "A black 2 attacks for 5 instead of 2; a red 2 reflects an attack back the way it came.",
+  "Play a 3 and whoever holds the most cards draws 1.",
+  "Play a 5 to gift one card from your hand to any opponent.",
+  "Play a 6 to choose any one player to skip.",
+  "Play a 7 and immediately take another turn.",
+  "Play an 8 to skip the next player.",
+  "Play a 9 to reverse the direction of play.",
+  "Play a 10 and every opponent discards one card face-down, if able.",
+  "Play a Jack as a wild — name the suit that must follow.",
+  "Play a Queen and every other player draws 1.",
+  "Play a King and the next player is skipped and draws 1.",
+  "Play an Ace to reverse direction and take another turn.",
+  "Play a suited Joker as a wild — but the new suit must match the Joker's own suit.",
+  "Play a '1' (ace-low): it counts below the 2 and cannot be topped by an Ace.",
+  "On your second-to-last card, announce 'Mau.' Forget and draw 2.",
+  "On your final card, announce 'Mau-Mau.' Forget and draw 2.",
+  "Never say 'thank you.' If you do, draw 1.",
+  "Say each card's name aloud as you play it; silence costs you 1 draw.",
+  "No idle talk — only legal calls and points of order. Chatter draws 1.",
+  "Salute and say 'Sir/Ma'am' whenever you play a 4.",
+  "Say 'Bramblewake' when you play any Joker.",
+  "Play a Heart and blow a kiss, or draw 1.",
+  "Play a Spade and knock the table once, or draw 1.",
+  "Play a Diamond and say a word that rhymes with the last one spoken.",
+  "Play a Club and the next player must follow with a Club or draw until they can.",
+  "The first card of each suit played this round scores a bonus point.",
+  "Suit-lock: while this card is on top, only same-suit cards may be played.",
+  "Elemental edge: if your card's element beats the top card's, draw one fewer on your next penalty.",
+  "Fire on top: the next player must play instantly — any hesitation draws 1.",
+  "Water on top: the pile flows — the next card may be any suit.",
+  "Metal on top: silence — no one may speak until the next card is played.",
+  "Wood on top: growth — draw 1 before you play.",
+  "Earth on top: stability — skip and reverse effects are suspended for one turn.",
+  "If this card's d6 shows 6, take another turn.",
+  "If this card's d20 shows 20 (a nat 20), every opponent draws 1.",
+  "If this card's d20 shows 1 (a nat 1), you draw 1.",
+  "Play two cards at once if their d6 values match.",
+  "Match the previous card's d6 value to skip the next player.",
+  "If this card's d10 shows 0, discard a second card face-down.",
+  "Point of Order: anyone may call it to pause and debate rules; no cards may be touched.",
+  "House rule: the first player to empty their hand invents one new rule for the next round.",
+  "Touching the deck out of turn draws 1.",
+  "Playing out of turn draws 2 and the card returns to your hand.",
+  "An illegal play is returned to hand with a 1-card penalty.",
+  "Announcing another player's hand size draws 1.",
+  "Last round's winner is exempt from speaking penalties this round.",
+  "Dealer's privilege: the rules need not be explained — new players learn by penalty.",
+  "Two same-colour Jokers played back-to-back end the round immediately.",
+  "Going out on a Joker doubles every opponent's penalty score.",
+  "Going out on a '1' is an instant, humble victory.",
+  "Play passes toward the seat in this card's compass bearing for one turn.",
+  "A card whose bearing points at the dealer makes the dealer draw 1.",
+  "A bearing that points back at you lets you play again.",
+  "Score by penalty points on remaining cards — lowest total wins the match.",
+  "Hold three of a kind at round's end to subtract 5 penalty points.",
+  "Take zero penalties all round to score 0 regardless of your hand ('clean hands').",
+  "Play a run of three ascending same-suit cards as a single turn.",
+  "Declare 'last card' before your final play, or draw 2 at round's end.",
+  "Wild reset: after any Joker, the next player chooses the new direction of play.",
+];
+
+// --- 40 design lenses (one per pip card) ---
+const GD_LENSES = [
+  "Where is the meaningful choice on this turn?",
+  "What is the core feedback loop, and how fast does it close?",
+  "What does the player feel in the first 30 seconds?",
+  "What's the smallest version of this that's still fun?",
+  "What is the player optimising — and is it what you intended?",
+  "Where does tension peak, and how is it released?",
+  "What can a new player safely ignore at first?",
+  "What's the risk, and what's the reward for taking it?",
+  "How does the game teach without a tutorial?",
+  "Which single decision would you remove to make this cleaner?",
+  "Where does luck end and skill begin?",
+  "What's the second-order strategy once players master the first?",
+  "What moment do you want players to screenshot and share?",
+  "How does the game end, and does the ending feel earned?",
+  "What does losing teach you for next time?",
+  "Where is the game grindy, and can that be cut?",
+  "What surprises the player on turn three?",
+  "Which rule confuses most — can it be intuited instead of stated?",
+  "What fantasy is the player living out?",
+  "How does the game reward mastery visibly?",
+  "What's the comeback path for a losing player?",
+  "Where can two players' plans collide?",
+  "What's the cost of the dominant strategy?",
+  "How little text can the rules use?",
+  "What's juicy here — what needs more feedback, sound, or motion?",
+  "What would a five-year-old do, and would it work?",
+  "What would a min-maxer break first?",
+  "Which component does the most work — how do you protect it?",
+  "Where is downtime, and can it become anticipation?",
+  "What story does the scoreboard tell?",
+  "How does difficulty scale with the player, not the clock?",
+  "What's the one number you'd tune first in playtest?",
+  "Where does theme reinforce the mechanics — or fight them?",
+  "What's the reason to play again immediately?",
+  "How do you telegraph danger before it lands?",
+  "What choice looks good but is a trap — and is that fair?",
+  "Where could a house rule improve on yours?",
+  "What table talk does this design invite?",
+  "How does the first turn differ from the last?",
+  "If you cut half the content, which half stays?",
+];
+
+// --- deterministic generator: an authored grid. Every system is a clean cycle
+//     down the canonical (suit → rank) order, so 60 = LCM of the periods keeps
+//     each one perfectly balanced (d6 ×10, element ×20, pillar ×12, …). ---
+// canonical order = exactly how the spreadsheet sorts: suit S·H·D·C, then rank
+const GD_SORD=['S','H','D','C'];
+const GD_RORD=['1','2','3','4','5','6','7','8','9','10','J','Q','K','A','JK']; // A high (after K), Joker last
+let GD_DECK_CACHE=null;
+function buildGDDeck(){
+  if(GD_DECK_CACHE) return GD_DECK_CACHE;
+  const ids=[];
+  for(const s of SUITS) for(const r of RANKS) ids.push({ kind:'std', r:r.id, t:r.t, s:s.id, sym:s.sym, color:s.color });
+  for(const s of SUITS) ids.push({ kind:'joker', r:'JK', t:'★', s:s.id, sym:s.sym, color:s.color });
+  for(const s of SUITS) ids.push({ kind:'one',   r:'1',  t:'1', s:s.id, sym:s.sym, color:s.color });
+  ids.sort((a,b)=> (GD_SORD.indexOf(a.s)-GD_SORD.indexOf(b.s)) || (GD_RORD.indexOf(a.r)-GD_RORD.indexOf(b.r)));
+  const ELEM3=['earth','fire','water'];                 // element cycle down the sheet: Earth ▸ Fire ▸ Water
+  const PILL5=GD_PILLARS.map(p=>p.id);                   // A ▸ B ▸ C ▸ D ▸ E
+  const isPip = c => c.kind==='std' && c.r!=='J' && c.r!=='Q' && c.r!=='K';
+  let li=0; const pc={ actions:0, balance:0, craft:0, drama:0, experience:0 };
+  GD_DECK_CACHE = ids.map((c,i)=>{
+    const id = c.kind==='std' ? c.r+c.s : c.kind==='joker' ? 'JK'+c.s : '1'+c.s;
+    // 30 pairs: the two same-colour suits of each of the 15 ranks share a pair key (its twin)
+    const pair = c.r + '·' + (c.color==='red' ? '♥♦' : '♠♣');
+    const P = PILL5[i%5];                               // pillar cycles A..E → each pillar's 12 cards take its 12 lessons
+    const card = { ...c, id, idx:i,
+      d6:(i%6)+1, d10:i%10, d20:(i%20)+1, bearing:(i%12)+1,
+      element:ELEM3[i%3], pillar:P, lesson:GD_PILLAR_LESSONS[P][pc[P]++],
+      sec:i+1, pair, mau:GD_MAU[i] };
+    if(isPip(c)) card.lens = GD_LENSES[li++];       // 40 pips carry a design lens; the 20 non-pips do not
+    return card;
+  });
+  return GD_DECK_CACHE;
+}
+
+// --- per-suit ink colour for card faces (customisable in the Card Customizer, persisted) ---
+const GD_INK_KEY='gd-suit-ink-v1';
+const GD_INK_DEFAULT={ S:'#1c1c1c', C:'#1e7d34', H:'#c62828', D:'#1565c0' };  // ships as the print-tuned four-colour deck
+// naive (uncalibrated) RGB→CMYK, a starting reference for a printer — confirm against their ICC profile
+function gdHexToCmyk(hex){
+  hex=(hex||'').replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
+  const r=parseInt(hex.slice(0,2),16)/255, g=parseInt(hex.slice(2,4),16)/255, b=parseInt(hex.slice(4,6),16)/255;
+  if([r,g,b].some(v=>isNaN(v))) return 'CMYK —';
+  const k=1-Math.max(r,g,b); if(k>=0.999) return 'C0 M0 Y0 K100';
+  const c=Math.round((1-r-k)/(1-k)*100), m=Math.round((1-g-k)/(1-k)*100), y=Math.round((1-b-k)/(1-k)*100);
+  return `C${c} M${m} Y${y} K${Math.round(k*100)}`;
+}
+const GD_INK_PRESETS={
+  'Classic':       { S:'#222222', C:'#222222', H:'#c0392b', D:'#c0392b' },
+  'Four-Colour':   { S:'#1c1c1c', C:'#1e7d34', H:'#c62828', D:'#1565c0' },  // print-tuned black/green/red/blue
+  'Blue & Red':    { S:'#1e3a8a', C:'#3b82c4', H:'#c0284a', D:'#e06a8a' },
+  'Cool & Warm':   { S:'#0f766e', C:'#2dd4bf', H:'#c02626', D:'#e08a1e' },
+  'Minimal':       { S:'#2452b5', C:'#222222', H:'#c0392b', D:'#e0912e' },
+};
+function gdLoadInk(){ try{ const s=localStorage.getItem(GD_INK_KEY); if(s) return Object.assign({}, GD_INK_DEFAULT, JSON.parse(s)); }catch(e){} return Object.assign({}, GD_INK_DEFAULT); }
+function gdSaveInk(){ try{ localStorage.setItem(GD_INK_KEY, JSON.stringify(GD_SUIT_INK)); }catch(e){} }
+let GD_SUIT_INK = gdLoadInk();
+const suitInk = s => GD_SUIT_INK[s] || '#222';
+
+// --- GD card renderers ---
+function gdArrow(b){ return `<span style="display:inline-block;transform:rotate(${(b%12)*30}deg)">↑</span>`; }
+function gdPip(label,val,arrow){
+  return `<div style="text-align:center;background:#f0eee4;border:1px solid #ddd6c2;border-radius:7px;padding:3px 5px;min-width:32px">
+     <div style="font-size:14px;font-weight:900;line-height:1;color:#222">${arrow?gdArrow(val):val}</div>
+     <div style="font-size:7px;font-weight:800;color:#998">${label}</div></div>`;
+}
+function gdBig(card){
+  const e=GD_ELEM[card.element], p=GD_PILLAR_BY[card.pillar], col=suitInk(card.s);
+  const kind = card.kind==='joker' ? 'SUITED JOKER · wild' : card.kind==='one' ? 'ACE-LOW · rank 1' : '';
+  const w=el('div'); w.style.cssText='width:230px;background:#fbfaf5;border-radius:12px;padding:12px;box-shadow:0 6px 22px #0008;border:1px solid #d8d4c4';
+  w.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div style="font-weight:900;font-size:24px;color:${col};line-height:1">${card.t}<span style="font-size:17px"> ${card.sym||''}</span></div>
+      <div style="text-align:right"><div style="font-size:22px">${e.ic}</div><div style="font-size:8px;font-weight:800;color:${e.color}">${e.name.toUpperCase()}</div></div>
+    </div>
+    ${kind?`<div style="font-size:8.5px;font-weight:800;color:#8a6d1f;letter-spacing:.08em;margin-top:1px">${kind}</div>`:''}
+    <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin:9px 0 6px">
+      ${gdPip('d6',card.d6)}${gdPip('d20',card.d20)}${gdPip('d10',card.d10)}${gdPip('bearing',card.bearing,true)}${gdPip('A–E',p.letter)}
+    </div>
+    <div style="display:flex;justify-content:center;gap:10px;font-size:8px;color:#8a8676;margin-bottom:6px">
+      <span>⏱ ${card.sec}s / 60</span><span>twin ${card.pair}</span></div>
+    <div style="background:#f2f0e6;border-radius:8px;padding:6px 8px;margin-bottom:6px">
+      <div style="font-size:8px;font-weight:800;color:${p.color};letter-spacing:.1em">${p.ic} ${p.letter} · ${p.name.toUpperCase()} · PILLAR ${p.n}/5</div>
+      <div style="font-size:10.5px;line-height:1.3;color:#333">${card.lesson}</div>
+    </div>
+    <div style="border-top:1px dashed #ccc;padding-top:6px">
+      <div style="font-size:8px;font-weight:800;color:#999;letter-spacing:.1em">MAU RULE</div>
+      <div style="font-size:11px;line-height:1.3;font-weight:600;color:#222">${card.mau}</div>
+    </div>
+    ${card.lens?`<div style="margin-top:6px"><div style="font-size:8px;font-weight:800;color:#999;letter-spacing:.1em">DESIGN LENS</div>
+      <div style="font-size:10.5px;line-height:1.3;font-style:italic;color:#444">${card.lens}</div></div>`:''}`;
+  return w;
+}
+function gdMini(card){
+  const e=GD_ELEM[card.element], col=suitInk(card.s);
+  const d=el('div'); d.style.cssText='width:70px;height:98px;background:#fbfaf5;border-radius:7px;position:relative;box-shadow:0 2px 5px #0006;flex:0 0 auto;cursor:pointer;overflow:hidden;border:1px solid #ded9c8';
+  d.innerHTML=`
+    <div style="position:absolute;top:3px;left:5px;font-weight:900;font-size:13px;color:${col};line-height:1">${card.t}<div style="font-size:11px">${card.sym||''}</div></div>
+    <div style="position:absolute;top:3px;right:4px;font-size:11px;font-weight:900;color:${GD_PILLAR_BY[card.pillar].color}">${GD_PILLAR_BY[card.pillar].letter}</div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:${e.color}">${e.ic}</div>
+    <div style="position:absolute;bottom:2px;left:0;right:0;display:flex;justify-content:center;gap:4px;font-size:7.5px;font-weight:800;color:#555">
+      <span>⚅${card.d6}</span><span>◱${card.d20}</span><span>${gdArrow(card.bearing)}</span></div>`;
+  return d;
+}
+
+// --- Functional card BACK: real rulers on all four edges + an orientation dial ---
+// Poker card = 63.5 × 88.9 mm (2.5 × 3.5 in). Edges: top=mm, right=inches,
+// bottom=cm, left=picas. Rotate the card to bring the scale you need to an edge.
+const GD_ORIENT_USES = [
+  "Counter / life: each edge is numbered (top 4 · right 3 · bottom 2 · left 1) — rotate a card so the value you want is at the top. Five cards track 20 (5 × 4).",
+  "Upright vs reversed (compass arrow up or down) = two readings of the same card (e.g. a lens question and its inverse).",
+  "The bearing arrow aims: lay a card so its arrow points at the player, pile, or value it targets.",
+  "The centre is a compass + protractor: 360° graduations with a north needle — measure an angle or read a bearing.",
+  "Rotate to select a ruler: bring mm / inch / cm / pica to whichever edge you're measuring against.",
+];
+function gdBack(scale){
+  const S=scale||1, z=x=>Math.round(x*S);                // scale EVERYTHING (size, ticks, labels) by S
+  const W=z(196), H=z(274), P=z(9);
+  const gold='#c9b26b', ink='#9fb0e0';
+  const wrap=el('div'); wrap.style.cssText=`position:relative;width:${W}px;height:${H}px;border-radius:${z(12)}px;
+    background:radial-gradient(circle at 50% 43%, #22326e, #0c1230);border:${Math.max(2,z(2))}px solid ${gold};box-shadow:0 8px 26px #0009;overflow:hidden;flex:0 0 auto`;
+  let t='';
+  const tw=Math.max(1, Math.floor(S*0.5));   // thin, sharp hairline ticks
+  const tick=(css,maj)=>`<div style="position:absolute;${css};background:${gold};${maj?'opacity:1':'opacity:.6'}"></div>`;
+  // one ruler per edge, CENTRED (equal margins at both ends):
+  //   4·top = CENTIMETERS (8) · 3·right = PICAS (18) · 2·bottom = MILLIMETERS (80) · 1·left = INCHES (3")
+  const ruler=(edge,steps,majFn,medFn)=>{ const horiz=(edge==='top'||edge==='bottom'), M=Math.round((horiz?W:H)*0.11), len=(horiz?W:H)-2*M;
+    for(let i=0;i<=steps;i++){ const f=M+len*i/steps, maj=majFn(i), h=z(maj?8:medFn(i)?5:3);
+      if(edge==='top')         t+=tick(`top:0;left:${f}px;width:${tw}px;height:${h}px`,maj);
+      else if(edge==='bottom') t+=tick(`bottom:0;left:${f}px;width:${tw}px;height:${h}px`,maj);
+      else if(edge==='left')   t+=tick(`left:0;top:${f}px;height:${tw}px;width:${h}px`,maj);
+      else                     t+=tick(`right:0;top:${f}px;height:${tw}px;width:${h}px`,maj); } };
+  ruler('top',    80, i=>i%10===0, i=>i%5===0);   // CENTIMETERS · 8  (mm resolution, major each cm)
+  ruler('bottom', 80, i=>i%10===0, i=>i%5===0);   // MILLIMETERS · 80 (major each 10 mm)
+  ruler('left',   24, i=>i%8===0,  i=>i%4===0);    // INCHES · 3 (eighth-inch ticks, major each inch)
+  ruler('right',  18, i=>i%6===0,  i=>i%3===0);    // PICAS · 18 (major each 6 pc = 1 inch)
+  // each edge: its unit label in tiny faded caps, and beneath it the counter number
+  const edgeTag=(css,num,word)=>`<div style="position:absolute;${css};color:${gold};line-height:1;text-align:center;white-space:nowrap">`+
+    `<div style="font-size:${z(6)}px;font-weight:700;letter-spacing:.16em;opacity:.4">${word}</div>`+
+    `<div style="font-size:${z(19)}px;font-weight:900;margin-top:${z(2)}px">${num}</div></div>`;
+  t+=edgeTag(`top:${z(11)}px;left:0;right:0`,4,'CENTIMETERS');
+  t+=edgeTag(`bottom:${z(11)}px;left:0;right:0;transform:rotate(180deg)`,2,'MILLIMETERS');
+  t+=edgeTag(`right:${z(9)}px;top:50%;transform:translateY(-50%) rotate(90deg)`,3,'PICAS');
+  t+=edgeTag(`left:${z(9)}px;top:50%;transform:translateY(-50%) rotate(-90deg)`,1,'INCHES');
+  // centre = compass + protractor: 360° graduations (every 5°), N/E/S/W, degree
+  // numbers every 30°, a north needle, and a crosshair for aligning an angle
+  const cx=W/2, cy=Math.round(H*0.44), R=z(50), sw=Math.max(1,S*0.5);
+  let ring='';
+  for(let d=0; d<360; d+=5){ const rad=d*Math.PI/180, s=Math.sin(rad), c=Math.cos(rad), len=d%30===0?z(9):d%10===0?z(6):z(3), r1=R-len;
+    ring+=`<line x1="${cx+s*r1}" y1="${cy-c*r1}" x2="${cx+s*R}" y2="${cy-c*R}" stroke="${gold}" stroke-width="${d%30===0?sw*1.6:sw}"/>`; }
+  let dnums='';
+  for(const d of [90,180,270]){ const rad=d*Math.PI/180, r=R-z(15);
+    dnums+=`<text x="${cx+Math.sin(rad)*r}" y="${cy-Math.cos(rad)*r}" fill="${gold}" fill-opacity=".8" font-size="${z(6.5)}" text-anchor="middle" dominant-baseline="middle" font-family="system-ui">${d}</text>`; }
+  const cross=`<line x1="${cx}" y1="${cy-R}" x2="${cx}" y2="${cy+R}" stroke="${gold}" stroke-opacity=".28" stroke-width="${sw}"/><line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" stroke="${gold}" stroke-opacity=".28" stroke-width="${sw}"/>`;
+  const needle=`<polygon points="${cx},${cy-R+z(6)} ${cx-z(4)},${cy} ${cx+z(4)},${cy}" fill="${gold}"/>`;
+  const svg=`<svg width="${W}" height="${H}" style="position:absolute;inset:0" viewBox="0 0 ${W} ${H}">
+     <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${gold}" stroke-opacity=".55" stroke-width="${sw}"/>
+     ${cross}${ring}${dnums}${needle}
+     <circle cx="${cx}" cy="${cy}" r="${z(2)}" fill="${gold}"/></svg>`;
+  const center=`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+     <div style="position:absolute;top:${Math.round(H*0.72)}px;font-size:${z(8)}px;letter-spacing:.26em;color:${gold};font-weight:800;opacity:.9">GAME·DESIGN·DECK</div></div>`;
+  wrap.innerHTML = svg + t + center;
+  return wrap;
+}
+
+// --- Vault Run (flagship B) core: a flip busts if it's not "clear skies" and its d20 ≤ your loot ---
+const VAULT_SAFE = [10,11,12,1,2];                    // North-band bearings = a safe flip (no bust)
+function vaultFlip(card, loot){
+  const safe = VAULT_SAFE.includes(card.bearing);
+  return { safe, bust: !safe && card.d20 <= loot, gain: card.d6 };
+}
+function vaultAITurn(deck, myScore, oppScore){
+  let loot=0; const flips=[];
+  const behind = oppScore - myScore;
+  let target = behind>10 ? 16 : behind < -6 ? 8 : 11;  // push when behind, coast when ahead
+  while(true){
+    if(!deck.length) deck.push(...shuffle(buildGDDeck()));
+    const c=deck.pop(), r=vaultFlip(c,loot); flips.push({c,r});
+    if(r.bust) return { gained:0, flips, busted:true };
+    loot+=r.gain;
+    if(loot>=target || myScore+loot>=50) return { gained:loot, flips, busted:false };
+  }
+}
+
+/* ---- Reference game: browse / draw / print the 60-card deck ---- */
+GAMES.push({
+  id:'gddeck', title:'Game Design Deck', players:'reference', tag:'60-card multi-tool · printable',
+  chips:[{k:'custom',t:'60 cards'},{k:'custom',t:'dice+elements'}],
+  blurb:'The designer\'s deck: 52 + 4 suited jokers + 4 aces-low = 60 cards, each carrying a d6/d20/d10, an element (Fire/Water/Earth), a design pillar with a one-sentence lesson, a 12-point bearing, a same-colour twin (30 pairs), a unique 1-60 seconds stamp, a Mau rule, and a design lens on the 40 pip cards. Draw one, browse all 60, or print the reference sheet.',
+  mount(root){
+    const deck=buildGDDeck();
+    // even-partition proof (computed, not asserted in prose)
+    const cnt=(key,val)=>deck.filter(c=>c[key]===val).length;
+    const ok = deck.length===60
+      && [1,2,3,4,5,6].every(v=>cnt('d6',v)===10)
+      && [1,2,3,4,5,6,7,8,9,10,11,12].every(v=>cnt('bearing',v)===5)
+      && GD_ELEMENTS.every(e=>cnt('element',e.id)===20)
+      && GD_PILLARS.every(p=>cnt('pillar',p.id)===12)
+      && new Set(deck.map(c=>c.lesson)).size===60
+      && new Set(deck.map(c=>c.pair)).size===30
+      && new Set(deck.map(c=>c.sec)).size===60
+      && new Set(deck.map(c=>c.mau)).size===60;
+    if(!document.getElementById('gd-print-style')){ const st=el('style'); st.id='gd-print-style';
+      st.textContent='@media print{header,.back{display:none!important}#app{max-width:none!important}.gd-noprint{display:none!important}body{background:#fff!important}#view{padding:0!important}}';
+      document.head.appendChild(st); }
+    root.innerHTML=`
+      <div class="gd-noprint">
+        <p class="muted">60 cards = 52 standard + 4 suited jokers + 4 aces-low "1"s. 60 is the most-divisible small number, so every system partitions evenly — the deck is a universal randomiser <b>and</b> a portfolio. ${ok?'<span style="color:var(--good)">balanced ✓</span>':'<span style="color:var(--bad)">imbalance!</span>'}</p>
+        <div class="row" style="margin:8px 0">
+          <button class="btn" id="gddraw">🎴 Draw a card</button>
+          <button class="btn alt" id="gdall">Browse all 60</button>
+          <button class="btn alt" id="gdsheet">📊 Spreadsheet</button>
+          <button class="btn alt" id="gdbackbtn">🂠 Card back</button>
+          <button class="btn alt" id="gdprint">🖨️ Print reference</button>
+        </div>
+        <div class="row" style="gap:10px;font-size:11px;color:var(--muted);flex-wrap:wrap">
+          ${GD_ELEMENTS.map(e=>`<span>${e.ic} ${e.name} ▸ ${GD_ELEM[GD_ELEM_BEATS[e.id]].ic}</span>`).join('<span style="opacity:.4">·</span>')}
+          <span style="opacity:.7">(element beats one)</span>
+          <span style="opacity:.4">|</span>
+          ${GD_PILLARS.map(p=>`<span><b>${p.letter}</b> ${p.ic} ${p.name}</span>`).join('<span style="opacity:.4">·</span>')}
+          <span style="opacity:.7">(pillars A–E = 1–5; each card a lesson)</span>
+        </div>
+      </div>
+      <div id="gdout" style="margin-top:12px"></div>`;
+    const out=root.querySelector('#gdout');
+    const showDraw=()=>{ const c=deck[Math.floor(Math.random()*deck.length)];
+      out.innerHTML=''; const wrap=el('div','center'); wrap.appendChild(gdBig(c)); out.appendChild(wrap); };
+    // full-size browse, organised into labelled groups (default: by suit, in rank order)
+    const RORD=['1','2','3','4','5','6','7','8','9','10','J','Q','K','A','JK']; // A high (after K), Joker last
+    const SORD=['S','H','D','C'], SMETA={S:{sym:'♠',n:'Spades'},H:{sym:'♥',n:'Hearts'},D:{sym:'♦',n:'Diamonds'},C:{sym:'♣',n:'Clubs'}};
+    const byRankSuit=(a,b)=>(RORD.indexOf(a.r)-RORD.indexOf(b.r))||(SORD.indexOf(a.s)-SORD.indexOf(b.s));
+    const bySuitRank=(a,b)=>(SORD.indexOf(a.s)-SORD.indexOf(b.s))||(RORD.indexOf(a.r)-RORD.indexOf(b.r));
+    function groupsFor(mode){
+      if(mode==='color')   return [['red','Red · ♥♦','♥'],['black','Black · ♠♣','♠']].map(([id,label,ic])=>({label,ic,cards:deck.filter(c=>c.color===id).sort(byRankSuit)}));
+      if(mode==='element') return GD_ELEMENTS.map(e=>({label:e.name,ic:e.ic,cards:deck.filter(c=>c.element===e.id).sort(bySuitRank)}));
+      if(mode==='pillar')  return GD_PILLARS.map(p=>({label:p.letter+' · '+p.name+' ('+p.n+')',ic:p.ic,cards:deck.filter(c=>c.pillar===p.id).sort(bySuitRank)}));
+      if(mode==='seconds') return [{label:'by the 1–60 seconds stamp',ic:'⏱',cards:deck.slice().sort((a,b)=>a.sec-b.sec)}];
+      return SORD.map(s=>({label:SMETA[s].n,ic:SMETA[s].sym,cards:deck.filter(c=>c.s===s).sort(byRankSuit)})); // suit
+    }
+    let allMode='suit';
+    const showAll=(mode)=>{ allMode=mode||allMode; out.innerHTML='';
+      const ctrl=el('div','row gd-noprint'); ctrl.style.cssText='margin-bottom:8px;justify-content:center';
+      ctrl.appendChild(el('span','muted','Group by:'));
+      [['suit','Suit'],['color','Twin colour'],['element','Element (3)'],['pillar','Pillar (5)'],['seconds','Seconds']].forEach(([m,lab])=>{
+        const b=el('button','btn alt sm',lab); if(m===allMode){ b.style.borderColor='var(--accent)'; b.style.color='var(--accent2)'; }
+        b.onclick=()=>showAll(m); ctrl.appendChild(b); });
+      out.appendChild(ctrl);
+      groupsFor(allMode).forEach(gp=>{
+        const h=el('div','h2'); h.style.cssText='color:var(--ink);margin:16px 0 8px;border-top:1px solid var(--line);padding-top:10px';
+        h.innerHTML=`${gp.ic} ${gp.label} <span class="muted" style="font-weight:400">· ${gp.cards.length} cards</span>`;
+        out.appendChild(h);
+        const grid=el('div'); grid.style.cssText='display:flex;flex-wrap:wrap;gap:12px;justify-content:center';
+        gp.cards.forEach(c=>grid.appendChild(gdBig(c)));
+        out.appendChild(grid);
+      });
+    };
+    // spreadsheet: every card in order, one column per system (a divisor at a time)
+    const showSheet=()=>{ out.innerHTML='';
+      const cards=deck.slice().sort(bySuitRank);
+      const cols=['#','Card','R/B (2)','Element (3)','Suit (4)','Pillar (5)','d6','d10','Bearing (12)','Rank (15)','d20','Twin (30)','Sec (60)','Pillar lesson','Mau rule','Design lens'];
+      let h='<table style="border-collapse:collapse;font-size:11px;min-width:1000px">';
+      h+='<thead><tr>'+cols.map(c=>`<th style="position:sticky;top:0;background:var(--panel2);color:var(--ink);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap">${c}</th>`).join('')+'</tr></thead><tbody>';
+      cards.forEach((c,i)=>{
+        const e=GD_ELEM[c.element], p=GD_PILLAR_BY[c.pillar], col=c.color==='red'?'var(--red)':'var(--ink)';
+        const info = c.lens || '';
+        const cells=[ i+1,
+          `<b style="color:${col}">${c.t}${c.sym||''}</b>`,
+          c.color==='red'?'Red':'Black',
+          `${e.ic} ${e.name}`,
+          SMETA[c.s] ? SMETA[c.s].sym+' '+SMETA[c.s].n : c.s,
+          `${p.letter} · ${p.ic} ${p.name}`,
+          c.d6, c.d10, `${c.bearing} ${gdArrow(c.bearing)}`,
+          c.r==='JK'?'★':c.r, c.d20, c.pair, c.sec,
+          `<span style="white-space:normal;display:block;min-width:230px;color:${p.color}">${c.lesson}</span>`,
+          `<span style="white-space:normal;display:block;min-width:230px">${c.mau}</span>`,
+          `<span style="white-space:normal;display:block;min-width:200px;color:var(--muted)">${info}</span>` ];
+        h+=`<tr style="background:${i%2?'#ffffff08':'transparent'}">`+cells.map(v=>`<td style="padding:5px 8px;border-bottom:1px solid #ffffff12;white-space:nowrap;vertical-align:top">${v}</td>`).join('')+'</tr>';
+      });
+      h+='</tbody></table>';
+      out.appendChild(el('div','muted','All 60 cards, in suit + rank order — one column per system (the number in each header is its divisor of 60). Scroll sideways for more.'));
+      const wrap=el('div'); wrap.style.cssText='overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:10px'; wrap.innerHTML=h;
+      out.appendChild(wrap);
+    };
+    const showBack=()=>{ out.innerHTML='';
+      const vw=window.innerWidth||900, vh=window.innerHeight||800;
+      const scale=Math.max(2.4, Math.min((vw-56)/196, (vh-240)/274, 5));   // as big as fits; min ~2.4× the old size
+      const w=el('div','center'); w.appendChild(gdBack(scale));
+      w.appendChild(el('div','muted','Prints true at 63.5 × 88.9 mm (2.5 × 3.5 in) — print at 100% / actual size. On-screen ticks are representative.'));
+      const leg=el('div'); leg.style.cssText='max-width:520px;margin:12px auto 0;text-align:left';
+      leg.innerHTML='<div class="h2" style="color:var(--ink)">Orientation tracks information — five ways</div>'+
+        '<ol style="font-size:12px;color:var(--muted);line-height:1.5;padding-left:18px">'+
+        GD_ORIENT_USES.map(u=>`<li>${u}</li>`).join('')+'</ol>'+
+        '<div class="muted" style="font-size:11px">Rulers — top: millimetres · right: inches · bottom: centimetres · left: picas (typographer\'s scale).</div>';
+      w.appendChild(leg); out.appendChild(w); };
+    root.querySelector('#gddraw').onclick=showDraw;
+    root.querySelector('#gdall').onclick=showAll;
+    root.querySelector('#gdsheet').onclick=showSheet;
+    root.querySelector('#gdbackbtn').onclick=showBack;
+    root.querySelector('#gdprint').onclick=()=>{ showAll(); if(window.print) setTimeout(()=>window.print(),60); };
+    showDraw();
+  }
+});
+
+// Elemental Gambit resolution + AI (module scope so smoke tests can exercise them)
+function egResolve(y,a){
+  const ye=y.element, ae=a.element, YN=GD_ELEM[ye].name, AN=GD_ELEM[ae].name;
+  if(gdBeats(ye,ae)) return { win:'you', dmg:y.d6, note:`Your ${YN} beats ${AN} — ${y.d6} damage` };
+  if(gdBeats(ae,ye)) return { win:'ai',  dmg:a.d6, note:`Foe's ${AN} beats ${YN} — ${a.d6} damage` };
+  if(y.d6===a.d6)    return { win:null,  dmg:0,    note:`${YN} mirror — equal d6 (${y.d6}), no damage` };
+  if(y.d6>a.d6)      return { win:'you', dmg:y.d6-a.d6, note:`${YN} mirror — d6 ${y.d6} vs ${a.d6}, ${y.d6-a.d6} damage` };
+  return { win:'ai', dmg:a.d6-y.d6, note:`${YN} mirror — foe's d6 ${a.d6} vs ${y.d6}, ${a.d6-y.d6} damage` };
+}
+function egAiPick(hand){
+  let best=hand[0], bv=-1e9;
+  for(const c of hand){ let s=0;
+    for(const e of GD_ELEMENTS){ const oe=e.id;
+      if(gdBeats(c.element,oe)) s+=c.d6; else if(gdBeats(oe,c.element)) s-=3.5; else s+=(c.d6-3.5); }
+    s=s/GD_ELEMENTS.length + Math.random()*0.6;
+    if(s>bv){ bv=s; best=c; } }
+  return best;
+}
+
+/* ---- Flagship micro-game: ELEMENTAL GAMBIT (you vs AI) ----
+   Play a card; the 3-element triangle (Fire ▸ Earth ▸ Water ▸ Fire) + d6 resolve
+   it. Beating the enemy element = full d6 damage; a mirror is decided by d6 gap. */
+GAMES.push({
+  id:'elemental', title:'Elemental Gambit', players:'1 player vs AI', tag:'flagship · elements + dice',
+  chips:[{k:'custom',t:'GD deck'},{k:'custom',t:'type wheel'}],
+  blurb:'The Game Design Deck\'s showcase duel. Each turn you and the AI reveal a card; if your element beats theirs (Fire ▸ Earth ▸ Water ▸ Fire) you deal its d6, otherwise a same-element mirror is settled by the d6 gap. Twenty life each — drop the AI to zero. Shows the element triangle and dice in one tight loop.',
+  mount(root){
+    let deck, you, ai, over, last, timer=null;
+    function draw(who){ if(deck.length && who.hand.length<5) who.hand.push(deck.pop()); }
+    function newGame(){
+      if(timer){ clearTimeout(timer); timer=null; }
+      deck=shuffle(buildGDDeck()); you={hand:[],life:20}; ai={hand:[],life:20}; over=false; last=null;
+      for(let i=0;i<5;i++){ draw(you); draw(ai); } render();
+    }
+    function play(idx){
+      if(over) return; const yc=you.hand.splice(idx,1)[0]; if(!yc) return;
+      const ac=egAiPick(ai.hand); ai.hand.splice(ai.hand.indexOf(ac),1);
+      const res=egResolve(yc,ac);
+      if(res.win==='you') ai.life-=res.dmg; else if(res.win==='ai') you.life-=res.dmg;
+      last={ yc, ac, res };
+      draw(you); draw(ai);
+      if(you.life<=0||ai.life<=0){ over=true; }
+      else if(!deck.length && you.hand.length===0 && ai.hand.length===0){ over=true; }
+      render();
+    }
+    function render(){
+      const winTxt = over ? (ai.life<=0 && you.life>0 ? 'You win! 🏆'
+        : you.life<=0 && ai.life>0 ? 'The AI wins.'
+        : you.life>ai.life ? 'You win on life! 🏆' : you.life<ai.life ? 'AI wins on life.' : 'A draw.') : '';
+      root.innerHTML=`
+        <p class="muted">Reveal a card each. If your <b>element beats</b> the AI's (Fire ▸ Earth ▸ Water ▸ Fire), you deal its <b>d6</b>; a same-element <b>mirror</b> is decided by the <b>d6 gap</b>. First to drop the other to 0 life wins.</p>
+        <div class="felt" style="max-width:520px;margin:0 auto">
+          <div class="row" style="justify-content:space-between">
+            <span class="pill">🤖 AI &nbsp;❤ ${Math.max(0,ai.life)}</span>
+            <span class="muted">${deck.length} in deck</span>
+            <span class="pill">🧑 You &nbsp;❤ ${Math.max(0,you.life)}</span>
+          </div>
+          <div id="egmid" class="center" style="min-height:150px;margin:12px 0"></div>
+          <div class="h2" style="color:#dffbe9">Your hand</div>
+          <div id="eghand" class="row" style="justify-content:center"></div>
+        </div>
+        <div class="row" style="margin-top:12px;justify-content:center">
+          <button class="btn alt" id="egnew">New game</button>
+          ${over?`<span class="big" style="color:var(--good)">${winTxt}</span>`:''}
+        </div>`;
+      const mid=root.querySelector('#egmid');
+      if(last){
+        const box=el('div'); box.style.cssText='display:flex;gap:22px;align-items:center;justify-content:center;flex-wrap:wrap';
+        const foe=el('div','center'); foe.innerHTML='<div class="muted" style="margin-bottom:4px">AI played</div>'; foe.appendChild(gdMini(last.ac));
+        const mine=el('div','center'); mine.innerHTML='<div class="muted" style="margin-bottom:4px">You played</div>'; mine.appendChild(gdMini(last.yc));
+        box.appendChild(foe); box.appendChild(mine); mid.appendChild(box);
+        const note=el('div','center',last.res.note); note.style.cssText='margin-top:10px;font-weight:800;color:'+(last.res.win==='you'?'var(--good)':last.res.win==='ai'?'var(--bad)':'var(--muted)'); mid.appendChild(note);
+      } else mid.appendChild(el('div','muted','Play a card to begin.'));
+      const hand=root.querySelector('#eghand');
+      you.hand.forEach((c,i)=>{ const m=gdMini(c); if(!over){ m.onclick=()=>play(i); } else m.style.opacity='.6'; hand.appendChild(m); });
+      root.querySelector('#egnew').onclick=newGame;
+    }
+    newGame();
+    return ()=>{ if(timer) clearTimeout(timer); };
+  }
+});
+
+/* ---- Flagship B: VAULT RUN (you vs AI) — dice + bearing press-your-luck ----
+   Flip cards to add their d6 to your loot. A flip BUSTS (loot lost) only when
+   it's not "clear skies" (bearing 10–2) AND its d20 ≤ your current loot — so
+   the bigger your pile, the more each flip risks. Bank to keep it. First to 50. */
+GAMES.push({
+  id:'vaultrun', title:'Vault Run', players:'1 player vs AI', tag:'flagship · dice + bearing',
+  chips:[{k:'custom',t:'GD deck'},{k:'custom',t:'press-your-luck'}],
+  blurb:'The deck\'s dice-and-bearing showcase. Flip cards to pile up loot (each adds its d6); a flip only busts when the bearing isn\'t "clear skies" and its d20 has dropped to or below your loot — so risk climbs with the pile. Bank before you bust. First to 50 wins. A North-band bearing is always a safe flip.',
+  mount(root){
+    let deck, myScore, aiScore, loot, turnFlips, phase, aiReport, over;
+    function reshuffle(){ if(!deck.length) deck.push(...shuffle(buildGDDeck())); }
+    function newGame(){ deck=shuffle(buildGDDeck()); myScore=0; aiScore=0; loot=0; turnFlips=[]; aiReport=null; phase='you'; over=false; render(); }
+    function flip(){
+      if(over||phase!=='you') return; reshuffle();
+      const c=deck.pop(), r=vaultFlip(c,loot); turnFlips.push({c,r});
+      if(r.bust){ loot=0; toast('BUST! 💥'); endYou(true); }
+      else { loot+=r.gain; if(myScore+loot>=50){ /* let them bank to win */ } render(); }
+    }
+    function bank(){
+      if(over||phase!=='you'||!turnFlips.length) return;
+      myScore+=loot; toast('Banked +'+loot);
+      endYou(false);
+    }
+    // one full round = your turn, then the AI's reply — the game ends only at a
+    // round boundary (equal turns), and the higher score ≥50 wins (a tie plays on)
+    function endYou(busted){ loot=0; turnFlips=[]; phase='ai'; render();
+      const rep=vaultAITurn(deck, aiScore, myScore); aiScore+=rep.gained; aiReport=rep;
+      if((myScore>=50||aiScore>=50) && myScore!==aiScore) over=true;
+      phase='you'; render(); }
+    function render(){
+      const canReach = !over && phase==='you' && (myScore+loot>=50);
+      root.innerHTML=`
+        <p class="muted">Flip to pile up loot (each adds its <b>d6</b>). A flip <b>busts</b> only if its bearing isn't clear-skies (North band ${VAULT_SAFE.join('/')}) <b>and</b> its <b>d20 ≤ your loot</b> — so danger grows with the pile. <b>Bank</b> to keep it. First to <b>50</b>.</p>
+        <div class="felt" style="max-width:540px;margin:0 auto">
+          <div class="row" style="justify-content:space-between">
+            <span class="pill">🤖 AI &nbsp;${aiScore}/50</span>
+            <span class="muted">${deck.length} in deck</span>
+            <span class="pill">🧑 You &nbsp;${myScore}/50</span>
+          </div>
+          <div class="center" style="margin:12px 0">
+            <div class="muted">this run</div>
+            <div class="big" style="color:var(--gold)">${loot} loot</div>
+            <div id="vrpile" class="row" style="justify-content:center;min-height:100px;margin-top:8px"></div>
+          </div>
+          ${aiReport?`<div class="center muted" style="font-size:12px">AI ${aiReport.busted?'busted 💥 (+0)':'banked +'+aiReport.gained} over ${aiReport.flips.length} flip${aiReport.flips.length!==1?'s':''}</div>`:''}
+        </div>
+        <div class="row" style="margin-top:12px;justify-content:center">
+          ${over?'':`<button class="btn" id="vrflip">🎴 Flip</button>
+          <button class="btn good" id="vrbank" ${turnFlips.length?'':'disabled'}>${canReach?'🏦 Bank +'+loot+' (AI replies)':'🏦 Bank +'+loot}</button>`}
+          <button class="btn alt" id="vrnew">New game</button>
+          ${over?`<span class="big" style="color:var(--good)">${myScore>aiScore?'You crack the vault! 🏆':'The AI wins.'}</span>`:''}
+        </div>`;
+      const pile=root.querySelector('#vrpile');
+      turnFlips.forEach(f=>{ const m=gdMini(f.c); if(f.r.safe) m.style.outline='2px solid var(--good)'; if(f.r.bust) m.style.outline='3px solid var(--bad)'; pile.appendChild(m); });
+      if(!over){ root.querySelector('#vrflip').onclick=flip; root.querySelector('#vrbank').onclick=bank; }
+      root.querySelector('#vrnew').onclick=newGame;
+    }
+    newGame();
+  }
+});
+
+/* ---- Card Customizer: play with the four suit inks live, presets + preview ---- */
+GAMES.push({
+  id:'customizer', title:'Card Customizer', players:'tool', tag:'suit colours · live preview',
+  chips:[{k:'custom',t:'suit ink'}],
+  blurb:'Play with the four suit colours live. Pick any ink per suit, try presets, and watch sample cards update instantly — the pairs (♠♣ and ♥♦) stay grouped so you can keep each reading as a team. Save to apply it across the whole deck (stored in this browser).',
+  mount(root){
+    const SM={ S:{sym:'♠',n:'Spades'}, H:{sym:'♥',n:'Hearts'}, D:{sym:'♦',n:'Diamonds'}, C:{sym:'♣',n:'Clubs'} };
+    const PAIRS=[['S','C','Pair 1 · ♠ + ♣'],['H','D','Pair 2 · ♥ + ♦']];
+    const inputs={}, hexes={}, cmyks={}, prevs={};
+    function inkCard(s){
+      const m=SM[s], ink=GD_SUIT_INK[s];
+      const d=el('div'); d.style.cssText='width:84px;height:118px;background:#fbfaf5;border-radius:9px;position:relative;box-shadow:0 2px 7px #0007;border:1px solid #ded9c8;flex:0 0 auto';
+      d.innerHTML=`<div style="position:absolute;top:6px;left:8px;font-weight:900;font-size:17px;color:${ink};line-height:1">A<div style="font-size:15px">${m.sym}</div></div>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;color:${ink}">${m.sym}</div>
+        <div style="position:absolute;bottom:6px;right:8px;font-weight:900;font-size:17px;color:${ink};transform:rotate(180deg)">A<div style="font-size:15px">${m.sym}</div></div>`;
+      return d;
+    }
+    function refresh(){ ['S','H','D','C'].forEach(s=>{
+      if(hexes[s]) hexes[s].textContent=GD_SUIT_INK[s];
+      if(cmyks[s]) cmyks[s].textContent=gdHexToCmyk(GD_SUIT_INK[s]);
+      if(prevs[s]){ prevs[s].innerHTML=''; prevs[s].appendChild(inkCard(s)); } }); }
+    function applyPreset(name){ const p=GD_INK_PRESETS[name]; if(!p) return;
+      Object.assign(GD_SUIT_INK, p);
+      ['S','H','D','C'].forEach(s=>{ if(inputs[s]) inputs[s].value=GD_SUIT_INK[s]; });
+      refresh(); }
+
+    root.innerHTML='';
+    root.appendChild(el('p','muted','Pick an ink per suit and watch the cards update. The two pairs — ♠♣ and ♥♦ — sit together so you can keep each pair reading as a team. <b>Save</b> applies your colours to every card in the deck (this browser).'));
+    const prow=el('div','row'); prow.appendChild(el('span','muted','Presets:'));
+    Object.keys(GD_INK_PRESETS).forEach(name=>{ const b=el('button','btn alt sm',name); b.onclick=()=>applyPreset(name); prow.appendChild(b); });
+    root.appendChild(prow);
+
+    const grid=el('div'); grid.style.cssText='display:flex;flex-wrap:wrap;gap:16px;margin-top:14px';
+    PAIRS.forEach(([a,b,label])=>{
+      const box=el('div'); box.style.cssText='border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--panel)';
+      box.appendChild(el('div','h2',label));
+      const row=el('div'); row.style.cssText='display:flex;gap:18px;justify-content:center';
+      [a,b].forEach(s=>{
+        const cell=el('div'); cell.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px';
+        cell.appendChild(el('div',null,SM[s].sym+' '+SM[s].n));
+        const holder=el('div'); prevs[s]=holder; holder.appendChild(inkCard(s)); cell.appendChild(holder);
+        const inp=document.createElement('input'); inp.type='color'; inp.value=GD_SUIT_INK[s];
+        inp.style.cssText='width:60px;height:34px;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer;padding:2px';
+        inp.oninput=()=>{ GD_SUIT_INK[s]=inp.value; refresh(); };
+        inputs[s]=inp; cell.appendChild(inp);
+        const hex=el('div','muted',GD_SUIT_INK[s]); hex.style.fontVariant='tabular-nums'; hexes[s]=hex; cell.appendChild(hex);
+        const cmyk=el('div','muted',gdHexToCmyk(GD_SUIT_INK[s])); cmyk.style.cssText='font-size:10px;opacity:.85;font-variant:tabular-nums'; cmyks[s]=cmyk; cell.appendChild(cmyk);
+        row.appendChild(cell);
+      });
+      box.appendChild(row);
+      grid.appendChild(box);
+    });
+    root.appendChild(grid);
+
+    const arow=el('div','row'); arow.style.marginTop='16px';
+    const save=el('button','btn good','💾 Save for the whole deck'); save.onclick=()=>{ gdSaveInk(); toast('Suit colours saved ✓'); };
+    const reset=el('button','btn alt','Reset to default (Four-Colour)'); reset.onclick=()=>applyPreset('Four-Colour');
+    arow.appendChild(save); arow.appendChild(reset);
+    root.appendChild(arow);
+    root.appendChild(el('p','muted','CMYK values are an <b>uncalibrated</b> RGB→CMYK reference for your print shop — confirm against their ICC profile before proofing. The deck now ships in Four-Colour by default.'));
+  }
+});
+
+/* ============================================================ */
+goHome();
+
+/* Dev hatch for headless smoke tests. */
+window.__cw = { makeDeck, shuffle, score5, best7, evalName, cmpScore, faeBeats, mkCard, mkJoker, GAMES, buildGDDeck, GD_MAU, GD_ELEMENTS, gdBeats, GD_PILLARS, GD_PILLAR_LESSONS, egResolve, egAiPick, gdBack, vaultFlip, vaultAITurn, GD_ORIENT_USES };
+</script>
+</body>
+</html>

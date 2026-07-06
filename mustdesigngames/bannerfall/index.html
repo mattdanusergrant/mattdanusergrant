@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Bannerfall</title>
+<style>
+  :root{
+    --bg:#0f1622; --neutral:#3d4450;
+    --you:#4f8ef7; --you-2:#2f62c8; --ai:#e06a5a; --ai-2:#b84a3c;
+    --ink:#eef2f8; --muted:#93a0b4; --gold:#f2c14e; --line:#28324a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    display:flex;flex-direction:column;overflow:hidden;user-select:none;touch-action:manipulation}
+  .top{padding:10px 12px 8px;display:flex;align-items:center;gap:10px}
+  .brand{font-weight:700;letter-spacing:.02em;font-size:15px;white-space:nowrap}
+  .brand small{color:var(--muted);font-weight:500;margin-left:6px;font-size:11px}
+  .tugwrap{flex:1;display:flex;flex-direction:column;gap:3px}
+  .tuglab{font-size:10px;letter-spacing:.06em;color:var(--muted);display:flex;justify-content:space-between}
+  .tuglab b{color:var(--you)} .tuglab i{color:var(--ai);font-style:normal}
+  .tug{height:9px;border-radius:6px;overflow:hidden;background:var(--ai-2);position:relative;box-shadow:inset 0 0 0 1px var(--line)}
+  .tug>span{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--you-2),var(--you));transition:width .25s}
+  .tug .div{position:absolute;top:-2px;width:2px;height:13px;background:#fff;opacity:.85;transform:translateX(-1px)}
+  .timer{font-size:15px;font-weight:800;color:var(--ink);white-space:nowrap;min-width:52px;text-align:right}
+  .timer.warn{color:var(--gold)}
+  .stage{flex:1;position:relative;min-height:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(10,16,26,.9);
+    border:1px solid var(--line);padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;
+    pointer-events:none;opacity:0;transition:opacity .25s;max-width:90%;text-align:center}
+  .toast.show{opacity:1}
+  .deck{padding:7px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line);
+    display:flex;gap:10px;align-items:center;background:#0c1320}
+  .gold{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:58px;gap:1px}
+  .gold .n{font-size:21px;font-weight:800;color:var(--gold);line-height:1}
+  .gold .r{font-size:10px;color:#8fd6a0;font-weight:700}
+  .gold .l{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .legendwrap{flex:1;display:flex;flex-direction:column;gap:4px}
+  .legend{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .lg{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted);background:#151d2e;border:1px solid var(--line);border-radius:7px;padding:3px 6px}
+  .lg .gp{font-size:13px;color:var(--ink)}
+  .lg b{color:var(--ink);font-weight:600}
+  .lg .c{color:var(--gold);font-weight:700;margin-left:auto}
+  .hint{font-size:9.5px;color:var(--muted);text-align:center}
+  .over{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;
+    gap:14px;background:rgba(10,15,24,.88);z-index:5;text-align:center;padding:24px}
+  .over.show{display:flex}
+  .over h1{font-size:32px;letter-spacing:.01em}
+  .over p{color:var(--muted);max-width:340px;line-height:1.5;font-size:14px}
+  .btn{background:var(--you);color:#031233;border:none;border-radius:12px;padding:13px 26px;font-size:16px;
+    font-weight:800;cursor:pointer;letter-spacing:.02em}
+  .btn:active{transform:scale(.97)}
+  .win h1{color:var(--you)} .lose h1{color:var(--ai)}
+  .how{font-size:12px;color:var(--muted);line-height:1.65;text-align:left;max-width:340px}
+  .how b{color:var(--ink)}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">Bannerfall <small>claim the field</small></div>
+    <div class="tugwrap">
+      <div class="tuglab"><b id="ypush">held 0%</b><i id="apush">0% held</i></div>
+      <div class="tug"><span id="tugfill" style="width:50%"></span><span class="div" id="tugdiv" style="left:50%"></span></div>
+    </div>
+    <div class="timer" id="timer">3:30</div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="toast" id="toast"></div>
+
+    <div class="over show" id="start">
+      <h1>Bannerfall</h1>
+      <p>A 3½-minute tactics duel. Build out from your keep, recruit heroes, and storm theirs.</p>
+      <div class="how">
+        <b>1.</b> Every tile next to yours shows <b>what it builds</b> and its cost. Tap a <b>glowing tile</b> to raise it.<br>
+        <b>2.</b> You start with one <b>⛏ Mine</b> — they grow gold and are <b>rare</b>, so grab any you see · <b>⚔ Recruit (50/100/250)</b> builds a camp that rolls a hero and <b>keeps summoning it</b> — pricier tiles roll rarer heroes · <b>♜ Tower (100)</b> defends · <b>? (25)</b> gambles: usually nothing, sometimes a camp.<br>
+        <b>3.</b> Heroes march the front. Push their color off the map — take their <b>keep</b>, or lead the banner bar at 0:00.
+      </div>
+      <button class="btn" id="startBtn">Take the field →</button>
+    </div>
+    <div class="over" id="end">
+      <h1 id="endTitle">Victory</h1>
+      <p id="endMsg"></p>
+      <button class="btn" id="againBtn">Play again</button>
+    </div>
+  </div>
+
+  <div class="deck">
+    <div class="gold"><div class="n" id="gold">50</div><div class="r" id="rate">▲0/s</div><div class="l">Gold</div></div>
+    <div class="legendwrap">
+      <div class="legend">
+        <div class="lg"><span class="gp">⛏</span><b>Mine</b><span class="c">50</span></div>
+        <div class="lg"><span class="gp">⚔</span><b>Recruit</b><span class="c">50+</span></div>
+        <div class="lg"><span class="gp">♜</span><b>Tower</b><span class="c">100</span></div>
+        <div class="lg"><span class="gp">?</span><b>Gamble</b><span class="c">25</span></div>
+      </div>
+      <div class="hint">Recruit builds a camp that keeps summoning its hero — pricier tiles roll rarer heroes</div>
+    </div>
+  </div>
+
+<script>
+(function(){
+"use strict";
+const TAU=Math.PI*2;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+
+// ── what a tile can offer (fixed costs; recruit tiles roll a hero by rarity) ─
+const PRE={
+  mine:   {glyph:'⛏', cost:50,  kind:'mine',  w:0.07},   // rare — you start with one already built
+  rec50:  {glyph:'⚔', cost:50,  kind:'recruit', tier:50,  w:0.34},
+  rec100: {glyph:'⚔', cost:100, kind:'recruit', tier:100, w:0.15},
+  rec250: {glyph:'⚔', cost:250, kind:'recruit', tier:250, w:0.06},
+  tower:  {glyph:'♜', cost:100, kind:'tower', w:0.16},
+  mystery:{glyph:'?', cost:25,  kind:'mystery', w:0.22},
+};
+const PRE_KEYS=Object.keys(PRE), PRE_WSUM=PRE_KEYS.reduce((s,k)=>s+PRE[k].w,0);
+function rollPre(){ let r=Math.random()*PRE_WSUM; for(const k of PRE_KEYS){ if((r-=PRE[k].w)<0) return k; } return 'mine'; }
+
+// hero rarity odds per recruit tier (Tile Guide), and the "?" gamble table
+function rollRarity(tier){ const r=Math.random()*100;
+  if(tier===50)  return r<94?'common':r<98?'rare':r<99?'epic':'legendary';
+  if(tier===100) return r<80?'rare':r<97?'epic':'legendary';
+  return r<83?'epic':'legendary';                                    // 250
+}
+function rollMystery(){ const r=Math.random()*100;                   // 80% nothing
+  return r<80?null:r<96?'common':r<98?'rare':r<99?'epic':'legendary'; }
+const RAR_COL={common:'#cfd8e6', rare:'#6fa8ff', epic:'#c79bff', legendary:'#f2c14e'};
+
+// ── buildings ─────────────────────────────────────────────────────────────
+const BLD={ mine:{hp:64, income:3.2}, tower:{hp:150, range:2.6, dmg:7, fire:0.6} };
+const CITY={hp:1000, range:3.2, dmg:9, fire:0.45};   // true fortress — capture is rare; most games decided on territory at 0:00
+
+// a Recruit building rolls ONE hero at creation, then summons it on a timer (by rarity)
+const SPAWN_EVERY={common:4.6, rare:6.2, epic:8.0, legendary:11.0};
+const REC_HP={common:42, rare:58, epic:74, legendary:98};
+
+// ── hero roster by rarity ─────────────────────────────────────────────────
+const HEROES={
+  cavalier:{rar:'common', glyph:'»', hp:22, dmg:2.2, mv:0.55, at:0.6,  rng:1.05, rr:0.24},
+  archer:  {rar:'common', glyph:'➹', hp:15, dmg:2.6, mv:0.8,  at:0.85, rng:2.0,  rr:0.23},
+  knight:  {rar:'rare',   glyph:'▮', hp:46, dmg:3.5, mv:0.95, at:0.8,  rng:1.05, rr:0.31},
+  rogue:   {rar:'rare',   glyph:'☠', hp:28, dmg:3.9, mv:0.5,  at:0.55, rng:1.05, rr:0.24},
+  mage:    {rar:'epic',   glyph:'✦', hp:52, dmg:5.4, mv:0.8,  at:1.0,  rng:2.2,  rr:0.28},
+  brute:   {rar:'epic',   glyph:'◆', hp:84, dmg:5.6, mv:0.7,  at:0.7,  rng:1.05, rr:0.32},
+  dragon:  {rar:'legendary', glyph:'✷', hp:150, dmg:8.0, mv:0.75, at:0.85, rng:1.6, rr:0.37},
+};
+const BY_RARITY={ common:['cavalier','archer'], rare:['knight','rogue'], epic:['mage','brute'], legendary:['dragon'] };
+
+// ── economy / balance knobs ───────────────────────────────────────────────
+const COLS=7, ROWS=11;
+const MATCH_TIME=210;
+const START_GOLD=50, GOLD_CAP=300, GOLD_DRIP=3.2;
+const UNIT_CAP=26;
+const AI_EVERY=1.4;
+
+// ── hex math (pointy-top, odd-r offset) ──────────────────────────────────
+function offToCube(col,row){ const x=col-(row-(row&1))/2, z=row, y=-x-z; return {x,y,z}; }
+function cubeToOff(c){ const col=c.x+(c.z-(c.z&1))/2, row=c.z; return {col,row}; }
+const CUBE_DIRS=[[1,-1,0],[1,0,-1],[0,1,-1],[-1,1,0],[-1,0,1],[0,-1,1]];
+function cubeDist(a,b){ return (Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z))/2; }
+
+// ── state ────────────────────────────────────────────────────────────────
+let hexes=[], hexById={}, units=[], you, ai, running=false, over=false;
+let SIZE=28, OX=0, OY=0, tPrev=0, fx=[], aiAcc=0, clock=MATCH_TIME, toastT=0, firstBuild=false;
+
+function hid(col,row){ return row*COLS+col; }
+function inBounds(col,row){ return col>=0&&col<COLS&&row>=0&&row<ROWS; }
+const MID=(ROWS-1)/2;
+
+function buildBoard(){
+  hexes=[]; hexById={};
+  for(let row=0; row<ROWS; row++) for(let col=0; col<COLS; col++){
+    const home = row<MID?'ai' : row>MID?'you' : null;
+    const h={id:hid(col,row), col, row, cube:offToCube(col,row), home, owner:home, claimedBy:null, pre:rollPre(), b:null, flash:0};
+    hexes.push(h); hexById[h.id]=h;
+  }
+  const mid=(COLS-1)/2|0;
+  const yc=hexById[hid(mid,ROWS-2)], ac=hexById[hid(mid,1)];
+  makeCity(yc,'you'); makeCity(ac,'ai');
+  you={city:yc, gold:START_GOLD}; ai={city:ac, gold:START_GOLD};
+  for(const [side,city] of [['you',yc],['ai',ac]]){   // start with ONE Mine already built; a Recruit tile adjacent
+    const ns=neighborsOf(city).filter(n=>!n.b);
+    const m=ns[0]; m.pre=null; m.claimedBy=side; m.owner=side; m.b={type:'mine',owner:side,glyph:'⛏',hp:BLD.mine.hp,maxhp:BLD.mine.hp,cd:0};
+    const rest=ns.slice(1);
+    if(rest.length && !rest.some(n=>PRE[n.pre].kind==='recruit')) rest[0].pre='rec50';
+  }
+}
+function makeCity(h,owner){ h.owner=owner; h.claimedBy=owner; h.pre=null; h.b={type:'city',owner,glyph:'♜',hp:CITY.hp,maxhp:CITY.hp,cd:0}; }
+function neighborsOf(h){
+  const out=[];
+  for(const d of CUBE_DIRS){
+    const o=cubeToOff({x:h.cube.x+d[0], y:h.cube.y+d[1], z:h.cube.z+d[2]});
+    if(inBounds(o.col,o.row)) out.push(hexById[hid(o.col,o.row)]);
+  }
+  return out;
+}
+function layout(){
+  const w=cv.width, hgt=cv.height;
+  const sx=w/((COLS+0.5)*Math.sqrt(3)), sy=hgt/((ROWS-1)*1.5+2);
+  SIZE=Math.min(sx,sy);
+  const bw=(COLS+0.5)*Math.sqrt(3)*SIZE, bh=((ROWS-1)*1.5+2)*SIZE;
+  OX=(w-bw)/2 + SIZE*Math.sqrt(3)/2; OY=(hgt-bh)/2 + SIZE;
+  for(const h of hexes){ h.px=OX+SIZE*Math.sqrt(3)*(h.col+0.5*(h.row&1)); h.py=OY+SIZE*1.5*h.row; }
+}
+function hexAt(x,y){
+  let best=null,bd=1e9;
+  for(const h of hexes){ const d=(h.px-x)**2+(h.py-y)**2; if(d<bd){bd=d;best=h;} }
+  return (best && bd < (SIZE*0.98)**2) ? best : null;
+}
+
+// ── build / recruit a tile's preset ───────────────────────────────────────
+function costFor(h){ return PRE[h.pre].cost; }
+function claimableFor(owner){
+  const set=new Set();
+  for(const h of hexes){ if(h.claimedBy===owner){ for(const n of neighborsOf(h)) if(n.claimedBy==null && n.pre) set.add(n.id); } }
+  return set;
+}
+function popOf(owner){ let n=0; for(const u of units) if(u.owner===owner) n++; return n; }
+function spawnHero(owner,hk,h){ const H=HEROES[hk];
+  if(popOf(owner)>=UNIT_CAP) return;
+  units.push({owner,hk,rar:H.rar,hexId:h.id,hp:H.hp,maxhp:H.hp,dmg:H.dmg,rng:H.rng,mv:H.mv,at:H.at,rr:H.rr,glyph:H.glyph,mcd:Math.random()*0.4,acd:0,jit:Math.random()*0.6-0.3}); }
+// a Recruit building rolls one hero at creation, then keeps summoning it on a timer
+function makeRecruit(owner,rar,h){ const hk=BY_RARITY[rar][Math.random()*BY_RARITY[rar].length|0];
+  h.b={type:'recruit',owner,hero:hk,rar,glyph:HEROES[hk].glyph,hp:REC_HP[rar],maxhp:REC_HP[rar],cd:SPAWN_EVERY[rar]*0.35}; }
+function claim(owner,h){
+  const p=PRE[h.pre]; h.claimedBy=owner; h.owner=owner; h.pre=null; h.flash=1;
+  if(p.kind==='mine'){  h.b={type:'mine',owner,glyph:'⛏',hp:BLD.mine.hp,maxhp:BLD.mine.hp,cd:0}; return {kind:'mine'}; }
+  if(p.kind==='tower'){ h.b={type:'tower',owner,glyph:'♜',hp:BLD.tower.hp,maxhp:BLD.tower.hp,cd:0}; return {kind:'tower'}; }
+  if(p.kind==='recruit'){ const rar=rollRarity(p.tier); makeRecruit(owner,rar,h); return {kind:'recruit',rar}; }
+  const rar=rollMystery(); if(rar){ makeRecruit(owner,rar,h); return {kind:'recruit',rar}; }
+  return {kind:'empty'};   // "?" blank → just claimed ground
+}
+
+// ── input ────────────────────────────────────────────────────────────────
+function tapBoard(x,y){
+  if(!running) return;
+  const h=hexAt(x,y); if(!h) return;
+  if(!(h.claimedBy==null && claimableFor('you').has(h.id))){ toast('Tap a glowing tile next to yours'); return; }
+  const cost=costFor(h);
+  if(you.gold<cost){ toast('Need ◆'+cost); return; }
+  you.gold-=cost; const r=claim('you',h);
+  if(!firstBuild){ firstBuild=true;
+    toast(r.kind==='mine'?'Mine up — gold rising':r.kind==='tower'?'Tower up — line held':
+          r.kind==='recruit'?(r.rar[0].toUpperCase()+r.rar.slice(1))+' hero recruited — marching':'Empty ruins — the dice were cold'); }
+  else if(r.kind==='recruit'&&(r.rar==='epic'||r.rar==='legendary')) toast((r.rar==='legendary'?'Legendary':'Epic')+' hero recruited!');
+}
+cv.addEventListener('pointerdown',e=>{
+  const r=cv.getBoundingClientRect();
+  tapBoard((e.clientX-r.left)*(cv.width/r.width),(e.clientY-r.top)*(cv.height/r.height));
+});
+
+// ── AI ───────────────────────────────────────────────────────────────────
+function aiTurn(){
+  let mines=0,tow=0; for(const h of hexes) if(h.b&&h.b.owner==='ai'){ if(h.b.type==='mine')mines++; else if(h.b.type==='tower')tow++; }
+  const army=popOf('ai'); const c=counts(); const pushed=c.yPush>0;
+  const ids=[...claimableFor('ai')].map(i=>hexById[i]);
+  if(!ids.length) return;
+  const aff=h=>ai.gold>=PRE[h.pre].cost;
+  const pk=(keys,anchor)=>{ const cc=ids.filter(h=>keys.indexOf(h.pre)>=0&&aff(h)); if(!cc.length)return null; cc.sort((a,b)=>cubeDist(a.cube,anchor)-cubeDist(b.cube,anchor)); return cc[0]; };
+  let pick=null;
+  if(pushed && tow<2) pick=pk(['tower'],you.city.cube);          // defend a breach first
+  if(!pick && mines<1) pick=pk(['mine'],ai.city.cube);           // a first Mine
+  if(!pick && army<2) pick=pk(['rec50','rec100'],ai.city.cube);  // a couple heroes early
+  if(!pick && mines<=army) pick=pk(['mine'],ai.city.cube);       // keep economy pacing the army
+  if(!pick){ const tiers = ai.gold>=250?['rec100','rec250','rec50']:ai.gold>=100?['rec100','rec50']:['rec50']; pick=pk(tiers,ai.city.cube); }
+  if(!pick) pick=pk(['mine'],ai.city.cube);
+  if(!pick) pick=pk(['mystery'],ai.city.cube);
+  if(!pick){ const cc=ids.filter(aff); if(cc.length){ cc.sort((a,b)=>PRE[a.pre].cost-PRE[b.pre].cost); pick=cc[0]; } }
+  if(pick){ ai.gold-=PRE[pick.pre].cost; claim('ai',pick); }
+}
+
+// ── simulation ─────────────────────────────────────────────────────────────
+function counts(){
+  let yInc=0,aInc=0,yPush=0,aPush=0,yHalf=0,aHalf=0;
+  for(const h of hexes){
+    if(h.home==='ai')aHalf++; else if(h.home==='you')yHalf++;
+    if(h.home==='ai'&&h.owner==='you')yPush++;
+    if(h.home==='you'&&h.owner==='ai')aPush++;
+    if(h.b&&h.b.type==='mine'){ if(h.b.owner==='you')yInc++; else aInc++; }
+  }
+  return {yInc,aInc,yPush,aPush,yHalf,aHalf};
+}
+function nearestEnemyUnit(u,me){ let t=null,td=1e9; for(const o of units){ if(o.owner===u.owner||o.hp<=0)continue; const d=cubeDist(me.cube,hexById[o.hexId].cube); if(d<td){td=d;t=o;} } return {t,td}; }
+function nearestEnemyBuilding(owner,me){ let t=null,td=1e9; for(const h of hexes){ if(h.b&&h.b.owner!==owner){ const d=cubeDist(me.cube,h.cube); if(d<td){td=d;t=h;} } } return {t,td}; }
+
+let incCache={yInc:0,aInc:0};
+function step(dt){
+  if(!running) return;
+  clock-=dt;
+  const c=counts(); incCache=c;
+  you.gold=Math.min(GOLD_CAP, you.gold+(GOLD_DRIP+c.yInc*BLD.mine.income)*dt);
+  ai.gold =Math.min(GOLD_CAP, ai.gold +(GOLD_DRIP+c.aInc*BLD.mine.income)*dt);
+  aiAcc+=dt; if(aiAcc>=AI_EVERY){ aiAcc=0; aiTurn(); }
+
+  for(const h of hexes){ if(!h.b) continue; const B=h.b; B.cd-=dt;
+    if(B.type==='recruit'&&B.cd<=0){ B.cd=SPAWN_EVERY[B.rar]; if(popOf(B.owner)<UNIT_CAP) spawnHero(B.owner,B.hero,h); }
+    if(B.type==='city'&&B.cd<=0){                 // keep fires on the WHOLE approaching swarm (AoE) — hard to storm
+      let hit=null; for(const o of units){ if(o.owner===B.owner||o.hp<=0)continue; if(cubeDist(h.cube,hexById[o.hexId].cube)<=CITY.range){ o.hp-=CITY.dmg; hit=o; } }
+      if(hit){ B.cd=CITY.fire; hitFx(hexById[hit.hexId]); }
+    }
+    if(B.type==='tower'&&B.cd<=0){                 // tower: single target
+      const spec=BLD.tower; let tgt=null,td=1e9; for(const o of units){ if(o.owner===B.owner||o.hp<=0)continue; const d=cubeDist(h.cube,hexById[o.hexId].cube); if(d<=spec.range&&d<td){td=d;tgt=o;} }
+      if(tgt){ tgt.hp-=spec.dmg; B.cd=spec.fire; hitFx(hexById[tgt.hexId]); }
+    }
+  }
+
+  for(const u of units){ u.mcd-=dt; u.acd-=dt; }
+  for(const u of units){
+    if(u.hp<=0) continue;
+    const me=hexById[u.hexId];
+    const eu=nearestEnemyUnit(u,me);
+    if(eu.t && eu.td<=u.rng){ if(u.acd<=0){ eu.t.hp-=u.dmg; u.acd=u.at; hitFx(hexById[eu.t.hexId]); } continue; }
+    const eb=nearestEnemyBuilding(u.owner,me);
+    if(eb.t && eb.td<=u.rng){ if(u.acd<=0){ eb.t.b.hp-=u.dmg; u.acd=u.at; hitFx(eb.t); } continue; }
+    if(u.mcd<=0){
+      const goal=(eb.t?eb.t:(u.owner==='you'?ai.city:you.city)).cube;
+      let nx=null,nd=1e9;
+      for(const nb of neighborsOf(me)){ if(nb.b) continue; const d=cubeDist(nb.cube,goal); if(d<nd){nd=d;nx=nb;} }
+      if(nx){ u.hexId=nx.id; u.mcd=u.mv; nx.owner=u.owner; nx.flash=Math.max(nx.flash,0.6); }
+      else u.mcd=u.mv*0.5;
+    }
+  }
+  units=units.filter(u=>u.hp>0);
+
+  for(const h of hexes){ if(h.b && h.b.type!=='city' && h.b.hp<=0){ h.b=null; }
+    if(h.flash>0) h.flash=Math.max(0,h.flash-dt*2.2); }
+  fx=fx.filter(f=>(f.t-=dt)>0);
+
+  if(ai.city.b.hp<=0) return finish('city',true);
+  if(you.city.b.hp<=0) return finish('city',false);
+  if(clock<=0){ const win=c.yPush!==c.aPush?c.yPush>c.aPush:true; return finish('time',win,c); }
+}
+function hitFx(h){ fx.push({x:h.px,y:h.py,t:0.28,max:0.28}); }
+
+// ── render ─────────────────────────────────────────────────────────────────
+function hexPath(cx,cy,s){ ctx.beginPath(); for(let i=0;i<6;i++){ const a=(60*i-30)*Math.PI/180; const x=cx+s*Math.cos(a),y=cy+s*Math.sin(a); i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.closePath(); }
+function mix(a,b,t){ const p=x=>parseInt(x,16); const r=Math.round(p(a.slice(1,3))*(1-t)+p(b.slice(1,3))*t),g=Math.round(p(a.slice(3,5))*(1-t)+p(b.slice(3,5))*t),bl=Math.round(p(a.slice(5,7))*(1-t)+p(b.slice(5,7))*t); return `rgb(${r},${g},${bl})`; }
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const cs=getComputedStyle(document.documentElement);
+  const C={n:cs.getPropertyValue('--neutral').trim(),you:cs.getPropertyValue('--you').trim(),you2:cs.getPropertyValue('--you-2').trim(),ai:cs.getPropertyValue('--ai').trim(),ai2:cs.getPropertyValue('--ai-2').trim(),line:cs.getPropertyValue('--line').trim()};
+  const claim = running?claimableFor('you'):null;
+  for(const h of hexes){
+    let base = h.owner==='you'?C.you2 : h.owner==='ai'?C.ai2 : C.n;
+    if(h.flash>0) base=mix(base,'#ffffff',h.flash*0.55);
+    hexPath(h.px,h.py,SIZE*0.94); ctx.fillStyle=base; ctx.fill();
+    ctx.lineWidth=1; ctx.strokeStyle=C.line; ctx.stroke();
+    if(claim && claim.has(h.id) && h.pre){
+      const P=PRE[h.pre], cost=costFor(h), afford=you.gold>=cost;
+      hexPath(h.px,h.py,SIZE*0.9); ctx.strokeStyle=C.you; ctx.lineWidth=2.2; ctx.stroke(); ctx.fillStyle='rgba(79,142,247,.13)'; ctx.fill();
+      // recruit tiles tint their sword by tier (rarity signal): 50=white, 100=blue, 250=purple
+      let gc = afford?'#dfe8f5':'#6b7590';
+      if(P.kind==='recruit'&&afford) gc = P.tier===250?'#c79bff':P.tier===100?'#6fa8ff':'#dfe8f5';
+      ctx.fillStyle=gc; ctx.font=`${SIZE*0.5}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(P.glyph,h.px,h.py-SIZE*0.12);
+      ctx.fillStyle=afford?'#f2c14e':'#8a6a4a'; ctx.font=`bold ${SIZE*0.34}px sans-serif`;
+      ctx.fillText(cost,h.px,h.py+SIZE*0.42);
+    }
+    if(h.b){ const B=h.b, own=B.owner==='you'?C.you:C.ai;
+      if(B.type==='city'){ ctx.fillStyle=own; ctx.beginPath(); ctx.arc(h.px,h.py,SIZE*0.5,0,TAU); ctx.fill();
+        ctx.fillStyle='#0b1420'; ctx.font=`bold ${SIZE*0.5}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('♜',h.px,h.py+1);
+      } else {
+        ctx.fillStyle=own; hexPath(h.px,h.py,SIZE*0.62); ctx.fill();
+        if(B.type==='recruit'&&(B.rar==='epic'||B.rar==='legendary')){ hexPath(h.px,h.py,SIZE*0.62); ctx.lineWidth=2.4; ctx.strokeStyle=RAR_COL[B.rar]; ctx.stroke(); }
+        ctx.fillStyle='#0b1420'; ctx.font=`${SIZE*0.5}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(B.glyph,h.px,h.py+1);
+      }
+      if(B.hp<B.maxhp){ const w=SIZE*0.8, hx=h.px-w/2, hy=h.py-SIZE*0.62;
+        ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(hx,hy,w,3);
+        ctx.fillStyle=own; ctx.fillRect(hx,hy,w*Math.max(0,B.hp/B.maxhp),3); }
+    }
+  }
+  for(const u of units){ const h=hexById[u.hexId], own=u.owner==='you'?C.you:C.ai, r=SIZE*u.rr;
+    const dx=u.jit*SIZE*0.34, dy=u.jit*SIZE*0.34, cx=h.px+dx, cy=h.py+dy;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,TAU); ctx.fillStyle=own; ctx.fill();
+    if(u.rar==='epic'||u.rar==='legendary'){ ctx.lineWidth=2; ctx.strokeStyle=RAR_COL[u.rar]; } else { ctx.lineWidth=1.5; ctx.strokeStyle='rgba(0,0,0,.4)'; }
+    ctx.stroke();
+    ctx.fillStyle='#06122a'; ctx.font=`bold ${r*1.15}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(u.glyph,cx,cy+1);
+    if(u.hp<u.maxhp){ const w=r*2; ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(cx-r,cy-r-4,w,2.5); ctx.fillStyle=own; ctx.fillRect(cx-r,cy-r-4,w*Math.max(0,u.hp/u.maxhp),2.5); }
+  }
+  for(const f of fx){ const a=f.t/f.max; ctx.beginPath(); ctx.arc(f.x,f.y,SIZE*0.36*(1.4-a),0,TAU); ctx.strokeStyle=`rgba(255,240,180,${a})`; ctx.lineWidth=2.5; ctx.stroke(); }
+}
+
+// ── HUD ────────────────────────────────────────────────────────────────────
+function hud(){
+  $('gold').textContent=Math.floor(you.gold);
+  $('rate').textContent='▲'+(GOLD_DRIP+incCache.yInc*BLD.mine.income).toFixed(1)+'/s';
+  const c=counts();
+  const yp=c.aHalf?c.yPush/c.aHalf:0, ap=c.yHalf?c.aPush/c.yHalf:0;
+  const fill=Math.max(4,Math.min(96, 50+(yp-ap)*50));
+  $('tugfill').style.width=fill+'%'; $('tugdiv').style.left=fill+'%';
+  $('ypush').textContent='held '+Math.round(yp*100)+'%'; $('apush').textContent=Math.round(ap*100)+'% held';
+  const t=Math.max(0,clock|0), m=t/60|0, sc=(t%60);
+  const tm=$('timer'); tm.textContent=m+':'+(sc<10?'0':'')+sc; tm.className='timer'+(t<=30?' warn':'');
+}
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1500); }
+
+// ── loop / lifecycle ───────────────────────────────────────────────────────
+function loop(now){ const dt=Math.min(0.05,(now-tPrev)/1000||0); tPrev=now; step(dt); draw(); hud(); requestAnimationFrame(loop); }
+function resize(){ const r=cv.getBoundingClientRect(); cv.width=r.width|0; cv.height=r.height|0; layout(); }
+function start(){
+  buildBoard(); units=[]; fx=[]; aiAcc=0; clock=MATCH_TIME; firstBuild=false; over=false; running=true; incCache={yInc:0,aInc:0};
+  layout();
+  $('start').classList.remove('show'); $('end').classList.remove('show');
+  setTimeout(()=>toast('Each tile shows what it builds — tap a glowing one'),300);
+}
+function finish(reason,win,c){
+  running=false; over=true;
+  $('endTitle').textContent=win?'The field is yours':'Your keep has fallen';
+  $('endTitle').parentElement.className='over show '+(win?'win':'lose');
+  let msg;
+  if(reason==='city') msg = win ? 'You stormed their keep. Economy into heroes into the push — that\'s the loop.'
+                                : 'They breached your keep. Screen your Mines with Towers and recruit rarer heroes.';
+  else { c=c||counts(); msg = win ? `Time — you held more of their ground (${c.yPush} vs ${c.aPush} tiles). The field is yours.`
+                                   : `Time — they held more of your ground (${c.aPush} vs ${c.yPush} tiles). Recruit heroes earlier next time.`; }
+  $('endMsg').textContent=msg;
+}
+$('startBtn').onclick=start;
+$('againBtn').onclick=start;
+window.addEventListener('resize',resize);
+buildBoard(); resize(); requestAnimationFrame(loop);
+
+// headless test hook
+window.__bf={
+  get s(){ const c=counts(); return {you,ai,units,clock,running,over,yPush:c.yPush,aPush:c.aPush,yInc:c.yInc,
+    buildings:hexes.filter(h=>h.b).length}; },
+  start, step, claimableFor, costFor, counts,
+  forceBuild(prefKind){ const ids=[...claimableFor('you')].map(i=>hexById[i]);
+    const match=h=>{ if(!prefKind) return true; return h.pre===prefKind || PRE[h.pre].kind===prefKind; };
+    let cands=ids.filter(h=>match(h)&&you.gold>=PRE[h.pre].cost);
+    if(!cands.length) cands=ids.filter(h=>PRE[h.pre].kind!=='mystery'&&you.gold>=PRE[h.pre].cost);
+    if(!cands.length) cands=ids.filter(h=>you.gold>=PRE[h.pre].cost);
+    cands.sort((a,b)=>PRE[a.pre].cost-PRE[b.pre].cost);
+    const h=cands[0]; if(h){ you.gold-=PRE[h.pre].cost; const r=claim('you',h); return r.kind==='recruit'?r.rar:r.kind; } return null; },
+  PRE, HEROES };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Grand Theft Apples</title>
+<meta name="description" content="Grand Theft Apples — a 3D third-person action romp. Raid the orchard, rack up a wanted level, pelt the farmers with apples, and bank your loot at the getaway truck before you get busted.">
+<meta property="og:title" content="Grand Theft Apples">
+<meta property="og:description" content="3D third-person apple heist. Raid orchards, dodge farmers, bank your loot before you get busted.">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#11161f;color:#fff;
+    font-family:ui-rounded,"Trebuchet MS",ui-sans-serif,system-ui,sans-serif;
+    user-select:none;-webkit-user-select:none;touch-action:none}
+  #app{position:fixed;inset:0;max-width:820px;margin:0 auto;overflow:hidden}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  /* HUD */
+  #hud{position:absolute;inset:0;pointer-events:none;z-index:3}
+  .panel{position:absolute;background:rgba(10,14,22,.55);backdrop-filter:blur(3px);
+    border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:8px 12px}
+  #score{top:10px;left:10px;font-weight:900;font-size:15px}
+  #score .lbl{font-size:9px;letter-spacing:.1em;color:#9fb3c8;text-transform:uppercase;display:block;font-weight:800}
+  #score b{color:#7CFC8A;font-size:22px}
+  #stars{top:10px;left:50%;transform:translateX(-50%);font-size:20px;letter-spacing:2px;padding:6px 12px}
+  #stars .s{color:#3a4658} #stars .s.on{color:#ffd23f;text-shadow:0 0 10px rgba(255,210,63,.7)}
+  #wlabel{font-size:9px;letter-spacing:.12em;color:#9fb3c8;text-align:center;display:block;text-transform:uppercase;font-weight:800;margin-bottom:2px}
+  #carry{top:10px;right:10px;font-weight:900;font-size:15px;text-align:right}
+  #carry .lbl{font-size:9px;letter-spacing:.1em;color:#9fb3c8;text-transform:uppercase;display:block;font-weight:800}
+  #carry b{color:#ff6b5e;font-size:22px}
+  #bustwrap{bottom:14px;left:50%;transform:translateX(-50%);width:min(60%,320px);padding:7px 10px}
+  #bustwrap .lbl{font-size:9px;letter-spacing:.12em;color:#ffb3ad;text-transform:uppercase;font-weight:800;margin-bottom:4px;text-align:center}
+  #bustbar{height:9px;background:rgba(0,0,0,.4);border-radius:5px;overflow:hidden}
+  #bustbar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffd23f,#ff6b5e,#e23b3b);transition:width .1s}
+  #prompt{bottom:64px;left:50%;transform:translateX(-50%);font-weight:800;font-size:14px;background:rgba(124,252,138,.92);
+    color:#0a2a12;padding:7px 16px;border-radius:20px;display:none}
+  #prompt.show{display:block}
+  /* touch controls */
+  .tbtn{position:absolute;pointer-events:auto;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    width:74px;height:74px;border-radius:50%;border:2px solid rgba(255,255,255,.25);background:rgba(20,26,38,.6);
+    font-weight:800;font-size:12px;color:#fff;cursor:pointer}
+  .tbtn:active{transform:scale(.93);background:rgba(40,50,70,.8)}
+  .tbtn .ic{font-size:26px;line-height:1}
+  #bThrow{right:18px;bottom:96px;background:rgba(226,59,59,.45);border-color:rgba(255,120,110,.5)}
+  #bGrab{right:104px;bottom:30px;background:rgba(124,252,138,.35);border-color:rgba(124,252,138,.5)}
+  #joyhint{left:24px;bottom:30px;width:96px;height:96px;border-radius:50%;border:2px dashed rgba(255,255,255,.18);
+    pointer-events:none;z-index:2;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:10px;text-align:center}
+  /* toast */
+  #toast{position:absolute;top:54px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;font-weight:700;
+    font-size:13px;padding:6px 14px;border-radius:20px;opacity:0;transition:opacity .2s;z-index:5;white-space:nowrap;pointer-events:none}
+  #toast.show{opacity:1}
+  /* overlay */
+  #ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    background:radial-gradient(120% 90% at 50% 0%,rgba(20,40,30,.82),rgba(8,10,16,.94));z-index:10;padding:24px;text-align:center}
+  #ov.hide{display:none}
+  #ov h1{font-size:clamp(30px,9vw,52px);font-weight:900;letter-spacing:.01em;line-height:1;
+    background:linear-gradient(90deg,#ff6b5e,#ffd23f,#7CFC8A);-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 6px 30px rgba(0,0,0,.5)}
+  #ov .sub{color:#cfe0d4;margin:14px 0 18px;font-size:15px;max-width:420px;line-height:1.55}
+  #ov .keys{font-size:12.5px;color:#9fb3c8;line-height:1.7;max-width:430px;margin-bottom:20px}
+  #ov .keys b{color:#fff} #ov .keys kbd{background:#222b3a;border:1px solid #3a4658;border-radius:5px;padding:1px 6px;font-weight:700;color:#fff;font-size:11px}
+  #ov button{padding:15px 44px;font-size:18px;font-weight:900;border:none;border-radius:14px;color:#0a2a12;
+    background:linear-gradient(180deg,#9dffae,#5fe07a);box-shadow:0 6px 0 #2c9a45;cursor:pointer;letter-spacing:.02em}
+  #ov button:active{transform:translateY(4px);box-shadow:0 2px 0 #2c9a45}
+  #ov .stats{margin:2px 0 18px;font-size:15px;color:#fff}
+  #ov .stats b{color:#ffd23f}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#11161f;color:#9fb3c8;
+    z-index:20;font-weight:700;font-size:14px}
+  #loading.hide{display:none}
+  #err{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:#11161f;
+    color:#ff6b5e;z-index:30;padding:30px;text-align:center;font-size:14px;line-height:1.6}
+</style>
+<script type="importmap">
+{ "imports": { "three": "./three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="panel" id="score"><span class="lbl">Banked</span><b id="vScore">0</b> 🍎</div>
+    <div class="panel" id="stars"><span id="wlabel">Wanted</span><span id="starRow"></span></div>
+    <div class="panel" id="carry"><span class="lbl">Carrying</span><b id="vCarry">0</b>/<span id="vCap">10</span></div>
+    <div class="panel" id="bustwrap"><div class="lbl">Heat / Bust</div><div id="bustbar"><i id="bustFill"></i></div></div>
+    <div id="prompt"></div>
+    <div id="joyhint">move</div>
+    <div class="tbtn" id="bThrow"><span class="ic">🍎</span>THROW</div>
+    <div class="tbtn" id="bGrab"><span class="ic">✋</span>GRAB</div>
+  </div>
+  <div id="toast"></div>
+  <div id="ov">
+    <h1>GRAND THEFT APPLES</h1>
+    <div class="sub">The orchards of Coreville are ripe for the taking. Raid the trees, outrun the farmers, and bank your haul at the getaway truck — before the heat busts you.</div>
+    <div class="keys">
+      <b>Move</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / left-stick &nbsp;·&nbsp; <b>Camera</b> drag / mouse<br>
+      <b>Grab &amp; Bank</b> <kbd>E</kbd> / ✋ near a tree or the truck &nbsp;·&nbsp; <b>Throw apple</b> click / 🍎<br>
+      Stealing raises your <b>wanted level</b>. Pelt farmers to stun them. Bank loot at the 🚚 to score &amp; cool off.
+    </div>
+    <button id="startBtn">Start the Heist</button>
+  </div>
+  <div id="loading">Loading the orchard…</div>
+  <div id="err"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+const $=id=>document.getElementById(id);
+const app=$('app'), ovEl=$('ov'), loadEl=$('loading'), errEl=$('err'), toastEl=$('toast');
+
+window.addEventListener('error',e=>{ if(loadEl && !loadEl.classList.contains('hide')){
+  errEl.style.display='flex'; errEl.textContent='Failed to load 3D engine: '+(e.message||e); loadEl.classList.add('hide'); } });
+
+// ---------------- renderer / scene ----------------
+let renderer, scene, camera, clock;
+const W=()=>app.clientWidth, H=()=>app.clientHeight;
+function initThree(){
+  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  renderer.setSize(W(),H());
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  app.insertBefore(renderer.domElement, $('hud'));
+
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x8fc4e8);
+  scene.fog=new THREE.Fog(0x8fc4e8, 38, 92);
+
+  camera=new THREE.PerspectiveCamera(60, W()/H(), 0.1, 200);
+  camera.position.set(0,6,10);
+
+  const hemi=new THREE.HemisphereLight(0xcfe8ff,0x5a7a3a,0.85); scene.add(hemi);
+  const sun=new THREE.DirectionalLight(0xfff2d6,1.05);
+  sun.position.set(28,46,18); sun.castShadow=true;
+  sun.shadow.mapSize.set(2048,2048);
+  const s=60; Object.assign(sun.shadow.camera,{left:-s,right:s,top:s,bottom:-s,near:1,far:140});
+  scene.add(sun);
+
+  clock=new THREE.Clock();
+  window.addEventListener('resize',onResize);
+}
+function onResize(){ if(!renderer)return; camera.aspect=W()/H(); camera.updateProjectionMatrix(); renderer.setSize(W(),H()); }
+
+// ---------------- shared materials ----------------
+const MAT={
+  ground:new THREE.MeshLambertMaterial({color:0x6fae4f}),
+  road:new THREE.MeshLambertMaterial({color:0x3b4250}),
+  trunk:new THREE.MeshLambertMaterial({color:0x7a5230}),
+  leaf:new THREE.MeshLambertMaterial({color:0x3f9444}),
+  leafBare:new THREE.MeshLambertMaterial({color:0x6f8a4a}),
+  apple:new THREE.MeshLambertMaterial({color:0xe23b3b}),
+  crate:new THREE.MeshLambertMaterial({color:0xb07a3a}),
+  truck:new THREE.MeshLambertMaterial({color:0xd23a3a}),
+  truckDark:new THREE.MeshLambertMaterial({color:0x7a1f1f}),
+  skin:new THREE.MeshLambertMaterial({color:0xf0c89a}),
+  playerBody:new THREE.MeshLambertMaterial({color:0x2f6fb0}),
+  playerHat:new THREE.MeshLambertMaterial({color:0x1b3a5c}),
+  guardBody:new THREE.MeshLambertMaterial({color:0xb83a2e}),
+  guardHat:new THREE.MeshLambertMaterial({color:0x7a241c}),
+  wheel:new THREE.MeshLambertMaterial({color:0x1a1a1a}),
+};
+// shared geometries
+const GEO={
+  box:new THREE.BoxGeometry(1,1,1),
+  sphere:new THREE.SphereGeometry(0.5,12,10),
+  appleSphere:new THREE.SphereGeometry(0.16,8,6),
+  cyl:new THREE.CylinderGeometry(0.5,0.5,1,12),
+};
+function mesh(geo,mat,sx,sy,sz){ const m=new THREE.Mesh(geo,mat); if(sx!==undefined)m.scale.set(sx,sy,sz); m.castShadow=true; m.receiveShadow=true; return m; }
+
+// ---------------- world build ----------------
+const WORLD=42;            // half-extent of play area
+let ground, trees=[], truck, crates=[];
+function buildWorld(){
+  ground=mesh(GEO.box, MAT.ground, WORLD*2+20, 1, WORLD*2+20); ground.position.y=-0.5;
+  ground.castShadow=false; scene.add(ground);
+  // a couple of cross roads for "town" feel
+  for(const r of [{x:0,z:0,w:7,d:WORLD*2},{x:0,z:0,w:WORLD*2,d:7}]){
+    const road=mesh(GEO.box,MAT.road,r.w,0.06,r.d); road.position.set(r.x,0.04,r.z); road.castShadow=false; scene.add(road);
+  }
+  // trees in a loose grid, skipping the center plaza & truck
+  for(let gx=-3;gx<=3;gx++) for(let gz=-3;gz<=3;gz++){
+    if(Math.abs(gx)<1&&Math.abs(gz)<1) continue;
+    const x=gx*11+ (Math.random()*4-2), z=gz*11+(Math.random()*4-2);
+    if(Math.hypot(x-22,z-22)<8) continue; // keep clear near truck
+    trees.push(makeTree(x,z));
+  }
+  // truck (getaway / bank)
+  truck=makeTruck(); truck.position.set(22,0,22); truck.rotation.y=-Math.PI/4; scene.add(truck);
+}
+function makeTree(x,z){
+  const g=new THREE.Group(); g.position.set(x,0,z);
+  const trunk=mesh(GEO.cyl,MAT.trunk,0.7,2.4,0.7); trunk.position.y=1.2; g.add(trunk);
+  const canopy=mesh(GEO.sphere,MAT.leaf,4.4,3.6,4.4); canopy.position.y=3.4; g.add(canopy);
+  const apples=[];
+  for(let i=0;i<8;i++){ const a=mesh(GEO.appleSphere,MAT.apple);
+    const ang=i/8*Math.PI*2, rr=1.7;
+    a.position.set(Math.cos(ang)*rr, 3.2+Math.sin(i*1.7)*0.7, Math.sin(ang)*rr);
+    canopy.add(a); apples.push(a); }
+  scene.add(g);
+  return {group:g, canopy, apples, count:8, max:8, regrow:0};
+}
+function makeTruck(){
+  const g=new THREE.Group();
+  const bed=mesh(GEO.box,MAT.truck,4.4,2.2,7); bed.position.y=1.6; g.add(bed);
+  const cab=mesh(GEO.box,MAT.truckDark,4.2,1.8,2.2); cab.position.set(0,1.4,3.2); g.add(cab);
+  for(const wx of [-1.9,1.9]) for(const wz of [-2,2.4]){
+    const w=mesh(GEO.cyl,MAT.wheel,1.1,0.5,1.1); w.rotation.z=Math.PI/2; w.position.set(wx,0.55,wz); g.add(w);
+  }
+  const sign=mesh(GEO.box,MAT.truckDark,3.2,1.2,0.2); sign.position.set(0,3.1,0); g.add(sign);
+  return g;
+}
+
+// ---------------- humanoid ----------------
+function makeHumanoid(bodyMat,hatMat){
+  const g=new THREE.Group();
+  const torso=mesh(GEO.box,bodyMat,1.1,1.3,0.7); torso.position.y=1.5; g.add(torso);
+  const head=mesh(GEO.sphere,MAT.skin,0.85,0.9,0.85); head.position.y=2.55; g.add(head);
+  const hat=mesh(GEO.cyl,hatMat,1.0,0.32,1.0); hat.position.y=2.95; g.add(hat);
+  const armL=mesh(GEO.box,bodyMat,0.32,1.0,0.32); armL.position.set(-0.72,1.55,0); g.add(armL);
+  const armR=mesh(GEO.box,bodyMat,0.32,1.0,0.32); armR.position.set(0.72,1.55,0); g.add(armR);
+  const legL=mesh(GEO.box,MAT.playerHat,0.4,1.0,0.4); legL.geometry=GEO.box; legL.position.set(-0.28,0.55,0); g.add(legL);
+  const legR=mesh(GEO.box,MAT.playerHat,0.4,1.0,0.4); legR.position.set(0.28,0.55,0); g.add(legR);
+  legL.material=hatMat; legR.material=hatMat;
+  return {group:g, legL, legR, armL, armR, head, phase:0};
+}
+function animWalk(h,speed,dt){
+  h.phase+=dt*speed*2.2;
+  const sw=Math.sin(h.phase)*0.5*Math.min(1,speed/4);
+  h.legL.rotation.x=sw; h.legR.rotation.x=-sw;
+  h.armL.rotation.x=-sw; h.armR.rotation.x=sw;
+}
+
+// ---------------- game state ----------------
+const ST={ score:0, carry:0, cap:10, heat:0, bust:0, stars:0, running:false, over:false,
+  contactCD:0, throwCD:0, best:0 };
+let player, guards=[], projectiles=[], pickups=[];
+const tmp=new THREE.Vector3(), tmp2=new THREE.Vector3();
+
+function resetGame(){
+  // clear dynamic
+  guards.forEach(g=>scene.remove(g.h.group)); guards=[];
+  projectiles.forEach(p=>scene.remove(p.mesh)); projectiles=[];
+  pickups.forEach(p=>scene.remove(p.mesh)); pickups=[];
+  trees.forEach(t=>{ t.count=t.max; t.apples.forEach(a=>a.visible=true); });
+  Object.assign(ST,{score:0,carry:0,heat:0,bust:0,stars:0,over:false,contactCD:0,throwCD:0});
+  if(!player){ player=makeHumanoid(MAT.playerBody,MAT.playerHat); scene.add(player.h?player.h.group:player.group); }
+  player.group.position.set(0,0,6); player.vel=new THREE.Vector3();
+  camYaw=Math.PI; camPitch=0.42;
+  updHUD();
+}
+
+// ---------------- input ----------------
+const keys={};
+addEventListener('keydown',e=>{ const k=e.key.toLowerCase(); keys[k]=true;
+  if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
+  if(k==='e') doAction();
+  if(k===' ') throwApple();
+});
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+
+let camYaw=Math.PI, camPitch=0.42, camDist=11;
+const joy={active:false,id:-1,cx:0,cy:0,x:0,y:0};
+const look={active:false,id:-1,lx:0,ly:0,moved:false,t:0};
+function isTouch(e){ return e.pointerType==='touch'; }
+function bindInput(){
+  const el=renderer.domElement;
+  el.addEventListener('pointerdown',e=>{
+    if(!ST.running)return;
+    const half=W()/2;
+    if(isTouch(e) && e.clientX<half){ joy.active=true; joy.id=e.pointerId; joy.cx=e.clientX; joy.cy=e.clientY; joy.x=0; joy.y=0; }
+    else { look.active=true; look.id=e.pointerId; look.lx=e.clientX; look.ly=e.clientY; look.moved=false; look.t=performance.now(); }
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove',e=>{
+    if(e.pointerId===joy.id && joy.active){ const dx=e.clientX-joy.cx, dy=e.clientY-joy.cy, m=Math.hypot(dx,dy),mm=Math.min(m,60)/60;
+      joy.x=dx/(m||1)*mm; joy.y=dy/(m||1)*mm; }
+    else if(e.pointerId===look.id && look.active){ const dx=e.clientX-look.lx, dy=e.clientY-look.ly;
+      if(Math.hypot(dx,dy)>4)look.moved=true;
+      camYaw-=dx*0.005; camPitch=clamp(camPitch+dy*0.004,0.12,1.15); look.lx=e.clientX; look.ly=e.clientY; }
+  });
+  const end=e=>{
+    if(e.pointerId===joy.id){ joy.active=false; joy.id=-1; joy.x=0; joy.y=0; }
+    else if(e.pointerId===look.id){ if(!look.moved && performance.now()-look.t<300) throwApple(); look.active=false; look.id=-1; }
+  };
+  el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end);
+  // touch buttons
+  const stop=fn=>e=>{ e.preventDefault(); e.stopPropagation(); fn(); };
+  $('bThrow').addEventListener('pointerdown',stop(throwApple));
+  $('bGrab').addEventListener('pointerdown',stop(doAction));
+}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+
+// ---------------- actions ----------------
+function nearestTree(){ let best=null,bd=4.2; for(const t of trees){ const d=t.group.position.distanceTo(player.group.position);
+  if(d<bd&&t.count>0){bd=d;best=t;} } return best; }
+function nearTruck(){ return truck.position.distanceTo(player.group.position)<6; }
+function doAction(){
+  if(!ST.running||ST.over)return;
+  if(nearTruck() && ST.carry>0){ bank(); return; }
+  const t=nearestTree();
+  if(t){ const take=Math.min(t.count, ST.cap-ST.carry);
+    if(take<=0){ toast('Pockets full — bank it at the 🚚'); return; }
+    t.count-=take; ST.carry+=take; for(let i=0;i<t.apples.length;i++)t.apples[i].visible=i<t.count;
+    ST.heat=clamp(ST.heat+take*2.2+4,0,100); ding(620,0.08);
+    toast('Swiped '+take+' apples 🍎'); updHUD();
+  } else if(nearTruck()){ toast('Nothing to bank'); }
+  else toast('Get closer to a tree or the truck');
+}
+function bank(){ const n=ST.carry; ST.score+=n; ST.carry=0; ST.heat=clamp(ST.heat-32,0,100); ST.bust=clamp(ST.bust-22,0,100);
+  ding(880,0.1); setTimeout(()=>ding(1320,0.1),90); toast('Banked '+n+' 🍎  (+score, heat down)'); updHUD(); }
+
+function throwApple(){
+  if(!ST.running||ST.over||ST.throwCD>0)return; ST.throwCD=0.28;
+  const m=mesh(GEO.appleSphere,MAT.apple); m.scale.set(1.4,1.4,1.4);
+  const p=player.group.position;
+  m.position.set(p.x,p.y+1.9,p.z);
+  // direction: camera forward (horizontal) + upward arc
+  camera.getWorldDirection(tmp); tmp.y=0; tmp.normalize();
+  player.group.rotation.y=Math.atan2(tmp.x,tmp.z);
+  const v=tmp.clone().multiplyScalar(27); v.y=4.2;
+  m.position.addScaledVector(tmp,0.9);
+  scene.add(m); projectiles.push({mesh:m,vel:v,life:2.4});
+  whoosh();
+}
+
+// ---------------- guards ----------------
+function spawnGuard(){
+  const h=makeHumanoid(MAT.guardBody,MAT.guardHat); scene.add(h.group);
+  const pp=player.group.position, a=Math.random()*Math.PI*2, r=22+Math.random()*8;
+  h.group.position.set(clamp(pp.x+Math.cos(a)*r,-WORLD,WORLD),0,clamp(pp.z+Math.sin(a)*r,-WORLD,WORLD));
+  guards.push({h, state:'chase', stunT:0, cd:0});
+}
+let guardSpawnT=0;
+function updateGuards(dt){
+  const want = ST.stars*2;            // target guard count
+  guardSpawnT-=dt;
+  if(guards.length<want && guardSpawnT<=0){ spawnGuard(); guardSpawnT=0.9; }
+  const pp=player.group.position;
+  for(const g of guards){
+    const gp=g.h.group.position;
+    if(g.stunT>0){ g.stunT-=dt; g.h.group.rotation.z=Math.min(Math.PI/2,g.h.group.rotation.z+dt*6);
+      if(g.stunT<=0){ g.h.group.rotation.z=0; } continue; }
+    g.h.group.rotation.z=0;
+    tmp.subVectors(pp,gp); tmp.y=0; const d=tmp.length(); tmp.normalize();
+    const spd=3.0+ST.stars*0.55;
+    gp.addScaledVector(tmp,spd*dt);
+    g.h.group.rotation.y=Math.atan2(tmp.x,tmp.z);
+    animWalk(g.h,spd,dt);
+    if(g.cd>0)g.cd-=dt;
+    if(d<1.9 && g.cd<=0){ // bump the player
+      g.cd=1.2; ST.bust=clamp(ST.bust+16,0,100); ST.contactCD=2;
+      // knock loose some apples
+      const drop=Math.min(ST.carry,3);
+      if(drop>0){ ST.carry-=drop; dropPickup(pp,drop); }
+      // shove player back
+      player.group.position.addScaledVector(tmp,-1.6);
+      ouch();
+      if(ST.bust>=100){ busted(); return; }
+      updHUD();
+    }
+  }
+  // despawn guards when heat is gone
+  if(ST.stars===0 && guards.length){ for(const g of guards){ scene.remove(g.h.group); } guards=[]; }
+}
+function dropPickup(pos,n){ const m=mesh(GEO.appleSphere,MAT.apple); m.scale.set(1.6,1.6,1.6);
+  m.position.set(pos.x+(Math.random()*2-1),0.3,pos.z+(Math.random()*2-1)); scene.add(m);
+  pickups.push({mesh:m,count:n,bob:Math.random()*6}); }
+
+// ---------------- projectiles & pickups ----------------
+function updateProjectiles(dt){
+  for(const pr of projectiles){
+    pr.life-=dt; pr.vel.y-=20*dt;
+    pr.mesh.position.addScaledVector(pr.vel,dt);
+    pr.mesh.rotation.x+=dt*10;
+    if(pr.mesh.position.y<0.16){ pr.mesh.position.y=0.16; pr.life=Math.min(pr.life,0.05); }
+    for(const g of guards){ if(g.stunT>0)continue;
+      const gp=g.h.group.position, hd=Math.hypot(gp.x-pr.mesh.position.x, gp.z-pr.mesh.position.z);
+      if(hd<1.7 && pr.mesh.position.y<3.0){ g.stunT=3.2; pr.life=0; splat();
+        toast('Bonk! Farmer stunned'); break; } }
+  }
+  projectiles=projectiles.filter(p=>{ if(p.life<=0){ scene.remove(p.mesh); return false; } return true; });
+  for(const pk of pickups){ pk.bob+=dt*4; pk.mesh.position.y=0.3+Math.sin(pk.bob)*0.1; pk.mesh.rotation.y+=dt*2;
+    if(pk.mesh.position.distanceTo(player.group.position)<1.6 && ST.carry<ST.cap){
+      ST.carry=Math.min(ST.cap,ST.carry+pk.count); pk.count=0; ding(560,0.07); updHUD(); } }
+  pickups=pickups.filter(p=>{ if(p.count<=0){ scene.remove(p.mesh); return false; } return true; });
+}
+
+// ---------------- player movement ----------------
+function updatePlayer(dt){
+  // movement basis from camera
+  camera.getWorldDirection(tmp); tmp.y=0; tmp.normalize();        // forward
+  tmp2.crossVectors(tmp,new THREE.Vector3(0,1,0)).normalize();    // right = fwd × up  (points left-ish; sign fixed below)
+  let fz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0);
+  let fx=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
+  if(joy.active){ fz+=-joy.y; fx+=joy.x; }
+  const move=new THREE.Vector3();
+  move.addScaledVector(tmp,fz); move.addScaledVector(tmp2,-fx);
+  const mag=move.length();
+  const sp=8.2;
+  if(mag>0.01){ move.normalize();
+    const p=player.group.position;
+    p.addScaledVector(move,sp*dt);
+    p.x=clamp(p.x,-WORLD,WORLD); p.z=clamp(p.z,-WORLD,WORLD);
+    player.group.rotation.y=Math.atan2(move.x,move.z);
+    animWalk(player,sp*Math.min(1,mag),dt);
+  } else { animWalk(player,0,dt); player.legL.rotation.x*=0.8; player.legR.rotation.x*=0.8; }
+}
+function updateCamera(dt){
+  const p=player.group.position;
+  const off=new THREE.Vector3(
+    Math.sin(camYaw)*Math.cos(camPitch),
+    Math.sin(camPitch),
+    Math.cos(camYaw)*Math.cos(camPitch)
+  ).multiplyScalar(camDist);
+  const desired=new THREE.Vector3(p.x+off.x, p.y+off.y+1.2, p.z+off.z);
+  camera.position.lerp(desired, 1-Math.pow(0.0015,dt));
+  camera.lookAt(p.x, p.y+1.5, p.z);
+}
+
+// ---------------- HUD / fx ----------------
+function updHUD(){
+  ST.stars=clamp(Math.floor(ST.heat/20)+(ST.heat>0?1:0),0,5);
+  if(ST.heat>=100)ST.stars=5;
+  $('vScore').textContent=ST.score; $('vCarry').textContent=ST.carry; $('vCap').textContent=ST.cap;
+  let s=''; for(let i=0;i<5;i++) s+=`<span class="s ${i<ST.stars?'on':''}">★</span>`; $('starRow').innerHTML=s;
+  $('bustFill').style.width=Math.max(ST.heat*0.45,ST.bust)+'%';
+  // contextual prompt
+  const pr=$('prompt');
+  if(ST.running&&!ST.over){
+    if(nearTruck()&&ST.carry>0){ pr.textContent='Press E / ✋ to BANK '+ST.carry+' 🍎'; pr.classList.add('show'); }
+    else { const t=nearestTree(); if(t){ pr.textContent='Press E / ✋ to grab apples'; pr.classList.add('show'); } else pr.classList.remove('show'); }
+  } else pr.classList.remove('show');
+}
+let toastT=0;
+function toast(m){ toastEl.textContent=m; toastEl.classList.add('show'); toastT=2; }
+
+// audio
+let AC=null; function ac(){ if(!AC){ try{AC=new (AudioContext||webkitAudioContext)();}catch(e){} } return AC; }
+function tone(f,d,type,g,slide){ const a=ac(); if(!a)return; const o=a.createOscillator(),v=a.createGain();
+  o.type=type||'square'; o.frequency.setValueAtTime(f,a.currentTime);
+  if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,slide),a.currentTime+d);
+  v.gain.setValueAtTime(g||0.1,a.currentTime); v.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+d);
+  o.connect(v); v.connect(a.destination); o.start(); o.stop(a.currentTime+d); }
+const ding=(f,g)=>tone(f||700,0.1,'square',g||0.12,0), whoosh=()=>tone(560,0.12,'square',0.06,240),
+  splat=()=>tone(150,0.16,'sawtooth',0.16,60), ouch=()=>tone(180,0.22,'sawtooth',0.18,90);
+
+// ---------------- loop ----------------
+function tick(){
+  requestAnimationFrame(tick);
+  const dt=Math.min(0.05, clock?clock.getDelta():0.016);
+  if(ST.running && !ST.over){
+    if(ST.throwCD>0)ST.throwCD-=dt;
+    if(ST.contactCD>0)ST.contactCD-=dt; else ST.bust=clamp(ST.bust-dt*6,0,100);
+    if(ST.bust>=100){ busted(); return; }
+    // heat decays slowly unless actively stealing
+    ST.heat=clamp(ST.heat-dt*1.6,0,100);
+    updatePlayer(dt); updateGuards(dt); updateProjectiles(dt);
+    // tree regrow
+    for(const t of trees){ if(t.count<t.max){ t.regrow+=dt; if(t.regrow>6){ t.regrow=0; t.count++;
+      for(let i=0;i<t.apples.length;i++)t.apples[i].visible=i<t.count; } } }
+    updateCamera(dt);
+    updHUD();
+  }
+  if(toastT>0){ toastT-=dt; if(toastT<=0)toastEl.classList.remove('show'); }
+  if(renderer) renderer.render(scene,camera);
+}
+
+// ---------------- start / busted ----------------
+function startGame(){ ac(); resetGame(); ST.running=true; ovEl.classList.add('hide'); }
+function busted(){
+  ST.over=true; ST.running=false; ST.best=Math.max(ST.best,ST.score);
+  ouch(); setTimeout(()=>tone(120,0.5,'sawtooth',0.18,60),120);
+  ovEl.classList.remove('hide');
+  ovEl.innerHTML=`<h1>BUSTED!</h1>
+    <div class="sub">The farmers of Coreville caught up with you. The apples have been... repossessed.</div>
+    <div class="stats">Banked this run: <b>${ST.score}</b> 🍎 &nbsp;·&nbsp; Best: <b>${ST.best}</b> 🍎</div>
+    <button id="againBtn">Pull Another Job</button>`;
+  $('againBtn').addEventListener('click',startGame);
+}
+
+// ---------------- boot ----------------
+function boot(){
+  try{
+    initThree(); buildWorld(); resetGame(); bindInput();
+    window.__GTA={ ST, keys, get pos(){return player.group.position}, guards:()=>guards, projectiles:()=>projectiles, start:startGame };
+    loadEl.classList.add('hide');
+    $('startBtn').addEventListener('click',startGame);
+    clock.start();
+    tick();
+  }catch(e){ errEl.style.display='flex'; errEl.textContent='Init error: '+(e&&e.message||e); loadEl.classList.add('hide'); console.error(e); }
+}
+boot();
+</script>
+</body>
+</html>

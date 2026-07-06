@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Apple Tree Lane</title>
+<meta name="description" content="Apple Tree Lane — run the orchard from the Farm HQ: manage trees, patrol pests, press cider, and host you-pick days. Four focused modes, one farm economy.">
+<meta property="og:title" content="Apple Tree Lane">
+<meta property="og:description" content="Manage trees, patrol pests, press cider, host you-pick days. Four modes, one farm.">
+<style>
+  :root{
+    --grass:#6fae4f; --grass2:#5d9e42; --soil:#7c5a3a;
+    --cream:#fff3e0; --line:#e6c596; --ink:#3a2a1a;
+    --apple:#e23b3b; --leaf:#3fa34d; --gold:#f2b134; --eco:#34a36b; --rep:#c065c8; --cider:#c9772b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#27331c;color:var(--ink);
+    font-family:ui-rounded,"Trebuchet MS",ui-sans-serif,system-ui,sans-serif;
+    user-select:none;-webkit-user-select:none;touch-action:none}
+  #app{display:flex;flex-direction:column;height:100dvh;max-width:560px;margin:0 auto;
+    background:var(--grass);position:relative;overflow:hidden}
+  /* persistent top HUD */
+  #hud{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:5px;align-items:center;
+    padding:7px 9px;background:var(--cream);border-bottom:3px solid var(--line);z-index:5}
+  .stat{display:flex;flex-direction:column;align-items:center;line-height:1}
+  .stat .lbl{color:#a9824a;font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+  .stat .val{font-weight:900;font-size:17px;margin-top:2px}
+  .stat.cash .val{color:var(--leaf)} .stat.eco .val{color:var(--eco)}
+  .stat.rep .val{color:var(--rep)} .stat.week .val{color:var(--apple)}
+  #mute{background:#ffe9c4;border:2px solid var(--line);border-radius:9px;width:36px;height:36px;font-size:17px;cursor:pointer}
+  /* stage swaps per view */
+  #stage{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* ---------- HUB ---------- */
+  .scroll{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch}
+  .hubhead{text-align:center;margin:2px 0 12px}
+  .hubhead h1{color:#fff;font-size:22px;text-shadow:0 2px 0 #2a6e2a;letter-spacing:.02em}
+  .hubhead .res{color:#fff;font-size:13px;font-weight:700;margin-top:6px;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+  .hubhead .res b{color:#ffe9c4}
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:12px}
+  .mode{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:118px;padding:14px 10px;border-radius:18px;border:2px solid rgba(0,0,0,.12);
+    background:linear-gradient(180deg,#fff,#fff3e0);box-shadow:0 5px 0 rgba(0,0,0,.18);cursor:pointer;text-align:center}
+  .mode:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+  .mode .mic{font-size:38px;line-height:1}
+  .mode .mnm{font-weight:900;font-size:14px;margin-top:7px;color:var(--ink)}
+  .mode .msub{font-size:11px;color:#7a6a55;margin-top:3px;line-height:1.3}
+  .mode .badge{position:absolute;top:8px;right:8px;background:var(--apple);color:#fff;font-size:11px;
+    font-weight:900;padding:2px 8px;border-radius:20px;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+  .mode .badge.warn{background:#e2683b} .mode .badge.good{background:var(--leaf)} .mode .badge.rep{background:var(--rep)}
+  .endweek{display:block;width:100%;padding:15px;font-size:17px;font-weight:900;border:none;border-radius:14px;
+    color:#fff;background:var(--apple);box-shadow:0 5px 0 #9e2626;cursor:pointer;letter-spacing:.02em}
+  .endweek:active{transform:translateY(3px);box-shadow:0 2px 0 #9e2626}
+  .pressbar{height:9px;background:rgba(0,0,0,.22);border-radius:5px;overflow:hidden;margin:8px 0 4px}
+  .pressbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--leaf),var(--gold),var(--apple))}
+
+  /* ---------- MANAGEMENT ---------- */
+  .panel{background:rgba(255,255,255,.92);border-radius:14px;padding:11px;margin-bottom:11px;box-shadow:0 3px 0 rgba(0,0,0,.12)}
+  .panel h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#a9824a;margin-bottom:8px}
+  .invrow{display:flex;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:800}
+  .pill{background:#fff3e0;border:1px solid var(--line);border-radius:20px;padding:5px 11px}
+  .pill b{color:var(--leaf)}
+  .treecard{display:flex;align-items:center;gap:9px;background:#fff;border:2px solid var(--line);border-radius:12px;
+    padding:8px 9px;margin:7px 0}
+  .treecard .ti{font-size:26px}
+  .treecard.dead{opacity:.5}
+  .treecard .tinfo{flex:1;min-width:0}
+  .treecard .tnm{font-weight:800;font-size:13px}
+  .bars{margin-top:4px}
+  .bar{display:flex;align-items:center;gap:5px;font-size:10px;color:#7a6a55;margin:2px 0}
+  .bar .track{flex:1;height:6px;background:#eee;border-radius:4px;overflow:hidden}
+  .bar .track>i{display:block;height:100%}
+  .bar .track>i.q{background:var(--gold)} .bar .track>i.h{background:var(--leaf)} .bar .track>i.f{background:var(--apple)}
+  .tacts{display:flex;flex-direction:column;gap:4px}
+  .mini{padding:6px 8px;font-size:11px;font-weight:800;border:none;border-radius:8px;color:#fff;background:var(--leaf);
+    box-shadow:0 2px 0 #2c7536;cursor:pointer;white-space:nowrap}
+  .mini:active{transform:translateY(1px);box-shadow:0 1px 0 #2c7536}
+  .mini.alt{background:#5a8fc4;box-shadow:0 2px 0 #3d6a99}
+  .mini.harv{background:var(--gold);color:#5a3d00;box-shadow:0 2px 0 #b07d12}
+  .mini:disabled{background:#bdbdbd;box-shadow:0 2px 0 #8f8f8f;opacity:.65;cursor:not-allowed}
+  .actgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .actbtn{padding:11px 8px;font-size:13px;font-weight:800;border:none;border-radius:11px;color:#fff;cursor:pointer}
+  .actbtn small{display:block;font-weight:600;font-size:10px;opacity:.9;margin-top:2px}
+  .actbtn:active{transform:translateY(2px)}
+  .actbtn.lady{background:var(--apple);box-shadow:0 3px 0 #9e2626} .actbtn.lady:active{box-shadow:0 1px 0 #9e2626}
+  .actbtn.spray{background:#7a8a3a;box-shadow:0 3px 0 #586627} .actbtn.spray:active{box-shadow:0 1px 0 #586627}
+  .actbtn.sell{background:var(--leaf);box-shadow:0 3px 0 #2c7536} .actbtn.sell:active{box-shadow:0 1px 0 #2c7536}
+  .actbtn.shop{background:var(--cider);box-shadow:0 3px 0 #8f5219} .actbtn.shop:active{box-shadow:0 1px 0 #8f5219}
+  .actbtn:disabled{filter:grayscale(.6);opacity:.6;cursor:not-allowed}
+  .back{position:absolute;top:10px;left:10px;z-index:6;background:rgba(255,255,255,.92);border:2px solid var(--line);
+    border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+  .back:active{transform:translateY(1px)}
+  .modetitle{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;color:#fff;font-weight:900;
+    font-size:16px;text-shadow:0 2px 0 rgba(0,0,0,.35);pointer-events:none}
+
+  /* action HUD (patrol / youpick) */
+  #strip{position:absolute;top:46px;left:10px;right:10px;display:flex;align-items:center;gap:8px;z-index:4;pointer-events:none}
+  #timebar{flex:1;height:9px;background:rgba(0,0,0,.22);border-radius:5px;overflow:hidden}
+  #timebar>i{display:block;height:100%;width:100%;background:var(--gold)}
+  .chip{background:rgba(255,255,255,.92);border-radius:9px;padding:3px 9px;font-weight:900;font-size:13px;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+  .chip.ammo{color:var(--apple)} .chip.score{color:var(--leaf)}
+  .tool{position:absolute;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    width:60px;height:56px;border-radius:14px;border:2px solid rgba(0,0,0,.15);background:rgba(255,255,255,.92);
+    box-shadow:0 3px 0 rgba(0,0,0,.18);cursor:pointer;font-weight:800}
+  .tool:active{transform:translateY(2px)}
+  .tool .ic{font-size:21px} .tool .ct{font-size:10px;color:#555;margin-top:1px}
+  .tool.dim{opacity:.4;filter:grayscale(.6)}
+
+  /* cider minigame */
+  .ciderwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:14px}
+  .ciderwrap .big{font-size:60px}
+  .cmeter{position:relative;width:100%;max-width:360px;height:46px;background:#fff;border:3px solid var(--line);
+    border-radius:14px;overflow:hidden;box-shadow:0 4px 0 rgba(0,0,0,.15)}
+  .cmeter .zone{position:absolute;top:0;bottom:0;background:rgba(63,163,77,.35)}
+  .cmeter .zone.perfect{background:rgba(242,177,52,.5)}
+  .cmeter .marker{position:absolute;top:-3px;bottom:-3px;width:5px;background:var(--apple);box-shadow:0 0 8px var(--apple)}
+  .cinfo{color:#fff;font-weight:800;text-align:center;text-shadow:0 1px 0 rgba(0,0,0,.3)}
+  .cinfo b{color:#ffe9c4}
+  .crush{padding:16px 40px;font-size:18px;font-weight:900;border:none;border-radius:14px;color:#fff;background:var(--cider);
+    box-shadow:0 5px 0 #8f5219;cursor:pointer;letter-spacing:.03em}
+  .crush:active{transform:translateY(3px);box-shadow:0 2px 0 #8f5219}
+  .crush:disabled{opacity:.5}
+
+  /* banner / toast */
+  #banner{position:absolute;top:24%;left:0;right:0;text-align:center;font-size:24px;font-weight:900;color:#fff;
+    text-shadow:0 2px 0 #2a6e2a,0 0 14px rgba(0,0,0,.4);pointer-events:none;opacity:0;transition:opacity .25s;padding:0 12px;z-index:8}
+  #banner.show{opacity:1}
+  #toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;
+    font-weight:700;font-size:13px;padding:7px 15px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;
+    z-index:8;white-space:nowrap;max-width:90%;text-align:center}
+  #toast.show{opacity:1}
+
+  /* overlay modal */
+  #ov{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;
+    background:rgba(28,46,22,.88);z-index:10;padding:20px;text-align:center;overflow-y:auto}
+  #ov.show{display:flex}
+  #ov h1{font-size:30px;color:#fff;text-shadow:0 3px 0 var(--apple);line-height:1.06}
+  #ov h2{font-size:22px;color:#fff;text-shadow:0 2px 0 var(--apple);margin-bottom:4px}
+  #ov .sub{color:#ffe9c4;margin:8px 0 14px;font-size:14px;max-width:360px;line-height:1.5}
+  #ov .card{background:var(--cream);border-radius:16px;padding:16px;max-width:400px;width:100%;box-shadow:0 8px 0 rgba(0,0,0,.25);margin:6px 0}
+  #ov .rows{font-size:14px;color:var(--ink);margin:4px 0 12px;text-align:left}
+  #ov .rows .r{display:flex;justify-content:space-between;padding:3px 2px;border-bottom:1px dashed #e1cba2}
+  #ov .rows .r b{color:var(--leaf)}
+  .btn{display:block;width:100%;padding:13px 16px;font-size:15px;font-weight:800;border:none;border-radius:12px;color:#fff;
+    background:var(--apple);box-shadow:0 4px 0 #9e2626;cursor:pointer;margin:8px 0}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #9e2626}
+  .btn.green{background:var(--leaf);box-shadow:0 4px 0 #2c7536} .btn.green:active{box-shadow:0 1px 0 #2c7536}
+  .btn.gold{background:var(--gold);color:#5a3d00;box-shadow:0 4px 0 #b07d12} .btn.gold:active{box-shadow:0 1px 0 #b07d12}
+  .btn.grey{background:#9a7b52;box-shadow:0 4px 0 #6e5538} .btn.grey:active{box-shadow:0 1px 0 #6e5538}
+  .btn small{display:block;font-weight:600;font-size:11px;opacity:.92;margin-top:3px}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.5)}
+  #ov .tip{font-size:12px;color:#d8e8c8;margin-top:12px;max-width:380px;line-height:1.5}
+  .shoprow{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--line);border-radius:12px;
+    padding:9px 11px;margin:7px 0;text-align:left}
+  .shoprow .si{font-size:23px} .shoprow .st{flex:1}
+  .shoprow .st .sn{font-weight:800;font-size:13px} .shoprow .st .sd{font-size:11px;color:#7a6a55;line-height:1.35}
+  .shoprow .buy{padding:9px 12px;font-weight:800;font-size:13px;border:none;border-radius:10px;color:#fff;background:var(--leaf);
+    box-shadow:0 3px 0 #2c7536;cursor:pointer;white-space:nowrap}
+  .shoprow .buy:active{transform:translateY(2px);box-shadow:0 1px 0 #2c7536}
+  .shoprow .buy:disabled{background:#bdbdbd;box-shadow:0 3px 0 #8f8f8f;opacity:.7;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="stat cash"><span class="lbl">Cash</span><span class="val" id="vCash">$0</span></div>
+    <div class="stat eco"><span class="lbl">Eco</span><span class="val" id="vEco">75</span></div>
+    <div class="stat rep"><span class="lbl">Fans</span><span class="val" id="vRep">0</span></div>
+    <div class="stat week"><span class="lbl">Week</span><span class="val" id="vWeek">1</span></div>
+    <button id="mute" title="Sound">🔊</button>
+  </div>
+  <div id="stage"></div>
+  <div id="banner"></div>
+  <div id="toast"></div>
+  <div id="ov" class="show"></div>
+</div>
+<script>
+"use strict";
+(function(){
+const $=id=>document.getElementById(id);
+const stage=$('stage'), ov=$('ov'), banner=$('banner'), toast=$('toast');
+const elCash=$('vCash'), elEco=$('vEco'), elRep=$('vRep'), elWeek=$('vWeek'), muteBtn=$('mute');
+
+// ---------- audio ----------
+let muted=false, AC=null;
+function ac(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return AC; }
+function beep(f,d,type,g,slide){ if(muted)return; const a=ac(); if(!a)return;
+  const o=a.createOscillator(), v=a.createGain(); o.type=type||'square';
+  o.frequency.setValueAtTime(f,a.currentTime);
+  if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,slide),a.currentTime+d);
+  v.gain.setValueAtTime(g||0.12,a.currentTime); v.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+d);
+  o.connect(v); v.connect(a.destination); o.start(); o.stop(a.currentTime+d); }
+const sThrow=()=>beep(620,0.10,'square',0.07,260), sSplat=()=>beep(150,0.14,'sawtooth',0.16,60),
+  sMiss=()=>beep(220,0.06,'sine',0.05), sDing=()=>{beep(880,0.09,'square',0.12);setTimeout(()=>beep(1320,0.10,'square',0.10),80);},
+  sThin=()=>beep(520,0.06,'triangle',0.08,720), sBad=()=>beep(120,0.3,'sawtooth',0.16,70),
+  sCrush=()=>beep(200,0.16,'sawtooth',0.14,80), sGood=()=>beep(700,0.1,'sine',0.1,1100),
+  sClick=()=>beep(440,0.04,'square',0.06);
+
+// ---------- helpers ----------
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, rnd=(a,b)=>a+Math.random()*(b-a),
+  dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
+let toastT=0;
+function showToast(m){ toast.textContent=m; toast.classList.add('show'); toastT=2; }
+function showBanner(m,t){ banner.textContent=m; banner.classList.add('show');
+  clearTimeout(showBanner._t); showBanner._t=setTimeout(()=>banner.classList.remove('show'),t||1200); }
+
+// ---------- state ----------
+let S=null, activeMode=null, last=0, view='title';
+const TREE_NAMES=['Honeycrisp','Gala','Fuji','Pink Lady','Granny','McIntosh'];
+function newRun(){
+  S={ cash:45, eco:75, rep:0, week:1, fresh:0, cider:0, pressure:16,
+      up:{prune:0,water:0,sign:0,ammo:0,speed:0,lady:0,press:0},
+      trees:[], ladyLeft:1 };
+  for(let i=0;i<6;i++) S.trees.push({id:i,name:TREE_NAMES[i],fruit:rnd(5,9),cap:24,
+    quality:0.5,health:1,alive:true,thinnedWk:0,wateredWk:0});
+}
+function aliveTrees(){ return S.trees.filter(t=>t.alive); }
+function updHUD(){ elCash.textContent='$'+Math.round(S.cash); elEco.textContent=Math.round(S.eco);
+  elRep.textContent=S.rep; elWeek.textContent=S.week; }
+const ecoPrem=()=>1+(S.eco/100)*0.6;
+const signMul=()=>1+S.up.sign*0.12;
+
+// ---------- router ----------
+function go(v){
+  view=v; activeMode=null; ov.classList.remove('show');
+  if(v==='hub') renderHub();
+  else if(v==='manage') renderManage();
+  else if(v==='patrol') startPatrol();
+  else if(v==='cider') startCider();
+  else if(v==='youpick') startYouPick();
+  updHUD();
+}
+
+// ---------- canvas setup (action modes) ----------
+let cv=null, ctx=null, W=0, H=0, dpr=1;
+function setupCanvas(){
+  stage.innerHTML='<canvas id="cv"></canvas>';
+  cv=$('cv'); ctx=cv.getContext('2d');
+  sizeCanvas(); bindCanvasInput();
+}
+function sizeCanvas(){ if(!cv)return; const r=cv.getBoundingClientRect();
+  dpr=Math.min(window.devicePixelRatio||1,2); W=r.width; H=r.height;
+  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); }
+window.addEventListener('resize',()=>{ if(cv && (view==='patrol'||view==='youpick')){ sizeCanvas();
+  if(activeMode&&activeMode.onResize)activeMode.onResize(); } });
+
+// canvas input -> forwarded to active mode
+let ptrId=null,downX=0,downY=0,downT=0,dragging=false;
+function cpt(e){ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+function bindCanvasInput(){
+  cv.onpointerdown=e=>{ if(ptrId!==null)return; ptrId=e.pointerId; const p=cpt(e);
+    downX=p.x;downY=p.y;downT=performance.now();dragging=false; cv.setPointerCapture(e.pointerId);
+    if(activeMode&&activeMode.onDown)activeMode.onDown(p.x,p.y); };
+  cv.onpointermove=e=>{ if(e.pointerId!==ptrId)return; const p=cpt(e);
+    if(Math.hypot(p.x-downX,p.y-downY)>14)dragging=true;
+    if(activeMode&&activeMode.onMove)activeMode.onMove(p.x,p.y,dragging,downX,downY); };
+  const up=e=>{ if(e.pointerId!==ptrId)return; const p=cpt(e), dt=performance.now()-downT;
+    if(activeMode&&activeMode.onUp)activeMode.onUp(p.x,p.y,dragging,dt); ptrId=null;dragging=false; };
+  cv.onpointerup=up; cv.onpointercancel=up;
+}
+const keys={};
+window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true;
+  if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase()))e.preventDefault(); });
+window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+
+// ---------- main loop ----------
+function frame(t){ requestAnimationFrame(frame);
+  const dt=Math.min(0.05,(t-last)/1000||0); last=t;
+  if(activeMode&&activeMode.update){ activeMode.update(dt); if(activeMode.draw)activeMode.draw(); }
+  if(toastT>0){ toastT-=dt; if(toastT<=0)toast.classList.remove('show'); }
+}
+
+/* =====================================================================
+   HUB
+===================================================================== */
+function renderHub(){
+  const ripe=Math.round(aliveTrees().reduce((s,t)=>s+t.fruit,0));
+  const pressClass=S.pressure>60?'warn':S.pressure>35?'':'good';
+  stage.innerHTML=`
+    <div class="scroll">
+      <div class="hubhead">
+        <h1>🍎 Farm HQ</h1>
+        <div class="res">Fresh crates <b>${Math.round(S.fresh)}</b> · Cider <b>${S.cider}</b> · On-tree fruit <b>${ripe}</b></div>
+        <div class="pressbar"><i style="width:${clamp(S.pressure,0,100)}%"></i></div>
+        <div class="res" style="font-size:11px;margin-top:2px">Pest pressure ${Math.round(S.pressure)}%</div>
+      </div>
+      <div class="modes">
+        <div class="mode" id="mManage"><div class="mic">🍎</div><div class="mnm">Farm Management</div>
+          <div class="msub">Thin, irrigate, harvest, sell &amp; shop</div></div>
+        <div class="mode" id="mPatrol"><div class="badge ${pressClass}">${Math.round(S.pressure)}%</div>
+          <div class="mic">🎯</div><div class="mnm">Pest Patrol</div>
+          <div class="msub">Sling apples at the bugs</div></div>
+        <div class="mode" id="mCider"><div class="badge good">${Math.round(S.fresh)}🍎</div>
+          <div class="mic">🍺</div><div class="mnm">Cider Maker</div>
+          <div class="msub">Press fresh apples into cider</div></div>
+        <div class="mode" id="mPick"><div class="badge rep">${S.rep}★</div>
+          <div class="mic">🧺</div><div class="mnm">You-Pick Day</div>
+          <div class="msub">Host visitors for cash &amp; fans</div></div>
+      </div>
+      <button class="endweek" id="mEnd">▶ End Week ${S.week}</button>
+    </div>`;
+  $('mManage').onclick=()=>{sClick();go('manage');};
+  $('mPatrol').onclick=()=>{sClick();go('patrol');};
+  $('mCider').onclick=()=>{sClick(); if(S.fresh<4){showToast('Need at least 4 fresh apples to press cider');return;} go('cider');};
+  $('mPick').onclick=()=>{sClick(); if(aliveTrees().reduce((s,t)=>s+t.fruit,0)<10){showToast('Not enough fruit on the trees to host a pick');return;} go('youpick');};
+  $('mEnd').onclick=()=>{sClick();endWeek();};
+}
+
+/* =====================================================================
+   FARM MANAGEMENT (menu, no character)
+===================================================================== */
+function renderManage(){
+  let cards='';
+  for(const t of S.trees){
+    if(!t.alive){ cards+=`<div class="treecard dead"><div class="ti">🪵</div><div class="tinfo"><div class="tnm">${t.name} — lost</div></div></div>`; continue; }
+    const ripe=t.fruit>=10, canThin=t.thinnedWk<S.week && t.quality<1, canWater=t.wateredWk<S.week && t.health<1;
+    cards+=`<div class="treecard"><div class="ti">🌳</div>
+      <div class="tinfo"><div class="tnm">${t.name}</div>
+        <div class="bars">
+          <div class="bar"><span>🍎</span><div class="track"><i class="f" style="width:${t.fruit/t.cap*100}%"></i></div></div>
+          <div class="bar"><span>⭐</span><div class="track"><i class="q" style="width:${t.quality*100}%"></i></div></div>
+          <div class="bar"><span>❤️</span><div class="track"><i class="h" style="width:${t.health*100}%"></i></div></div>
+        </div></div>
+      <div class="tacts">
+        <button class="mini" data-act="thin" data-id="${t.id}" ${canThin?'':'disabled'}>✂️ Thin</button>
+        <button class="mini alt" data-act="water" data-id="${t.id}" ${canWater?'':'disabled'}>💧 Water</button>
+        <button class="mini harv" data-act="harvest" data-id="${t.id}" ${ripe?'':'disabled'}>🧺 Harvest</button>
+      </div></div>`;
+  }
+  stage.innerHTML=`
+    <button class="back" id="back">‹ HQ</button>
+    <div class="modetitle">Farm Management</div>
+    <div class="scroll" style="padding-top:46px">
+      <div class="panel"><h3>Inventory</h3><div class="invrow">
+        <span class="pill">Fresh <b>${Math.round(S.fresh)}</b>🍎</span>
+        <span class="pill">Cider <b>${S.cider}</b>🍺</span>
+        <span class="pill">Pests <b>${Math.round(S.pressure)}%</b></span>
+        <span class="pill">🐞 <b>${S.ladyLeft}</b> left</span>
+      </div></div>
+      <div class="panel"><h3>Orchard — once-per-week per tree</h3>${cards}</div>
+      <div class="panel"><h3>Pest Management (IPM)</h3><div class="actgrid">
+        <button class="actbtn lady" id="aLady" ${S.ladyLeft>0?'':'disabled'}>🐞 Release Ladybugs<small>−18% pests · +Eco · free</small></button>
+        <button class="actbtn spray" id="aSpray">🧪 Spray<small>−40% pests · −Eco · $10</small></button>
+      </div></div>
+      <div class="panel"><h3>Sell &amp; Upgrade</h3><div class="actgrid">
+        <button class="actbtn sell" id="aSell" ${S.fresh>0||S.cider>0?'':'disabled'}>💰 Sell Produce<small>fresh &amp; cider</small></button>
+        <button class="actbtn shop" id="aShop">🛒 Farm Shop<small>upgrades</small></button>
+      </div></div>
+    </div>`;
+  $('back').onclick=()=>{sClick();go('hub');};
+  stage.querySelectorAll('.mini').forEach(b=>{ b.onclick=()=>treeAction(b.dataset.act,+b.dataset.id); });
+  $('aLady').onclick=releaseLadybugs;
+  $('aSpray').onclick=spray;
+  $('aSell').onclick=sellScreen;
+  $('aShop').onclick=shopScreen;
+}
+function treeAction(act,id){
+  const t=S.trees[id]; if(!t||!t.alive)return;
+  if(act==='thin' && t.thinnedWk<S.week && t.quality<1){
+    t.quality=clamp(t.quality+0.22+S.up.prune*0.03,0,1); t.thinnedWk=S.week; sThin();
+    showToast('✂️ Thinned '+t.name+' — quality up'); }
+  else if(act==='water' && t.wateredWk<S.week && t.health<1){
+    t.health=clamp(t.health+0.25,0,1); t.wateredWk=S.week; sGood();
+    showToast('💧 Watered '+t.name+' — healthier'); }
+  else if(act==='harvest' && t.fruit>=10){
+    const got=Math.round(t.fruit*t.quality*t.health); S.fresh+=got; t.fruit=rnd(1,3); sDing();
+    showToast('🧺 Harvested '+got+' crates from '+t.name); }
+  updHUD(); renderManage();
+}
+function releaseLadybugs(){ if(S.ladyLeft<=0){sMiss();return;}
+  S.ladyLeft--; S.pressure=clamp(S.pressure-18,0,100); S.eco=clamp(S.eco+4,0,100); sGood();
+  showToast('🐞 Ladybugs released — pests down, Eco up'); updHUD(); renderManage(); }
+function spray(){ if(S.cash<10){showToast('Need $10 to spray');sMiss();return;}
+  S.cash-=10; S.pressure=clamp(S.pressure-40,0,100); S.eco=clamp(S.eco-12,0,100); sBad();
+  showToast('🧪 Sprayed — pests crash, but Eco premium drops'); updHUD(); renderManage(); }
+
+/* =====================================================================
+   SELL / SHOP / DRAMA  (overlays)
+===================================================================== */
+function showOverlay(html){ ov.innerHTML=html; ov.classList.add('show'); }
+function hideOverlay(){ ov.classList.remove('show'); }
+function sellScreen(){
+  const fD2C=Math.round(S.fresh*3*ecoPrem()*signMul()), fWhole=Math.round(S.fresh*1.6),
+        cSell=Math.round(S.cider*9*ecoPrem());
+  showOverlay(`
+    <h2>💰 Sell Produce</h2>
+    <div class="card">
+      <div class="rows">
+        <div class="r"><span>Fresh crates</span><b>${Math.round(S.fresh)}</b></div>
+        <div class="r"><span>Cider bottles</span><b>${S.cider}</b></div>
+        <div class="r"><span>Eco premium</span><b>×${ecoPrem().toFixed(2)}</b></div>
+      </div>
+      <button class="btn green" id="sFarm" ${S.fresh>0?'':'disabled'}>🧺 Fresh → Farmstand (D2C)<small>+$${fD2C} · rewards Eco &amp; sign</small></button>
+      <button class="btn grey" id="sWhole" ${S.fresh>0?'':'disabled'}>🏷️ Fresh → Wholesale<small>+$${fWhole} · fast, no premium</small></button>
+      <button class="btn gold" id="sCider" ${S.cider>0?'':'disabled'}>🍺 Sell Cider<small>+$${cSell} · best margins</small></button>
+      <button class="btn" id="sClose" style="background:#666;box-shadow:0 4px 0 #444">Done</button>
+    </div>`);
+  $('sFarm').onclick=()=>{ S.cash+=fD2C; S.fresh=0; sDing(); back(); };
+  $('sWhole').onclick=()=>{ S.cash+=fWhole; S.fresh=0; sDing(); back(); };
+  $('sCider').onclick=()=>{ S.cash+=cSell; S.cider=0; sDing(); back(); };
+  $('sClose').onclick=()=>{ sClick(); hideOverlay(); };
+  function back(){ updHUD(); hideOverlay(); renderManage(); }
+}
+const SHOP=[
+  {k:'prune',ic:'✂️',n:'Sharper Pruners',d:'Thinning raises quality more.',base:18,inc:14,max:4},
+  {k:'water',ic:'💧',n:'Drip Irrigation',d:'Trees grow more fruit each week.',base:24,inc:18,max:3},
+  {k:'sign', ic:'🪧',n:'Farmstand Sign',d:'+12% direct-to-consumer price.',base:20,inc:16,max:4},
+  {k:'press',ic:'⚙️',n:'Cider Press Gears',d:'Slower marker — easier perfect cider.',base:22,inc:16,max:3},
+  {k:'lady', ic:'🐞',n:'Ladybug House',d:'+1 ladybug release per week.',base:22,inc:16,max:3},
+  {k:'ammo', ic:'🍎',n:'Apple Satchel',d:'+6 apples in Pest Patrol.',base:16,inc:12,max:4},
+  {k:'speed',ic:'👢',n:'Trail Boots',d:'Move faster in Pest Patrol.',base:15,inc:12,max:3},
+];
+const priceOf=s=>s.base+s.inc*S.up[s.k];
+function shopScreen(){
+  let rows='';
+  for(const s of SHOP){ const lvl=S.up[s.k], maxed=lvl>=s.max, pr=priceOf(s);
+    rows+=`<div class="shoprow"><div class="si">${s.ic}</div>
+      <div class="st"><div class="sn">${s.n} ${lvl?`<span style="color:#3fa34d">Lv${lvl}</span>`:''}</div><div class="sd">${s.d}</div></div>
+      <button class="buy" data-k="${s.k}" ${maxed||S.cash<pr?'disabled':''}>${maxed?'MAX':'$'+pr}</button></div>`; }
+  showOverlay(`<h2>🛒 Farm Shop</h2>
+    <div class="sub">Cash <b style="color:#ffd54a">$${Math.round(S.cash)}</b></div>
+    <div class="card" style="max-width:420px">${rows}</div>
+    <button class="btn green" id="shopDone" style="max-width:420px">Done</button>`);
+  ov.querySelectorAll('.buy').forEach(b=>{ b.onclick=()=>{ const s=SHOP.find(x=>x.k===b.dataset.k), pr=priceOf(s);
+    if(S.cash>=pr && S.up[s.k]<s.max){ S.cash-=pr; S.up[s.k]++; sDing(); updHUD(); shopScreen(); } }; });
+  $('shopDone').onclick=()=>{ sClick(); hideOverlay(); renderManage(); };
+}
+
+/* =====================================================================
+   END WEEK  (growth, pest pressure, drama)
+===================================================================== */
+const DRAMA=[
+  {t:"Neighbor Earl says your dawn tractor wakes his hens.",
+   a:{l:"Apologize, gift a crate (−$12, +2 Fans)",f:()=>{S.cash-=12;S.rep+=2;}},
+   b:{l:"Rev it louder (−2 Fans)",f:()=>{S.rep=Math.max(0,S.rep-2);}}},
+  {t:"A farm-to-table chef offers a standing weekly order.",
+   a:{l:"Sign the deal (+$28)",f:()=>{S.cash+=28;}},
+   b:{l:"Stay independent (+1 Fan)",f:()=>{S.rep+=1;}}},
+  {t:"The co-op pushes a cheap broad-spectrum pesticide.",
+   a:{l:"Decline, trust IPM (+Eco)",f:()=>{S.eco=clamp(S.eco+6,0,100);}},
+   b:{l:"Use it (−Eco, −15% pests)",f:()=>{S.eco=clamp(S.eco-10,0,100);S.pressure=clamp(S.pressure-15,0,100);}}},
+  {t:"Local paper wants to feature your orchard.",
+   a:{l:"Host the reporter (−$6, +4 Fans)",f:()=>{S.cash-=6;S.rep+=4;}},
+   b:{l:"Decline the spotlight",f:()=>{}}},
+  {t:"Heatwave forecast — irrigation could save the crop.",
+   a:{l:"Run the pumps (−$15, trees healthier)",f:()=>{S.cash-=15;for(const t of S.trees)if(t.alive)t.health=clamp(t.health+0.2,0,1);}},
+   b:{l:"Risk it (trees stressed)",f:()=>{for(const t of S.trees)if(t.alive)t.health=clamp(t.health-0.12,0.1,1);}}},
+  {t:"A school asks for a field trip.",
+   a:{l:"Welcome the kids (+3 Fans)",f:()=>{S.rep+=3;}},
+   b:{l:"Charge admission (+$10)",f:()=>{S.cash+=10;}}},
+];
+function endWeek(){
+  // grow fruit, regen a little health if pressure is low
+  for(const t of S.trees){ if(!t.alive)continue;
+    t.cap=24+S.up.water*5;
+    t.fruit=clamp(t.fruit+(2.2+S.up.water*0.7),0,t.cap);
+    if(S.pressure<35) t.health=clamp(t.health+0.04,0,1);
+  }
+  // pest pressure builds
+  S.pressure=clamp(S.pressure+8+S.week*1.4,0,100);
+  // high pressure damages trees
+  if(S.pressure>55){ const dmg=(S.pressure-55)/100*0.5;
+    for(const t of S.trees){ if(!t.alive)continue; t.health-=dmg*rnd(0.6,1.2);
+      if(t.health<=0){ t.alive=false; t.health=0; } } }
+  S.eco=clamp(S.eco+1,0,100);
+  S.ladyLeft=1+S.up.lady;
+  if(aliveTrees().length===0){ gameOver(); return; }
+  // drama
+  const d=DRAMA[(Math.random()*DRAMA.length)|0];
+  showOverlay(`<h2>📰 Week ${S.week} — Local Drama</h2>
+    <div class="card"><p style="font-weight:700;font-size:15px;margin-bottom:12px">${d.t}</p>
+      <button class="btn green" id="dA">${d.a.l}</button>
+      <button class="btn grey" id="dB">${d.b.l}</button></div>
+    <div class="tip">Fans bring bigger You-Pick crowds. Eco lifts your direct-sale &amp; cider prices.</div>`);
+  $('dA').onclick=()=>{ d.a.f(); finishWeek(); };
+  $('dB').onclick=()=>{ d.b.f(); finishWeek(); };
+}
+function finishWeek(){ S.week++; updHUD(); hideOverlay(); go('hub');
+  showBanner('Week '+S.week,1000);
+  if(aliveTrees().some(t=>!t.alive)) {} }
+
+/* =====================================================================
+   PEST PATROL  (action — control the farmer)
+===================================================================== */
+const PEST={ worm:{ic:'🐛',spd:34,r:13,hp:1,bounty:1,col:'#9bca3a'},
+  fly:{ic:'🪰',spd:64,r:11,hp:1,bounty:2,col:'#888',fly:true},
+  beetle:{ic:'🪲',spd:42,r:15,hp:2,bounty:3,col:'#5a3a8a'} };
+function startPatrol(){
+  setupCanvas();
+  const toClear=Math.round(S.pressure/3)+S.week+2;
+  const M={ t:42, player:{x:W/2,y:H*0.6,r:16,recoil:0}, joyX:0,joyY:0,
+    ammo:14+S.up.ammo*6, ammoCap:14+S.up.ammo*6, pests:[], shots:[], parts:[], windfalls:[],
+    spawnT:0.6, toSpawn:toClear, cleared:0, earned:0, windT:2.4, done:false };
+  // HUD overlay (DOM on top of canvas)
+  stage.insertAdjacentHTML('beforeend',`
+    <button class="back" id="back">‹ HQ</button>
+    <div class="modetitle">Pest Patrol</div>
+    <div id="strip"><div id="timebar"><i id="tFill"></i></div>
+      <div class="chip ammo">🍎 <span id="cAmmo">${M.ammo}</span></div>
+      <div class="chip score">🐛 <span id="cClr">0</span>/${toClear}</div></div>
+    <div class="tool" id="tLady" style="right:12px;bottom:14px">🐞<span class="ct">×${S.ladyLeft}</span></div>`);
+  $('back').onclick=()=>{ sClick(); go('hub'); };
+  const tFill=$('tFill'), cAmmo=$('cAmmo'), cClr=$('cClr'), tLady=$('tLady');
+  if(S.ladyLeft<=0)tLady.classList.add('dim');
+  tLady.onclick=()=>{ if(S.ladyLeft<=0){sMiss();return;} S.ladyLeft--;
+    let k=0; for(const pe of M.pests){ if(dist(pe.x,pe.y,M.player.x,M.player.y)<150){pe.hp=0;k++;splat(pe);} }
+    S.eco=clamp(S.eco+2,0,100); tLady.querySelector('.ct').textContent='×'+S.ladyLeft;
+    if(S.ladyLeft<=0)tLady.classList.add('dim'); sGood(); showToast('🐞 '+k+' pests cleared'); };
+
+  function splat(pe){ for(let i=0;i<8;i++){const a=rnd(0,6.28),s=rnd(.3,1)*120;
+    M.parts.push({x:pe.x,y:pe.y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-30,life:rnd(.3,.6),col:PEST[pe.kind].col,r:rnd(2,4)});} }
+  function spawn(){ const al=aliveTrees(); const s=S.week; let kind='worm',r=Math.random();
+    if(s>=2&&r>0.6)kind='fly'; if(s>=3&&r>0.82)kind='beetle'; const K=PEST[kind];
+    const edge=(Math.random()*4)|0; let x,y;
+    if(edge===0){x=rnd(0,W);y=-20;}else if(edge===1){x=W+20;y=rnd(70,H-30);}
+    else if(edge===2){x=rnd(0,W);y=H+20;}else{x=-20;y=rnd(70,H-30);}
+    M.pests.push({kind,x,y,r:K.r,hp:K.hp,spd:K.spd*rnd(.9,1.1),wob:rnd(0,6),
+      tx:rnd(W*0.2,W*0.8),ty:rnd(H*0.25,H*0.7)}); }
+
+  M.onDown=(x,y)=>{};
+  M.onMove=(x,y,drag,dx,dy)=>{ if(drag){ const ddx=x-dx,ddy=y-dy,m=Math.hypot(ddx,ddy),mm=Math.min(m,60)/60;
+    M.joyX=ddx/(m||1)*mm; M.joyY=ddy/(m||1)*mm; } };
+  M.onUp=(x,y,drag,dt)=>{ if(!drag && dt<320) sling(x,y); M.joyX=0;M.joyY=0; };
+  function sling(tx,ty){ if(M.ammo<=0){sMiss();showToast('Out of apples — grab windfalls!');return;}
+    M.ammo--; cAmmo.textContent=M.ammo; const p=M.player,a=Math.atan2(ty-p.y,tx-p.x);
+    M.shots.push({x:p.x,y:p.y,vx:Math.cos(a)*470,vy:Math.sin(a)*470,life:1.1,r:7}); p.recoil=0.12; sThrow(); }
+
+  M.update=dt=>{
+    if(M.done)return;
+    M.t-=dt; tFill.style.width=clamp(M.t/42,0,1)*100+'%';
+    if(M.t<=0){ endPatrol(M); return; }
+    const p=M.player;
+    let mx=M.joyX,my=M.joyY;
+    let kx=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
+    let ky=(keys['s']||keys['arrowdown']?1:0)-(keys['w']||keys['arrowup']?1:0);
+    if(kx||ky){const m=Math.hypot(kx,ky);mx=kx/m;my=ky/m;}
+    const spd=176*(1+S.up.speed*0.13);
+    p.x=clamp(p.x+mx*spd*dt,16,W-16); p.y=clamp(p.y+my*spd*dt,60,H-16);
+    if(p.recoil>0)p.recoil-=dt;
+    // spawn
+    if(M.toSpawn>0){ M.spawnT-=dt; if(M.spawnT<=0){ M.spawnT=Math.max(0.5,1.6-S.week*0.1)*rnd(.7,1.2); spawn(); M.toSpawn--; } }
+    // windfalls
+    M.windT-=dt; if(M.windT<=0){ M.windT=2.6; M.windfalls.push({x:rnd(40,W-40),y:rnd(80,H-40),bob:rnd(0,6)});
+      if(M.windfalls.length>8)M.windfalls.shift(); }
+    for(let i=M.windfalls.length-1;i>=0;i--){ const w=M.windfalls[i]; w.bob+=dt*4;
+      if(dist(p.x,p.y,w.x,w.y)<p.r+12){ if(M.ammo<M.ammoCap){M.ammo=Math.min(M.ammoCap,M.ammo+2);cAmmo.textContent=M.ammo;sDing();}
+        M.windfalls.splice(i,1); } }
+    // pests move toward roam point
+    for(const pe of M.pests){ if(pe.hp<=0)continue; pe.wob+=dt*8;
+      const d=dist(pe.x,pe.y,pe.tx,pe.ty), a=Math.atan2(pe.ty-pe.y,pe.tx-pe.x);
+      const wob=pe.kind==='fly'?Math.sin(pe.wob)*0.5:0;
+      pe.x+=Math.cos(a+wob)*pe.spd*dt; pe.y+=Math.sin(a+wob)*pe.spd*dt;
+      if(d<8){ pe.tx=rnd(W*0.15,W*0.85); pe.ty=rnd(H*0.2,H*0.75); } }
+    // shots
+    for(const sh of M.shots){ sh.life-=dt; sh.x+=sh.vx*dt; sh.y+=sh.vy*dt;
+      if(sh.x<-20||sh.x>W+20||sh.y<-20||sh.y>H+20)sh.life=0;
+      for(const pe of M.pests){ if(pe.hp<=0)continue;
+        if(dist(sh.x,sh.y,pe.x,pe.y)<pe.r+sh.r){ pe.hp--; sh.life=0; sSplat();
+          if(pe.hp<=0){ M.cleared++; M.earned+=PEST[pe.kind].bounty; cClr.textContent=M.cleared; splat(pe);
+            M.parts.push({x:pe.x,y:pe.y-12,txt:'+$'+PEST[pe.kind].bounty,col:'#ffd54a',life:.9,vy:-44}); }
+          break; } } }
+    M.shots=M.shots.filter(s=>s.life>0); M.pests=M.pests.filter(pe=>pe.hp>0);
+    for(const pa of M.parts){ pa.life-=dt; pa.x+=(pa.vx||0)*dt; pa.y+=pa.vy*dt; if(pa.txt===undefined)pa.vy+=420*dt; }
+    M.parts=M.parts.filter(p=>p.life>0);
+    // win early if all cleared
+    if(M.toSpawn<=0 && M.pests.length===0){ endPatrol(M); }
+  };
+  M.draw=()=>{
+    for(let i=0;i<10;i++){ ctx.fillStyle=i%2?'#6fae4f':'#69a849'; ctx.fillRect(0,i*H/10,W,H/10+1); }
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(const w of M.windfalls){ ctx.font='17px serif'; ctx.fillText('🍎',w.x,w.y+Math.sin(w.bob)*1.5); }
+    for(const pe of M.pests){ const K=PEST[pe.kind]; ctx.font=(pe.r+8)+'px serif';
+      ctx.fillText(K.ic,pe.x,pe.y+(pe.kind==='fly'?Math.sin(pe.wob)*3:0)); }
+    for(const sh of M.shots){ ctx.font='15px serif'; ctx.fillText('🍎',sh.x,sh.y); }
+    drawFarmer(M.player);
+    for(const pa of M.parts){ if(pa.txt!==undefined){ ctx.save(); ctx.globalAlpha=clamp(pa.life,0,1);
+        ctx.fillStyle=pa.col; ctx.font='800 14px system-ui'; ctx.fillText(pa.txt,pa.x,pa.y); ctx.restore(); }
+      else { ctx.save(); ctx.globalAlpha=clamp(pa.life*1.4,0,1); ctx.fillStyle=pa.col;
+        ctx.beginPath(); ctx.arc(pa.x,pa.y,pa.r,0,6.28); ctx.fill(); ctx.restore(); } }
+  };
+  M.onResize=()=>{ M.player.x=clamp(M.player.x,16,W-16); M.player.y=clamp(M.player.y,60,H-16); };
+  activeMode=M;
+}
+function endPatrol(M){
+  if(M.done)return; M.done=true; activeMode=null;
+  const drop=Math.min(S.pressure, M.cleared*3+6);
+  S.pressure=clamp(S.pressure-drop,0,100); S.cash+=M.earned;
+  showOverlay(`<h2>🎯 Patrol Over</h2>
+    <div class="card"><div class="rows">
+      <div class="r"><span>Pests splatted</span><b>${M.cleared}</b></div>
+      <div class="r"><span>Bounty earned</span><b>+$${M.earned}</b></div>
+      <div class="r"><span>Pest pressure</span><b>−${Math.round(drop)}%</b></div>
+    </div><button class="btn green" id="ok">Back to HQ</button></div>`);
+  $('ok').onclick=()=>{ sClick(); updHUD(); go('hub'); };
+}
+function drawFarmer(p){ const x=p.x,y=p.y;
+  ctx.fillStyle='rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(x,y+15,13,5,0,0,6.28); ctx.fill();
+  ctx.fillStyle='#2f6fb0'; ctx.beginPath(); ctx.arc(x,y+2,12,0,6.28); ctx.fill();
+  ctx.fillStyle='#f0c89a'; ctx.beginPath(); ctx.arc(x,y-12,8,0,6.28); ctx.fill();
+  ctx.fillStyle='#e0b349'; ctx.beginPath(); ctx.ellipse(x,y-16,12,4,0,0,6.28); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x,y-19,6,5,0,0,6.28); ctx.fill();
+  if(p.recoil>0){ ctx.font='13px serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🍎',x+12,y-4); }
+}
+
+/* =====================================================================
+   CIDER MAKER  (timing minigame)
+===================================================================== */
+function startCider(){
+  const batches=Math.floor(S.fresh/4);
+  const C={ batches, left:batches, made:0, quality:0, pos:0, dir:1,
+    speed:0.9-S.up.press*0.13, zoneL:0.32, zoneW:0.36, perfL:0.45, perfW:0.10, raf:0, done:false };
+  stage.innerHTML=`
+    <button class="back" id="back">‹ HQ</button>
+    <div class="modetitle">Cider Maker</div>
+    <div class="ciderwrap">
+      <div class="big">🍺</div>
+      <div class="cinfo">Press <b id="cLeft">${batches}</b> batches · 4🍎 each<br>Stop the marker in the <b style="color:#3fa34d">green</b> — nail the <b style="color:#f2b134">gold</b> for top cider.</div>
+      <div class="cmeter" id="meter">
+        <div class="zone" style="left:${C.zoneL*100}%;width:${C.zoneW*100}%"></div>
+        <div class="zone perfect" style="left:${C.perfL*100}%;width:${C.perfW*100}%"></div>
+        <div class="marker" id="marker" style="left:0%"></div>
+      </div>
+      <div class="cinfo">Bottles made: <b id="cMade">0</b></div>
+      <button class="crush" id="crush" ${batches>0?'':'disabled'}>CRUSH</button>
+    </div>`;
+  $('back').onclick=()=>{ sClick(); finishCider(C); };
+  const marker=$('marker'), cLeft=$('cLeft'), cMade=$('cMade'), crushBtn=$('crush');
+  if(batches===0){ showToast('No full batches — need 4+ fresh apples'); }
+  // animate marker via global rAF mode
+  const M={ update:dt=>{ if(C.done)return; C.pos+=C.dir*dt/C.speed;
+      if(C.pos>=1){C.pos=1;C.dir=-1;} if(C.pos<=0){C.pos=0;C.dir=1;}
+      marker.style.left=(C.pos*100)+'%'; } };
+  activeMode=M;
+  crushBtn.onclick=()=>{ if(C.left<=0||C.done)return;
+    const p=C.pos; let q,word;
+    if(p>=C.perfL && p<=C.perfL+C.perfW){ q=1; word='PERFECT'; }
+    else if(p>=C.zoneL && p<=C.zoneL+C.zoneW){ q=0.6; word='good'; }
+    else { q=0; word='spilled'; }
+    C.left--; S.fresh-=4; cLeft.textContent=C.left;
+    if(q>0){ const bottles=q>=1?2:1; C.made+=bottles; C.quality+=q; cMade.textContent=C.made; sCrush();
+      showToast('🍺 '+word+'! +'+bottles+' cider'); }
+    else { sBad(); showToast('💧 Spilled that batch'); }
+    if(C.left<=0){ crushBtn.disabled=true; setTimeout(()=>finishCider(C),500); }
+    updHUD();
+  };
+}
+function finishCider(C){
+  if(C.done)return; C.done=true; activeMode=null;
+  S.cider+=C.made;
+  showOverlay(`<h2>🍺 Cider Pressed</h2>
+    <div class="card"><div class="rows">
+      <div class="r"><span>Batches pressed</span><b>${C.batches-C.left}</b></div>
+      <div class="r"><span>Cider bottles made</span><b>+${C.made}</b></div>
+      <div class="r"><span>Fresh apples used</span><b>${(C.batches-C.left)*4}</b></div>
+    </div><button class="btn green" id="ok">Back to HQ</button></div>`);
+  $('ok').onclick=()=>{ sClick(); updHUD(); go('hub'); };
+}
+
+/* =====================================================================
+   YOU-PICK DAY  (agrotourism — serve visitors)
+===================================================================== */
+function startYouPick(){
+  setupCanvas();
+  const M={ t:38, visitors:[], parts:[], spawnT:0.5, served:0, earned:0, fans:0, missed:0,
+    cap:6, done:false, picked:0 };
+  stage.insertAdjacentHTML('beforeend',`
+    <button class="back" id="back">‹ HQ</button>
+    <div class="modetitle">You-Pick Day</div>
+    <div id="strip"><div id="timebar"><i id="tFill"></i></div>
+      <div class="chip score">🧺 <span id="cServ">0</span></div>
+      <div class="chip ammo" style="color:#c065c8">★ <span id="cFan">0</span></div></div>`);
+  $('back').onclick=()=>{ sClick(); endYouPick(M); };
+  const tFill=$('tFill'), cServ=$('cServ'), cFan=$('cFan');
+  // tree anchors along the top for visitors to walk toward
+  const anchors=[]; const n=aliveTrees().length||1;
+  for(let i=0;i<n;i++) anchors.push({x:(i+0.5)/n*W, y:H*0.22});
+  const avgQ=aliveTrees().reduce((s,t)=>s+t.quality,0)/(n||1);
+
+  function spawnV(){ if(M.visitors.length>=M.cap)return;
+    const emo=['🧑‍🌾','👩','👨','🧒','👵','👪'][(Math.random()*6)|0];
+    M.visitors.push({x:rnd(30,W-30),y:H+20,emo,state:'walk',
+      ax:anchors[(Math.random()*anchors.length)|0].x+rnd(-20,20),ay:anchors[(Math.random()*anchors.length)|0].y+rnd(0,30),
+      wait:0,r:18,bob:rnd(0,6)}); }
+
+  M.onUp=(x,y,drag,dt)=>{ if(drag&&dt>=320)return; // tap = serve nearest approaching visitor
+    let best=null,bd=46; for(const v of M.visitors){ if(v.state==='leave')continue;
+      const d=dist(x,y,v.x,v.y); if(d<bd){bd=d;best=v;} }
+    if(best) serve(best); };
+  function serve(v){ v.state='leave'; v.vy=70;
+    const pay=Math.round(4*avgQ*(1+S.rep*0.04)); S.cash+=pay; M.served++; M.earned+=pay;
+    M.picked++; // they pick a fruit from a tree
+    const al=aliveTrees(); if(al.length){ const t=al[(Math.random()*al.length)|0]; t.fruit=Math.max(0,t.fruit-1); }
+    if(Math.random()<0.35){ M.fans++; cFan.textContent=M.fans; }
+    cServ.textContent=M.served; sDing();
+    M.parts.push({x:v.x,y:v.y-16,txt:'+$'+pay,col:'#ffd54a',life:.9,vy:-44});
+  }
+  M.update=dt=>{ if(M.done)return; M.t-=dt; tFill.style.width=clamp(M.t/38,0,1)*100+'%';
+    if(M.t<=0){ endYouPick(M); return; }
+    M.spawnT-=dt; if(M.spawnT<=0){ M.spawnT=rnd(0.7,1.5); spawnV(); }
+    for(const v of M.visitors){ v.bob+=dt*6;
+      if(v.state==='walk'){ const a=Math.atan2(v.ay-v.y,v.ax-v.x); v.x+=Math.cos(a)*92*dt; v.y+=Math.sin(a)*92*dt;
+        if(dist(v.x,v.y,v.ax,v.ay)<10){ v.state='wait'; v.wait=0; } }
+      else if(v.state==='wait'){ v.wait+=dt; if(v.wait>5.5){ v.state='leave'; v.vy=70; M.missed++; } }
+      else if(v.state==='leave'){ v.y+=v.vy*dt; }
+    }
+    M.visitors=M.visitors.filter(v=>v.y<H+40);
+    for(const pa of M.parts){ pa.life-=dt; pa.y+=pa.vy*dt; } M.parts=M.parts.filter(p=>p.life>0);
+  };
+  M.draw=()=>{
+    for(let i=0;i<10;i++){ ctx.fillStyle=i%2?'#6fae4f':'#69a849'; ctx.fillRect(0,i*H/10,W,H/10+1); }
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(const an of anchors){ ctx.font='40px serif'; ctx.fillText('🌳',an.x,an.y-18); }
+    for(const v of M.visitors){ ctx.font='28px serif'; ctx.fillText(v.emo,v.x,v.y+Math.sin(v.bob)*1.5);
+      if(v.state==='wait'){ const f=clamp(1-v.wait/5.5,0,1);
+        ctx.fillStyle=f>0.4?'#3fa34d':'#e23b3b'; ctx.fillRect(v.x-16,v.y-26,32*f,4);
+        ctx.font='15px serif'; ctx.fillText('🧺',v.x+16,v.y-22); } }
+    for(const pa of M.parts){ ctx.save(); ctx.globalAlpha=clamp(pa.life,0,1); ctx.fillStyle=pa.col;
+      ctx.font='800 14px system-ui'; ctx.fillText(pa.txt,pa.x,pa.y); ctx.restore(); }
+  };
+  M.onResize=()=>{};
+  activeMode=M;
+}
+function endYouPick(M){
+  if(M.done)return; M.done=true; activeMode=null;
+  S.rep+=M.fans;
+  showOverlay(`<h2>🧺 You-Pick Day Done</h2>
+    <div class="card"><div class="rows">
+      <div class="r"><span>Visitors served</span><b>${M.served}</b></div>
+      <div class="r"><span>Cash earned</span><b>+$${M.earned}</b></div>
+      <div class="r"><span>New fans</span><b>+${M.fans}</b></div>
+      <div class="r"><span>Left unhappy</span><b>${M.missed}</b></div>
+    </div><button class="btn green" id="ok">Back to HQ</button></div>`);
+  $('ok').onclick=()=>{ sClick(); updHUD(); go('hub'); };
+}
+
+/* =====================================================================
+   GAME OVER / TITLE
+===================================================================== */
+function gameOver(){
+  activeMode=null;
+  showOverlay(`<h1>Orchard Lost</h1>
+    <div class="sub">Every tree fell to the pests. The farm is done — for now.</div>
+    <div class="card"><div class="rows">
+      <div class="r"><span>Weeks survived</span><b>${S.week}</b></div>
+      <div class="r"><span>Final cash</span><b>$${Math.round(S.cash)}</b></div>
+      <div class="r"><span>Fans earned</span><b>${S.rep}</b></div>
+    </div><button class="btn green" id="again">Plant a New Orchard</button></div>`);
+  $('again').onclick=()=>{ sClick(); newRun(); updHUD(); titleScreen(); };
+}
+function titleScreen(){
+  activeMode=null;
+  showOverlay(`<h1>APPLE&nbsp;TREE<br>LANE</h1>
+    <div class="sub">You inherited six apple trees. Run the whole orchard from the Farm HQ — four jobs, one farm.</div>
+    <div class="card" style="text-align:left">
+      <p style="font-size:13px;line-height:1.6;color:#3a2a1a">
+        🍎 <b>Farm Management</b> — thin, water &amp; harvest trees; sell produce; buy upgrades.<br>
+        🎯 <b>Pest Patrol</b> — drive the farmer, sling apples at pests to cut pest pressure.<br>
+        🍺 <b>Cider Maker</b> — press fresh apples into premium cider with a timing game.<br>
+        🧺 <b>You-Pick Day</b> — host visitors who pick your fruit for cash &amp; fans.<br><br>
+        End each week to grow fruit &amp; face the next pest wave. Keep <b>Eco</b> high for better
+        prices, win <b>Fans</b> for bigger crowds. Lose every tree and it's over.
+      </p>
+    </div>
+    <button class="btn green" id="play" style="max-width:360px">Start Farming</button>`);
+  $('play').onclick=()=>{ ac(); sClick(); hideOverlay(); go('hub'); showBanner('Week 1',1000); };
+}
+
+// ---------- boot ----------
+muteBtn.addEventListener('click',()=>{ muted=!muted; muteBtn.textContent=muted?'🔇':'🔊'; });
+newRun(); updHUD(); last=performance.now(); requestAnimationFrame(frame); titleScreen();
+})();
+</script>
+</body>
+</html>

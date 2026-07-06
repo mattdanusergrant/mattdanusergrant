@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Must Design Games</title>
+<meta name="description" content="Playable game prototypes by Matt Danuser-Grant — one repo, one folder per game.">
+<link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Must Design Games">
+<meta property="og:description" content="Playable game prototypes by Matt Danuser-Grant — one repo, one folder per game.">
+<meta property="og:url" content="https://mustdesigngames.mattdanusergrant.com/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315161C'/%3E%3Cpath d='M13 10l9 6-9 6z' fill='%23FBF8F2'/%3E%3C/svg%3E">
+<!-- theme init before paint: avoids a flash of the wrong theme -->
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:18px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 28px 80px}
+
+  /* ── Top nav ── */
+  .nav{
+    display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:wrap;row-gap:10px;
+    padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em;
+  }
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(13px,3.8vw,17px);color:var(--ink);letter-spacing:-0.01em;white-space:nowrap}
+  .nav .links{display:flex;align-items:center;flex-wrap:wrap;row-gap:6px;white-space:nowrap}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a .arr{display:inline-block;transition:transform .18s}
+  .nav .links a:hover .arr{transform:translate(2px,-2px)}
+
+  /* ── Hero ── */
+  .hero{padding:64px 0 40px}
+  .hero .eyebrow{font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;font-weight:500}
+  .hero h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(40px,7vw,64px);line-height:1.05;letter-spacing:-0.02em;margin:0 0 20px;color:var(--ink)}
+  .hero h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .hero .lede{font-size:20px;line-height:1.6;color:var(--ink-2);max-width:600px;margin:0}
+
+  /* ── Game grid ── */
+  .grid{margin:44px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .card{
+    display:flex;flex-direction:column;justify-content:space-between;min-height:132px;
+    background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
+    padding:18px 18px 16px;box-shadow:var(--shadow);
+    transition:transform .18s,border-color .18s,box-shadow .18s;
+  }
+  .card:hover,.card:focus-visible{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow-hover);outline:none}
+  .card .name{font-family:'Fraunces',serif;font-weight:500;font-size:19px;letter-spacing:-0.01em;line-height:1.2;color:var(--ink)}
+  .card .play{
+    align-self:flex-start;margin-top:16px;
+    font-family:'Fraunces',serif;font-size:13px;font-weight:500;
+    display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 14px 7px;
+    background:transparent;color:var(--muted);border:1.5px solid var(--line-2);
+    transition:border-color .15s,background .15s,color .15s;
+  }
+  .card:hover .play,.card:focus-visible .play{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .card .play .arr{display:inline-block;transition:transform .18s}
+  .card:hover .play .arr{transform:translateX(3px)}
+
+  /* ── Footer ── */
+  .foot{
+    margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    color:var(--muted);font-size:14px;
+  }
+  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot a:hover{border-color:var(--ink-2)}
+
+  @media (max-width:480px){
+    .wrap{padding:0 22px 60px}
+    .hero{padding:36px 0 24px}
+    .hero .lede{font-size:17px}
+    .nav .links a{margin-left:14px;font-size:13px}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <a class="brand" href="/">Must Design Games</a>
+      <div class="links">
+        <a href="https://mattdanusergrant.com/">mattdanusergrant.com <span class="arr">↗</span></a>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <p class="eyebrow">The Arcade</p>
+      <h1>Must <em>Design</em> Games</h1>
+      <p class="lede">Playable prototypes by Matt Danuser-Grant — one repo, one folder per game. Pick one and play.</p>
+    </header>
+
+    <main class="grid">
+      <a class="card" href="./airwolf/"><span class="name">Airwolf</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./apple-tree-lane/"><span class="name">Apple Tree Lane</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./baduk-blitz/"><span class="name">Baduk Blitz</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./berm-burner/"><span class="name">Berm Burner</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./bloom-again/"><span class="name">Bloom Again</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./multiplayerdeckgateway/"><span class="name">Multiplayer Deck Gateway</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./eat-monkey-eat/"><span class="name">Eat, Monkey, Eat</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./grand-theft-apples/"><span class="name">Grand Theft Apples</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./groundwork/"><span class="name">Groundwork</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./honk-beach/"><span class="name">Honk Beach</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./keeprippingpacks/"><span class="name">Keep Ripping Packs</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./matgo/"><span class="name">Matgo</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./mosslings/"><span class="name">Mosslings</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./prism-pond/"><span class="name">Prism Pond</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./rhythm-rpg/"><span class="name">Rolls Per Groove</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./sigil-tactics/"><span class="name">Sigil Tactics</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./split-system/"><span class="name">Split System</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./switchback-td/"><span class="name">Switchback TD</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./bannerfall/"><span class="name">Bannerfall</span><span class="play">play <span class="arr">→</span></span></a>
+      <a class="card" href="./word-pounce/"><span class="name">Word Pounce</span><span class="play">play <span class="arr">→</span></span></a>
+    </main>
+
+    <footer class="foot">
+      <span>Must Design Games — playable prototypes by Matt Danuser-Grant.</span>
+      <span><a href="https://mattdanusergrant.com/">← Back to the portfolio</a></span>
+    </footer>
+  </div>
+  <script src="/assets/site.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,2710 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f3e7d3">
+<title>Mosslings</title>
+<!-- MOSSLING — cozy virtual pet, mobile-first prototype (v0.1). Neopets DNA:
+     adopt a little creature, keep it fed/happy/rested, earn coins in a mini-game,
+     spend them on snacks. Real-time needs decay; the pet never dies — it just gets
+     sleepy or wistful. Self-contained: vanilla JS + canvas, state in localStorage.
+     GDD: 03_creating/game-ideas/mossling.md. #LLM-generated -->
+<style>
+  :root{
+    --cream:#f3e7d3; --cream-2:#ecd9bf; --ink:#5a4a3a; --ink-soft:#8a7560;
+    --card:#fffaf1; --line:#e3d2b6;
+    --full:#e8a05a; --happy:#e07a9b; --energy:#6fb3c9;
+    --coin:#e6b84a; --btn:#fbf3e4; --btn-press:#efe0c6;
+    --shadow:0 6px 16px rgba(120,90,55,.18);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--cream);
+    font-family:'Quicksand',ui-rounded,'Segoe UI',system-ui,sans-serif;
+    color:var(--ink);-webkit-user-select:none;user-select:none;
+    touch-action:none;overscroll-behavior:none;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;
+    max-width:560px;margin:0 auto;}
+
+  /* ---- top HUD ---- */
+  #hud{padding:max(10px,env(safe-area-inset-top)) 14px 8px;flex:0 0 auto;}
+  .hudtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  #petname{font-size:19px;font-weight:700;letter-spacing:.3px;cursor:pointer;display:flex;align-items:center;gap:6px;}
+  #petname::after{content:'›';font-size:18px;color:var(--ink-soft);font-weight:400;}
+  #petname:active{transform:translateY(1px);}
+  #coins{display:flex;align-items:center;gap:6px;background:var(--card);
+    padding:5px 12px;border-radius:20px;box-shadow:var(--shadow);font-weight:700;font-size:15px;}
+  #coins .c{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f6d878,var(--coin));
+    box-shadow:inset 0 -2px 0 rgba(150,110,20,.35);}
+  #hudright{display:flex;align-items:center;gap:8px;}
+  #mute{background:var(--card);border:none;border-radius:50%;width:32px;height:32px;
+    box-shadow:var(--shadow);font-size:15px;cursor:pointer;color:var(--ink-soft);
+    display:flex;align-items:center;justify-content:center;padding:0;transition:transform .08s;}
+  #mute:active{transform:scale(.92);}
+  .bars{display:flex;flex-direction:column;gap:7px;}
+  .bar{display:flex;align-items:center;gap:9px;}
+  .bar .ic{width:22px;text-align:center;font-size:16px;}
+  .bar .track{flex:1;height:13px;border-radius:8px;background:#0000000f;overflow:hidden;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.08);}
+  .bar .fill{height:100%;width:50%;border-radius:8px;transition:width .35s ease;}
+  .bar.full .fill{background:linear-gradient(var(--full),#d88c44);}
+  .bar.happy .fill{background:linear-gradient(var(--happy),#cf6386);}
+  .bar.energy .fill{background:linear-gradient(var(--energy),#5aa0b8);}
+
+  /* ---- scene ---- */
+  #scene{position:relative;flex:1 1 auto;min-height:0;}
+  #c{display:block;width:100%;height:100%;}
+  #moodtag{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+    background:#fffaf1cc;backdrop-filter:blur(3px);padding:5px 14px;border-radius:16px;
+    font-size:13px;font-weight:600;color:var(--ink-soft);box-shadow:var(--shadow);
+    pointer-events:none;white-space:nowrap;}
+
+  /* ---- toolbar ---- */
+  #bar{flex:0 0 auto;display:flex;gap:10px;padding:10px 14px max(14px,env(safe-area-inset-bottom));}
+  .tool{flex:1;background:var(--btn);border:none;border-radius:18px;padding:11px 4px 9px;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:inherit;color:var(--ink);cursor:pointer;transition:transform .08s,background .1s;}
+  .tool:active{transform:translateY(2px) scale(.97);background:var(--btn-press);}
+  .tool .e{font-size:25px;line-height:1;}
+  .tool .l{font-size:11.5px;font-weight:700;letter-spacing:.2px;}
+
+  /* ---- overlays ---- */
+  .ov{position:absolute;inset:0;background:#3a2c1e66;backdrop-filter:blur(2px);
+    display:none;align-items:center;justify-content:center;padding:22px;z-index:20;}
+  .ov.show{display:flex;}
+  .sheet{background:var(--card);border-radius:24px;box-shadow:0 14px 40px rgba(70,50,30,.35);
+    width:100%;max-width:380px;padding:22px;text-align:center;animation:pop .25s ease;}
+  .sheet.wide{max-width:440px;}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  .sheet h2{margin:0 0 4px;font-size:21px;}
+  .sheet p{margin:0 0 16px;color:var(--ink-soft);font-size:14px;line-height:1.45;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .pick{background:var(--btn);border:2px solid transparent;border-radius:18px;padding:12px;
+    width:96px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.12s;}
+  .pick:active{transform:scale(.96);}
+  .pick.sel{border-color:var(--happy);background:#fff;}
+  .pick .pe{font-size:34px;}
+  .pick .pn{font-size:13px;font-weight:700;margin-top:4px;}
+  .pick .pd{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  input#nameIn{width:100%;padding:12px 14px;border-radius:14px;border:2px solid var(--line);
+    font-family:inherit;font-size:16px;color:var(--ink);text-align:center;margin:14px 0;background:#fff;}
+  input#nameIn:focus{outline:none;border-color:var(--happy);}
+  .btn{background:var(--happy);color:#fff;border:none;border-radius:16px;padding:13px 22px;
+    font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow);
+    transition:transform .08s,filter .1s;}
+  .btn:active{transform:translateY(2px) scale(.98);}
+  .btn:disabled{filter:grayscale(.6) opacity(.55);cursor:default;}
+  .btn.ghost{background:var(--btn);color:var(--ink-soft);box-shadow:none;}
+  .foods{display:flex;flex-direction:column;gap:9px;margin:6px 0 16px;}
+  .food{display:flex;align-items:center;gap:12px;background:var(--btn);border:none;border-radius:16px;
+    padding:11px 14px;font-family:inherit;color:var(--ink);cursor:pointer;text-align:left;transition:.1s;}
+  .food:active{transform:scale(.98);background:var(--btn-press);}
+  .food .fe{font-size:26px;}
+  .food .fmeta{flex:1;}
+  .food .fn{font-weight:700;font-size:15px;}
+  .food .fsub{font-size:12px;color:var(--ink-soft);}
+  .food .cost{display:flex;align-items:center;gap:4px;font-weight:700;font-size:14px;}
+  .food .cost .c{width:14px;height:14px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#f6d878,var(--coin));}
+  .food:disabled{filter:grayscale(.5) opacity(.5);}
+
+  /* ---- world map ---- */
+  .map{position:relative;height:300px;border-radius:18px;margin:6px 0 18px;overflow:hidden;
+    background:radial-gradient(ellipse at 30% 25%, #f7d8a8 0%, #d8e6c1 35%, #c9d9a8 65%, #a8c6a0 100%);
+    box-shadow:inset 0 2px 10px rgba(70,50,30,.18);}
+  .map::before{content:'';position:absolute;inset:0;
+    background-image:radial-gradient(circle at 50% 65%, #b8d4dc 0%, transparent 18%),
+                     radial-gradient(circle at 12% 80%, #8fb878 0%, transparent 15%),
+                     radial-gradient(circle at 88% 80%, #8fb878 0%, transparent 14%);}
+  .loc{position:absolute;background:#fffaf1;border:2px solid #e3d2b6;border-radius:50%;
+    width:64px;height:64px;box-shadow:var(--shadow);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:inherit;color:var(--ink);padding:0;transition:transform .08s;z-index:2;}
+  .loc:active{transform:scale(.92);}
+  .loc:disabled{filter:grayscale(.55) opacity(.5);cursor:default;}
+  .loc .le{font-size:24px;line-height:1;}
+  .loc .ln{font-size:10px;font-weight:700;margin-top:1px;letter-spacing:.2px;}
+  .lcd{position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);
+    font-size:10px;color:var(--ink-soft);font-weight:600;white-space:nowrap;}
+
+  /* ---- pet profile ---- */
+  .profile-card{background:var(--btn);border-radius:18px;padding:14px;margin:6px 0 14px;
+    text-align:left;display:flex;align-items:center;gap:14px;}
+  .profile-card .pemoji{font-size:46px;line-height:1;}
+  .profile-card .pinfo{flex:1;}
+  .profile-card .pname{font-weight:700;font-size:18px;color:var(--ink);}
+  .profile-card .ptitle{font-size:13px;color:var(--ink-soft);font-weight:600;margin-top:2px;}
+  .xpbar{height:8px;background:#0000000f;border-radius:5px;overflow:hidden;margin-top:9px;}
+  .xpbar .xfill{height:100%;background:linear-gradient(var(--happy),#cf6386);border-radius:5px;transition:width .35s;}
+  .xptag{font-size:11px;color:var(--ink-soft);font-weight:600;margin-top:4px;text-align:right;}
+  .rosterh{margin:4px 0 8px;font-size:12px;color:var(--ink-soft);font-weight:700;
+    text-transform:uppercase;letter-spacing:.6px;text-align:left;}
+  .roster{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:180px;overflow-y:auto;}
+  .rosterItem{display:flex;align-items:center;gap:10px;background:var(--btn);border:none;
+    border-radius:14px;padding:8px 12px;cursor:pointer;font-family:inherit;color:var(--ink);text-align:left;
+    transition:transform .08s,background .1s;}
+  .rosterItem:active{transform:scale(.98);background:var(--btn-press);}
+  .rosterItem .re{font-size:22px;}
+  .rosterItem .rn{flex:1;font-weight:700;font-size:14px;}
+  .rosterItem .rt{font-size:11px;color:var(--ink-soft);}
+  .rosterEmpty{font-size:13px;color:var(--ink-soft);text-align:center;padding:8px 4px 4px;}
+  .profile-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+
+  /* mini-game */
+  #mg{position:absolute;inset:0;display:none;z-index:30;background:#2a2440;}
+  #mg.show{display:block;}
+  #mgc{display:block;width:100%;height:100%;}
+  #mghud{position:absolute;top:max(10px,env(safe-area-inset-top));left:0;right:0;
+    display:flex;justify-content:space-between;padding:0 18px;color:#fff;font-weight:700;
+    font-size:16px;text-shadow:0 1px 3px #0006;pointer-events:none;}
+  #mgmsg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;color:#fff;text-align:center;gap:14px;padding:24px;}
+  #mgmsg h2{margin:0;font-size:24px;}
+  #mgmsg p{margin:0;opacity:.85;font-size:14px;line-height:1.5;max-width:300px;}
+
+  .toast{position:absolute;left:50%;top:14px;transform:translateX(-50%) translateY(-12px);
+    background:#5a4a3a;color:#fff;padding:9px 18px;border-radius:18px;font-size:14px;font-weight:600;
+    opacity:0;transition:.3s;z-index:40;pointer-events:none;box-shadow:var(--shadow);white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="hudtop">
+      <div id="petname">Mosslings</div>
+      <div id="hudright">
+        <button id="mute" title="sound">🔇</button>
+        <div id="coins"><span class="c"></span><span id="coinval">0</span></div>
+      </div>
+    </div>
+    <div class="bars">
+      <div class="bar full"><span class="ic">🍓</span><div class="track"><div class="fill" id="bFull"></div></div></div>
+      <div class="bar happy"><span class="ic">💞</span><div class="track"><div class="fill" id="bHappy"></div></div></div>
+      <div class="bar energy"><span class="ic">⚡</span><div class="track"><div class="fill" id="bEnergy"></div></div></div>
+    </div>
+  </div>
+
+  <div id="scene">
+    <canvas id="c"></canvas>
+    <div id="moodtag">…</div>
+  </div>
+
+  <div id="bar">
+    <button class="tool" id="tFeed"><span class="e">🍓</span><span class="l">Feed</span></button>
+    <button class="tool" id="tPlay"><span class="e">🎣</span><span class="l">Play</span></button>
+    <button class="tool" id="tExplore"><span class="e">🗺️</span><span class="l">Explore</span></button>
+  </div>
+
+  <!-- adopt overlay -->
+  <div class="ov" id="ovAdopt">
+    <div class="sheet">
+      <h2>Adopt a Mossling</h2>
+      <p>A little one has wandered into your garden. Choose who stays.</p>
+      <div class="row" id="speciesRow"></div>
+      <input id="nameIn" maxlength="12" placeholder="name your Mossling" autocomplete="off">
+      <button class="btn" id="adoptBtn" disabled>Bring them home</button>
+    </div>
+  </div>
+
+  <!-- feed overlay -->
+  <div class="ov" id="ovFeed">
+    <div class="sheet">
+      <h2>Snacks</h2>
+      <p id="feedSub">A little something to fill the tummy.</p>
+      <div class="foods" id="foodList"></div>
+      <button class="btn ghost" id="feedClose">Close</button>
+    </div>
+  </div>
+
+  <!-- mini-game chooser -->
+  <div class="ov" id="ovGames">
+    <div class="sheet">
+      <h2>Let's play!</h2>
+      <p>Earn a few coins and cheer up your Mossling.</p>
+      <div class="foods">
+        <button class="food" id="gKick"><span class="fe">⚽</span><span class="fmeta">
+          <div class="fn">Kick-a-Ball</div><div class="fsub">play together · big happiness</div></span></button>
+        <button class="food" id="gFirefly"><span class="fe">🎣</span><span class="fmeta">
+          <div class="fn">Firefly Catch</div><div class="fsub">tap fireflies · steady coins</div></span></button>
+        <button class="food" id="gPush"><span class="fe">🕳️</span><span class="fmeta">
+          <div class="fn">Hole-in-One</div><div class="fsub">flick acorns into the hole</div></span></button>
+        <button class="food" id="gBerry"><span class="fe">🍓</span><span class="fmeta">
+          <div class="fn">Berry Sort</div><div class="fsub">help sort the harvest · earn coins</div></span></button>
+        <button class="food" id="gMemory"><span class="fe">🌸</span><span class="fmeta">
+          <div class="fn">Memory Meadow</div><div class="fsub">flip and match pairs</div></span></button>
+        <button class="food" id="gCount"><span class="fe">🌻</span><span class="fmeta">
+          <div class="fn">Counting Garden</div><div class="fsub">find what's hiding · earn coins</div></span></button>
+      </div>
+      <button class="btn ghost" id="gamesClose">Close</button>
+    </div>
+  </div>
+
+  <!-- daily greeting + bonus -->
+  <div class="ov" id="ovDaily">
+    <div class="sheet">
+      <h2 id="dailyTitle">Hello!</h2>
+      <p id="dailySub">…</p>
+      <div id="dailyGift" style="font-size:56px;margin:2px 0 4px;line-height:1;">🎁</div>
+      <div id="dailyStreak" style="font-weight:700;color:var(--happy);margin-bottom:14px;"></div>
+      <button class="btn" id="dailyClaim">Open today's gift</button>
+    </div>
+  </div>
+
+  <!-- explore world map -->
+  <div class="ov" id="ovExplore">
+    <div class="sheet wide">
+      <h2>Where to next?</h2>
+      <p>Tap a place to visit. Each one rests a while after you go.</p>
+      <div class="map" id="mapView"></div>
+      <button class="btn ghost" id="exploreClose">Close</button>
+    </div>
+  </div>
+
+  <!-- pet profile + roster -->
+  <div class="ov" id="ovProfile">
+    <div class="sheet wide">
+      <h2>Pet Profile</h2>
+      <div id="profCard" class="profile-card"></div>
+      <div class="rosterh">Other Mosslings</div>
+      <div id="rosterList" class="roster"></div>
+      <div class="profile-actions">
+        <button class="btn" id="adoptNewBtn">Adopt new Mossling</button>
+        <button class="btn ghost" id="profileClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- mini-game -->
+  <div id="mg">
+    <canvas id="mgc"></canvas>
+    <div id="mghud"><span>🪙 <span id="mgScore">0</span></span><span>⏱ <span id="mgTime">20</span></span></div>
+    <div id="mgmsg"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ===================== MOSSLING — cozy virtual pet =====================
+// #LLM-generated. Single file: model + real-time decay + canvas render + a
+// firefly-catching mini-game. State persists in localStorage; the pet "lives"
+// while you're away (needs drift slowly toward calm-but-wistful, never zero-out
+// into death — this is a cozy game).
+
+const KEY = 'mossling.save.v2';
+const OLD_KEY = 'mossling.save.v1';
+const $ = id => document.getElementById(id);
+
+// ---- species: drawn procedurally, no art assets ----
+const SPECIES = {
+  pip:  { name:'Pip',  desc:'forest',  body:'#9cc97f', belly:'#e7f0cf', cheek:'#f0a9b8', ear:'leaf'  },
+  tato: { name:'Tato', desc:'fungal',  body:'#caa3d8', belly:'#f2e3f6', cheek:'#f0a9b8', ear:'cap'   },
+  bubo: { name:'Bubo', desc:'dusk',    body:'#86b8d6', belly:'#dcecf5', cheek:'#eda9b0', ear:'tuft'  },
+};
+
+// ---- Berry Sort colours ----
+const SORT_BERRIES = [
+  { e:'🍓', colorName:'red',    fill:'#e85555', basket:0 },
+  { e:'🫐', colorName:'purple', fill:'#7a58c0', basket:1 },
+  { e:'🌻', colorName:'yellow', fill:'#e8c030', basket:2 },
+];
+
+// ---- food shop: id, emoji, label, cost, fullness restored, joy bonus, morsel count ----
+const FOODS = [
+  { id:'berry',  e:'🍓', n:'Sunberry',     sub:'+18 tummy · 2 morsels',          cost:3,  fill:18, joy:3,  count:2 },
+  { id:'honey',  e:'🍯', n:'Honey Drop',   sub:'+30 tummy · sweet · 3 morsels',  cost:6,  fill:30, joy:7,  count:3 },
+  { id:'mush',   e:'🍄', n:'Glow Cap',     sub:'+24 tummy · 3 morsels',          cost:5,  fill:24, joy:4,  count:3 },
+  { id:'cake',   e:'🧁', n:'Moss Cake',    sub:'+45 tummy · treat · 5 morsels',  cost:12, fill:45, joy:12, count:5 },
+];
+
+// ---- decay per real hour (cozy & slow). Energy regenerates while asleep. ----
+const DECAY = { full: 7, happy: 4.5, energyAwake: 5.5, energyAsleep: -22 };
+const MAX_CATCHUP_H = 36;     // cap offline simulation so it never feels punishing
+const TIRED_SLEEP_AT = 15;    // pet auto-naps when energy crosses this threshold
+const SLEEP_DECAY_MULT = 0.35;// hunger/happy decay much slower while asleep — sleep restores
+const HUNGER_BLOCK = 25;      // below this fullness, the pet won't play or explore
+
+// ===================== STATE SHAPE (v2) =====================
+// S = { pets: [...], currentId, coins, lastVisitDay, streak }
+// Each pet owns its own stats/lastTs/asleep/level/xp/lastVisits. Coins, the
+// daily streak, and lastVisitDay belong to the player (shared across pets).
+// `P` is the live reference to the current pet (refresh via refreshP()).
+let S = null;        // wrapper save object
+let P = null;        // current pet (alias into S.pets)
+let now = () => Date.now();
+
+function newPetId(){ return 'p-' + Math.random().toString(36).slice(2, 8); }
+function freshPet(species, name){
+  species = species || 'pip';
+  return { id: newPetId(), name: name || SPECIES[species].name, species,
+    full:70, happy:70, energy:80, asleep:false,
+    lastTs: now(), born: now(),
+    xp: 0, level: 0, lastVisits: {} };
+}
+function freshSave(){
+  return { pets: [], currentId: null, coins: 8, lastVisitDay: '', streak: 0,
+    unlocked: ['meadow'] };
+}
+function refreshP(){ P = (S && S.currentId) ? S.pets.find(p => p.id === S.currentId) || S.pets[0] || null : (S && S.pets[0]) || null; }
+function hasPet(){ return !!(S && S.pets && S.pets.length); }
+
+// ---------- persistence (with v1 → v2 migration) ----------
+function load(){
+  try {
+    const r = JSON.parse(localStorage.getItem(KEY));
+    if (r && Array.isArray(r.pets)){
+      // older v2 saves didn't have the unlocked-locations set — start them with meadow
+      if (!Array.isArray(r.unlocked) || !r.unlocked.length) r.unlocked = ['meadow'];
+      return r;
+    }
+  } catch(e){}
+  // v1 had a single adopted pet at the top level. Bring it forward.
+  try {
+    const old = JSON.parse(localStorage.getItem(OLD_KEY));
+    if (old && old.adopted){
+      const pet = { id:'p-legacy', name: old.name, species: old.species||'pip',
+        full: old.full, happy: old.happy, energy: old.energy, asleep: !!old.asleep,
+        lastTs: old.lastTs||now(), born: old.born||now(),
+        xp: 0, level: 0, lastVisits: {} };
+      return { pets:[pet], currentId: pet.id,
+        coins: old.coins||0, lastVisitDay: old.lastVisitDay||'', streak: old.streak||0,
+        unlocked: ['meadow'] };
+    }
+  } catch(e){}
+  return null;
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+// ---------- multi-pet roster ----------
+function switchPet(id){
+  if (!S) return;
+  if (P) P.lastTs = now();           // freeze decay on the pet we're leaving
+  S.currentId = id;
+  refreshP();
+  if (P) P.lastTs = now();           // and start the new one from now (no catch-up)
+  save();
+}
+function addPet(species, name){
+  if (!S) S = freshSave();
+  const pet = freshPet(species, name);
+  S.pets.push(pet);
+  switchPet(pet.id);
+  return pet;
+}
+
+// ---------- XP & levels (per pet) ----------
+// Cumulative XP threshold to reach level L+1 from L. Slow gentle ramp.
+function xpToNext(L){ return 25 + L*10; }
+const TITLES = ['Sprout 🌱','Sapling 🌿','Bud 🌸','Bloom 🌺','Heart 💚','Star ⭐','Spirit 🌟','Sage ✨','Legend ✨'];
+function titleOf(p){ return TITLES[Math.min(p.level||0, TITLES.length-1)]; }
+function gainXP(amt){
+  if (!P || !amt) return;
+  P.xp = (P.xp||0) + amt;
+  let leveled = false;
+  while (P.xp >= xpToNext(P.level||0)){
+    P.xp -= xpToNext(P.level||0);
+    P.level = (P.level||0) + 1;
+    leveled = true;
+  }
+  if (leveled){ sfx('daily'); toast(`${P.name} is now a ${titleOf(P)}!`); }
+}
+
+// ===================== SOUND (WebAudio, synthesized) =====================
+// Cozy procedural audio: no asset files. One AudioContext lazy-built on the
+// first user gesture (autoplay policy). A handful of short SFX + an optional
+// gentle ambient pad. Mute state persists separately from the pet save.
+const MUTE_KEY = 'mossling.muted.v1';
+const SND = { ctx:null, master:null, muted:true, amb:null };
+SND.muted = localStorage.getItem(MUTE_KEY) !== '0';      // default: muted
+
+function ensureAudio(){
+  if (SND.ctx){ if (SND.ctx.state==='suspended') SND.ctx.resume(); return SND.ctx; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  SND.ctx = new AC();
+  SND.master = SND.ctx.createGain();
+  SND.master.gain.value = SND.muted ? 0 : 0.6;
+  SND.master.connect(SND.ctx.destination);
+  return SND.ctx;
+}
+function setMuted(m){
+  SND.muted = m;
+  localStorage.setItem(MUTE_KEY, m ? '1' : '0');
+  if (SND.master) SND.master.gain.setTargetAtTime(m ? 0 : 0.6, SND.ctx.currentTime, 0.05);
+  if (m) stopAmbient(); else startAmbient();
+  const b = $('mute'); if (b) b.textContent = m ? '🔇' : '🔊';
+}
+
+// envelope helper: short tone with attack/decay
+function tone(freq, dur, type='sine', vol=0.25, attack=0.01, decay){
+  const ctx = ensureAudio(); if (!ctx || SND.muted) return;
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq;
+  const g = ctx.createGain(); g.gain.value = 0;
+  o.connect(g); g.connect(SND.master);
+  g.gain.linearRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function seq(notes, type='triangle', vol=0.22){    // simple melodic burst
+  const ctx = ensureAudio(); if (!ctx || SND.muted) return;
+  notes.forEach(([f,delay,dur=0.18])=>{
+    setTimeout(()=>tone(f, dur, type, vol, 0.005), delay*1000);
+  });
+}
+function sfx(kind){
+  if (SND.muted) return;
+  switch(kind){
+    case 'cuddle':   tone(880, 0.22, 'sine', 0.22); setTimeout(()=>tone(1175,0.18,'sine',0.18),60); break;
+    case 'feed':     seq([[660,0],[880,0.08,0.22]],'triangle',0.22); break;
+    case 'kick':     tone(420+Math.random()*120, 0.12, 'square', 0.16, 0.003); break;
+    case 'petkick':  tone(720, 0.10, 'sine', 0.14); break;
+    case 'firefly':  tone(1320, 0.18, 'sine', 0.20); setTimeout(()=>tone(1760,0.14,'sine',0.14),50); break;
+    case 'sleep':    seq([[523,0,0.3],[392,0.1,0.4]],'sine',0.18); break;
+    case 'wake':     seq([[523,0],[659,0.08],[784,0.16,0.22]],'sine',0.20); break;
+    case 'daily':    seq([[523,0],[659,0.09],[784,0.18],[1047,0.27,0.32]],'triangle',0.22); break;
+    case 'endgame':  seq([[523,0],[659,0.1],[784,0.2],[1047,0.3,0.28]],'triangle',0.22); break;
+  }
+}
+
+// gentle ambient — slow chord progression + soft pentatonic arpeggio. The
+// pad uses three sine voices retuned every ~6.5s; a triangle voice on top
+// drops a pentatonic note every ~1.7s (sometimes a rest). Day is C major
+// (I-vi-IV-V); night is A minor (vi-IV-I-V). All voices share the master
+// gain so muting silences everything.
+function startAmbient(){
+  const ctx = ensureAudio(); if (!ctx || SND.muted || SND.amb) return;
+  const hr = new Date().getHours(), night = hr<6 || hr>=20;
+  // Chord roots/thirds/fifths (Hz)
+  const dayChords   = [[131,165,196],[110,131,165],[87,110,131],[98,123,147]]; // C, Am, F, G
+  const nightChords = [[110,131,165],[87,110,131],[131,165,196],[98,123,147]]; // Am, F, C, G
+  const dayPent     = [262, 294, 330, 392, 440, 523, 587, 659];
+  const nightPent   = [220, 262, 294, 330, 392, 440, 523, 587];
+  const chords = night ? nightChords : dayChords;
+  const pent   = night ? nightPent   : dayPent;
+
+  const padGain = ctx.createGain();
+  padGain.gain.value = 0;
+  padGain.connect(SND.master);
+  const padVoices = [0,0,0].map(()=>{
+    const o = ctx.createOscillator(); o.type='sine';
+    const g = ctx.createGain(); g.gain.value = 0.30;
+    o.connect(g); g.connect(padGain);
+    o.start();
+    return { o, g };
+  });
+  padGain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 3);
+
+  function setChord(c){
+    const t = ctx.currentTime;
+    for (let i = 0; i < 3; i++){
+      padVoices[i].o.frequency.cancelScheduledValues(t);
+      padVoices[i].o.frequency.linearRampToValueAtTime(c[i], t + 1.4);
+    }
+  }
+  let chordIdx = 0; setChord(chords[0]);
+  const chordTimer = setInterval(()=>{
+    chordIdx = (chordIdx + 1) % chords.length;
+    setChord(chords[chordIdx]);
+  }, 6500);
+
+  // melody — triangle bell with soft attack/long decay
+  function arpNote(){
+    if (Math.random() < 0.25) return;            // breathing room
+    const f = pent[Math.floor(Math.random() * pent.length)];
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type='triangle'; o.frequency.value = f;
+    const g = ctx.createGain(); g.gain.value = 0;
+    o.connect(g); g.connect(SND.master);
+    g.gain.linearRampToValueAtTime(0.04, t + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+    o.start(t); o.stop(t + 1.5);
+  }
+  const arpTimer = setInterval(arpNote, 1700);
+
+  SND.amb = { padGain, padVoices, chordTimer, arpTimer };
+}
+function stopAmbient(){
+  if (!SND.amb) return;
+  const ctx = SND.ctx, t = ctx.currentTime;
+  clearInterval(SND.amb.chordTimer);
+  clearInterval(SND.amb.arpTimer);
+  SND.amb.padGain.gain.cancelScheduledValues(t);
+  SND.amb.padGain.gain.linearRampToValueAtTime(0, t + 0.5);
+  for (const v of SND.amb.padVoices){ v.o.stop(t + 0.6); }
+  SND.amb = null;
+}
+
+// ---------- real-time needs decay (current pet only) ----------
+// Simulated in segments split at the awake→asleep transition so an offline
+// stretch that drains the pet past TIRED_SLEEP_AT lands the next session on
+// a sleeping pet. No auto-wake — the pet sleeps until tapped. Non-current pets
+// don't decay (switchPet freezes their lastTs).
+function applyDecay(){
+  if (!P) return;
+  const t = now();
+  let hLeft = (t - P.lastTs) / 3.6e6;
+  if (hLeft <= 0){ P.lastTs = t; return; }
+  hLeft = Math.min(hLeft, MAX_CATCHUP_H);
+  while (hLeft > 1e-6){
+    let segH = hLeft;
+    if (!P.asleep && P.energy > TIRED_SLEEP_AT){            // schedule the nap onset
+      segH = Math.min(segH, (P.energy - TIRED_SLEEP_AT) / DECAY.energyAwake);
+    }
+    const eRate = P.asleep ? DECAY.energyAsleep : DECAY.energyAwake;
+    const m = P.asleep ? SLEEP_DECAY_MULT : 1;
+    P.full   = clamp(P.full   - DECAY.full  * segH * m);
+    P.happy  = clamp(P.happy  - DECAY.happy * segH * m);
+    P.energy = clamp(P.energy - eRate * segH);
+    if (P.full < 25 || P.energy < 25) P.happy = Math.max(P.happy - 4*segH*m, 18);
+    hLeft -= segH;
+    if (!P.asleep && P.energy <= TIRED_SLEEP_AT + 0.01) P.asleep = true;
+  }
+  P.lastTs = t;
+}
+function clamp(v){ return Math.max(0, Math.min(100, v)); }
+
+// ---------- mood ----------
+function mood(){
+  if (!P) return { key:'ok', tag:'…' };
+  if (P.asleep) return { key:'sleep', tag:`${P.name} is sleeping… tap to wake them ☀️` };
+  if (P.energy < 18) return { key:'tired', tag:`${P.name} can barely keep their eyes open` };
+  if (P.full   < 20) return { key:'hungry', tag:`${P.name}'s tummy is rumbling` };
+  if (P.happy  < 25) return { key:'sad',   tag:`${P.name} feels a little wistful` };
+  const avg = (P.full + P.happy + P.energy) / 3;
+  if (avg > 80 && P.happy > 78) return { key:'joy',  tag:`${P.name} is beaming!` };
+  if (avg > 60) return { key:'happy', tag:`${P.name} is content` };
+  return { key:'ok', tag:`${P.name} is pottering about` };
+}
+
+// ===================== RENDER (scene) =====================
+const cv = $('c'), ctx = cv.getContext('2d');
+let DPR=1, W=0, H=0;
+let petCYRatio = 0.58;     // 0.58 = home; eases to 0.22 (near top) when feedTray active
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio||1);
+  const r = $('scene').getBoundingClientRect();
+  W = r.width; H = r.height;
+  cv.width = W*DPR; cv.height = H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+
+// ambient: tint the room by the real local hour
+function ambient(){
+  const hr = new Date().getHours();
+  const night = hr < 6 || hr >= 20;
+  const dusk  = (hr>=18&&hr<20)||(hr>=6&&hr<8);
+  if (P && P.asleep) return { top:'#26243f', bot:'#3a3358', night:true, dim:.45 };
+  if (night) return { top:'#3b3a5c', bot:'#52507a', night:true, dim:.3 };
+  if (dusk)  return { top:'#f6c9a0', bot:'#f0d9c0', night:false, dim:.08 };
+  return { top:'#d9eefc', bot:'#fbeed6', night:false, dim:0 };
+}
+
+let particles = [];   // floating hearts / Zzz
+function spawnHearts(n,x,y){
+  for(let i=0;i<n;i++) particles.push({ x:x+(Math.random()-.5)*40, y, vy:-(.5+Math.random()*.6),
+    life:1, kind:'heart', wob:Math.random()*6.28, size:14+Math.random()*8 });
+}
+let stars=[]; for(let i=0;i<26;i++) stars.push({x:Math.random(),y:Math.random()*.6,p:Math.random()*6.28});
+
+let t0 = performance.now();
+function frame(ts){
+  const dt = Math.min(50, ts - t0); t0 = ts;
+  const A = ambient();
+  // sky
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,A.top); g.addColorStop(1,A.bot);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  if (A.night){
+    for(const s of stars){ s.p+=0.02;
+      ctx.globalAlpha = .4+.4*Math.sin(s.p);
+      ctx.fillStyle='#fff'; const sx=s.x*W, sy=s.y*H;
+      ctx.fillRect(sx,sy,2,2);
+    }
+    ctx.globalAlpha=1;
+  }
+
+  drawRoom(A);
+  const cx = W/2;
+  petCYRatio += ((feedTray ? 0.22 : 0.58) - petCYRatio) * 0.08;
+  const cy = H * petCYRatio;
+  drawCreature(cx, cy, ts);
+  drawZ(cx, cy, ts);
+  trayTick(dt);
+  drawTray(ctx, ts);
+
+  // particles
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i]; p.y+=p.vy*dt*0.06*16/16; p.wob+=0.1; p.life-=dt*0.0009;
+    if(p.life<=0){ particles.splice(i,1); continue; }
+    ctx.globalAlpha = Math.max(0,p.life);
+    ctx.font = `${p.size}px serif`; ctx.textAlign='center';
+    ctx.fillText('💗', p.x+Math.sin(p.wob)*8, p.y);
+    ctx.globalAlpha=1;
+  }
+  requestAnimationFrame(frame);
+}
+
+function drawRoom(A){
+  // floor
+  const fy = H*0.74;
+  ctx.fillStyle = A.night ? '#6b5a7a' : '#e7c89a';
+  ctx.fillRect(0,fy,W,H-fy);
+  ctx.fillStyle = A.night ? '#5d4e6b' : '#d9b787';
+  ctx.fillRect(0,fy,W,4);
+  // a little rug
+  ctx.fillStyle = A.night ? '#7a6790' : '#e89aa9';
+  ctx.beginPath(); ctx.ellipse(W/2, fy+(H-fy)*0.55, W*0.34, (H-fy)*0.32, 0,0,7); ctx.fill();
+  ctx.fillStyle = A.night ? '#8c79a3' : '#f2b3bf';
+  ctx.beginPath(); ctx.ellipse(W/2, fy+(H-fy)*0.55, W*0.24, (H-fy)*0.21, 0,0,7); ctx.fill();
+  // a potted plant in the corner
+  const px = W*0.84, pb = fy;
+  ctx.fillStyle = A.night?'#7a5e52':'#b9784f'; ctx.fillRect(px-14,pb-22,28,22);
+  ctx.fillStyle = A.night?'#5f8f6a':'#7bb87f';
+  for(const a of [-0.5,0,0.5]){ ctx.save(); ctx.translate(px,pb-22); ctx.rotate(a);
+    ctx.beginPath(); ctx.ellipse(0,-22,9,24,0,0,7); ctx.fill(); ctx.restore(); }
+  if (A.dim>0){ ctx.fillStyle=`rgba(20,16,40,${A.dim})`; ctx.fillRect(0,0,W,H); }
+}
+
+// procedural cozy creature; mood drives eyes & mouth, gentle idle bob/blink
+let blink = 0, blinkT = 0;
+function drawCreature(cx, cy, ts){
+  if (!P) return;
+  const sp = SPECIES[P.species];
+  const m = mood();
+  const breathe = Math.sin(ts*0.0021)*4;
+  const sleepy = m.key==='sleep';
+  const bob = sleepy ? Math.sin(ts*0.0012)*2 : breathe;
+  const R = Math.min(W,H)*0.20;
+  const y = cy + bob;
+
+  // shadow
+  ctx.fillStyle='rgba(80,60,40,.16)';
+  ctx.beginPath(); ctx.ellipse(cx, cy+R*0.95, R*0.85, R*0.28, 0,0,7); ctx.fill();
+
+  // ears (behind body)
+  drawEars(cx, y, R, sp);
+
+  // body (squashed round)
+  ctx.fillStyle = sp.body;
+  ctx.beginPath(); ctx.ellipse(cx, y, R*1.02, R*0.92, 0, 0, 7); ctx.fill();
+  // belly
+  ctx.fillStyle = sp.belly;
+  ctx.beginPath(); ctx.ellipse(cx, y+R*0.18, R*0.6, R*0.5, 0, 0, 7); ctx.fill();
+  // tiny feet
+  ctx.fillStyle = sp.body;
+  ctx.beginPath(); ctx.ellipse(cx-R*0.42, y+R*0.82, R*0.22, R*0.16, 0,0,7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+R*0.42, y+R*0.82, R*0.22, R*0.16, 0,0,7); ctx.fill();
+
+  // face
+  const ey = y - R*0.08, eo = R*0.34;
+  // blink timer
+  blinkT -= 16; if (blinkT<0){ blink=1; blinkT = 1800+Math.random()*2600; }
+  if (blink>0) blink = Math.max(0, blink-0.12);
+  const closed = sleepy || (m.key==='joy'? false : blink>0.5);
+
+  ctx.fillStyle = '#4a3b30';
+  ctx.strokeStyle = '#4a3b30'; ctx.lineWidth = R*0.07; ctx.lineCap='round';
+  for(const sgn of [-1,1]){
+    const ex = cx + sgn*eo;
+    if (closed || sleepy){
+      ctx.beginPath(); ctx.arc(ex, ey, R*0.16, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+    } else if (m.key==='joy'){
+      // happy upward arcs ^_^
+      ctx.beginPath(); ctx.arc(ex, ey+R*0.05, R*0.17, 1.15*Math.PI, 1.85*Math.PI); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(ex, ey, R*0.11, 0, 7); ctx.fill();
+      // sparkle
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(ex-R*0.04, ey-R*0.04, R*0.035,0,7); ctx.fill();
+      ctx.fillStyle='#4a3b30';
+    }
+  }
+  // cheeks
+  ctx.fillStyle = sp.cheek; ctx.globalAlpha=0.7;
+  ctx.beginPath(); ctx.arc(cx-eo-R*0.06, ey+R*0.2, R*0.12,0,7); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx+eo+R*0.06, ey+R*0.2, R*0.12,0,7); ctx.fill();
+  ctx.globalAlpha=1;
+
+  // mouth by mood
+  ctx.strokeStyle='#7a4a44'; ctx.lineWidth=R*0.05;
+  const my = ey + R*0.34;
+  ctx.beginPath();
+  if (m.key==='joy'||m.key==='happy'){ ctx.arc(cx, my-R*0.06, R*0.16, 0.15*Math.PI, 0.85*Math.PI); }
+  else if (m.key==='sad'||m.key==='tired'){ ctx.arc(cx, my+R*0.14, R*0.14, 1.2*Math.PI, 1.8*Math.PI); }
+  else if (m.key==='hungry'){ ctx.ellipse(cx, my, R*0.07, R*0.09, 0,0,7); }
+  else { ctx.moveTo(cx-R*0.08,my); ctx.lineTo(cx+R*0.08,my); }
+  ctx.stroke();
+}
+
+function drawEars(cx, y, R, sp){
+  ctx.fillStyle = sp.body;
+  if (sp.ear==='leaf'){
+    for(const sgn of [-1,1]){ ctx.save(); ctx.translate(cx+sgn*R*0.5, y-R*0.75); ctx.rotate(sgn*0.5);
+      ctx.fillStyle='#7fae62'; ctx.beginPath(); ctx.ellipse(0,0,R*0.18,R*0.42,0,0,7); ctx.fill();
+      ctx.strokeStyle='#6b9a52'; ctx.lineWidth=R*0.03; ctx.beginPath(); ctx.moveTo(0,R*0.3); ctx.lineTo(0,-R*0.3); ctx.stroke();
+      ctx.restore(); }
+  } else if (sp.ear==='cap'){
+    ctx.fillStyle='#c98fd8';
+    ctx.beginPath(); ctx.ellipse(cx, y-R*0.78, R*0.78, R*0.4, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle='#f2e3f6';
+    for(const dx of [-0.4,0,0.4]){ ctx.beginPath(); ctx.arc(cx+dx*R, y-R*0.85, R*0.08,0,7); ctx.fill(); }
+  } else { // tuft (owlish)
+    for(const sgn of [-1,1]){ ctx.fillStyle=sp.body;
+      ctx.beginPath(); ctx.moveTo(cx+sgn*R*0.55,y-R*0.6);
+      ctx.lineTo(cx+sgn*R*0.78,y-R*1.05); ctx.lineTo(cx+sgn*R*0.32,y-R*0.78); ctx.closePath(); ctx.fill(); }
+  }
+}
+
+function drawZ(cx, cy, ts){
+  if (!P || !P.asleep) return;
+  ctx.fillStyle='#ffffffcc'; ctx.textAlign='left';
+  for(let i=0;i<3;i++){
+    const p = ((ts*0.0006)+i*0.33)%1;
+    ctx.globalAlpha = 1-p; ctx.font = `${14+i*8}px serif`;
+    ctx.fillText('Z', cx+ Math.min(W,H)*0.2 + p*18, cy - Math.min(W,H)*0.16 - p*46);
+  }
+  ctx.globalAlpha=1;
+}
+
+// tap the scene → if a morsel is under the finger, start drag-to-feed; else
+// wake (if sleeping) or cuddle. Cuddle has diminishing returns by the gap since
+// the last cuddle, so rapid taps still spawn hearts (feel cute) without
+// gaming the happy bar.
+cv.addEventListener('pointerdown', e=>{
+  if (!hasPet() || !P) return;
+  const r = cv.getBoundingClientRect();
+  const x = e.clientX-r.left, y = e.clientY-r.top;
+  if (feedTray && trayGrab(x, y, e.pointerId)) return;
+  if (P.asleep){
+    P.asleep = false; P.lastTs = now();
+    sfx('wake'); save(); refresh();
+    toast(`Good morning, ${P.name}! ☀️`);
+    return;
+  }
+  const gap = now() - (P.lastCuddleTs || 0);
+  const gain = Math.min(3, Math.floor(gap / 2000));   // 2s→+1, 4s→+2, 6s→+3 happy
+  if (gain > 0){ P.happy = clamp(P.happy + gain); gainXP(1); }
+  P.lastCuddleTs = now();
+  spawnHearts(3, x, y);
+  sfx('cuddle');
+  refresh(); save();
+});
+cv.addEventListener('pointermove', e=>{
+  if (!feedTray || !feedTray.drag) return;
+  const r = cv.getBoundingClientRect();
+  trayMove(e.clientX-r.left, e.clientY-r.top);
+});
+cv.addEventListener('pointerup',     ()=>{ if (feedTray) trayRelease(); });
+cv.addEventListener('pointercancel', ()=>{ if (feedTray) trayRelease(); });
+
+// ===================== UI WIRING =====================
+function refresh(){
+  if (!P){
+    $('coinval').textContent = S ? Math.floor(S.coins) : 0;
+    $('petname').textContent = 'Mosslings';
+    $('moodtag').textContent = '…';
+    $('bFull').style.width = $('bHappy').style.width = $('bEnergy').style.width = '0%';
+    return;
+  }
+  const wasAwake = !P.asleep;
+  applyDecay();
+  if (wasAwake && P.asleep){ sfx('sleep'); toast(`${P.name} yawned and curled up 💤`); }
+  $('coinval').textContent = Math.floor(S.coins);
+  $('petname').textContent = P.name;
+  $('bFull').style.width   = P.full+'%';
+  $('bHappy').style.width  = P.happy+'%';
+  $('bEnergy').style.width = P.energy+'%';
+  $('moodtag').textContent = mood().tag;
+}
+
+let toastT;
+function toast(msg){
+  const el=$('toast'); el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),1700);
+}
+
+// ---- adopt flow (used for first-pet and "Adopt new" from profile) ----
+function buildAdopt(){
+  const row = $('speciesRow'); row.innerHTML='';
+  let chosen=null;
+  for(const [id,sp] of Object.entries(SPECIES)){
+    const b=document.createElement('button'); b.className='pick';
+    b.innerHTML=`<div class="pe">${sp.ear==='leaf'?'🌱':sp.ear==='cap'?'🍄':'🦉'}</div>
+      <div class="pn">${sp.name}</div><div class="pd">${sp.desc}</div>`;
+    b.onclick=()=>{ chosen=id; [...row.children].forEach(c=>c.classList.remove('sel'));
+      b.classList.add('sel'); checkAdopt(); };
+    row.appendChild(b);
+  }
+  const nameIn=$('nameIn'); nameIn.value = '';
+  function checkAdopt(){ $('adoptBtn').disabled = !(chosen && nameIn.value.trim()); }
+  nameIn.oninput = checkAdopt;
+  checkAdopt();
+  $('adoptBtn').onclick=()=>{
+    if (!S) S = freshSave();
+    const name = nameIn.value.trim().slice(0,12) || SPECIES[chosen||'pip'].name;
+    const pet = addPet(chosen||'pip', name);
+    if (!S.lastVisitDay){ S.lastVisitDay = dayStr(now()); S.streak = 1; }
+    save();
+    $('ovAdopt').classList.remove('show');
+    refresh(); toast(`Welcome home, ${pet.name}! 💚`);
+  };
+  $('ovAdopt').classList.add('show');
+}
+
+// ---- feed flow ----
+function openFeed(){
+  if (!P) return;
+  if (P.asleep){ toast('they are asleep — wake them first'); return; }
+  if (feedTray){ toast(`still some ${feedTray.food.n} on the plate`); return; }
+  // a food is only offered if the WHOLE plate fits — no starting a meal the
+  // pet can't finish (morsels would otherwise bounce off once it fills up).
+  const smallest = Math.min(...FOODS.map(f => f.fill));
+  if (P.full + smallest > 100){
+    toast(`${P.name} is too full to eat right now`);
+    return;
+  }
+  const list=$('foodList'); list.innerHTML='';
+  $('feedSub').textContent = P.full>=80 ? `${P.name} is getting full…` : 'A little something to fill the tummy.';
+  for(const f of FOODS){
+    const b=document.createElement('button'); b.className='food';
+    const fits = (P.full + f.fill) <= 100;
+    const afford = S.coins>=f.cost && fits;
+    b.disabled=!afford;
+    b.innerHTML=`<span class="fe">${f.e}</span><span class="fmeta"><div class="fn">${f.n}</div>
+      <div class="fsub">${fits ? f.sub : 'too much for now'}</div></span><span class="cost"><span class="c"></span>${f.cost}</span>`;
+    b.onclick=()=>feed(f);
+    list.appendChild(b);
+  }
+  $('ovFeed').classList.add('show');
+}
+function feed(f){
+  if (!P || S.coins < f.cost) return;
+  if (P.asleep){ toast(`${P.name} is sleeping — wake them first`); return; }
+  if (feedTray){ toast(`still some ${feedTray.food.n} on the plate`); return; }
+  if (P.full + f.fill > 100){ toast(`${P.name} doesn't have room for all that`); return; }
+  S.coins -= f.cost;
+  startTray(f);
+  $('ovFeed').classList.remove('show');
+  save(); refresh();
+}
+
+$('tFeed').onclick  = openFeed;
+$('tPlay').onclick  = pickGame;
+$('feedClose').onclick = ()=>$('ovFeed').classList.remove('show');
+$('mute').onclick = ()=>{ ensureAudio(); setMuted(!SND.muted); };
+
+// ===================== MINI-GAMES =====================
+// Two cozy thumb-games on a shared overlay/canvas. Firefly Catch is the steady
+// coin grind; Kick-a-Ball is about playing *with* the pet — flick the ball and
+// the Mossling chases it down to bop it back (entertain your pet).
+const mg = $('mg'), mgc = $('mgc'), mctx = mgc.getContext('2d');
+let mgMode=null, mgState=null;
+
+function pickGame(){
+  if (!P) return;
+  if (P.asleep){ toast('wake them up to play together'); return; }
+  if (P.energy < 12){ toast(`${P.name} is too sleepy to play`); return; }
+  if (P.full < HUNGER_BLOCK){ toast(`${P.name} is too hungry to play — feed them first`); return; }
+  $('ovGames').classList.add('show');
+}
+$('gFirefly').onclick   = ()=>{ $('ovGames').classList.remove('show'); startFirefly(); };
+$('gKick').onclick      = ()=>{ $('ovGames').classList.remove('show'); startKick(); };
+$('gPush').onclick      = ()=>{ $('ovGames').classList.remove('show'); startPush(); };
+$('gBerry').onclick     = ()=>{ $('ovGames').classList.remove('show'); startBerry(); };
+$('gMemory').onclick    = ()=>{ $('ovGames').classList.remove('show'); startMemory(); };
+$('gCount').onclick     = ()=>{ $('ovGames').classList.remove('show'); startCount(); };
+$('gamesClose').onclick = ()=>$('ovGames').classList.remove('show');
+
+function mgResize(){ const r=mg.getBoundingClientRect();
+  const w=r.width||window.innerWidth, h=r.height||window.innerHeight;   // never 0 (e.g. mid-show)
+  mgc.width=w*DPR; mgc.height=h*DPR;
+  mctx.setTransform(DPR,0,0,DPR,0,0); if(mgState){ mgState.w=w; mgState.h=h; } }
+function openMG(){ mg.classList.add('show'); $('mgmsg').style.display='flex'; $('mghud').style.display='flex'; mgResize(); }
+function closeGame(){ mg.classList.remove('show'); mgState=null; mgMode=null; refresh(); }
+
+// shared canvas input → dispatch to the active game
+mgc.addEventListener('pointerdown', e=>{
+  if (!mgState || !mgState.running) return;
+  const r=mgc.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top;
+  if (mgMode==='firefly') fireflyTap(x,y);
+  else if (mgMode==='kick') kickTap(x,y);
+  else if (mgMode==='walk') walkTap(x,y);
+  else if (mgMode==='berry') berryTap(x,y);
+  else if (mgMode==='memory') memoryTap(x,y);
+  else if (mgMode==='count') countTap(x,y);
+  else if (mgMode==='feed'){ if (feedDown(x,y)) mgc.setPointerCapture(e.pointerId); }
+  else if (mgMode==='push'){ if (pushDown(x,y)) mgc.setPointerCapture(e.pointerId); }
+});
+mgc.addEventListener('pointermove', e=>{
+  if (!mgState || !mgState.running) return;
+  const r=mgc.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top;
+  if (mgMode==='feed') feedMove(x, y);
+  else if (mgMode==='push') pushMove(x, y);
+});
+mgc.addEventListener('pointerup',     ()=>{ if (mgMode==='feed') feedUp(); else if (mgMode==='push') pushUp(); });
+mgc.addEventListener('pointercancel', ()=>{ if (mgMode==='feed') feedUp(); else if (mgMode==='push') pushUp(); });
+
+// ---------- Firefly Catch ----------
+function startFirefly(){
+  mgMode='firefly';
+  mgState = { flies:[], score:0, time:20, last:performance.now(), spawn:0, running:false, w:0, h:0 };
+  openMG();                                  // show first → mgResize fills real w/h
+  $('mgScore').textContent=0; $('mgTime').textContent=20;
+  $('mgmsg').innerHTML = `<h2>🎣 Firefly Catch</h2>
+    <p>Tap the fireflies before they drift away. Each one is a coin — and ${P.name} loves the company.</p>
+    <button class="btn" id="mgStart">Start</button><button class="btn ghost" id="mgQuit">Maybe later</button>`;
+  $('mgStart').onclick=()=>{ $('mgmsg').style.display='none'; mgState.running=true; mgState.last=performance.now(); requestAnimationFrame(fireflyFrame); };
+  $('mgQuit').onclick=closeGame;
+}
+function fireflyTap(x,y){
+  for(let i=mgState.flies.length-1;i>=0;i--){ const f=mgState.flies[i];
+    if (Math.hypot(f.x-x,f.y-y) < f.r+16){ mgState.flies.splice(i,1); mgState.score++;
+      sfx('firefly');
+      mctx.fillStyle='#fff'; mctx.font='20px serif'; mctx.textAlign='center'; mctx.fillText('✨',f.x,f.y); break; } }
+}
+function fireflyFrame(ts){
+  if(!mgState||!mgState.running) return;
+  const dt=Math.min(50,ts-mgState.last); mgState.last=ts;
+  const w=mgState.w, h=mgState.h;
+  mgState.time-=dt/1000;
+  $('mgTime').textContent=Math.max(0,Math.ceil(mgState.time)); $('mgScore').textContent=mgState.score;
+  mgState.spawn-=dt;
+  if(mgState.spawn<=0){ mgState.spawn=420+Math.random()*380;
+    mgState.flies.push({x:30+Math.random()*(w-60),y:h+20,vy:-(0.04+Math.random()*0.045),vx:(Math.random()-0.5)*0.03,p:Math.random()*6.28,r:20}); }
+  nightBG(w,h,ts);
+  for(let i=mgState.flies.length-1;i>=0;i--){ const f=mgState.flies[i]; f.p+=0.08; f.y+=f.vy*dt; f.x+=Math.sin(f.p)*0.5+f.vx*dt;
+    if(f.y<-30){ mgState.flies.splice(i,1); continue; }
+    const glow=0.6+0.4*Math.sin(f.p);
+    mctx.globalAlpha=glow*0.5; mctx.fillStyle='#fff6a8'; mctx.beginPath(); mctx.arc(f.x,f.y,f.r*1.7,0,7); mctx.fill();
+    mctx.globalAlpha=1; mctx.fillStyle='#fff2c2'; mctx.beginPath(); mctx.arc(f.x,f.y,f.r*0.5,0,7); mctx.fill();
+    mctx.fillStyle='#e8c84a'; mctx.beginPath(); mctx.arc(f.x,f.y,f.r*0.28,0,7); mctx.fill(); }
+  if(mgState.time<=0){ endGame('firefly'); return; }
+  requestAnimationFrame(fireflyFrame);
+}
+
+// ---------- Kick-a-Ball ----------
+function startKick(){
+  mgMode='kick';
+  mgState={ score:0, rally:0, best:0, time:25, last:performance.now(), running:false, w:0, h:0,
+    ball:null, pet:{x:0, kickCd:0}, pops:[] };
+  openMG();                                  // show first so the canvas has real dimensions
+  mgState.pet.x = mgState.w*0.3;             // (mgResize inside openMG filled w/h)
+  resetBall();                               // size + place the ball against real dimensions
+  $('mgScore').textContent=0; $('mgTime').textContent=25;
+  $('mgmsg').innerHTML=`<h2>⚽ Kick-a-Ball</h2>
+    <p>Flick the ball to keep it bouncing — ${P.name} will chase and bop it back. Every kick is a coin and a happy little heart.</p>
+    <button class="btn" id="mgStart">Start</button><button class="btn ghost" id="mgQuit">Maybe later</button>`;
+  $('mgStart').onclick=()=>{ $('mgmsg').style.display='none'; mgState.running=true; mgState.last=performance.now(); requestAnimationFrame(kickFrame); };
+  $('mgQuit').onclick=closeGame;
+}
+function resetBall(){ const s=mgState; s.ball={ x:s.w*0.5, y:s.h*0.35, vx:0, vy:0, r:Math.min(s.w,s.h)*0.06 }; }
+function kickTap(x,y){
+  const b=mgState.ball, d=Math.hypot(b.x-x,b.y-y);
+  if(d < b.r+36){
+    const ang=Math.atan2(b.y-y, b.x-x);            // direction away from finger
+    b.vx = Math.cos(ang)*0.38 + (Math.random()-0.5)*0.1;
+    b.vy = -Math.abs(Math.sin(ang)*0.42) - 0.42;   // always lofts upward
+    mgState.score++; mgState.rally++; mgState.best=Math.max(mgState.best,mgState.rally);
+    mgState.pops.push({x:b.x,y:b.y-b.r,life:1,txt:'💗'});
+    sfx('kick');
+  }
+}
+function kickFrame(ts){
+  if(!mgState||!mgState.running) return;
+  const dt=Math.min(50,ts-mgState.last); mgState.last=ts;
+  const s=mgState, w=s.w, h=s.h, floor=h*0.84;
+  s.time-=dt/1000;
+  $('mgTime').textContent=Math.max(0,Math.ceil(s.time)); $('mgScore').textContent=s.score;
+
+  // ball physics
+  const b=s.ball, g=0.0012;
+  b.vy += g*dt; b.x += b.vx*dt; b.y += b.vy*dt;
+  if(b.x < b.r){ b.x=b.r; b.vx=Math.abs(b.vx)*0.8; }
+  if(b.x > w-b.r){ b.x=w-b.r; b.vx=-Math.abs(b.vx)*0.8; }
+  if(b.y < b.r){ b.y=b.r; b.vy=Math.abs(b.vy)*0.6; }
+  if(b.y > floor-b.r){ b.y=floor-b.r;
+    if(b.vy>0.05){ b.vy=-b.vy*0.55; b.vx*=0.9; } else { b.vy=0; b.vx*=0.85; s.rally=0; } }
+
+  // pet chases the ball and bops it up when close (entertains itself)
+  const p=s.pet; p.kickCd-=dt;
+  p.x += Math.sign(b.x-p.x)*Math.min(Math.abs(b.x-p.x), 0.32*dt);
+  p.x = Math.max(w*0.1, Math.min(w*0.9, p.x));
+  const petTop = floor - Math.min(w,h)*0.24;
+  if(p.kickCd<=0 && Math.abs(b.x-p.x) < b.r+Math.min(w,h)*0.13 && b.y > petTop){
+    b.vy = -0.5 - Math.random()*0.15;
+    b.vx = (w*0.5-b.x)*0.0009 + (Math.random()-0.5)*0.15;
+    p.kickCd=350; s.pops.push({x:p.x,y:petTop,life:1,txt:'✨'});
+    sfx('petkick');
+  }
+
+  // draw
+  kickBG(w,h,floor);
+  const sh=1-Math.min(1,(floor-b.r-b.y)/(h*0.4));
+  mctx.fillStyle='rgba(0,0,0,.18)'; mctx.beginPath(); mctx.ellipse(b.x,floor-4,b.r*(0.6+0.5*sh),b.r*0.25,0,0,7); mctx.fill();
+  drawKickPet(p.x, floor, Math.min(w,h)*0.17, ts);
+  drawBall(b);
+  for(let i=s.pops.length-1;i>=0;i--){ const o=s.pops[i]; o.y-=0.04*dt; o.life-=dt*0.0016;
+    if(o.life<=0){ s.pops.splice(i,1); continue; }
+    mctx.globalAlpha=o.life; mctx.font='22px serif'; mctx.textAlign='center'; mctx.fillText(o.txt,o.x,o.y); mctx.globalAlpha=1; }
+
+  if(s.time<=0){ endGame('kick'); return; }
+  requestAnimationFrame(kickFrame);
+}
+function drawBall(b){
+  mctx.fillStyle='#fff'; mctx.beginPath(); mctx.arc(b.x,b.y,b.r,0,7); mctx.fill();
+  mctx.strokeStyle='#d76a6a'; mctx.lineWidth=Math.max(2,b.r*0.16);
+  mctx.beginPath(); mctx.arc(b.x,b.y,b.r*0.6,0,7); mctx.stroke();
+  mctx.fillStyle='#d76a6a'; mctx.beginPath(); mctx.arc(b.x,b.y,b.r*0.22,0,7); mctx.fill();
+}
+function drawKickPet(x, floor, R, ts){
+  const sp=SPECIES[P.species], y=floor-R*0.85 + Math.sin(ts*0.006)*2;
+  mctx.fillStyle='rgba(0,0,0,.15)'; mctx.beginPath(); mctx.ellipse(x,floor-2,R*0.8,R*0.22,0,0,7); mctx.fill();
+  mctx.fillStyle=sp.body; mctx.beginPath(); mctx.ellipse(x,y,R*0.95,R*0.85,0,0,7); mctx.fill();
+  mctx.fillStyle=sp.belly; mctx.beginPath(); mctx.ellipse(x,y+R*0.15,R*0.55,R*0.45,0,0,7); mctx.fill();
+  mctx.strokeStyle='#4a3b30'; mctx.lineWidth=R*0.08; mctx.lineCap='round';
+  for(const sgn of[-1,1]){ mctx.beginPath(); mctx.arc(x+sgn*R*0.32,y-R*0.05,R*0.15,1.15*Math.PI,1.85*Math.PI); mctx.stroke(); }
+  mctx.strokeStyle='#7a4a44'; mctx.lineWidth=R*0.06;
+  mctx.beginPath(); mctx.arc(x,y+R*0.18,R*0.14,0.15*Math.PI,0.85*Math.PI); mctx.stroke();
+}
+function nightBG(w,h,ts){
+  const g=mctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#211d38'); g.addColorStop(1,'#3a3358');
+  mctx.fillStyle=g; mctx.fillRect(0,0,w,h);
+  for(const s of stars){ mctx.globalAlpha=.3+.3*Math.sin(s.p+ts*0.001); mctx.fillStyle='#fff'; mctx.fillRect(s.x*w,s.y*h*0.7,2,2); }
+  mctx.globalAlpha=1;
+}
+function kickBG(w,h,floor){
+  const g=mctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#bfe6f2'); g.addColorStop(1,'#eafbe7');
+  mctx.fillStyle=g; mctx.fillRect(0,0,w,h);
+  mctx.fillStyle='#ffe9a8'; mctx.beginPath(); mctx.arc(w*0.82,h*0.15,26,0,7); mctx.fill();
+  mctx.fillStyle='#9fd17f'; mctx.fillRect(0,floor,w,h-floor);
+  mctx.fillStyle='#8cc46c'; mctx.fillRect(0,floor,w,4);
+}
+function endGame(mode){
+  mgState.running=false;
+  const earned=mgState.score;
+  S.coins += earned;
+  if (mode==='kick'){
+    P.happy=clamp(P.happy+Math.min(28,earned*2));
+    P.energy=clamp(P.energy-10);
+    P.full=clamp(P.full-12);
+  } else if (mode==='push'){
+    P.happy=clamp(P.happy+Math.min(24,earned*3));
+    P.energy=clamp(P.energy-6);
+    P.full=clamp(P.full-10);
+  } else if (mode==='berry'){
+    P.happy=clamp(P.happy+Math.min(22,earned*2));
+    P.energy=clamp(P.energy-5);
+    P.full=clamp(P.full-6);
+  } else if (mode==='memory'){
+    P.happy=clamp(P.happy+Math.min(22,earned*3));
+    P.energy=clamp(P.energy-4);
+    P.full=clamp(P.full-5);
+  } else if (mode==='count'){
+    P.happy=clamp(P.happy+Math.min(22,earned*3));
+    P.energy=clamp(P.energy-4);
+    P.full=clamp(P.full-5);
+  } else {
+    P.happy=clamp(P.happy+Math.min(20,earned*1.5));
+    P.energy=clamp(P.energy-8);
+    P.full=clamp(P.full-8);
+  }
+  gainXP(mode==='kick'   ? Math.max(3, Math.floor(earned/2))
+       : mode==='push'   ? Math.max(2, earned)
+       : mode==='memory' ? Math.max(3, earned)
+       : mode==='count'  ? Math.max(3, earned)
+       : Math.max(2, Math.floor(earned/3)));
+  if (earned>0) sfx('endgame');
+  save(); refresh();
+  $('mgmsg').style.display='flex';
+  let title, tail;
+  $('mghud').style.display='flex';
+  if (mode==='kick'){
+    title = `⚽ ${earned} 🪙`;
+    tail = `${P.name} chased every kick — ${earned>0?`+${earned} coins and a very happy heart.`:'still a lovely romp!'}`;
+  } else if (mode==='push'){
+    title = `🕳️ ${earned} 🪙`;
+    tail = `${P.name} watched ${earned} thing${earned===1?'':'s'} drop into the hole. ${earned>0?`+${earned} coins!`:'Better roll next time.'}`;
+  } else if (mode==='berry'){
+    title = `🍓 ${earned} 🪙`;
+    tail = `${P.name} helped sort ${earned} treat${earned===1?'':'s'}! ${earned>=20?'Brilliant colours!':earned>10?'Great sorting!':'Keep practising!'}`;
+  } else if (mode==='memory'){
+    const pairs = mgState.cards.length/2;
+    title = `🌸 ${earned} 🪙`;
+    tail = `${P.name} found ${earned} of ${pairs} pairs! ${earned===pairs?'Perfect memory!':'Good try!'}`;
+  } else if (mode==='count'){
+    title = `🌻 ${earned} 🪙`;
+    tail = `${P.name} counted along! ${mgState.score} of ${mgState.totalRounds} right.`;
+  } else {
+    title = `🎣 ${earned} 🪙`;
+    tail = `${P.name} had a lovely time. ${earned>0?`+${earned} coins, and a happier heart.`:'Better luck next time!'}`;
+  }
+  $('mgmsg').innerHTML=`<h2>${title}</h2><p>${tail}</p>
+    <button class="btn" id="mgAgain">Play again</button><button class="btn ghost" id="mgDone">Done</button>`;
+  $('mgAgain').onclick = mode==='kick' ? startKick : mode==='push' ? startPush
+    : mode==='berry' ? startBerry : mode==='memory' ? startMemory : mode==='count' ? startCount : startFirefly;
+  $('mgDone').onclick  = closeGame;
+}
+
+// ---------- Hole-in-One (push objects into a hole) ----------
+// Top-down meadow with a sunken hole near the top. A handful of scattered
+// trinkets (acorns, leaves, pebbles, mushrooms) sit around the field. Drag
+// any of them to fling it across the grass; flicks are damped and capped so
+// the path reads. When an object's center crosses the hole rim it drops in
+// for a coin. Friction stops things eventually; objects bump each other.
+function startPush(){
+  mgMode='push';
+  mgState={ objs:[], hole:null, pet:null, score:0, time:30, last:performance.now(),
+    running:false, w:0, h:0, pops:[], drag:null, samples:[] };
+  openMG();                                  // sizes the canvas → mgState.w/h
+  layoutPush();
+  $('mgScore').textContent=0; $('mgTime').textContent=30;
+  $('mgmsg').innerHTML=`<h2>🕳️ Hole-in-One</h2>
+    <p>Flick the acorns, pebbles and leaves into the hole. Heavy little things — and ${P.name} keeps trying to bat them back out!</p>
+    <button class="btn" id="mgStart">Start</button><button class="btn ghost" id="mgQuit">Maybe later</button>`;
+  $('mgStart').onclick=()=>{ $('mgmsg').style.display='none'; mgState.running=true; mgState.last=performance.now(); requestAnimationFrame(pushFrame); };
+  $('mgQuit').onclick=closeGame;
+}
+function layoutPush(){
+  const s=mgState, w=s.w, h=s.h, R=Math.min(w,h);
+  s.hole = { x: w*0.5, y: h*0.5, r: R*0.16 };
+  const KINDS = [
+    { e:'🌰', size: R*0.048 },
+    { e:'🍂', size: R*0.055 },
+    { e:'🪨', size: R*0.058 },
+    { e:'🍄', size: R*0.050 },
+    { e:'🌿', size: R*0.055 },
+    { e:'🌰', size: R*0.048 },
+  ];
+  // arrange the items in a loose ring around the hole
+  s.objs = [];
+  const n = 8;
+  const ringR = s.hole.r * 2.4;
+  const jitter = R * 0.06;
+  for (let i=0; i<n; i++){
+    const k = KINDS[Math.floor(Math.random()*KINDS.length)];
+    const ang = (i/n) * Math.PI*2 + Math.random()*0.18;
+    const rr = ringR + (Math.random()-0.5) * jitter*2;
+    let x = s.hole.x + Math.cos(ang) * rr;
+    let y = s.hole.y + Math.sin(ang) * rr;
+    // keep inside the stage with a little padding
+    x = Math.max(k.size+8, Math.min(w-k.size-8, x));
+    y = Math.max(k.size+8, Math.min(h-k.size-8, y));
+    s.objs.push({ x, y, vx:0, vy:0, r:k.size, e:k.e, sunk:false, dragging:false, fall:0 });
+  }
+  // pet starts near a corner and toddles toward the nearest item
+  s.pet = {
+    x: w*0.18, y: h*0.85,
+    r: R*0.09,
+    vx: 0, vy: 0,
+    step: 0, target: null, retargetAt: 0
+  };
+}
+function pushDown(x, y){
+  const s=mgState; if (!s) return false;
+  for (const o of s.objs){
+    if (o.sunk) continue;
+    if (Math.hypot(o.x-x, o.y-y) < o.r + 28){
+      // grab — but the object doesn't snap to the finger; instead it lags
+      // behind a "drag target" that the finger steers. Heavy crate feel.
+      o.dragging = true; o.vx = 0; o.vy = 0;
+      o.gx = o.x; o.gy = o.y;
+      s.drag = o; s.samples = [{ x, y, t: performance.now() }];
+      return true;
+    }
+  }
+  return false;
+}
+function pushMove(x, y){
+  const s=mgState; if (!s || !s.drag) return;
+  const o=s.drag;
+  o.gx = x; o.gy = y;          // finger position — object eases toward it
+  s.samples.push({ x, y, t: performance.now() });
+  if (s.samples.length > 6) s.samples.shift();
+}
+function pushUp(){
+  const s=mgState; if (!s || !s.drag) return;
+  const o=s.drag; o.dragging = false;
+  const a=s.samples[0], b=s.samples[s.samples.length-1];
+  if (a && b && b !== a){
+    const dt = Math.max(8, b.t - a.t);
+    const damp = 0.022;            // 10× harder for the player to move
+    let vx = (b.x - a.x) / dt * damp;
+    let vy = (b.y - a.y) / dt * damp;
+    const sp = Math.hypot(vx, vy), maxV = 0.085;
+    if (sp > maxV){ vx *= maxV/sp; vy *= maxV/sp; }
+    o.vx = vx; o.vy = vy;
+  } else { o.vx = 0; o.vy = 0; }
+  s.drag = null; s.samples = [];
+}
+function pushFrame(ts){
+  if (!mgState || !mgState.running) return;
+  const dt = Math.min(50, ts - mgState.last); mgState.last = ts;
+  const s = mgState, w = s.w, h = s.h;
+  s.time -= dt / 1000;
+  $('mgTime').textContent = Math.max(0, Math.ceil(s.time));
+  $('mgScore').textContent = s.score;
+
+  const friction = 0.0056;       // 2× drag — items feel heavier
+  // dragged objects don't snap to the finger — they trundle toward it,
+  // capped at a heavy "you're hauling this" speed.
+  const dragMaxStep = 0.12 * dt;          // px/ms speed cap while held
+  for (const o of s.objs){
+    if (o.sunk) continue;
+    if (o.dragging){
+      const dx = (o.gx ?? o.x) - o.x, dy = (o.gy ?? o.y) - o.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 0.001){
+        const step = Math.min(d, dragMaxStep);
+        o.x += dx / d * step;
+        o.y += dy / d * step;
+      }
+      continue;
+    }
+    o.x += o.vx * dt; o.y += o.vy * dt;
+    if (o.x < o.r){ o.x = o.r; o.vx = -o.vx*0.6; }
+    if (o.x > w-o.r){ o.x = w-o.r; o.vx = -o.vx*0.6; }
+    if (o.y < o.r){ o.y = o.r; o.vy = -o.vy*0.6; }
+    if (o.y > h-o.r){ o.y = h-o.r; o.vy = -o.vy*0.6; }
+    const sp = Math.hypot(o.vx, o.vy);
+    if (sp > 0){
+      const dec = friction * dt;
+      if (sp > dec){ const k = (sp - dec) / sp; o.vx *= k; o.vy *= k; }
+      else { o.vx = 0; o.vy = 0; }
+    }
+    const dh = Math.hypot(o.x - s.hole.x, o.y - s.hole.y);
+    if (dh < s.hole.r - o.r*0.3){
+      o.sunk = true; o.fall = 1;
+      s.score++; S.coins++;
+      s.pops.push({ x:o.x, y:o.y, life:1, txt:'🪙' });
+      sfx('firefly');
+    } else if (dh < s.hole.r + o.r*0.5){
+      // a soft pull when grazing the rim — gives near-misses a sympathy nudge
+      const k = 0.0007 * dt;
+      o.vx += (s.hole.x - o.x) * k;
+      o.vy += (s.hole.y - o.y) * k;
+    }
+  }
+  // object–object collisions (no stacking)
+  for (let i=0; i<s.objs.length; i++){
+    const a = s.objs[i]; if (a.sunk) continue;
+    for (let j=i+1; j<s.objs.length; j++){
+      const b = s.objs[j]; if (b.sunk) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+      const minD = a.r + b.r;
+      if (d > 0 && d < minD){
+        const nx = dx / d, ny = dy / d;
+        const overlap = (minD - d) * 0.5;
+        if (!a.dragging){ a.x -= nx * overlap; a.y -= ny * overlap; }
+        if (!b.dragging){ b.x += nx * overlap; b.y += ny * overlap; }
+        if (!a.dragging && !b.dragging){
+          const av = a.vx*nx + a.vy*ny;
+          const bv = b.vx*nx + b.vy*ny;
+          a.vx += (bv - av) * nx * 0.55; a.vy += (bv - av) * ny * 0.55;
+          b.vx += (av - bv) * nx * 0.55; b.vy += (av - bv) * ny * 0.55;
+        }
+      }
+    }
+  }
+
+  // pet AI: chase the nearest non-sunk object that isn't being dragged;
+  // on contact, shove it toward the hole (only from the far side so the
+  // pet never accidentally knocks something out across the hole).
+  pushPetTick(s, dt);
+
+  pushBG(w, h);
+  // hole (top-down ellipse with subtle inner highlight)
+  mctx.fillStyle = '#2a221c';
+  mctx.beginPath(); mctx.ellipse(s.hole.x, s.hole.y, s.hole.r, s.hole.r*0.55, 0, 0, 7); mctx.fill();
+  mctx.fillStyle = 'rgba(255,255,255,0.05)';
+  mctx.beginPath(); mctx.ellipse(s.hole.x, s.hole.y - s.hole.r*0.18, s.hole.r*0.6, s.hole.r*0.20, 0, 0, 7); mctx.fill();
+  // objects
+  mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+  for (const o of s.objs){
+    if (o.sunk) continue;
+    mctx.fillStyle = 'rgba(0,0,0,.22)';
+    mctx.beginPath(); mctx.ellipse(o.x, o.y + o.r*0.85, o.r*0.85, o.r*0.25, 0, 0, 7); mctx.fill();
+    mctx.font = `${o.r*2.2}px serif`;
+    mctx.fillText(o.e, o.x, o.y);
+  }
+  mctx.textBaseline = 'alphabetic';
+
+  drawPushPet(s, ts);
+
+  for (let i=s.pops.length-1; i>=0; i--){
+    const o = s.pops[i]; o.y -= 0.04 * dt; o.life -= dt * 0.0016;
+    if (o.life <= 0){ s.pops.splice(i, 1); continue; }
+    mctx.globalAlpha = o.life; mctx.font = '22px serif'; mctx.textAlign = 'center';
+    mctx.fillText(o.txt, o.x, o.y); mctx.globalAlpha = 1;
+  }
+
+  if (s.time <= 0){ endGame('push'); return; }
+  // also end early if every object is in the hole — no point in standing around
+  if (s.objs.every(o => o.sunk)){ endGame('push'); return; }
+  requestAnimationFrame(pushFrame);
+}
+function pushBG(w, h){
+  const g = mctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#cce8a8'); g.addColorStop(1, '#9fcf86');
+  mctx.fillStyle = g; mctx.fillRect(0, 0, w, h);
+  mctx.fillStyle = 'rgba(120,160,90,.35)';
+  for (let i = 0; i < 22; i++){
+    const x = (i * 73) % w, y = (i * 113) % h;
+    mctx.fillRect(x, y, 3, 8);
+  }
+}
+function pushPetTick(s, dt){
+  const pet = s.pet; if (!pet) return;
+  // pick (or re-pick) a target: nearest unsunk object, avoiding ones the
+  // player is currently dragging or pets the pet has already shoved into a
+  // corner. "Cornered" = the object's center is within cornerDist of any
+  // canvas edge — the pet abandons it and goes after a fresher one.
+  pet.retargetAt -= dt;
+  const cornerDist = Math.min(s.w, s.h) * 0.14;
+  const cornered = (o) => o && (o.x < cornerDist || o.y < cornerDist
+                              || o.x > s.w - cornerDist || o.y > s.h - cornerDist);
+  const targetGone = !pet.target || pet.target.sunk || pet.target.dragging || cornered(pet.target);
+  if (targetGone || pet.retargetAt <= 0){
+    let best = null, bestD = Infinity;
+    for (const o of s.objs){
+      if (o.sunk || o.dragging || cornered(o)) continue;
+      const d = Math.hypot(o.x - pet.x, o.y - pet.y);
+      if (d < bestD){ bestD = d; best = o; }
+    }
+    pet.target = best;
+    pet.retargetAt = 700 + Math.random() * 500;
+  }
+  // walk toward an offset that puts the pet on the *opposite* side of the
+  // object from the pet's destination — for the meddling pet, that's the
+  // SAME side as the hole, so a bump sends the object AWAY from the hole.
+  let moveX = 0, moveY = 0;
+  if (pet.target){
+    const o = pet.target;
+    const hx = s.hole.x - o.x, hy = s.hole.y - o.y;
+    const hl = Math.hypot(hx, hy) || 1;
+    const standDist = o.r + pet.r * 0.9;
+    const gx = o.x + (hx / hl) * standDist;      // hole-side of the object
+    const gy = o.y + (hy / hl) * standDist;
+    moveX = gx - pet.x; moveY = gy - pet.y;
+    const ml = Math.hypot(moveX, moveY);
+    if (ml > 1){
+      const speed = 0.08;                            // px/ms toddle (half speed)
+      const k = Math.min(speed, ml / dt) / ml;
+      pet.vx = moveX * k; pet.vy = moveY * k;
+    } else {
+      pet.vx = 0; pet.vy = 0;
+    }
+  } else {
+    pet.vx *= 0.9; pet.vy *= 0.9;
+  }
+  pet.x += pet.vx * dt; pet.y += pet.vy * dt;
+  pet.x = Math.max(pet.r, Math.min(s.w - pet.r, pet.x));
+  pet.y = Math.max(pet.r, Math.min(s.h - pet.r, pet.y));
+  pet.step += dt * 0.01 * (Math.hypot(pet.vx, pet.vy) > 0.02 ? 1 : 0);
+
+  // bump objects the pet touches: push them away with a hole-biased nudge
+  for (const o of s.objs){
+    if (o.sunk || o.dragging) continue;
+    const dx = o.x - pet.x, dy = o.y - pet.y;
+    const d = Math.hypot(dx, dy);
+    const minD = o.r + pet.r;
+    if (d > 0 && d < minD){
+      const nx = dx / d, ny = dy / d;
+      const overlap = minD - d;
+      o.x += nx * overlap; o.y += ny * overlap;
+      // shove direction: blend "away from pet" with "away from the hole" so
+      // the pet is actively meddling — every bump sends the object outward.
+      const hx = o.x - s.hole.x, hy = o.y - s.hole.y;       // away-from-hole
+      const hl = Math.hypot(hx, hy) || 1;
+      const sx = nx * 0.35 + (hx / hl) * 0.65;
+      const sy = ny * 0.35 + (hy / hl) * 0.65;
+      const sl = Math.hypot(sx, sy) || 1;
+      const shove = 0.14;     // a bit more oomph so meddling actually meddles
+      o.vx += (sx / sl) * shove;
+      o.vy += (sy / sl) * shove;
+    }
+  }
+}
+
+function drawPushPet(s, ts){
+  if (!P || !s.pet) return;
+  const sp = SPECIES[P.species];
+  const pet = s.pet, R = pet.r;
+  const moving = Math.hypot(pet.vx, pet.vy) > 0.02;
+  const x = pet.x;
+  const y = pet.y + (moving ? Math.sin(pet.step * 2) * 2 : Math.sin(ts * 0.004) * 1.5);
+  mctx.fillStyle = 'rgba(0,0,0,.20)';
+  mctx.beginPath(); mctx.ellipse(x, y + R*0.95, R*0.85, R*0.25, 0, 0, 7); mctx.fill();
+  mctx.fillStyle = sp.body;
+  mctx.beginPath(); mctx.ellipse(x, y, R*1.02, R*0.92, 0, 0, 7); mctx.fill();
+  mctx.fillStyle = sp.belly;
+  mctx.beginPath(); mctx.ellipse(x, y + R*0.18, R*0.6, R*0.5, 0, 0, 7); mctx.fill();
+  // feet bob when moving
+  const f1 = moving ? Math.sin(pet.step * 4) * 4 : 0;
+  mctx.fillStyle = sp.body;
+  mctx.beginPath(); mctx.ellipse(x - R*0.42, y + R*0.82 + f1,  R*0.22, R*0.16, 0, 0, 7); mctx.fill();
+  mctx.beginPath(); mctx.ellipse(x + R*0.42, y + R*0.82 - f1,  R*0.22, R*0.16, 0, 0, 7); mctx.fill();
+  // happy eyes
+  mctx.strokeStyle = '#4a3b30'; mctx.lineWidth = R*0.07; mctx.lineCap = 'round';
+  for (const sgn of [-1, 1]){
+    mctx.beginPath();
+    mctx.arc(x + sgn*R*0.34, y - R*0.03, R*0.17, 1.15*Math.PI, 1.85*Math.PI);
+    mctx.stroke();
+  }
+  // cheeks
+  mctx.fillStyle = sp.cheek; mctx.globalAlpha = 0.7;
+  mctx.beginPath(); mctx.arc(x - R*0.42, y + R*0.18, R*0.10, 0, 7); mctx.fill();
+  mctx.beginPath(); mctx.arc(x + R*0.42, y + R*0.18, R*0.10, 0, 7); mctx.fill();
+  mctx.globalAlpha = 1;
+  // little smile
+  mctx.strokeStyle = '#7a4a44'; mctx.lineWidth = R*0.05;
+  mctx.beginPath(); mctx.arc(x, y + R*0.30, R*0.16, 0.15*Math.PI, 0.85*Math.PI); mctx.stroke();
+}
+
+// ===================== LEARNING MINI-GAMES =====================
+
+// shared: rounded rect path helper
+function rr(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+// ---------- Berry Sort ----------
+function startBerry(){
+  mgMode='berry';
+  mgState={ score:0, time:30, last:performance.now(), running:false, w:0, h:0, current:null, shake:0, pops:[] };
+  openMG();
+  $('mgScore').textContent=0; $('mgTime').textContent=30;
+  nextSortBerry();
+  $('mgmsg').innerHTML=`<h2>🍓 Berry Sort</h2>
+    <p>Tap the basket that matches each berry! Help ${P.name} sort the harvest.</p>
+    <button class="btn" id="mgStart">Start</button>
+    <button class="btn ghost" id="mgQuit">Maybe later</button>`;
+  $('mgStart').onclick=()=>{ $('mgmsg').style.display='none'; mgState.running=true; mgState.last=performance.now(); requestAnimationFrame(berryFrame); };
+  $('mgQuit').onclick=closeGame;
+}
+function nextSortBerry(){ mgState.current=SORT_BERRIES[Math.floor(Math.random()*SORT_BERRIES.length)]; }
+function berryTap(x,y){
+  const s=mgState; if (!s.current||s.shake>0) return;
+  const bw=s.w/3, by=s.h*0.64;
+  if (y<by) return;
+  const bi=Math.floor(x/bw); if (bi<0||bi>2) return;
+  if (bi===s.current.basket){
+    s.score++; $('mgScore').textContent=s.score;
+    sfx('firefly');
+    s.pops.push({x:bw*bi+bw/2, y:by+s.h*0.16, life:1, txt:s.current.e});
+    nextSortBerry();
+  } else {
+    s.shake=300; sfx('kick');
+  }
+}
+function berryFrame(ts){
+  if(!mgState||!mgState.running) return;
+  const dt=Math.min(50,ts-mgState.last); mgState.last=ts;
+  const s=mgState, w=s.w, h=s.h;
+  s.time-=dt/1000; if(s.shake>0) s.shake-=dt;
+  $('mgTime').textContent=Math.max(0,Math.ceil(s.time));
+  const g=mctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'#dff8e8'); g.addColorStop(1,'#b8e8a0');
+  mctx.fillStyle=g; mctx.fillRect(0,0,w,h);
+  mctx.fillStyle='#94c870'; mctx.fillRect(0,h*0.60,w,h*0.40);
+  // current item — large, centred, shake on wrong
+  const shakeX=s.shake>0?Math.sin(s.shake*0.05)*(s.shake/30)*8:0;
+  mctx.font=`${Math.min(w,h)*0.24}px serif`;
+  mctx.textAlign='center'; mctx.textBaseline='middle';
+  mctx.fillText(s.current.e, w/2+shakeX, h*0.32);
+  mctx.fillStyle='#5a4a3a';
+  mctx.font=`bold ${h*0.052}px sans-serif`; mctx.textBaseline='alphabetic';
+  mctx.fillText('Which basket?', w/2, h*0.57);
+  // 3 baskets
+  const bw=w/3, bh=h*0.29, by=h*0.63;
+  for(let i=0;i<3;i++){
+    const bc=SORT_BERRIES[i], bx=bw*i;
+    mctx.fillStyle=bc.fill+'33';
+    rr(mctx,bx+8,by,bw-16,bh,14); mctx.fill();
+    mctx.strokeStyle=bc.fill; mctx.lineWidth=3;
+    rr(mctx,bx+8,by,bw-16,bh,14); mctx.stroke();
+    mctx.font=`${Math.min(w,h)*0.10}px serif`;
+    mctx.textAlign='center'; mctx.textBaseline='middle';
+    mctx.fillText(bc.e, bx+bw/2, by+bh*0.44);
+    mctx.fillStyle='#5a4a3a';
+    mctx.font=`bold ${h*0.038}px sans-serif`; mctx.textBaseline='alphabetic';
+    mctx.fillText(bc.colorName, bx+bw/2, by+bh*0.86);
+  }
+  for(let i=s.pops.length-1;i>=0;i--){
+    const o=s.pops[i]; o.y-=0.04*dt; o.life-=dt*0.0018;
+    if(o.life<=0){s.pops.splice(i,1); continue;}
+    mctx.globalAlpha=o.life; mctx.font='28px serif';
+    mctx.textAlign='center'; mctx.fillText(o.txt,o.x,o.y); mctx.globalAlpha=1;
+  }
+  if(s.time<=0){ endGame('berry'); return; }
+  requestAnimationFrame(berryFrame);
+}
+
+// ---------- Memory Meadow ----------
+const MEMORY_EMOJIS=['🌸','🦋','🍄','🌻','🐝','🌿','🍓','🐞'];
+
+function startMemory(){
+  mgMode='memory';
+  const pairs=MEMORY_EMOJIS.slice(0,6);
+  const deck=[...pairs,...pairs];
+  for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
+  const cards=deck.map(e=>({ e, flipped:false, matched:false }));
+  mgState={ cards, flipped:[], lockFlip:false, lockTimer:0, score:0, time:90, last:performance.now(), running:false, w:0, h:0, pops:[] };
+  openMG();
+  $('mgScore').textContent=0; $('mgTime').textContent=90;
+  $('mgmsg').innerHTML=`<h2>🌸 Memory Meadow</h2>
+    <p>Flip the cards to find the matching pairs! ${P.name} loves this game.</p>
+    <button class="btn" id="mgStart">Start</button>
+    <button class="btn ghost" id="mgQuit">Maybe later</button>`;
+  $('mgStart').onclick=()=>{ $('mgmsg').style.display='none'; mgState.running=true; mgState.last=performance.now(); requestAnimationFrame(memoryFrame); };
+  $('mgQuit').onclick=closeGame;
+}
+function memoryLayout(s){
+  const cols=4, rows=3, gap=8, pad=14, topPad=50;
+  const cw=Math.floor((s.w-pad*2-gap*(cols-1))/cols);
+  const ch=Math.floor((s.h-topPad-pad*2-gap*(rows-1))/rows);
+  return {cols,rows,cw,ch,ox:pad,oy:topPad+pad,gap};
+}
+function memoryTap(x,y){
+  const s=mgState; if(s.lockFlip||s.flipped.length>=2) return;
+  const {cols,rows,cw,ch,ox,oy,gap}=memoryLayout(s);
+  const col=Math.floor((x-ox)/(cw+gap)), row=Math.floor((y-oy)/(ch+gap));
+  if(col<0||col>=cols||row<0||row>=rows) return;
+  const idx=row*cols+col; if(idx>=s.cards.length) return;
+  const c=s.cards[idx]; if(c.flipped||c.matched) return;
+  c.flipped=true; s.flipped.push(idx); sfx('kick');
+  if(s.flipped.length===2){
+    const [a,b]=s.flipped.map(i=>s.cards[i]);
+    if(a.e===b.e){
+      a.matched=b.matched=true; s.score++; $('mgScore').textContent=s.score;
+      sfx('firefly'); s.pops.push({x:s.w/2,y:s.h*0.45,life:1,txt:'💗'}); s.flipped=[];
+      if(s.cards.every(c=>c.matched)){ setTimeout(()=>endGame('memory'),500); return; }
+    } else { s.lockFlip=true; s.lockTimer=900; }
+  }
+}
+function memoryFrame(ts){
+  if(!mgState||!mgState.running) return;
+  const dt=Math.min(50,ts-mgState.last); mgState.last=ts;
+  const s=mgState;
+  s.time-=dt/1000; $('mgTime').textContent=Math.max(0,Math.ceil(s.time));
+  if(s.lockTimer>0){ s.lockTimer-=dt; if(s.lockTimer<=0){ s.lockFlip=false; s.flipped.forEach(i=>s.cards[i].flipped=false); s.flipped=[]; } }
+  const g=mctx.createLinearGradient(0,0,0,s.h);
+  g.addColorStop(0,'#e8f8d8'); g.addColorStop(1,'#c0e8a0');
+  mctx.fillStyle=g; mctx.fillRect(0,0,s.w,s.h);
+  const {cols,rows,cw,ch,ox,oy,gap}=memoryLayout(s);
+  mctx.font=`${Math.min(cw,ch)*0.56}px serif`;
+  mctx.textAlign='center'; mctx.textBaseline='middle';
+  for(let i=0;i<s.cards.length;i++){
+    const col=i%cols, row=Math.floor(i/cols);
+    const x=ox+col*(cw+gap), y=oy+row*(ch+gap), c=s.cards[i];
+    mctx.fillStyle=c.matched?'#b8eaa8':c.flipped?'#fffaf1':'#c0a882';
+    rr(mctx,x,y,cw,ch,10); mctx.fill();
+    mctx.strokeStyle=c.matched?'#78c858':c.flipped?'#e07a9b':'#a08060'; mctx.lineWidth=2;
+    rr(mctx,x,y,cw,ch,10); mctx.stroke();
+    if(c.flipped||c.matched){ mctx.fillText(c.e,x+cw/2,y+ch/2); }
+    else { mctx.globalAlpha=0.35; mctx.fillText('🌿',x+cw/2,y+ch/2); mctx.globalAlpha=1; }
+  }
+  mctx.textBaseline='alphabetic';
+  for(let i=s.pops.length-1;i>=0;i--){
+    const o=s.pops[i]; o.y-=0.03*dt; o.life-=dt*0.0012;
+    if(o.life<=0){s.pops.splice(i,1); continue;}
+    mctx.globalAlpha=o.life; mctx.font='32px serif';
+    mctx.textAlign='center'; mctx.fillText(o.txt,o.x,o.y); mctx.globalAlpha=1;
+  }
+  if(s.time<=0){ endGame('memory'); return; }
+  requestAnimationFrame(memoryFrame);
+}
+
+// ---------- Counting Garden ----------
+const COUNT_EMOJIS=['🍓','🌼','🍄','🦋','🌿','🐞','🪨','🌸'];
+function startCount(){
+  mgMode='count';
+  mgState={ items:[], currentEmoji:'🍓', choices:[], correct:0, score:0,
+    round:0, totalRounds:8, phase:'question', resultTimer:0, resultCorrect:false,
+    last:performance.now(), running:false, w:0, h:0, pops:[] };
+  openMG();
+  $('mghud').style.display='none';
+  $('mgmsg').innerHTML=`<h2>🌻 Counting Garden</h2>
+    <p>Count what ${P.name} finds and tap the right number!</p>
+    <button class="btn" id="mgStart">Start</button>
+    <button class="btn ghost" id="mgQuit">Maybe later</button>`;
+  $('mgStart').onclick=()=>{ $('mgmsg').style.display='none'; mgState.running=true; mgState.last=performance.now(); newCountRound(); requestAnimationFrame(countFrame); };
+  $('mgQuit').onclick=closeGame;
+}
+function newCountRound(){
+  const s=mgState;
+  const maxN=s.score<4?5:10;
+  const n=1+Math.floor(Math.random()*maxN);
+  s.correct=n; s.currentEmoji=COUNT_EMOJIS[Math.floor(Math.random()*COUNT_EMOJIS.length)];
+  // grid-based placement to avoid overlap
+  const cols=Math.ceil(Math.sqrt(n*2.2)), rows=Math.ceil(n/cols)+1;
+  const positions=[];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
+    positions.push({x:0.12+(c/(cols-1||1))*0.76+(Math.random()-.5)*0.06, y:0.28+(r/(rows-1||1))*0.38+(Math.random()-.5)*0.06});
+  positions.sort(()=>Math.random()-.5);
+  s.items=positions.slice(0,n).map(p=>({x:p.x,y:p.y,wob:Math.random()*6.28}));
+  const wrong=new Set();
+  while(wrong.size<2){ const w=1+Math.floor(Math.random()*Math.max(n+3,10)); if(w!==n) wrong.add(w); }
+  s.choices=[n,...wrong].sort(()=>Math.random()-.5);
+  s.phase='question'; s.resultTimer=0;
+}
+function countTap(x,y){
+  const s=mgState; if(s.phase!=='question') return;
+  const btnH=s.h*0.14, btnY=s.h*0.80, bw=s.w/3;
+  if(y<btnY||y>btnY+btnH) return;
+  const bi=Math.floor(x/bw); if(bi<0||bi>2) return;
+  if(s.choices[bi]===s.correct){ s.score++; sfx('daily'); s.pops.push({x:s.w/2,y:s.h*0.50,life:1,txt:'⭐'}); s.resultCorrect=true; }
+  else { sfx('sleep'); s.resultCorrect=false; }
+  s.phase='result'; s.resultTimer=900;
+}
+function countFrame(ts){
+  if(!mgState||!mgState.running) return;
+  const dt=Math.min(50,ts-mgState.last); mgState.last=ts;
+  const s=mgState, w=s.w, h=s.h;
+  if(s.phase==='result'){ s.resultTimer-=dt; if(s.resultTimer<=0){ s.round++; if(s.round>=s.totalRounds){ endGame('count'); return; } newCountRound(); } }
+  const g=mctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'#e8f8d8'); g.addColorStop(1,'#c8f0a8');
+  mctx.fillStyle=g; mctx.fillRect(0,0,w,h);
+  mctx.fillStyle='#a0d880'; mctx.fillRect(0,h*0.74,w,h*0.26);
+  // pet + speech bubble
+  const petR=Math.min(w,h)*0.085, petX=w*0.5, petY=h*0.165;
+  const bubH=h*0.096, bubW=w*0.68, bubX=petX-bubW/2, bubTop=petY-petR-bubH-4;
+  mctx.fillStyle='#fffaf1'; rr(mctx,bubX,bubTop,bubW,bubH,10); mctx.fill();
+  mctx.strokeStyle='#e3d2b6'; mctx.lineWidth=2; rr(mctx,bubX,bubTop,bubW,bubH,10); mctx.stroke();
+  mctx.fillStyle='#fffaf1'; mctx.beginPath(); mctx.moveTo(petX-7,bubTop+bubH); mctx.lineTo(petX+7,bubTop+bubH); mctx.lineTo(petX,bubTop+bubH+9); mctx.closePath(); mctx.fill();
+  mctx.fillStyle='#5a4a3a'; mctx.font=`bold ${h*0.044}px sans-serif`;
+  mctx.textAlign='center'; mctx.textBaseline='middle';
+  mctx.fillText(`How many ${s.currentEmoji}?`, petX, bubTop+bubH/2); mctx.textBaseline='alphabetic';
+  drawKickPet(petX, petY+petR*0.85, petR, ts);
+  // round indicator
+  mctx.fillStyle='#8a7560'; mctx.font=`bold ${h*0.038}px sans-serif`; mctx.textAlign='right';
+  mctx.fillText(`${s.round+1} / ${s.totalRounds}`, w-14, 38);
+  // items
+  mctx.textAlign='center'; mctx.textBaseline='middle';
+  for(const it of s.items){ it.wob+=0.025; mctx.font=`${h*0.076}px serif`; mctx.fillText(s.currentEmoji, it.x*w, it.y*h+Math.sin(it.wob)*2.5); }
+  mctx.textBaseline='alphabetic';
+  // number buttons
+  const btnH=h*0.14, btnY=h*0.80, bw=w/3;
+  for(let i=0;i<3;i++){
+    const lit=s.phase==='result'&&s.choices[i]===s.correct;
+    mctx.fillStyle=lit?'#9de880':'#fffaf1'; rr(mctx,bw*i+7,btnY,bw-14,btnH,14); mctx.fill();
+    mctx.strokeStyle=lit?'#6ab858':'#c8a87a'; mctx.lineWidth=2; rr(mctx,bw*i+7,btnY,bw-14,btnH,14); mctx.stroke();
+    mctx.fillStyle='#5a4a3a'; mctx.font=`bold ${btnH*0.52}px sans-serif`;
+    mctx.textAlign='center'; mctx.textBaseline='middle'; mctx.fillText(s.choices[i],bw*i+bw/2,btnY+btnH/2);
+    mctx.textBaseline='alphabetic';
+  }
+  for(let i=s.pops.length-1;i>=0;i--){
+    const o=s.pops[i]; o.y-=0.03*dt; o.life-=dt*0.0012;
+    if(o.life<=0){s.pops.splice(i,1); continue;}
+    mctx.globalAlpha=o.life; mctx.font='30px serif';
+    mctx.textAlign='center'; mctx.fillText(o.txt,o.x,o.y); mctx.globalAlpha=1;
+  }
+  requestAnimationFrame(countFrame);
+}
+
+// ---------- Feed (flick from plate to pet) ----------
+// Pick food in shop → this mini-game opens. Drag the snack off the plate at the
+// bottom and flick it up to the Mossling's open mouth. Missed flicks bounce back
+// to the plate (cozy promise — never lose food). Coins only debit on a successful
+// eat. "Tasty toss" = caught mid-flight without touching the plate → bonus joy.
+function startFeed(f){
+  mgMode='feed';
+  mgState={ food:f, w:0, h:0, last:performance.now(), running:false,
+    item:null, plate:null, pet:null, pops:[], samples:[], tasty:true };
+  openMG();
+  layoutFeed();
+  $('mghud').style.display='none';        // feed has no score/timer
+  $('mgmsg').innerHTML=`<h2>${f.e} Feed ${P.name}</h2>
+    <p>Flick the ${f.n} off the plate up to ${P.name}'s mouth. Missed flicks bounce back — no waste.</p>
+    <button class="btn" id="mgStart">Start</button><button class="btn ghost" id="mgQuit">Maybe later</button>`;
+  $('mgStart').onclick=()=>{ $('mgmsg').style.display='none'; mgState.running=true; mgState.last=performance.now(); requestAnimationFrame(feedFrame); };
+  $('mgQuit').onclick=closeGame;
+}
+function layoutFeed(){
+  const s=mgState, w=s.w, h=s.h;
+  const R=Math.min(w,h)*0.18, py=h*0.36;
+  s.pet  = { x:w*0.5, y:py, r:R, mouthY:py+R*0.34, openMouth:0 };
+  s.plate= { x:w*0.5, y:h*0.80, r:Math.min(w,h)*0.18 };
+  const ir=Math.min(w,h)*0.06;
+  s.item = { x:s.plate.x, y:s.plate.y-ir*0.5, vx:0, vy:0, r:ir, dragging:false, settled:true };
+}
+function feedDown(x,y){
+  const s=mgState, it=s.item;
+  if (!it.settled) return false;
+  if (Math.hypot(it.x-x, it.y-y) < it.r+24){
+    it.dragging=true; it.settled=false; it.vx=0; it.vy=0;
+    s.samples=[{x,y,t:performance.now()}];
+    it.x=x; it.y=y;
+    return true;
+  }
+  return false;
+}
+function feedMove(x,y){
+  const s=mgState, it=s.item;
+  if (!it.dragging) return;
+  it.x=x; it.y=y;
+  s.samples.push({x,y,t:performance.now()});
+  if (s.samples.length>6) s.samples.shift();
+}
+function feedUp(){
+  const s=mgState; if (!s||!s.item||!s.item.dragging) return;
+  const it=s.item; it.dragging=false;
+  const a=s.samples[0], b=s.samples[s.samples.length-1];
+  if (a && b && b!==a){
+    const dt=Math.max(8, b.t-a.t);
+    it.vx=(b.x-a.x)/dt; it.vy=(b.y-a.y)/dt;
+  } else { it.vx=0; it.vy=0; }
+  s.samples=[];
+}
+function feedFrame(ts){
+  if(!mgState||!mgState.running) return;
+  const dt=Math.min(50, ts-mgState.last); mgState.last=ts;
+  const s=mgState, it=s.item, pet=s.pet, plate=s.plate;
+
+  if (!it.dragging && !it.settled){
+    const px=it.x, py=it.y;                 // segment start (for swept catch check)
+    it.vy += 0.0014*dt;                     // gravity
+    it.x  += it.vx*dt; it.y += it.vy*dt;
+    if (it.x < it.r){ it.x=it.r; it.vx=Math.abs(it.vx)*0.7; }
+    if (it.x > s.w-it.r){ it.x=s.w-it.r; it.vx=-Math.abs(it.vx)*0.7; }
+    if (it.y < it.r){ it.y=it.r; it.vy=Math.abs(it.vy)*0.5; s.tasty=false; }  // ceiling
+    // swept catch: closest point on segment (prev→new) to pet's mouth
+    const vx=it.x-px, vy=it.y-py, ux=pet.x-px, uy=pet.mouthY-py;
+    const tt = Math.max(0, Math.min(1, (ux*vx+uy*vy)/((vx*vx+vy*vy)||1)));
+    if (Math.hypot(px+tt*vx-pet.x, py+tt*vy-pet.mouthY) < pet.r*0.55){ eatItem(); return; }
+    // landed on/near the plate → bounce + eventually settle (no loss)
+    const restY = plate.y - it.r*0.5;
+    if (it.y > restY){
+      it.y = restY;
+      if (Math.abs(it.vy) > 0.08){ it.vy = -it.vy*0.45; it.vx *= 0.7; s.tasty=false; }
+      else { it.vx=0; it.vy=0; it.settled=true; it.x = plate.x; s.tasty=false; }
+    }
+  }
+  // pet's mouth opens as food approaches
+  const md = Math.hypot(it.x-pet.x, it.y-pet.mouthY);
+  pet.openMouth = Math.max(0, Math.min(1, 1 - md/(pet.r*2.2)));
+
+  feedBG(s);
+  drawFeedPet(pet, ts);
+  drawPlate(plate);
+  drawFeedItem(it, s.food, ts);
+  for(let i=s.pops.length-1;i>=0;i--){ const o=s.pops[i]; o.y-=0.04*dt; o.life-=dt*0.0016;
+    if(o.life<=0){ s.pops.splice(i,1); continue; }
+    mctx.globalAlpha=o.life; mctx.font='22px serif'; mctx.textAlign='center'; mctx.fillText(o.txt,o.x,o.y); mctx.globalAlpha=1; }
+  requestAnimationFrame(feedFrame);
+}
+function eatItem(){
+  const s=mgState, f=s.food, tasty=s.tasty;
+  s.running=false;
+  S.coins -= f.cost;
+  P.full   = clamp(P.full + f.fill);
+  P.happy  = clamp(P.happy + f.joy + (tasty?4:0));
+  gainXP(3 + (tasty?1:0));
+  s.pops.push({x:s.pet.x, y:s.pet.mouthY, life:1, txt:'💗'});
+  sfx('feed'); save(); refresh();
+  $('mgmsg').style.display='flex';
+  const head = tasty ? `${f.e} Tasty toss!` : `${f.e} Yum`;
+  const body = tasty
+    ? `${P.name} caught it mid-air! +${f.fill} tummy, +${f.joy+4} joy.`
+    : `${P.name} happily nibbled the ${f.n}. +${f.fill} tummy, +${f.joy} joy.`;
+  $('mgmsg').innerHTML=`<h2>${head}</h2><p>${body}</p>
+    <button class="btn" id="mgDone">Done</button>`;
+  $('mgDone').onclick = closeGame;
+}
+function feedBG(s){
+  const g=mctx.createLinearGradient(0,0,0,s.h); g.addColorStop(0,'#f7e9d0'); g.addColorStop(1,'#e8c89a');
+  mctx.fillStyle=g; mctx.fillRect(0,0,s.w,s.h);
+  mctx.fillStyle='#d9b787'; mctx.fillRect(0, s.h*0.78, s.w, 3);   // table line
+}
+function drawPlate(p){
+  mctx.fillStyle='rgba(0,0,0,.14)'; mctx.beginPath(); mctx.ellipse(p.x, p.y+6, p.r*1.05, p.r*0.30, 0,0,7); mctx.fill();
+  mctx.fillStyle='#fffaf1';         mctx.beginPath(); mctx.ellipse(p.x, p.y,   p.r,      p.r*0.30, 0,0,7); mctx.fill();
+  mctx.fillStyle='#ecd9bf';         mctx.beginPath(); mctx.ellipse(p.x, p.y,   p.r*0.84, p.r*0.25, 0,0,7); mctx.fill();
+}
+function drawFeedItem(it, food){
+  mctx.fillStyle='rgba(0,0,0,.12)'; mctx.beginPath(); mctx.ellipse(it.x, it.y+it.r*1.2, it.r*0.7, it.r*0.22, 0,0,7); mctx.fill();
+  mctx.font=`${it.r*2.2}px serif`; mctx.textAlign='center'; mctx.textBaseline='middle';
+  mctx.fillText(food.e, it.x, it.y);
+  mctx.textBaseline='alphabetic';
+}
+function drawFeedPet(pet, ts){
+  const sp=SPECIES[P.species], R=pet.r, x=pet.x, y=pet.y + Math.sin(ts*0.0021)*2;
+  mctx.fillStyle='rgba(0,0,0,.15)'; mctx.beginPath(); mctx.ellipse(x, y+R*0.95, R*0.85, R*0.28, 0,0,7); mctx.fill();
+  mctx.fillStyle=sp.body;  mctx.beginPath(); mctx.ellipse(x, y, R*1.02, R*0.92, 0,0,7); mctx.fill();
+  mctx.fillStyle=sp.belly; mctx.beginPath(); mctx.ellipse(x, y+R*0.18, R*0.6, R*0.5, 0,0,7); mctx.fill();
+  // happy eyes
+  mctx.strokeStyle='#4a3b30'; mctx.lineWidth=R*0.07; mctx.lineCap='round';
+  for (const sgn of [-1,1]){ mctx.beginPath(); mctx.arc(x+sgn*R*0.34, y-R*0.03, R*0.17, 1.15*Math.PI, 1.85*Math.PI); mctx.stroke(); }
+  // cheeks
+  mctx.fillStyle=sp.cheek; mctx.globalAlpha=0.7;
+  mctx.beginPath(); mctx.arc(x-R*0.42, y+R*0.18, R*0.10, 0,7); mctx.fill();
+  mctx.beginPath(); mctx.arc(x+R*0.42, y+R*0.18, R*0.10, 0,7); mctx.fill();
+  mctx.globalAlpha=1;
+  // mouth — grows as food approaches
+  const mO=pet.openMouth, mY=y+R*0.34;
+  mctx.fillStyle='#7a4a44';
+  mctx.beginPath(); mctx.ellipse(x, mY, R*(0.07+0.13*mO), R*(0.09+0.22*mO), 0,0,7); mctx.fill();
+}
+
+// ===================== DAILY GREETING + BONUS =====================
+// First open of each new local day, the Mossling greets you and offers a small
+// gift. A streak grows the bonus; a missed day just resets it — no guilt, no
+// penalty (cozy promise). Greeting is time-of-day aware and notices the pet's mood.
+function dayStr(ts){ const d=new Date(ts); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+function greetWord(){ const h=new Date().getHours();
+  return h<6?'Hello, night owl':h<12?'Good morning':h<18?'Good afternoon':'Good evening'; }
+
+// what (if anything) is owed today — pure, doesn't mutate state until claimed
+function pendingDaily(){
+  if (!hasPet()) return null;
+  const today = dayStr(now());
+  if (S.lastVisitDay === today) return null;            // already greeted today
+  const yesterday = dayStr(now() - 864e5);
+  const streak = (S.lastVisitDay === yesterday) ? (S.streak||0) + 1 : 1;
+  const bonus = 5 + Math.min(streak, 7) * 2;            // 7 → 19 coins, capped at a 7-day streak
+  return { today, streak, bonus };
+}
+function anyOverlayOpen(){ return document.querySelector('.ov.show') || mg.classList.contains('show'); }
+
+function checkDaily(){
+  if (anyOverlayOpen()) return;                         // don't interrupt adopt/feed/games
+  const d = pendingDaily();
+  if (!d) return;
+  $('dailyTitle').textContent = `${greetWord()}!`;
+  let sub = d.streak > 1 ? `${P.name} kept the windowsill warm for you.`
+                         : `${P.name} is so happy to see you again!`;
+  if (P.full < 25)        sub += ` Looks a little hungry, though.`;
+  else if (P.energy < 25) sub += ` Looks a bit sleepy, too.`;
+  $('dailySub').textContent = sub;
+  $('dailyStreak').textContent = d.streak > 1 ? `🔥 ${d.streak}-day streak · +${d.bonus} coins` : `A welcome gift · +${d.bonus} coins`;
+  $('dailyClaim').onclick = ()=>claimDaily(d);
+  $('ovDaily').classList.add('show');
+}
+function claimDaily(d){
+  S.coins += d.bonus;
+  if (P) P.happy = clamp(P.happy + 10);
+  S.streak = d.streak;
+  S.lastVisitDay = d.today;
+  gainXP(5);
+  save(); refresh();
+  $('ovDaily').classList.remove('show');
+  spawnHearts(4, W/2, H*0.5);
+  sfx('daily');
+  toast(`+${d.bonus} coins · ${P ? P.name : 'they'} feels loved 💚`);
+}
+
+// ---- Creature Riddle answers ----
+const CREATURES = [
+  {e:'🦋',n:'butterfly', clues:'Has colorful wings · Starts as a caterpillar · Loves flowers',         decoy:{e:'🐝',n:'bee'}},
+  {e:'🐝',n:'bee',       clues:'Makes honey · Has yellow and black stripes · Lives in a hive',          decoy:{e:'🦟',n:'fly'}},
+  {e:'🐸',n:'frog',      clues:'Loves puddles · Starts life as a tadpole · Catches flies with its tongue', decoy:{e:'🦎',n:'lizard'}},
+  {e:'🦔',n:'hedgehog',  clues:'Has sharp spines · Curls into a ball when scared · Comes out at night', decoy:{e:'🐿️',n:'squirrel'}},
+  {e:'🦉',n:'owl',       clues:'Can turn its head nearly all the way · Sleeps in the daytime · Hoots',  decoy:{e:'🐦',n:'bird'}},
+  {e:'🐌',n:'snail',     clues:'Carries its home on its back · Leaves a shiny trail · Is very slow',    decoy:{e:'🪲',n:'beetle'}},
+  {e:'🐿️',n:'squirrel', clues:'Hides nuts for winter · Has a big fluffy tail · Loves to climb',        decoy:{e:'🐇',n:'rabbit'}},
+  {e:'🐇',n:'rabbit',    clues:'Has very long ears · Hops everywhere · Loves carrots',                  decoy:{e:'🐿️',n:'squirrel'}},
+];
+
+// ===================== EXPLORE — world map =====================
+// Each PLACE is a tappable location on the map with a per-pet cooldown.
+// Visiting always rewards a little XP; some places have a chance at coins or a
+// free snack effect. No fail state — the cooldown is the only friction so the
+// world feels lived-in rather than grindable.
+const PLACES = [
+  { id:'meadow', e:'☀️', n:'Meadow',   x:0.18, y:0.28, cd:20,
+    visit:()=>{ P.happy = clamp(P.happy + 6);
+      return { xp:3, msg:`${P.name} basked in the sun` }; } },
+  { id:'wood',   e:'🌲', n:'Wood',     x:0.78, y:0.22, cd:30,
+    visit:()=>{ const c = Math.random()<0.45 ? 2 : 0; if (c) S.coins += c;
+      return { xp:3, coins:c, msg: c ? `${P.name} found ${c} coins in the leaves`
+                                    : `${P.name} listened to the wind` }; } },
+  { id:'pond',   e:'✨', n:'Star Pond', x:0.50, y:0.62, cd:60, only:'night',
+    visit:()=>{ P.happy = clamp(P.happy + 5); S.coins += 1;
+      return { xp:5, coins:1, msg:`${P.name} watched the stars on the water` }; } },
+  { id:'grove',  e:'🍄', n:'Grove',    x:0.28, y:0.82, cd:45,
+    visit:()=>{ const lucky = Math.random()<0.5;
+      if (lucky){ P.full = clamp(P.full + 18); P.happy = clamp(P.happy + 3); }
+      return { xp:3, msg: lucky ? `${P.name} nibbled a wild Sunberry`
+                                : `${P.name} rested under the moss` }; } },
+];
+
+function openExplore(){
+  if (!P) return;
+  if (P.asleep){ toast(`${P.name} is sleeping — let them rest first`); return; }
+  if (P.full < HUNGER_BLOCK){ toast(`${P.name} is too hungry to explore — feed them first`); return; }
+  renderMap();
+  $('ovExplore').classList.add('show');
+}
+function renderMap(){
+  const mv = $('mapView'); mv.innerHTML = '';
+  const hr = new Date().getHours(), isNight = hr<6 || hr>=20;
+  P.lastVisits = P.lastVisits || {};
+  S.unlocked = S.unlocked || ['meadow'];
+  let anyLocked = false;
+  for (const pl of PLACES){
+    if (!S.unlocked.includes(pl.id)){ anyLocked = true; continue; }
+    const b = document.createElement('button'); b.className = 'loc';
+    b.style.left = `calc(${pl.x*100}% - 32px)`;
+    b.style.top  = `calc(${pl.y*100}% - 32px)`;
+    const last = P.lastVisits[pl.id] || 0;
+    const cdLeft = Math.max(0, last + pl.cd*60000 - now());
+    const nightLock = (pl.only==='night') && !isNight;
+    b.disabled = cdLeft>0 || nightLock;
+    let cdLabel = '';
+    if (cdLeft>0){ const m = Math.ceil(cdLeft/60000); cdLabel = m+'m'; }
+    else if (nightLock) cdLabel = '☾ at night';
+    b.innerHTML = `<div class="le">${pl.e}</div><div class="ln">${pl.n}</div>
+      ${cdLabel?`<div class="lcd">${cdLabel}</div>`:''}`;
+    b.onclick = ()=>visitPlace(pl);
+    mv.appendChild(b);
+  }
+  if (anyLocked){
+    const hint = document.createElement('div');
+    hint.style.cssText = 'position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;color:#fff;opacity:.85;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.4);';
+    hint.textContent = '✨ more paths await discovery…';
+    mv.appendChild(hint);
+  }
+}
+function visitPlace(pl){
+  if (!P) return;
+  P.lastVisits = P.lastVisits || {};
+  P.lastVisits[pl.id] = now();
+  save();
+  $('ovExplore').classList.remove('show');
+  startWalk(pl);
+}
+
+// ===================== WALK — Capybara-Go-style stop-and-encounter journey =====================
+// The pet hops up a winding path heading north (the world scrolls *down*),
+// with a leash drooping back to the player's hand at the bottom of the screen.
+// Each walk is a fixed series of ENCOUNTERS. The world scrolls for a few
+// seconds, then stops and an RNG event plays out as a card: a keepsake, a
+// friend, a coin stash, a wild snack, a fork in the road, a little dawdle —
+// or, rarely, a DISCOVERY that unlocks a brand-new location on the world map.
+// After the last encounter the journey ends and rewards are tallied.
+const WALK_SCENES = {
+  meadow: { grass:'#bcd99b', path:'#d8c79a', stone:'#c7b487', sky:'#dff0d6',
+            items:['🌼','🌿','🌸','🍓','🪶'], friends:['🐝','🦋','🐞','🐌'],
+            sideDeco:[
+              { e:'🌼', spacing:88,  xOff:40, size:20, side:'both' },
+              { e:'🌿', spacing:68,  xOff:60, size:17, side:'both' },
+              { e:'🌸', spacing:122, xOff:46, size:19, side:'left' },
+              { e:'🍀', spacing:108, xOff:62, size:16, side:'right' },
+            ]},
+  wood:   { grass:'#7d9968', path:'#b09474', stone:'#9c805f', sky:'#cfd9c0',
+            items:['🍂','🌰','🪺','🍄','🪵'], friends:['🐿️','🦔','🦉','🐇'],
+            sideDeco:[
+              { e:'🌲', spacing:108, xOff:34, size:28, side:'both' },
+              { e:'🍂', spacing:72,  xOff:60, size:17, side:'both' },
+              { e:'🍄', spacing:118, xOff:48, size:19, side:'left' },
+              { e:'🪵', spacing:152, xOff:54, size:18, side:'right' },
+            ]},
+  pond:   { grass:'#2c3a5e', path:'#3b4a6c', stone:'#4a5a80', sky:'#1a2340', night:true,
+            items:['✨','⭐','🌙','🐚','💧'], friends:['🐸','🦆','🦢','🐟'],
+            sideDeco:[
+              { e:'🌾', spacing:82,  xOff:36, size:20, side:'both' },
+              { e:'✨', spacing:98,  xOff:56, size:15, side:'both' },
+              { e:'💧', spacing:128, xOff:44, size:17, side:'left' },
+              { e:'🌙', spacing:195, xOff:52, size:20, side:'right' },
+            ]},
+  grove:  { grass:'#9a83a8', path:'#b79c8f', stone:'#a3897c', sky:'#d6c8e0',
+            items:['🍄','🌿','🌺','🫐','🌷'], friends:['🦋','🐌','🐛','🦗'],
+            sideDeco:[
+              { e:'🍄', spacing:92,  xOff:36, size:22, side:'both' },
+              { e:'🌺', spacing:78,  xOff:58, size:18, side:'both' },
+              { e:'🌷', spacing:114, xOff:44, size:19, side:'left' },
+              { e:'🌿', spacing:68,  xOff:64, size:16, side:'right' },
+            ]},
+};
+const TOTAL_STOPS = 5;
+const STOP_DIST_MIN = 280, STOP_DIST_MAX = 520;
+
+function startWalk(pl){
+  if (!P) return;
+  mgMode = 'walk';
+  const scene = WALK_SCENES[pl.id] || WALK_SCENES.meadow;
+  mgState = {
+    place: pl, scene,
+    last: performance.now(), running: false,
+    w: 0, h: 0,
+    dist: 0, scrollV: 0,
+    petLane: 0.5, laneTarget: 0.5,
+    hop: 0,
+    phase: 'intro',                          // 'intro' | 'walking' | 'stopped' | 'done'
+    stopIdx: 0,
+    distToNext: STOP_DIST_MIN + Math.random() * (STOP_DIST_MAX - STOP_DIST_MIN),
+    currentEv: null,                         // active encounter (for emoji bubble above pet)
+    found: 0, friends: 0, coinsEarned: 0, snacks: 0,
+    unlockedPlace: null,                     // place id newly unlocked this walk
+    pops: [],
+  };
+  openMG();
+  $('mgScore').textContent = 0;
+  $('mgTime').textContent = `0/${TOTAL_STOPS}`;
+  $('mgmsg').innerHTML = `<h2>${pl.e} ${pl.n} walk</h2>
+    <p>${P.name} sets off bounding up the path while you hold the leash. Every few seconds you'll stop for whatever happens by.</p>
+    <button class="btn" id="mgStart">Set off</button>
+    <button class="btn ghost" id="mgQuit">Maybe later</button>`;
+  $('mgStart').onclick = ()=>{
+    $('mgmsg').style.display='none';
+    mgState.phase = 'walking';
+    mgState.running = true;
+    mgState.last = performance.now();
+    requestAnimationFrame(walkFrame);
+  };
+  $('mgQuit').onclick = ()=>{
+    // bail out — refund the cooldown so the player can re-pick later
+    if (P.lastVisits && P.lastVisits[pl.id]) delete P.lastVisits[pl.id];
+    save(); closeGame();
+  };
+}
+
+function walkPetY(s){ return s.h * 0.50; }
+function walkPetX(s){ return s.w * 0.5 + (s.petLane - 0.5) * s.w * 0.30; }
+
+function walkFrame(ts){
+  if (!mgState || !mgState.running) return;
+  const dt = Math.min(50, ts - mgState.last); mgState.last = ts;
+  const s = mgState;
+
+  const moving = s.phase === 'walking';
+  s.hop += dt * (moving ? 0.013 : 0.006);
+  s.scrollV += ((moving ? 0.18 : 0) - s.scrollV) * 0.10;
+  s.dist += s.scrollV * dt;
+  s.petLane += (s.laneTarget - s.petLane) * 0.06;
+
+  if (moving){
+    s.distToNext -= s.scrollV * dt;
+    if (s.distToNext <= 0){
+      s.phase = 'stopped';
+      s.stopIdx++;
+      $('mgTime').textContent = `${s.stopIdx}/${TOTAL_STOPS}`;
+      showEncounter(s);
+    }
+  }
+
+  walkDrawBG(s);
+  walkDrawPath(s);
+  walkDrawSideDeco(s);
+  walkDrawLeash(s, ts);
+  walkDrawPet(s, ts);
+  if (s.phase === 'stopped' && s.currentEv){ walkDrawBubble(s, s.currentEv, ts); }
+  walkDrawPops(s, dt);
+
+  requestAnimationFrame(walkFrame);
+}
+
+// ---------- encounters ----------
+function pickRandom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+function rollEncounter(s){
+  const lockedIds = PLACES.map(p => p.id).filter(id => !S.unlocked.includes(id));
+  const canDiscover = lockedIds.length > 0 && !s.unlockedPlace;     // one unlock max per walk
+  const weights = [
+    ['trinket',  24],
+    ['friend',   18],
+    ['coins',     9],
+    ['snack',     8],
+    ['rest',      7],
+    ['fork',     10],
+    ['stumble',   6],
+    ['riddle',    9],
+    ['discover', canDiscover ? 9 : 0],
+  ];
+  const total = weights.reduce((a, [,w]) => a + w, 0);
+  let r = Math.random() * total;
+  for (const [kind, w] of weights){
+    r -= w;
+    if (r < 0){
+      switch (kind){
+        case 'trinket':  return makeTrinket(s);
+        case 'friend':   return makeFriend(s);
+        case 'coins':    return makeCoins(s);
+        case 'snack':    return makeSnack(s);
+        case 'rest':     return makeRest(s);
+        case 'riddle':   return makeRiddle(s);
+        case 'fork':     return makeFork(s);
+        case 'stumble':  return makeStumble(s);
+        case 'discover': return makeDiscovery(s, lockedIds);
+      }
+    }
+  }
+  return makeTrinket(s);
+}
+
+function makeTrinket(s){
+  const e = pickRandom(s.scene.items);
+  return {
+    e, title: 'A keepsake!',
+    body: `${P.name} spots a ${e} on the path. Keep it or leave it be?`,
+    sfx: 'firefly',
+    choices: [
+      { label: '🎒 Tuck it away', apply: ()=>{ s.found++; if (Math.random()<0.5){ s.coinsEarned++; S.coins++; } } },
+      { label: '🌬️ Leave it be',  apply: ()=>{ P.happy = clamp(P.happy + 3); } },
+    ],
+  };
+}
+function makeFriend(s){
+  const e = pickRandom(s.scene.friends);
+  return {
+    e, title: 'A new friend',
+    body: `A little ${e} pops out! How should ${P.name} say hello?`,
+    sfx: 'cuddle',
+    choices: [
+      { label: '🎮 Play together', apply: ()=>{ s.friends++; P.happy = clamp(P.happy + 5); P.energy = clamp(P.energy - 3); } },
+      { label: '🤲 Just say hi',   apply: ()=>{ s.friends++; P.happy = clamp(P.happy + 2); } },
+    ],
+  };
+}
+function makeCoins(s){
+  return {
+    e: '🪙', title: 'A tiny stash',
+    body: `${P.name} sniffs out coins under the leaves. Grab them all?`,
+    sfx: 'daily',
+    choices: [
+      { label: '🤲 Grab them all', apply: ()=>{ const n = 3+Math.floor(Math.random()*3); s.coinsEarned+=n; S.coins+=n; P.energy=clamp(P.energy-2); } },
+      { label: '✌️ Take just a few', apply: ()=>{ const n = 1+Math.floor(Math.random()*2); s.coinsEarned+=n; S.coins+=n; P.happy=clamp(P.happy+2); } },
+    ],
+  };
+}
+function makeSnack(s){
+  return {
+    e: '🍓', title: 'Wild snack',
+    body: `A patch of wild berries — ${P.name}'s eyes go wide.`,
+    sfx: 'feed',
+    choices: [
+      { label: '😋 Eat heartily',  apply: ()=>{ P.full = clamp(P.full + 18); s.snacks++; } },
+      { label: '🌸 Nibble slowly', apply: ()=>{ P.full = clamp(P.full + 8); P.happy = clamp(P.happy + 4); s.snacks++; } },
+    ],
+  };
+}
+function makeFork(s){
+  return {
+    e: '🪧', title: 'Fork in the road',
+    body: `The path splits two ways. Which should ${P.name} take?`,
+    sfx: 'wake',
+    choices: [
+      { label: '👈 Left', apply: ()=>{
+        s.laneTarget = 0.28;
+        if (Math.random()<0.5){ s.coinsEarned++; S.coins++; } else { s.found++; }
+        setTimeout(()=>{ if (mgState) mgState.laneTarget = 0.5; }, 1300);
+      }},
+      { label: '👉 Right', apply: ()=>{
+        s.laneTarget = 0.72;
+        if (Math.random()<0.5){ s.friends++; P.happy = clamp(P.happy+3); }
+        else { s.snacks++; P.full = clamp(P.full+8); }
+        setTimeout(()=>{ if (mgState) mgState.laneTarget = 0.5; }, 1300);
+      }},
+    ],
+  };
+}
+function makeStumble(s){
+  const stories = [
+    `${P.name} chases a leaf and takes a little tumble. They're fine!`,
+    `${P.name} stops to sniff a flower for absolutely ages.`,
+    `${P.name} stares at a cloud shaped like a snack.`,
+    `A pebble! ${P.name} considers it very carefully.`,
+  ];
+  return {
+    e: '🍃', title: 'A little dawdle',
+    body: pickRandom(stories),
+    sfx: 'sleep',
+    choices: [
+      { label: '😄 Laugh it off', apply: ()=>{ P.happy = clamp(P.happy + 3); } },
+      { label: '⏸️ Use the pause', apply: ()=>{ P.energy = clamp(P.energy + 3); } },
+    ],
+  };
+}
+function makeRest(s){
+  const stories = [
+    `${P.name} flops onto a soft patch and looks up at the sky.`,
+    `${P.name} finds a warm stone to sit on for a moment.`,
+    `${P.name} curls up in the grass. Just for a minute.`,
+    `${P.name} leans against a tree and closes their eyes.`,
+  ];
+  return {
+    e: '💤', title: 'A little rest',
+    body: pickRandom(stories),
+    sfx: 'sleep',
+    choices: [
+      { label: '😴 Nap in the grass', apply: ()=>{ P.energy = clamp(P.energy + 8); } },
+      { label: '🌅 Watch the world', apply: ()=>{ P.happy = clamp(P.happy + 5); P.energy = clamp(P.energy + 3); } },
+    ],
+  };
+}
+function makeDiscovery(s, lockedIds){
+  const id = pickRandom(lockedIds);
+  const pl = PLACES.find(p => p.id === id);
+  s.unlockedPlace = id;
+  S.unlocked.push(id);
+  save();
+  return {
+    e: pl.e, title: 'A hidden trail!',
+    body: `${P.name} noses out a path leading to ${pl.n}. It's been added to your world map.`,
+    sfx: 'daily',
+    choices: [
+      { label: '👀 Peek inside',   apply: ()=>{ const n=2; s.coinsEarned+=n; S.coins+=n; gainXP(2); } },
+      { label: '🗺️ Note it down', apply: ()=>{} },
+    ],
+  };
+}
+
+function makeRiddle(s){
+  const c=pickRandom(CREATURES);
+  const showResult=(correct)=>{
+    if(correct){
+      sfx('daily');
+      $('mgmsg').innerHTML=`<h2>${c.e} Yes! A ${c.n}!</h2>
+        <p>${P.name} jumps with joy!</p>
+        <button class="btn" id="encGo">Onward</button>`;
+      P.happy=clamp(P.happy+5); gainXP(2); save();
+    } else {
+      sfx('sleep');
+      $('mgmsg').innerHTML=`<h2>Not quite!</h2>
+        <p>It was a ${c.e} ${c.n}! ${P.name} will remember next time.</p>
+        <button class="btn ghost" id="encGo">Onward</button>`;
+      P.happy=clamp(P.happy+1);
+    }
+    $('encGo').onclick=()=>resumeWalk(s);
+  };
+  const swap=Math.random()<0.5;
+  return {
+    e:'❓', title:'Who am I?', body:c.clues, sfx:'wake',
+    choices: swap ? [
+      {label:`${c.decoy.e} ${c.decoy.n}`, apply:()=>{ showResult(false); return true; }},
+      {label:`${c.e} ${c.n}`,             apply:()=>{ showResult(true);  return true; }},
+    ] : [
+      {label:`${c.e} ${c.n}`,             apply:()=>{ showResult(true);  return true; }},
+      {label:`${c.decoy.e} ${c.decoy.n}`, apply:()=>{ showResult(false); return true; }},
+    ],
+  };
+}
+function showEncounter(s){
+  const ev = rollEncounter(s);
+  s.currentEv = ev;
+  if (ev.sfx) sfx(ev.sfx);
+  $('mgmsg').style.display = 'flex';
+  const lastStop = s.stopIdx >= TOTAL_STOPS;
+  if (ev.choices){
+    $('mgmsg').innerHTML = `<h2>${ev.e} ${ev.title}</h2><p>${ev.body}</p>
+      <div class="row">
+        ${ev.choices.map((c,i)=>`<button class="btn${i>0?' ghost':''}" data-i="${i}">${c.label}</button>`).join('')}
+      </div>`;
+    $('mgmsg').querySelectorAll('[data-i]').forEach(btn => {
+      btn.onclick = ()=>{
+        const handled = ev.choices[parseInt(btn.dataset.i)].apply(s);
+        if (!handled) resumeWalk(s);
+      };
+    });
+  } else {
+    $('mgmsg').innerHTML = `<h2>${ev.e} ${ev.title}</h2><p>${ev.body}</p>
+      <button class="btn" id="encGo">${lastStop ? 'Head home' : (ev.btn || 'Onward')}</button>`;
+    if (ev.apply) ev.apply(s);
+    $('encGo').onclick = ()=>resumeWalk(s);
+  }
+}
+
+function resumeWalk(s){
+  $('mgmsg').style.display = 'none';
+  s.currentEv = null;
+  if (s.stopIdx >= TOTAL_STOPS){
+    s.phase = 'done';
+    endWalk();
+    return;
+  }
+  s.phase = 'walking';
+  s.distToNext = STOP_DIST_MIN + Math.random() * (STOP_DIST_MAX - STOP_DIST_MIN);
+}
+
+// ---------- drawing ----------
+function walkDrawBG(s){
+  const sky = mctx.createLinearGradient(0, 0, 0, s.h);
+  sky.addColorStop(0, s.scene.sky); sky.addColorStop(1, s.scene.grass);
+  mctx.fillStyle = sky; mctx.fillRect(0, 0, s.w, s.h);
+  if (s.scene.night){
+    mctx.fillStyle = '#fff';
+    for (let i = 0; i < 40; i++){
+      const x = (i * 97) % s.w;
+      const y = ((i * 53 + s.dist * 0.2) % (s.h * 0.5));
+      mctx.globalAlpha = 0.5; mctx.fillRect(x, y, 2, 2);
+    }
+    mctx.globalAlpha = 1;
+  }
+}
+function walkDrawPath(s){
+  const pw = s.w * 0.42, cx = s.w * 0.5;
+  mctx.fillStyle = s.scene.path;
+  mctx.fillRect(cx - pw/2, 0, pw, s.h);
+  mctx.fillStyle = 'rgba(0,0,0,.08)';
+  mctx.fillRect(cx - pw/2, 0, 6, s.h);
+  mctx.fillRect(cx + pw/2 - 6, 0, 6, s.h);
+  mctx.fillStyle = s.scene.stone;
+  const spacing = 90;
+  const off = s.dist % spacing;
+  for (let y = -spacing + off; y < s.h + spacing; y += spacing){
+    for (const lane of [0.34, 0.66]){
+      const x = cx + (lane - 0.5) * pw;
+      mctx.beginPath(); mctx.ellipse(x, y, 18, 11, 0, 0, 7); mctx.fill();
+    }
+    mctx.beginPath(); mctx.ellipse(cx, y + spacing/2, 20, 12, 0, 0, 7); mctx.fill();
+  }
+}
+function walkDrawSideDeco(s){
+  const deco = s.scene.sideDeco;
+  if (!deco) return;
+  const pw = s.w * 0.42, cx = s.w * 0.5;
+  const pathLeft = cx - pw/2, pathRight = cx + pw/2;
+  mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+  for (const d of deco){
+    const n = 20;
+    const period = d.spacing * n;
+    const scroll = s.dist % period;
+    for (let i = 0; i < n; i++){
+      // deterministic stable position per stripe index
+      const h1 = Math.imul(i + 1, 2654435761) >>> 0;
+      const h2 = Math.imul(i * 17 + 7, 2246822519) >>> 0;
+      const yBase = i * d.spacing + (h1 % Math.max(1, d.spacing >> 1));
+      const y = ((yBase - scroll) % period + period) % period - 30;
+      if (y < -44 || y > s.h + 44) continue;
+      const alpha = Math.min(1, (y + 54) / 54) * Math.min(1, (s.h + 24 - y) / 54);
+      if (alpha <= 0) continue;
+      mctx.globalAlpha = alpha * 0.90;
+      const xJit = (h2 % 26) - 13;
+      mctx.font = `${d.size}px serif`;
+      if (d.side === 'left'  || d.side === 'both')
+        mctx.fillText(d.e, pathLeft  - d.xOff + xJit, y);
+      if (d.side === 'right' || d.side === 'both')
+        mctx.fillText(d.e, pathRight + d.xOff + xJit, y);
+    }
+  }
+  mctx.globalAlpha = 1; mctx.textBaseline = 'alphabetic';
+}
+function walkDrawLeash(s, ts){
+  const handX = s.w * 0.5, handY = s.h - 6;
+  const px = walkPetX(s), py = walkPetY(s) + Math.min(s.w,s.h)*0.06;
+  const sway = Math.sin(ts * 0.002) * 10;
+  const midX = (handX + px) / 2 + sway, midY = (handY + py) / 2 + 34;
+  mctx.strokeStyle = '#7a5a3a'; mctx.lineWidth = 4; mctx.lineCap = 'round';
+  mctx.beginPath(); mctx.moveTo(handX, handY);
+  mctx.quadraticCurveTo(midX, midY, px, py); mctx.stroke();
+  mctx.fillStyle = '#caa06a';
+  mctx.beginPath(); mctx.arc(handX, handY, 12, 0, 7); mctx.fill();
+}
+function walkDrawPet(s, ts){
+  if (!P) return;
+  const sp = SPECIES[P.species];
+  const R = Math.min(s.w, s.h) * 0.11;
+  const cx = walkPetX(s);
+  const baseY = walkPetY(s);
+  const hop = Math.abs(Math.sin(s.hop)) * R * 0.55;
+  const y = baseY - hop;
+  const airborne = hop > R * 0.18;
+  const airT = Math.min(1, hop / (R * 0.55));
+  mctx.fillStyle = `rgba(0,0,0,${0.22 * (1 - airT * 0.6)})`;
+  mctx.beginPath();
+  mctx.ellipse(cx, baseY + R * 0.95, R * (0.82 - 0.3 * airT), R * 0.26, 0, 0, 7);
+  mctx.fill();
+  mctx.fillStyle = sp.body;
+  mctx.beginPath(); mctx.ellipse(cx, y, R * 1.02, R * 0.92, 0, 0, 7); mctx.fill();
+  mctx.fillStyle = sp.belly;
+  mctx.beginPath(); mctx.ellipse(cx, y + R * 0.18, R * 0.6, R * 0.5, 0, 0, 7); mctx.fill();
+  let f1, f2;
+  if (airborne){ f1 = -R * 0.18; f2 = -R * 0.18; }
+  else { f1 = Math.sin(s.hop * 2) * 3; f2 = -f1; }
+  mctx.fillStyle = sp.body;
+  mctx.beginPath(); mctx.ellipse(cx - R * 0.42, y + R * 0.82 + f1, R * 0.22, R * 0.16, 0, 0, 7); mctx.fill();
+  mctx.beginPath(); mctx.ellipse(cx + R * 0.42, y + R * 0.82 + f2, R * 0.22, R * 0.16, 0, 0, 7); mctx.fill();
+  mctx.strokeStyle = '#c2552f'; mctx.lineWidth = R * 0.10;
+  mctx.beginPath(); mctx.ellipse(cx, y + R * 0.30, R * 0.5, R * 0.34, 0, 0.1*Math.PI, 0.9*Math.PI); mctx.stroke();
+  mctx.strokeStyle = '#4a3b30'; mctx.lineWidth = R * 0.07; mctx.lineCap = 'round';
+  for (const sgn of [-1, 1]){
+    mctx.beginPath();
+    mctx.arc(cx + sgn * R * 0.34, y - R * 0.05, R * 0.17, 1.15 * Math.PI, 1.85 * Math.PI);
+    mctx.stroke();
+  }
+  mctx.fillStyle = sp.cheek; mctx.globalAlpha = 0.7;
+  mctx.beginPath(); mctx.arc(cx - R * 0.42, y + R * 0.15, R * 0.10, 0, 7); mctx.fill();
+  mctx.beginPath(); mctx.arc(cx + R * 0.42, y + R * 0.15, R * 0.10, 0, 7); mctx.fill();
+  mctx.globalAlpha = 1;
+}
+function walkDrawBubble(s, ev, ts){
+  const cx = walkPetX(s);
+  const cy = walkPetY(s) - Math.min(s.w, s.h) * 0.22 + Math.sin(ts * 0.004) * 4;
+  const r = Math.min(s.w, s.h) * 0.07;
+  mctx.fillStyle = '#fffaf1';
+  mctx.beginPath(); mctx.arc(cx, cy, r, 0, 7); mctx.fill();
+  mctx.beginPath();
+  mctx.moveTo(cx - 8, cy + r - 2);
+  mctx.lineTo(cx + 8, cy + r - 2);
+  mctx.lineTo(cx, cy + r + 12);
+  mctx.closePath(); mctx.fill();
+  mctx.font = `${r*1.2}px serif`;
+  mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+  mctx.fillStyle = '#000'; mctx.fillText(ev.e, cx, cy);
+  mctx.textBaseline = 'alphabetic';
+}
+function walkDrawPops(s, dt){
+  for (let i = s.pops.length - 1; i >= 0; i--){
+    const o = s.pops[i];
+    o.y -= dt * 0.04; o.life -= dt * 0.0016;
+    if (o.life <= 0){ s.pops.splice(i, 1); continue; }
+    mctx.globalAlpha = Math.max(0, o.life);
+    mctx.font = '24px serif'; mctx.textAlign = 'center'; mctx.fillText(o.txt || '✨', o.x, o.y);
+    mctx.globalAlpha = 1;
+  }
+}
+function walkTap(x, y){
+  if (!mgState || mgState.phase !== 'walking') return;
+  const txt = ['💗','🌟','✨'][Math.floor(Math.random()*3)];
+  mgState.pops.push({ x, y, life: 1, txt });
+  sfx('cuddle');
+}
+
+function endWalk(){
+  const s = mgState; if (!s) return;
+  s.running = false;
+  const pl = s.place;
+  const r = pl.visit ? pl.visit() : { xp: 3, msg: `${P.name} enjoyed the walk` };
+  const totalXP    = (r.xp || 0) + s.found + s.friends * 2 + s.snacks;
+  const totalCoins = (r.coins || 0) + s.coinsEarned;
+  P.happy = clamp(P.happy + Math.min(12, 2 + s.found + s.friends * 2));
+  P.full  = clamp(P.full - 10);                    // the journey works up an appetite
+  gainXP(totalXP);
+  save(); refresh();
+  $('mgmsg').style.display = 'flex';
+  const bits = [];
+  if (s.found)   bits.push(`found ${s.found} keepsake${s.found===1?'':'s'}`);
+  if (s.friends) bits.push(`met ${s.friends} friend${s.friends===1?'':'s'}`);
+  if (s.snacks)  bits.push(`nibbled ${s.snacks} snack${s.snacks===1?'':'s'}`);
+  const journey = bits.length ? bits.join(', ') : 'had a quiet wander';
+  const coinsLine = totalCoins ? `<br>+${totalCoins} 🪙` : '';
+  const unlockLine = s.unlockedPlace
+    ? `<p style="color:var(--happy);font-weight:700;">✨ New path unlocked: ${PLACES.find(p=>p.id===s.unlockedPlace).n}!</p>`
+    : '';
+  $('mgmsg').innerHTML = `<h2>Home again ✨</h2>
+    <p>${r.msg}.<br>${P.name} ${journey} on the way.</p>
+    ${unlockLine}
+    <p>+${totalXP} XP${coinsLine}</p>
+    <button class="btn" id="mgDone">Done</button>`;
+  $('mgDone').onclick = closeGame;
+}
+
+// ===================== PET PROFILE & ROSTER =====================
+function petEmoji(species){
+  const ear = SPECIES[species].ear;
+  return ear==='leaf' ? '🌱' : ear==='cap' ? '🍄' : '🦉';
+}
+function openProfile(){
+  if (!hasPet()) return;
+  renderProfile();
+  $('ovProfile').classList.add('show');
+}
+function renderProfile(){
+  const need = xpToNext(P.level||0);
+  const xpPct = Math.max(0, Math.min(100, (P.xp/need)*100));
+  $('profCard').innerHTML = `<div class="pemoji">${petEmoji(P.species)}</div>
+    <div class="pinfo">
+      <div class="pname">${P.name}</div>
+      <div class="ptitle">Lv ${P.level||0} · ${titleOf(P)}</div>
+      <div class="xpbar"><div class="xfill" style="width:${xpPct}%"></div></div>
+      <div class="xptag">${P.xp} / ${need} XP</div>
+    </div>`;
+  const list = $('rosterList'); list.innerHTML = '';
+  const others = S.pets.filter(p => p.id !== P.id);
+  if (!others.length){
+    list.innerHTML = `<div class="rosterEmpty">Just ${P.name} for now. Adopt more below.</div>`;
+  } else {
+    for (const p of others){
+      const b = document.createElement('button'); b.className='rosterItem';
+      b.innerHTML = `<span class="re">${petEmoji(p.species)}</span>
+        <span class="rn">${p.name}</span>
+        <span class="rt">Lv ${p.level||0} · ${titleOf(p)}</span>`;
+      b.onclick = ()=>{
+        switchPet(p.id);
+        $('ovProfile').classList.remove('show');
+        refresh();
+        toast(`Switched to ${P.name}`);
+      };
+      list.appendChild(b);
+    }
+  }
+}
+
+$('exploreClose').onclick = ()=>$('ovExplore').classList.remove('show');
+$('tExplore').onclick     = openExplore;
+$('profileClose').onclick = ()=>$('ovProfile').classList.remove('show');
+$('adoptNewBtn').onclick  = ()=>{ $('ovProfile').classList.remove('show'); buildAdopt(); };
+$('petname').onclick      = openProfile;
+
+// ===================== FEED TRAY — in-scene flick feeding =====================
+// Tapping a food in the shop debits coins and drops a plate of morsels at the
+// bottom of the home scene. The user flicks each morsel up to the pet directly
+// on the main canvas — no overlay, no scene switch. Missed flicks bounce back
+// to the plate (cozy promise). Per-morsel fullness/joy is applied as each one
+// is eaten; a "tasty toss" bonus per morsel caught mid-air without bouncing.
+let feedTray = null;
+
+function petPos(){
+  const R = Math.min(W, H) * 0.20;
+  const cy = H * petCYRatio;
+  return { x: W/2, y: cy, r: R, mouthY: cy + R*0.26 };
+}
+
+function startTray(f){
+  const plateR = Math.min(W, H) * 0.16;
+  const plateX = W * 0.5, plateY = H * 0.88;
+  const morselR = Math.min(W, H) * 0.055;
+  const n = f.count || 3;
+  const spacing = plateR * 0.36;
+  const start = plateX - spacing * (n-1) / 2;
+  const morsels = [];
+  for (let i = 0; i < n; i++){
+    const rx = start + i*spacing;
+    morsels.push({ x: rx, y: plateY - morselR*0.45, restX: rx,
+      vx:0, vy:0, r: morselR, dragging:false, settled:true, tasty:true, eaten:false });
+  }
+  feedTray = { food: f, plate:{ x:plateX, y:plateY, r:plateR },
+    morsels, samples:[], drag:null, _ate:0, _tasty:0 };
+}
+
+function trayGrab(x, y, pointerId){
+  if (!feedTray) return false;
+  for (const m of feedTray.morsels){
+    if (!m.settled || m.eaten) continue;
+    if (Math.hypot(m.x - x, m.y - y) < m.r + 24){
+      m.dragging = true; m.settled = false; m.vx = 0; m.vy = 0;
+      feedTray.drag = m;
+      feedTray.samples = [{ x, y, t: performance.now() }];
+      m.x = x; m.y = y;
+      try { cv.setPointerCapture(pointerId); } catch(e){}
+      return true;
+    }
+  }
+  return false;
+}
+function trayMove(x, y){
+  if (!feedTray || !feedTray.drag) return;
+  const m = feedTray.drag;
+  m.x = x; m.y = y;
+  feedTray.samples.push({ x, y, t: performance.now() });
+  if (feedTray.samples.length > 6) feedTray.samples.shift();
+}
+function trayRelease(){
+  if (!feedTray || !feedTray.drag) return;
+  const m = feedTray.drag;
+  m.dragging = false;
+  const a = feedTray.samples[0], b = feedTray.samples[feedTray.samples.length-1];
+  if (a && b && b !== a){
+    const dt = Math.max(8, b.t - a.t);
+    // Damp the raw flick + cap top speed so the arc is always readable.
+    // Without this, pointer velocities are so high the food teleports to the
+    // pet in one frame. damp=0.4 keeps "typical" flicks effective; maxV=1.3
+    // means the strongest flick takes ~16 frames to cross to the pet.
+    const damp = 0.4;
+    let vx = (b.x - a.x) / dt * damp;
+    let vy = (b.y - a.y) / dt * damp;
+    const speed = Math.hypot(vx, vy), maxV = 1.3;
+    if (speed > maxV){ vx *= maxV/speed; vy *= maxV/speed; }
+    m.vx = vx; m.vy = vy;
+  } else { m.vx = 0; m.vy = 0; }
+  feedTray.samples = []; feedTray.drag = null;
+}
+
+function trayTick(dt){
+  if (!feedTray || !P) return;
+  const pet = petPos(), plate = feedTray.plate;
+  const f = feedTray.food, n = f.count || 1;
+  for (let i = feedTray.morsels.length - 1; i >= 0; i--){
+    const m = feedTray.morsels[i];
+    if (m.dragging || m.settled) continue;
+    const px = m.x, py = m.y;
+    m.vy += 0.0030 * dt;                                     // gravity (a bit stronger so the arc reads)
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (m.x < m.r){ m.x = m.r; m.vx = Math.abs(m.vx)*0.7; }
+    if (m.x > W-m.r){ m.x = W-m.r; m.vx = -Math.abs(m.vx)*0.7; }
+    if (m.y < m.r){ m.y = m.r; m.vy = Math.abs(m.vy)*0.5; m.tasty = false; }
+    // swept catch by pet (only when awake)
+    if (!P.asleep){
+      const vx = m.x - px, vy = m.y - py, ux = pet.x - px, uy = pet.mouthY - py;
+      const tt = Math.max(0, Math.min(1, (ux*vx + uy*vy) / ((vx*vx + vy*vy) || 1)));
+      if (Math.hypot(px + tt*vx - pet.x, py + tt*vy - pet.mouthY) < pet.r * 0.55){
+        // the plate was gated at feed-time to fit under 100, so every morsel
+        // is always eaten — no mid-meal refusal.
+        P.full = clamp(P.full + f.fill / n);
+        P.happy = clamp(P.happy + f.joy / n + (m.tasty ? 1 : 0));
+        sfx('feed');
+        spawnHearts(2, m.x, m.y - m.r);
+        feedTray._ate++;
+        if (m.tasty) feedTray._tasty++;
+        feedTray.morsels.splice(i, 1);                       // eaten — remove now
+        continue;
+      }
+    }
+    // landed on the plate
+    const restY = plate.y - m.r * 0.5;
+    if (m.y > restY){
+      m.y = restY;
+      if (Math.abs(m.vy) > 0.08){ m.vy = -m.vy * 0.30; m.vx *= 0.5; m.tasty = false; }
+      else { m.vx = 0; m.vy = 0; m.settled = true; m.x = m.restX; m.tasty = false; }
+    }
+  }
+  if (feedTray.morsels.length === 0){
+    const ate = feedTray._ate, tasty = feedTray._tasty;
+    if (ate > 0){
+      gainXP(3 + tasty);
+      const all = ate === n;
+      toast(all && tasty===n ? `${P.name} caught every ${f.n} bite! ✨`
+          : all              ? `${P.name} finished the ${f.n} 😊`
+                             : `${P.name} ate ${ate} of ${n} bites`);
+    }
+    feedTray = null;
+    save(); refresh();
+  }
+}
+
+function drawTray(ctx, ts){
+  if (!feedTray) return;
+  const p = feedTray.plate;
+  // plate shadow + body + rim
+  ctx.fillStyle = 'rgba(0,0,0,.18)';
+  ctx.beginPath(); ctx.ellipse(p.x, p.y+6, p.r*1.05, p.r*0.30, 0,0,7); ctx.fill();
+  ctx.fillStyle = '#fffaf1';
+  ctx.beginPath(); ctx.ellipse(p.x, p.y,   p.r,      p.r*0.30, 0,0,7); ctx.fill();
+  ctx.fillStyle = '#ecd9bf';
+  ctx.beginPath(); ctx.ellipse(p.x, p.y,   p.r*0.84, p.r*0.25, 0,0,7); ctx.fill();
+  // morsels (with little shadow under each)
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const m of feedTray.morsels){
+    ctx.fillStyle = 'rgba(0,0,0,.14)';
+    ctx.beginPath(); ctx.ellipse(m.x, m.y + m.r*1.1, m.r*0.65, m.r*0.20, 0,0,7); ctx.fill();
+    ctx.font = `${m.r*2.2}px serif`;
+    ctx.fillText(feedTray.food.e, m.x, m.y);
+  }
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ===================== BOOT =====================
+function boot(){
+  resize();
+  $('mute').textContent = SND.muted ? '🔇' : '🔊';
+  S = load();
+  if (!hasPet()){ S = S || freshSave(); buildAdopt(); }
+  else { refreshP(); refresh(); checkDaily(); }
+  requestAnimationFrame(frame);
+  // tick the world every few seconds while open, and on refocus
+  setInterval(()=>{ if (hasPet()){ refresh(); save(); } }, 5000);
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden && hasPet()){ refresh(); save(); checkDaily(); }   // catch midnight crossings
+  });
+}
+boot();
+</script>
+</body>
+</html>

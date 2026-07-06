@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Honk Beach</title>
+<meta name="description" content="Honk Beach — defend your beach picnic from a siege of hungry geese. Tap to shoo!">
+<meta property="og:title" content="Honk Beach">
+<meta property="og:description" content="Defend your beach picnic from a siege of hungry geese. Tap to shoo!">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: #7ec8e3; color: #2a2a33;
+    font-family: ui-rounded, "Trebuchet MS", ui-sans-serif, system-ui, sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none; }
+  #app { display: flex; flex-direction: column; height: 100dvh; max-width: 560px; margin: 0 auto;
+    background: linear-gradient(#bfe9f5 0%, #7ec8e3 40%); }
+  #hud { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 6px; align-items: center;
+    padding: 8px 10px; background: #fff5d9; border-bottom: 2px solid #e9c97a; }
+  .stat { display: flex; flex-direction: column; align-items: center; }
+  .stat .lbl { color: #b48a3a; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+  .stat .val { font-weight: 800; font-size: 18px; line-height: 1; }
+  .stat.food .val { color: #d2683a; }
+  .stat.wave .val { color: #3a8fd2; }
+  .stat.shooed .val { color: #4a9d4a; }
+  #mute { background: #ffe9ad; border: 2px solid #e9c97a; border-radius: 8px; width: 38px; height: 38px;
+    font-size: 18px; cursor: pointer; }
+  #boardwrap { flex: 1; position: relative; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #banner { position: absolute; top: 14%; left: 0; right: 0; text-align: center; font-size: 26px; font-weight: 900;
+    color: #fff; text-shadow: 0 2px 0 #d2683a, 0 0 14px rgba(210,104,58,0.6); pointer-events: none;
+    opacity: 0; transition: opacity 0.25s; padding: 0 10px; }
+  #banner.show { opacity: 1; }
+  #cd { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: 120px; height: 8px;
+    background: rgba(0,0,0,0.18); border-radius: 4px; overflow: hidden; pointer-events: none; }
+  #cd > i { display: block; height: 100%; width: 100%; background: #ffd166; transition: width 0.04s linear; }
+  #overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    flex-direction: column; background: rgba(20,40,55,0.78); z-index: 10; padding: 24px; text-align: center; }
+  #overlay.show { display: flex; }
+  #overlay h1 { font-size: 46px; margin-bottom: 4px; color: #fff; text-shadow: 0 3px 0 #d2683a; letter-spacing: 0.04em; }
+  #overlay .sub { color: #ffe9ad; margin-bottom: 16px; font-size: 15px; max-width: 320px; line-height: 1.5; }
+  #overlay .stats { margin: 6px 0 18px; color: #fff; font-size: 16px; }
+  #overlay .stats .row { margin: 3px 0; }
+  #overlay .stats b { color: #ffd166; }
+  #overlay button { padding: 14px 38px; font-size: 18px; font-weight: 800; background: #d2683a; border: none;
+    color: #fff; border-radius: 12px; cursor: pointer; letter-spacing: 0.03em; box-shadow: 0 4px 0 #a84d28; }
+  #overlay button:active { transform: translateY(3px); box-shadow: 0 1px 0 #a84d28; }
+  #overlay .tip { font-size: 12px; color: #cfe6ee; margin-top: 16px; max-width: 320px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="stat food"><span class="lbl">Picnic</span><span class="val" id="foodVal">7</span></div>
+    <div class="stat wave"><span class="lbl">Wave</span><span class="val" id="waveVal">1</span></div>
+    <div class="stat shooed"><span class="lbl">Shooed</span><span class="val" id="shooVal">0</span></div>
+    <button id="mute" title="Sound">🔊</button>
+  </div>
+  <div id="boardwrap">
+    <canvas id="cv"></canvas>
+    <div id="banner"></div>
+    <div id="cd"><i id="cdFill"></i></div>
+    <div id="overlay" class="show">
+      <h1>HONK BEACH</h1>
+      <div class="sub">You laid out the perfect beach picnic. Then the geese saw it.</div>
+      <div class="stats" id="ovStats"></div>
+      <button id="startBtn">Spread the Blanket</button>
+      <div class="tip">Tap / click anywhere to <b>SHOO</b> the geese near that spot. Each shoo has a short cooldown, so aim it. Big geese take two shoos. Lose the picnic and it's over.</div>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+(function () {
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const elFood = document.getElementById('foodVal'), elWave = document.getElementById('waveVal'),
+        elShoo = document.getElementById('shooVal'), banner = document.getElementById('banner'),
+        cdFill = document.getElementById('cdFill'), overlay = document.getElementById('overlay'),
+        ovStats = document.getElementById('ovStats'), startBtn = document.getElementById('startBtn'),
+        muteBtn = document.getElementById('mute');
+
+  // ---- layout ----
+  let W = 0, H = 0, dpr = 1, blanket = null;
+  function resize() {
+    const r = cv.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const bw = Math.min(W * 0.62, 300), bh = Math.min(H * 0.42, 260);
+    blanket = { x: W / 2 - bw / 2, y: H / 2 - bh / 2, w: bw, h: bh };
+  }
+  window.addEventListener('resize', resize);
+
+  // ---- audio (tiny WebAudio) ----
+  let actx = null, muted = false;
+  function beep(freq, dur, type, vol, slideTo) {
+    if (muted) return;
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } }
+    const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'square'; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.linearRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(vol || 0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur);
+  }
+  const sHonk = () => beep(420, 0.16, 'square', 0.10, 220);   // shoo connects
+  const sFlap = () => beep(180, 0.10, 'sawtooth', 0.05, 120); // whiff (no goose hit)
+  const sSteal = () => { beep(140, 0.30, 'sawtooth', 0.14, 70); };
+  const sWave = () => { beep(520, 0.12, 'triangle', 0.12); setTimeout(() => beep(700, 0.16, 'triangle', 0.12), 120); };
+  muteBtn.addEventListener('click', () => { muted = !muted; muteBtn.textContent = muted ? '🔇' : '🔊'; });
+
+  // ---- game state ----
+  const FOOD_EMOJI = ['🥪', '🍉', '🧁', '🍗', '🍎', '🍪', '🥤'];
+  const SHOO_RADIUS = 78, SHOO_CD = 0.40, PECK_TIME = 1.1, FLEE_TIME = 0.7, WAVE_TIME = 18;
+  let state = 'menu', foods = [], geese = [], ripples = [], crumbs = [];
+  let foodLeft = 0, shooed = 0, wave = 1, waveTimer = 0, spawnTimer = 0, cd = 0, best = 0;
+  try { best = parseInt(localStorage.getItem('honkbeach_best') || '0', 10) || 0; } catch (e) {}
+
+  const GOOSE_TYPES = {
+    regular: { speed: 46, shoos: 1, size: 18, color: '#f2f2ee' },
+    fast:    { speed: 78, shoos: 1, size: 14, color: '#dfe8ef' }, // a quick gull
+    big:     { speed: 32, shoos: 2, size: 26, color: '#eceae2' }, // a stubborn honker
+  };
+
+  function placeFoods() {
+    foods = [];
+    const cols = 4, n = FOOD_EMOJI.length;
+    const padX = blanket.w * 0.16, padY = blanket.h * 0.22;
+    const gw = blanket.w - padX * 2, gh = blanket.h - padY * 2;
+    for (let i = 0; i < n; i++) {
+      const row = Math.floor(i / cols), rows = Math.ceil(n / cols);
+      const inRow = Math.min(cols, n - row * cols), col = i - row * cols;
+      const fx = blanket.x + padX + (inRow === 1 ? gw / 2 : gw * (col / (inRow - 1)));
+      const fy = blanket.y + padY + (rows === 1 ? gh / 2 : gh * (row / (rows - 1)));
+      foods.push({ x: fx, y: fy, emoji: FOOD_EMOJI[i], held: false, eaten: false, holder: null });
+    }
+    foodLeft = foods.length;
+  }
+
+  function availableFood() {
+    return foods.filter(f => !f.held && !f.eaten);
+  }
+  function nearestFood(x, y) {
+    let best = null, bd = Infinity;
+    for (const f of availableFood()) {
+      const d = (f.x - x) ** 2 + (f.y - y) ** 2;
+      if (d < bd) { bd = d; best = f; }
+    }
+    return best;
+  }
+
+  function spawnGoose() {
+    // type weights drift toward harder geese as waves climb
+    let roll = Math.random(), type;
+    const bigW = Math.min(0.05 + wave * 0.03, 0.30);
+    const fastW = Math.min(0.10 + wave * 0.04, 0.40);
+    if (roll < bigW) type = 'big';
+    else if (roll < bigW + fastW) type = 'fast';
+    else type = 'regular';
+    const def = GOOSE_TYPES[type];
+    // pick an edge — top (the sea) is weighted heaviest
+    const edge = Math.random() < 0.5 ? 'top' : (Math.random() < 0.5 ? 'left' : 'right');
+    let x, y;
+    if (edge === 'top') { x = 30 + Math.random() * (W - 60); y = -30; }
+    else if (edge === 'left') { x = -30; y = 40 + Math.random() * (H - 80); }
+    else { x = W + 30; y = 40 + Math.random() * (H - 80); }
+    const speedMul = 1 + (wave - 1) * 0.06;
+    geese.push({
+      x, y, type, size: def.size, color: def.color,
+      speed: def.speed * speedMul, shoosLeft: def.shoos,
+      state: 'approach', target: null, carried: null,
+      peck: 0, flee: 0, fdx: 0, fdy: 0, angle: 0, phase: Math.random() * 6.28,
+    });
+  }
+
+  function start() {
+    resize(); placeFoods();
+    geese = []; ripples = []; crumbs = [];
+    shooed = 0; wave = 1; waveTimer = 0; spawnTimer = 0.5; cd = 0;
+    elShoo.textContent = '0'; elWave.textContent = '1'; elFood.textContent = foodLeft;
+    overlay.classList.remove('show');
+    state = 'play';
+  }
+
+  function gameOver() {
+    state = 'over';
+    if (shooed > best) { best = shooed; try { localStorage.setItem('honkbeach_best', String(best)); } catch (e) {} }
+    ovStats.innerHTML =
+      `<div class="row">The geese cleaned you out on <b>Wave ${wave}</b>.</div>` +
+      `<div class="row">Geese shooed: <b>${shooed}</b></div>` +
+      `<div class="row">Best ever: <b>${best}</b></div>`;
+    overlay.querySelector('h1').textContent = 'PICNIC RUINED';
+    overlay.querySelector('.sub').textContent = 'Not a crumb left. The geese send their regards.';
+    startBtn.textContent = 'Try Again';
+    overlay.classList.add('show');
+    sSteal();
+  }
+
+  function showBanner(text) {
+    banner.textContent = text; banner.classList.add('show');
+    clearTimeout(showBanner._t);
+    showBanner._t = setTimeout(() => banner.classList.remove('show'), 1400);
+  }
+
+  // ---- input ----
+  function shoo(px, py) {
+    if (cd > 0) return;
+    cd = SHOO_CD;
+    ripples.push({ x: px, y: py, r: 8, max: SHOO_RADIUS, life: 1 });
+    let hit = false;
+    for (const g of geese) {
+      const d = Math.hypot(g.x - px, g.y - py);
+      if (d <= SHOO_RADIUS + g.size) {
+        hit = true;
+        g.shoosLeft--;
+        g.state = 'flee'; g.flee = FLEE_TIME;
+        const a = Math.atan2(g.y - py, g.x - px) || 0;
+        g.fdx = Math.cos(a); g.fdy = Math.sin(a);
+        if (g.carried) { g.carried.held = false; g.carried.holder = null; g.carried = null; }
+      }
+    }
+    if (hit) sHonk(); else sFlap();
+  }
+  function pointFromEvent(e) {
+    const r = cv.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  }
+  cv.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (state !== 'play') return;
+    const p = pointFromEvent(e);
+    shoo(p.x, p.y);
+  });
+  startBtn.addEventListener('click', () => { if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } start(); });
+
+  // ---- update ----
+  function update(dt) {
+    if (state !== 'play') return;
+    cd = Math.max(0, cd - dt);
+    cdFill.style.width = (100 * (1 - cd / SHOO_CD)) + '%';
+
+    waveTimer += dt;
+    if (waveTimer >= WAVE_TIME) { waveTimer = 0; wave++; elWave.textContent = wave; showBanner('WAVE ' + wave + ' — more geese!'); sWave(); }
+
+    // spawn cadence shortens with waves
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnGoose();
+      spawnTimer = Math.max(0.55, 2.2 - wave * 0.16) * (0.7 + Math.random() * 0.6);
+    }
+
+    for (const g of geese) updateGoose(g, dt);
+    geese = geese.filter(g => !g._dead);
+
+    for (const r of ripples) { r.r += (r.max - r.r) * dt * 9; r.life -= dt * 2.2; }
+    ripples = ripples.filter(r => r.life > 0);
+    for (const c of crumbs) { c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 200 * dt; c.life -= dt * 1.6; }
+    crumbs = crumbs.filter(c => c.life > 0);
+
+    if (foodLeft <= 0) gameOver();
+  }
+
+  function updateGoose(g, dt) {
+    const wob = Math.sin((performance.now() / 130) + g.phase);
+    if (g.state === 'flee') {
+      g.flee -= dt;
+      const sp = g.speed * 2.2;
+      g.x += g.fdx * sp * dt; g.y += g.fdy * sp * dt;
+      g.angle = Math.atan2(g.fdy, g.fdx);
+      if (g.flee <= 0) {
+        if (g.shoosLeft <= 0) { g._dead = true; shooed++; elShoo.textContent = shooed; }
+        else { g.state = 'approach'; g.target = null; }
+      }
+      // a fully-shooed goose that runs off-screen is gone too
+      if (g.x < -50 || g.x > W + 50 || g.y < -50 || g.y > H + 50) {
+        if (g.shoosLeft <= 0) { g._dead = true; }
+      }
+      return;
+    }
+
+    if (g.state === 'approach') {
+      if (!g.target || g.target.held || g.target.eaten) g.target = nearestFood(g.x, g.y);
+      const tx = g.target ? g.target.x : blanket.x + blanket.w / 2;
+      const ty = g.target ? g.target.y : blanket.y + blanket.h / 2;
+      const dx = tx - g.x, dy = ty - g.y, d = Math.hypot(dx, dy) || 1;
+      g.angle = Math.atan2(dy, dx);
+      const sp = g.speed * (1 + wob * 0.12);
+      g.x += (dx / d) * sp * dt; g.y += (dy / d) * sp * dt;
+      if (g.target && d < g.size + 10) { g.state = 'peck'; g.peck = PECK_TIME; }
+      return;
+    }
+
+    if (g.state === 'peck') {
+      if (!g.target || g.target.held || g.target.eaten) { g.state = 'approach'; g.target = null; return; }
+      g.peck -= dt;
+      g.y += Math.sin(performance.now() / 50) * 0.4; // bob while pecking
+      if (g.peck <= 0) {
+        g.target.held = true; g.target.holder = g; g.carried = g.target;
+        g.state = 'carry';
+      }
+      return;
+    }
+
+    if (g.state === 'carry') {
+      // head for the nearest edge with the loot
+      const toL = g.x, toR = W - g.x, toT = g.y, toB = H - g.y;
+      const m = Math.min(toL, toR, toT, toB);
+      let dx = 0, dy = 0;
+      if (m === toL) dx = -1; else if (m === toR) dx = 1; else if (m === toT) dy = -1; else dy = 1;
+      g.angle = Math.atan2(dy, dx);
+      const sp = g.speed * 0.92;
+      g.x += dx * sp * dt; g.y += dy * sp * dt;
+      if (g.carried) { g.carried.x = g.x; g.carried.y = g.y - g.size - 4; }
+      if (g.x < -40 || g.x > W + 40 || g.y < -40 || g.y > H + 40) {
+        if (g.carried) {
+          g.carried.eaten = true; g.carried.held = false;
+          foodLeft--; elFood.textContent = foodLeft;
+          for (let i = 0; i < 6; i++) crumbs.push({ x: g.x, y: g.y, vx: (Math.random() - 0.5) * 120, vy: -Math.random() * 100, life: 1 });
+        }
+        g._dead = true;
+        sSteal();
+      }
+      return;
+    }
+  }
+
+  // ---- render ----
+  function drawBeach() {
+    // water band at the very top, then wet sand, then dry sand
+    ctx.fillStyle = '#e9d7a8'; ctx.fillRect(0, 0, W, H);
+    const waterH = H * 0.13;
+    const wg = ctx.createLinearGradient(0, 0, 0, waterH);
+    wg.addColorStop(0, '#3aa7d8'); wg.addColorStop(1, '#6fc6e8');
+    ctx.fillStyle = wg; ctx.fillRect(0, 0, W, waterH);
+    ctx.fillStyle = '#d9c08a'; ctx.fillRect(0, waterH, W, H * 0.05); // wet sand line
+    // a few dune-grass freckles for texture
+    ctx.fillStyle = 'rgba(180,150,90,0.35)';
+    for (let i = 0; i < 26; i++) {
+      const x = (i * 9871 % W), y = waterH + 30 + ((i * 5417) % (H - waterH - 30));
+      ctx.fillRect(x, y, 2, 2);
+    }
+  }
+
+  function drawBlanket() {
+    const b = blanket, r = 14;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6;
+    roundRect(b.x, b.y, b.w, b.h, r); ctx.fillStyle = '#e7e2d6'; ctx.fill();
+    ctx.restore();
+    // red/white check
+    ctx.save();
+    roundRect(b.x, b.y, b.w, b.h, r); ctx.clip();
+    const c = 26;
+    for (let yy = 0; yy < b.h; yy += c) for (let xx = 0; xx < b.w; xx += c) {
+      const odd = ((xx / c | 0) + (yy / c | 0)) % 2;
+      ctx.fillStyle = odd ? '#e7544a' : '#f6f1e8';
+      ctx.fillRect(b.x + xx, b.y + yy, c, c);
+    }
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawFood(f) {
+    if (f.eaten || f.held) return; // held food is drawn on the goose
+    ctx.font = '22px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(f.emoji, f.x, f.y);
+  }
+
+  function drawGoose(g) {
+    ctx.save();
+    ctx.translate(g.x, g.y);
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.14)';
+    ctx.beginPath(); ctx.ellipse(0, g.size * 0.55, g.size * 0.9, g.size * 0.4, 0, 0, 7); ctx.fill();
+    ctx.rotate(g.angle + Math.PI / 2); // face direction of travel
+    const s = g.size, flap = g.state === 'flee' ? Math.sin(performance.now() / 45) * 0.5 : 0;
+    // body
+    ctx.fillStyle = g.color;
+    ctx.beginPath(); ctx.ellipse(0, 0, s * 0.7, s, 0, 0, 7); ctx.fill();
+    // wings (flap when fleeing)
+    ctx.fillStyle = '#cfcabd';
+    ctx.beginPath(); ctx.ellipse(-s * 0.55, -s * 0.1 + flap * s * 0.3, s * 0.3, s * 0.6, 0.5, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s * 0.55, -s * 0.1 + flap * s * 0.3, s * 0.3, s * 0.6, -0.5, 0, 7); ctx.fill();
+    // neck + head (toward travel direction = -y after rotate)
+    ctx.fillStyle = g.type === 'big' ? '#3a3a3a' : '#2c2c2c';
+    ctx.fillRect(-s * 0.16, -s * 1.05, s * 0.32, s * 0.7); // dark neck
+    ctx.fillStyle = g.color;
+    ctx.beginPath(); ctx.arc(0, -s * 1.15, s * 0.42, 0, 7); ctx.fill();
+    ctx.fillStyle = g.type === 'big' ? '#3a3a3a' : '#2c2c2c';
+    ctx.beginPath(); ctx.arc(0, -s * 1.15, s * 0.42, 0, 7); ctx.fill(); // black head (canada-goose vibe)
+    // cheek patch
+    ctx.fillStyle = g.color;
+    ctx.beginPath(); ctx.ellipse(0, -s * 1.0, s * 0.22, s * 0.16, 0, 0, 7); ctx.fill();
+    // beak
+    ctx.fillStyle = '#f2a13a';
+    ctx.beginPath(); ctx.moveTo(-s * 0.16, -s * 1.5); ctx.lineTo(s * 0.16, -s * 1.5); ctx.lineTo(0, -s * 1.78); ctx.closePath(); ctx.fill();
+    // eye
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.arc(s * 0.16, -s * 1.22, s * 0.07, 0, 7); ctx.fill();
+    ctx.restore();
+    // carried food rides above
+    if (g.carried) {
+      ctx.font = '18px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(g.carried.emoji, g.x, g.y - g.size - 4);
+    }
+  }
+
+  function drawFX() {
+    for (const r of ripples) {
+      ctx.strokeStyle = `rgba(255,255,255,${0.6 * r.life})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 7); ctx.stroke();
+    }
+    ctx.fillStyle = '#b07a3a';
+    for (const c of crumbs) { ctx.globalAlpha = Math.max(0, c.life); ctx.fillRect(c.x, c.y, 3, 3); }
+    ctx.globalAlpha = 1;
+  }
+
+  function render() {
+    drawBeach();
+    drawBlanket();
+    for (const f of foods) drawFood(f);
+    // draw geese sorted by y for a little depth
+    const sorted = geese.slice().sort((a, b) => a.y - b.y);
+    for (const g of sorted) drawGoose(g);
+    drawFX();
+  }
+
+  // ---- loop ----
+  let last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000; last = now;
+    if (dt > 0.05) dt = 0.05;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  resize();
+  // idle menu scene: a few geese already eyeing the blanket
+  placeFoods();
+  for (let i = 0; i < 3; i++) spawnGoose();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

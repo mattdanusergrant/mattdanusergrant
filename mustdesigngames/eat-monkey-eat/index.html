@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0613">
+<title>NO GUT, NO GLORY!</title>
+<style>
+  :root{
+    --bg:#0a0613; --panel:#160c24; --panel2:#1e1233; --ink:#f3e9ff; --dim:#9a86c4;
+    --pink:#ff3d9a; --cyan:#34e6ff; --lime:#9cff4f; --gold:#ffd23d; --red:#ff5a5a;
+    --line:#3a2358;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:var(--bg);color:var(--ink);
+    font-family:"DejaVu Sans Mono",ui-monospace,Menlo,Consolas,monospace}
+  body{display:flex;flex-direction:column;align-items:center;min-height:100%;
+    background:
+      radial-gradient(1200px 500px at 50% -10%, #2a0f4d 0%, transparent 60%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 1px, transparent 1px 3px),
+      var(--bg);}
+  .wrap{width:100%;max-width:860px;padding:14px 14px 60px;}
+  h1{font-size:30px;letter-spacing:2px;text-align:center;line-height:1;
+     color:#fff;text-shadow:0 0 6px var(--pink),0 0 18px var(--pink),0 0 2px #fff;
+     transform:scaleY(1.15);margin:6px 0 2px;font-weight:800}
+  .sub{text-align:center;color:var(--cyan);font-size:11px;letter-spacing:3px;margin-bottom:10px;
+     text-shadow:0 0 6px var(--cyan)}
+  /* top status bar */
+  .status{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+     padding:6px 11px;font-size:13px;min-width:84px;text-align:center}
+  .chip b{display:block;font-size:10px;color:var(--dim);letter-spacing:1px;font-weight:400}
+  .chip .v{font-size:18px;font-weight:700}
+  .money .v{color:var(--lime);text-shadow:0 0 8px rgba(156,255,79,.5)}
+  .day .v{color:var(--cyan)}
+  .ap .v{color:var(--gold)}
+  /* appetite bar */
+  .appbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+  .appbox .row{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--dim);letter-spacing:1px}
+  .bar{height:18px;border-radius:9px;background:#241636;margin-top:6px;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .bar .fill{height:100%;width:0;transition:width .25s ease;
+     background:linear-gradient(90deg,var(--cyan),var(--lime))}
+  .bar.rav .fill{background:linear-gradient(90deg,var(--gold),var(--red))}
+  .bar .zone{position:absolute;top:0;bottom:0;border-left:1px dashed rgba(255,255,255,.35);border-right:1px dashed rgba(255,255,255,.35);background:rgba(156,255,79,.10)}
+  .appstate{font-weight:700;font-size:12px}
+  /* tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+  .tab{flex:1;min-width:80px;background:var(--panel);border:1px solid var(--line);color:var(--dim);
+     padding:9px 4px;border-radius:8px 8px 0 0;cursor:pointer;font-size:12px;letter-spacing:1px;text-align:center;font-weight:700}
+  .tab.on{background:var(--panel2);color:#fff;border-bottom-color:var(--pink);box-shadow:inset 0 -3px 0 var(--pink)}
+  .panel{background:var(--panel2);border:1px solid var(--line);border-radius:0 8px 8px 8px;padding:12px;min-height:220px}
+  .panel h2{font-size:13px;color:var(--pink);letter-spacing:2px;margin-bottom:8px;text-shadow:0 0 6px rgba(255,61,154,.5)}
+  /* generic item row */
+  .item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+     border-radius:8px;padding:9px 10px;margin-bottom:7px}
+  .item .meta{flex:1;min-width:0}
+  .item .nm{font-size:13px;font-weight:700}
+  .item .ds{font-size:11px;color:var(--dim);line-height:1.35;margin-top:2px}
+  .item .lv{font-size:11px;color:var(--cyan);margin-top:3px}
+  .xpbar{height:5px;background:#241636;border-radius:3px;margin-top:4px;overflow:hidden}
+  .xpbar i{display:block;height:100%;background:var(--cyan);width:0}
+  button.act{background:var(--pink);color:#fff;border:none;border-radius:7px;padding:8px 12px;
+     font-weight:700;cursor:pointer;font-family:inherit;font-size:12px;white-space:nowrap;
+     box-shadow:0 0 10px rgba(255,61,154,.4)}
+  button.act:hover{filter:brightness(1.12)}
+  button.act:disabled{background:#3a2c52;color:#7c6b9c;box-shadow:none;cursor:not-allowed}
+  button.buy{background:var(--lime);color:#0a2300;box-shadow:0 0 10px rgba(156,255,79,.35)}
+  button.go{background:var(--gold);color:#2a1c00;box-shadow:0 0 12px rgba(255,210,61,.45)}
+  button.owned{background:#2a3a18;color:var(--lime);box-shadow:none;cursor:default}
+  .cost{color:var(--gold)}
+  .locked{opacity:.5}
+  .tag{font-size:10px;padding:2px 6px;border-radius:5px;background:#2a1840;color:var(--cyan);margin-left:6px}
+  .tag.haz{color:var(--red);background:#3a1414}
+  /* log */
+  #log{margin-top:12px;background:#06040c;border:1px solid var(--line);border-radius:8px;
+     padding:8px 10px;height:84px;overflow-y:auto;font-size:11px;line-height:1.5;color:var(--dim)}
+  #log .e{color:var(--ink)} #log .g{color:var(--lime)} #log .b{color:var(--red)} #log .y{color:var(--gold)}
+  .barbtn{display:flex;gap:6px;margin-top:10px}
+  .barbtn button{flex:1}
+  /* eat-off overlay */
+  #ov{position:fixed;inset:0;background:rgba(5,2,12,.92);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+  #ov.on{display:flex}
+  .arena{width:100%;max-width:520px;background:var(--panel2);border:2px solid var(--pink);border-radius:14px;
+     padding:18px;box-shadow:0 0 40px rgba(255,61,154,.4)}
+  .arena h3{text-align:center;color:var(--gold);letter-spacing:1px;font-size:16px;text-shadow:0 0 8px rgba(255,210,61,.5)}
+  .arena .venue{text-align:center;color:var(--dim);font-size:11px;margin:2px 0 12px}
+  .scores{display:flex;justify-content:space-around;text-align:center;margin-bottom:8px}
+  .scores .s b{display:block;font-size:11px;color:var(--dim)}
+  .scores .me{font-size:34px;font-weight:800;color:var(--lime);text-shadow:0 0 12px rgba(156,255,79,.6)}
+  .scores .opp{font-size:34px;font-weight:800;color:var(--cyan)}
+  .progress{height:14px;background:#241636;border-radius:7px;overflow:hidden;border:1px solid var(--line);margin-bottom:4px}
+  .progress i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--lime));width:0;transition:width .25s}
+  .tline{font-size:10px;color:var(--dim);text-align:right;margin-bottom:8px}
+  #feed{height:140px;overflow-y:auto;background:#06040c;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.6}
+  #feed .l{opacity:0;animation:pop .25s forwards}
+  @keyframes pop{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+  .result{text-align:center;margin-top:12px}
+  .result .big{font-size:24px;font-weight:800;letter-spacing:1px}
+  .win{color:var(--lime);text-shadow:0 0 14px rgba(156,255,79,.6)}
+  .lose{color:var(--red);text-shadow:0 0 14px rgba(255,90,90,.5)}
+  .credit{text-align:center;color:var(--dim);font-size:10px;margin-top:24px;letter-spacing:1px}
+  .credit a{color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NO GUT, NO GLORY!</h1>
+  <div class="sub">HANK MACADAMIA &middot; MANTECA CA &middot; 1991</div>
+
+  <div class="status">
+    <div class="chip day"><b>DAY</b><span class="v" id="st-day">1</span></div>
+    <div class="chip money"><b>MONEY</b><span class="v" id="st-money">$50</span></div>
+    <div class="chip ap"><b>ACTIONS</b><span class="v" id="st-ap">3</span></div>
+    <div class="chip"><b>RANK</b><span class="v" id="st-rank" style="font-size:13px">Rookie</span></div>
+  </div>
+
+  <div class="appbox">
+    <div class="row"><span>APPETITE</span><span class="appstate" id="app-state">PECKISH</span><span id="app-num">50 / 100</span></div>
+    <div class="bar" id="app-bar"><div class="zone" id="app-zone"></div><div class="fill" id="app-fill"></div></div>
+    <div class="row" style="margin-top:5px"><span id="fatigue-l">Jaw fatigue: fresh</span><span>Imodium: <span id="imo">0</span> &middot; sweet spot = green</span></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" data-t="train">TRAIN</div>
+    <div class="tab" data-t="work">WORK</div>
+    <div class="tab" data-t="shop">!SURGERY!</div>
+    <div class="tab" data-t="compete">COMPETE</div>
+  </div>
+
+  <div class="panel" id="panel"></div>
+
+  <div class="barbtn">
+    <button class="act go" id="endday">END DAY &raquo;</button>
+    <button class="act" id="mutebtn" style="flex:0 0 auto;background:#3a2c52;box-shadow:none">🔊</button>
+    <button class="act" id="reset" style="flex:0 0 auto;background:#3a2c52;box-shadow:none">RESET</button>
+  </div>
+
+  <div id="log"></div>
+  <div class="credit">a Conductive build &middot; design doc: <a>03_creating/game-ideas/no-gut-no-glory.md</a> &middot; #LLM-generated</div>
+</div>
+
+<div id="ov"><div class="arena" id="arena"></div></div>
+
+<script>
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmtMoney=n=>'$'+Math.round(n).toLocaleString();
+
+// ---------- definitions ----------
+const STATS=[
+  {k:'appetite',nm:'Appetite',  ds:'A bigger hunger tank — raises your max appetite, so you can hold more hunger for the big day.'},
+  {k:'stomach', nm:'Stomach',   ds:'Elasticity. The hard ceiling on how much food you can physically fit in there.'},
+  {k:'jaw',     nm:'Jaw',       ds:'Chewing speed and endurance. A tired jaw slows you to a crawl.'},
+  {k:'lungs',   nm:'Lungs',     ds:'You can\'t breathe while you eat. Better lungs lose less food to gasping.'},
+  {k:'gut',     nm:'Gut',       ds:'Tolerance for spicy, greasy, contaminated food. Low gut = a sprint to the bathroom.'},
+  {k:'grip',    nm:'Grip',      ds:'Steady hands. Butterfingers means dropping a perfectly good dog.'},
+];
+// training methods: which stat, appetite delta (eating is negative), money cost, xp
+const TRAIN=[
+  {k:'stomach', nm:"Dad's BBQ",            ds:'Eat ribs to survive and to stretch the stomach.', app:-15, cost:5,  xp:12},
+  {k:'jaw',     nm:'Abba-Zabba reps',      ds:'Chew the chewiest candy in California.',          app:-5,  cost:3,  xp:12},
+  {k:'lungs',   nm:'Pool laps & yoga',     ds:'Breath control. No eating involved.',             app:0,   cost:4,  xp:11},
+  {k:'gut',     nm:'Ghost-pepper drills',  ds:'Eat gut-wrecking food to build a tolerance.',     app:-10, cost:6,  xp:12},
+  {k:'appetite',nm:'Skip-a-meal fast',     ds:'Stay hungry. Grows your hunger AND the tank.',    app:+18, cost:0,  xp:11},
+  {k:'grip',    nm:'Greased-handle squeezes',ds:'Crush a greasy grip-trainer. Never drop a dog.',app:-3,  cost:3,  xp:12},
+];
+const JOBS=[
+  {nm:'Bag groceries',  ds:'Honest work at the Manteca Save-Mart.', pay:20, app:0,   need:0},
+  {nm:'Mow lawns',      ds:'Sweaty, but the cash is good.',          pay:35, app:-4,  need:0},
+  {nm:'Sideshow eater', ds:'Eat for tips at the fair — burns appetite.',pay:60,app:-22,need:2},
+];
+const SURGERY=[
+  {k:'gutWidener',  nm:'Gut Wideners',          ds:'YOU decide how much fits in there. Stomach cap ×1.6.',    cost:400},
+  {k:'steelJaw',    nm:'Steel Jaws',            ds:'Like that guy from Bond. Rate ×1.4, huge endurance.',     cost:600},
+  {k:'reinfLungs',  nm:'Reinforced Lungs',      ds:'Air in. Air out — slowly. Breath loss way down.',          cost:500},
+  {k:'ultraGrip',   nm:'Ultra-Grip Fingers',    ds:'Never drop a greasy dog again. Drop chance way down.',     cost:350},
+  {k:'bacterialWall',nm:'Bacterial Border Wall',ds:'Grill or garbage can — bon appetit. Hazard resist +30%.',  cost:450},
+  {k:'roboColon',   nm:'Robo-Colon™',      ds:'Nice try, diarrhea. Hazard resist +50%.',                  cost:800},
+];
+const COMPS=[
+  {nm:'Manteca County Fair Pie-Off', unit:'pies',  fee:5,   time:10, opp:6,   prize:40,   haz:0,    rank:'Local Hopeful'},
+  {nm:'Tracy Taco Tuesday',          unit:'tacos', fee:15,  time:11, opp:12,  prize:90,   haz:0.20, rank:'Circuit Rookie'},
+  {nm:'Stockton Chili-Dog Challenge',unit:'dogs',  fee:30,  time:12, opp:20,  prize:200,  haz:0.35, rank:'Contender'},
+  {nm:'Sacramento State Fair Wing Bowl',unit:'wings',fee:60,time:13, opp:32,  prize:450,  haz:0.45, rank:'Regional Threat'},
+  {nm:'Reno Buffet Blitz',           unit:'plates',fee:120, time:14, opp:48,  prize:900,  haz:0.30, rank:'Headliner'},
+  {nm:'Coney Island Qualifier',      unit:'dogs',  fee:250, time:15, opp:70,  prize:2000, haz:0.50, rank:'Pro Eater'},
+  {nm:'Vegas World Championship',    unit:'dogs',  fee:500, time:16, opp:100, prize:5000, haz:0.55, rank:'LEGEND'},
+];
+const SAVE='emeSave_v1';
+
+// ---------- state ----------
+let S;
+function fresh(){return{
+  day:1, ap:3, money:50, appetite:50, fatigue:0, imodium:0, busy:false,
+  stats:{appetite:1,stomach:1,jaw:1,lungs:1,gut:1,grip:1},
+  xp:   {appetite:0,stomach:0,jaw:0,lungs:0,gut:0,grip:0},
+  up:{gutWidener:false,steelJaw:false,reinfLungs:false,ultraGrip:false,bacterialWall:false,roboColon:false},
+  tier:0, wins:0, champion:false, tab:'train', mute:false,
+};}
+function load(){try{const r=localStorage.getItem(SAVE);if(r){S=Object.assign(fresh(),JSON.parse(r));return;}}catch(e){}S=fresh();}
+function save(){try{localStorage.setItem(SAVE,JSON.stringify(S));}catch(e){}}
+
+// ---------- audio (WebAudio chimes, no assets) ----------
+let AC=null;
+function beep(f,d=0.08,type='square',g=0.04,when=0){
+  if(!S||S.mute)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended')AC.resume();
+    const t=AC.currentTime+when;
+    const o=AC.createOscillator(),v=AC.createGain();
+    o.type=type;o.frequency.value=f;
+    v.gain.setValueAtTime(g,t);v.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.connect(v);v.connect(AC.destination);o.start(t);o.stop(t+d);
+  }catch(e){}
+}
+const SFX={
+  chomp:()=>beep(170+Math.random()*70,0.05,'square',0.03),
+  drop: ()=>{beep(220,0.08,'sawtooth',0.04);beep(110,0.12,'sawtooth',0.04,0.06);},
+  gulp: ()=>beep(90,0.15,'sine',0.06),
+  good: ()=>{beep(523,0.09,'triangle',0.05);beep(784,0.12,'triangle',0.05,0.08);},
+  bad:  ()=>{beep(196,0.18,'sawtooth',0.05);beep(98,0.3,'sawtooth',0.05,0.12);},
+  cash: ()=>{beep(880,0.06,'square',0.035);beep(1175,0.1,'square',0.035,0.05);},
+  win:  ()=>{[523,659,784,1047].forEach((f,i)=>beep(f,0.16,'triangle',0.06,i*0.12));},
+  lose: ()=>{[330,262,196,131].forEach((f,i)=>beep(f,0.18,'sawtooth',0.04,i*0.14));},
+  levelup:()=>{[660,880].forEach((f,i)=>beep(f,0.1,'triangle',0.05,i*0.08));},
+};
+
+// ---------- derived ----------
+const appetiteMax=()=>100+(S.stats.appetite-1)*20;
+const xpNeed=lvl=>Math.round(50*Math.pow(lvl,1.5));
+const rankName=()=> S.champion?'World Champ': (COMPS[Math.max(0,S.tier-1)]?.rank || 'Rookie');
+
+// ---------- log ----------
+function log(msg,cls=''){const l=$('log');const d=document.createElement('div');
+  d.className=cls;d.innerHTML=msg;l.appendChild(d);l.scrollTop=l.scrollHeight;
+  while(l.children.length>40)l.removeChild(l.firstChild);}
+
+// ---------- actions cost AP ----------
+function spendAP(){ if(S.ap<=0){log('No actions left today. <span class="y">End the day.</span>');return false;} S.ap--; return true; }
+
+function train(t){
+  if(S.busy)return;
+  if(t.app<0 && S.appetite < -t.app){ log(`Too stuffed to ${t.nm.toLowerCase()} — rest or wait.`); return; }
+  if(S.money < t.cost){ log('Not enough money for that.'); return; }
+  if(!spendAP())return;
+  S.money-=t.cost; S.appetite=clamp(S.appetite+t.app,0,appetiteMax());
+  const k=t.k; S.xp[k]+=t.xp;
+  let ups=0; while(S.xp[k]>=xpNeed(S.stats[k])){ S.xp[k]-=xpNeed(S.stats[k]); S.stats[k]++; ups++; }
+  log(`${t.nm}: +${t.xp} ${STATS.find(s=>s.k===k).nm} XP`+(ups?` <span class="g">— LEVEL UP to ${S.stats[k]}!</span>`:'')+'.');
+  if(ups)SFX.levelup();else SFX.chomp();
+  render();save();
+}
+function work(j){
+  if(S.busy)return;
+  if(j.need && S.stats.appetite<j.need){log('Locked — train Appetite first.');return;}
+  if(j.app<0 && S.appetite< -j.app){log('Too stuffed for that job right now.');return;}
+  if(!spendAP())return;
+  S.money+=j.pay; S.appetite=clamp(S.appetite+j.app,0,appetiteMax());
+  log(`${j.nm}: <span class="g">+${fmtMoney(j.pay)}</span>.`);
+  SFX.cash();
+  render();save();
+}
+function rest(){
+  if(S.busy)return; if(!spendAP())return;
+  S.appetite=clamp(S.appetite+20,0,appetiteMax()); S.fatigue=0;
+  log('Rested — appetite up, jaw fresh.');
+  SFX.gulp();
+  render();save();
+}
+function buy(s){
+  if(S.up[s.k]){return;}
+  if(S.money<s.cost){log('Can\'t afford that surgery yet.');return;}
+  S.money-=s.cost; S.up[s.k]=true;
+  log(`!SURGERY! <span class="y">${s.nm}</span> installed.`);
+  SFX.good();
+  render();save();
+}
+function buyImodium(){ if(S.money<10){log('Imodium is $10.');return;} S.money-=10;S.imodium++; log('Bought Imodium (×'+S.imodium+').'); SFX.cash(); render();save(); }
+function endDay(){
+  if(S.busy)return;
+  S.day++; S.ap=3; S.appetite=clamp(S.appetite+12,0,appetiteMax());
+  log(`<span class="y">— Day ${S.day} —</span> You wake up hungrier.`);
+  SFX.gulp();
+  render();save();
+}
+
+// ---------- competition sim ----------
+function simulate(c){
+  const st=S.stats, up=S.up, max=appetiteMax();
+  const appFrac=clamp(S.appetite/max,0,1);
+  const ravenous=S.appetite>=max*0.9;
+  const hungerCeil=Math.round(S.appetite*0.55);
+  const stomachCap=Math.round(st.stomach*11*(up.gutWidener?1.6:1));
+  const maxEat=Math.min(hungerCeil,stomachCap);
+  let rate=(1.0+st.jaw*0.4)*(up.steelJaw?1.4:1);
+  const endurance=5+st.jaw*1.5+(up.steelJaw?8:0);
+  const breathLoss=Math.max(0.02,0.28-st.lungs*0.035-(up.reinfLungs?0.16:0));
+  const dropBase=Math.max(0,0.20-st.grip*0.03-(up.ultraGrip?0.16:0))+(ravenous?0.15:0);
+  const gutResist=clamp(st.gut*0.10+(up.bacterialWall?0.30:0)+(up.roboColon?0.50:0),0,0.95);
+  let haz=c.haz;
+  if(c.haz>0 && c.haz<0.4 && Math.random()<0.20) haz=Math.min(0.9,haz+0.25); // contaminated low-tier food
+  const ev=[]; let eaten=0, dq=false, usedImo=false;
+  const gutTick=Math.max(2,Math.round(c.time*0.5+Math.random()*c.time*0.2));
+  for(let t=1;t<=c.time;t++){
+    if(eaten>=maxEat){ ev.push({line:`STUFFED — can\'t fit another bite.`,cls:'y',total:eaten}); break; }
+    let r=rate*(0.85+appFrac*0.3), note='', dropped=false;
+    if(t>endurance){ r*=Math.max(0.3,1-(t-endurance)*0.12); note='jaw tiring'; S.fatigue=Math.min(100,S.fatigue+5); }
+    if(ravenous) r*=0.85;
+    r*=(1-breathLoss);
+    if(Math.random()<dropBase){ r*=0.35; dropped=true; }
+    if(t===gutTick && haz>0){
+      if(S.imodium>0){ S.imodium--; usedImo=true; ev.push({line:`💊 Imodium kicks in — gut settled.`,cls:'g',total:eaten}); }
+      else if(Math.random()<haz*(1-gutResist)){ dq=true; ev.push({line:`🚽 GUT CHECK FAILED — sprinting to the bathroom!`,cls:'b',total:eaten}); break; }
+      else ev.push({line:`😅 Gut check... held it down.`,cls:'',total:eaten});
+    }
+    eaten=Math.min(maxEat,eaten+Math.max(0,r));
+    let line=`CHOMP! +${r.toFixed(1)} ${c.unit}`;
+    if(dropped) line=`BUTTERFINGERS! fumbled — +${r.toFixed(1)}`;
+    else if(note) line+=` <span style="color:var(--gold)">(${note})</span>`;
+    ev.push({line,cls:'e',total:eaten});
+  }
+  const finalN=Math.floor(eaten);
+  return {ev,finalN,dq,won:!dq&&finalN>c.opp, opp:c.opp, maxEat};
+}
+
+function enterComp(c,idx){
+  if(S.busy)return;
+  if(S.money<c.fee){ log('Can\'t cover the entry fee.'); return; }
+  if(!spendAP())return;
+  S.money-=c.fee;
+  const res=simulate(c);
+  playArena(c,res,idx);
+  save();
+}
+
+function playArena(c,res,idx){
+  S.busy=true;
+  const a=$('arena');
+  a.innerHTML=`<h3>${c.nm}</h3><div class="venue">entry ${fmtMoney(c.fee)} &middot; beat ${c.opp} &middot; purse ${fmtMoney(c.prize)}${c.haz?` &middot; <span style="color:var(--red)">hazard</span>`:''}</div>
+    <div class="scores"><div class="s"><b>HANK</b><div class="me" id="me">0</div></div><div class="s"><b>BEAT</b><div class="opp">${c.opp}</div></div></div>
+    <div class="progress"><i id="prog"></i></div><div class="tline" id="tl">ready…</div>
+    <div id="feed"></div>
+    <div style="text-align:center;margin-top:8px"><button class="act" id="skip" style="background:#3a2c52;box-shadow:none;font-size:11px">FAST &raquo;&raquo;</button></div>
+    <div class="result" id="rz"></div>`;
+  $('ov').classList.add('on');
+  const feed=$('feed'),me=$('me'),prog=$('prog'),tl=$('tl');
+  const goal=Math.max(c.opp,res.maxEat,1);
+  let i=0, fast=false;
+  $('skip').onclick=()=>{ fast=true; $('skip').style.display='none'; };
+  const step=()=>{
+    if(i<res.ev.length){
+      const e=res.ev[i];
+      const d=document.createElement('div'); d.className='l '+(e.cls||''); d.innerHTML=e.line;
+      if(e.cls==='b')d.style.color='var(--red)'; if(e.cls==='g')d.style.color='var(--lime)'; if(e.cls==='y')d.style.color='var(--gold)';
+      feed.appendChild(d); feed.scrollTop=feed.scrollHeight;
+      const n=Math.floor(e.total); me.textContent=n;
+      me.style.color = n>c.opp?'var(--lime)':'var(--cyan)';
+      prog.style.width=clamp(e.total/goal*100,0,100)+'%';
+      tl.textContent=`tick ${i+1} / ${res.ev.length}`;
+      if(!fast){
+        if(e.line.indexOf('BUTTERFINGERS')===0)SFX.drop();
+        else if(e.cls==='b')SFX.bad();
+        else if(e.cls==='g')SFX.good();
+        else if(e.cls==='y')SFX.gulp();
+        else SFX.chomp();
+      }
+      i++; setTimeout(step,fast?45:380);
+    } else { finishArena(c,res,idx); }
+  };
+  setTimeout(step,450);
+}
+
+function finishArena(c,res,idx){
+  const rz=$('rz');
+  $('skip').style.display='none';
+  if(res.won)SFX.win();else SFX.lose();
+  let payout=0, msg='';
+  if(res.won){
+    payout=c.prize; S.money+=payout; S.wins++;
+    if(idx>=S.tier) S.tier=Math.min(COMPS.length,idx+1);
+    if(idx===COMPS.length-1) S.champion=true;
+    msg=`<div class="big win">${res.finalN} ${c.unit} — YOU WIN!</div>
+      <div style="color:var(--lime);margin-top:4px">purse <b>${fmtMoney(payout)}</b>${idx>=S.tier-1&&S.tier<COMPS.length?' &middot; new contest unlocked!':''}</div>`;
+    log(`<span class="g">WON ${c.nm}</span> — ${res.finalN} ${c.unit}, +${fmtMoney(payout)}.`,'g');
+  } else if(res.dq){
+    msg=`<div class="big lose">DISQUALIFIED</div><div style="color:var(--dim);margin-top:4px">The gut betrayed you at ${res.finalN}. Entry fee gone.</div>`;
+    log(`<span class="b">DQ at ${c.nm}</span> — gut check failed.`,'b');
+  } else {
+    msg=`<div class="big lose">${res.finalN} ${c.unit} — fell short of ${c.opp}.</div><div style="color:var(--dim);margin-top:4px">Entry fee gone. Train up and come back.</div>`;
+    log(`<span class="b">Lost ${c.nm}</span> — ${res.finalN}/${c.opp}.`,'b');
+  }
+  if(S.champion){
+    msg+=`<div class="big win" style="margin-top:10px">🏆 WORLD CHAMPION! 🏆</div><div style="color:var(--gold)">Manteca's finest. EAT, MONKEY, EAT!</div>`;
+  }
+  rz.innerHTML=msg+`<button class="act go" style="margin-top:14px" id="close">BACK TO TRAINING</button>`;
+  $('close').onclick=()=>{ $('ov').classList.remove('on'); S.busy=false; render(); save(); };
+}
+
+// ---------- render ----------
+function statRow(s){
+  const lv=S.stats[s.k], need=xpNeed(lv), have=S.xp[s.k];
+  return `<div class="item"><div class="meta"><div class="nm">${s.nm} <span class="tag">Lv ${lv}</span></div>
+    <div class="ds">${s.ds}</div>
+    <div class="xpbar"><i style="width:${clamp(have/need*100,0,100)}%"></i></div></div></div>`;
+}
+function panelTrain(){
+  let h=`<h2>STATS &amp; TRAINING</h2>`;
+  h+=STATS.map(statRow).join('');
+  h+=`<h2 style="margin-top:12px">METHODS &middot; 1 action each</h2>`;
+  h+=TRAIN.map((t,i)=>{
+    const target=STATS.find(s=>s.k===t.k).nm;
+    const appTxt=t.app>0?`+${t.app} appetite`:t.app<0?`${t.app} appetite`:'no eating';
+    const dis=(S.ap<=0)||(t.app<0&&S.appetite< -t.app)||(S.money<t.cost);
+    return `<div class="item"><div class="meta"><div class="nm">${t.nm} <span class="tag">${target}</span></div>
+      <div class="ds">${t.ds}</div>
+      <div class="lv">${appTxt}${t.cost?` &middot; <span class="cost">${fmtMoney(t.cost)}</span>`:' &middot; free'}</div></div>
+      <button class="act" data-train="${i}" ${dis?'disabled':''}>TRAIN</button></div>`;
+  }).join('');
+  return h;
+}
+function panelWork(){
+  let h=`<h2>ODD JOBS &middot; 1 action each</h2>`;
+  h+=JOBS.map((j,i)=>{
+    const locked=j.need&&S.stats.appetite<j.need;
+    const dis=(S.ap<=0)||locked||(j.app<0&&S.appetite< -j.app);
+    return `<div class="item ${locked?'locked':''}"><div class="meta"><div class="nm">${j.nm}${locked?` <span class="tag haz">needs Appetite ${j.need}</span>`:''}</div>
+      <div class="ds">${j.ds}</div>
+      <div class="lv"><span class="g" style="color:var(--lime)">+${fmtMoney(j.pay)}</span>${j.app?` &middot; ${j.app} appetite`:''}</div></div>
+      <button class="act buy" data-work="${i}" ${dis?'disabled':''}>WORK</button></div>`;
+  }).join('');
+  h+=`<h2 style="margin-top:12px">RECOVER</h2>
+    <div class="item"><div class="meta"><div class="nm">Rest</div><div class="ds">Sleep it off — +20 appetite, clears jaw fatigue.</div></div>
+    <button class="act buy" id="restbtn" ${S.ap<=0?'disabled':''}>REST</button></div>`;
+  return h;
+}
+function panelShop(){
+  let h=`<h2>!S-U-R-G-E-R-Y! &middot; permanent, no action cost</h2>`;
+  h+=SURGERY.map((s,i)=>{
+    const owned=S.up[s.k];
+    return `<div class="item"><div class="meta"><div class="nm">${s.nm}${owned?' <span class="tag" style="color:var(--lime)">INSTALLED</span>':''}</div>
+      <div class="ds">${s.ds}</div><div class="lv"><span class="cost">${fmtMoney(s.cost)}</span></div></div>
+      ${owned?'<button class="act owned">OWNED</button>':`<button class="act buy" data-buy="${i}" ${S.money<s.cost?'disabled':''}>BUY</button>`}</div>`;
+  }).join('');
+  h+=`<h2 style="margin-top:12px">DRUG STORE</h2>
+    <div class="item"><div class="meta"><div class="nm">Imodium <span class="tag">×${S.imodium}</span></div>
+    <div class="ds">Mainline it before a contest — negates one gut hazard.</div><div class="lv"><span class="cost">$10</span> each</div></div>
+    <button class="act buy" id="imobtn" ${S.money<10?'disabled':''}>BUY</button></div>`;
+  return h;
+}
+function panelCompete(){
+  let h=`<h2>THE CIRCUIT &middot; 1 action to enter</h2>`;
+  h+=COMPS.map((c,i)=>{
+    const locked=i>S.tier;
+    const beaten=i<S.tier;
+    const dis=(S.ap<=0)||locked||(S.money<c.fee);
+    return `<div class="item ${locked?'locked':''}"><div class="meta">
+      <div class="nm">${c.nm}${beaten?' <span class="tag" style="color:var(--lime)">★ won</span>':''}${c.haz?' <span class="tag haz">hazard</span>':''}</div>
+      <div class="ds">eat ${c.unit} &middot; ${c.time} ticks &middot; beat <b>${c.opp}</b></div>
+      <div class="lv">entry <span class="cost">${fmtMoney(c.fee)}</span> &middot; purse <span style="color:var(--lime)">${fmtMoney(c.prize)}</span></div></div>
+      <button class="act ${locked?'':'go'}" data-comp="${i}" ${dis?'disabled':''}>${locked?'LOCKED':'ENTER'}</button></div>`;
+  }).join('');
+  return h;
+}
+const PANELS={train:panelTrain,work:panelWork,shop:panelShop,compete:panelCompete};
+
+function render(){
+  $('st-day').textContent=S.day;
+  $('st-money').textContent=fmtMoney(S.money);
+  $('st-ap').textContent=S.ap;
+  $('st-rank').textContent=rankName();
+  $('imo').textContent=S.imodium;
+  const max=appetiteMax(), frac=S.appetite/max;
+  $('app-num').textContent=`${Math.round(S.appetite)} / ${max}`;
+  $('app-fill').style.width=clamp(frac*100,0,100)+'%';
+  const bar=$('app-bar'); const rav=S.appetite>=max*0.9; bar.classList.toggle('rav',rav);
+  // green sweet-spot zone 60%–88%
+  const z=$('app-zone'); z.style.left='60%'; z.style.width='28%';
+  let state='PECKISH';
+  if(rav)state='RAVENOUS ⚠';
+  else if(frac>=0.6)state='HUNGRY (prime)';
+  else if(frac>=0.35)state='PECKISH';
+  else state='STUFFED';
+  const as=$('app-state'); as.textContent=state;
+  as.style.color = rav?'var(--red)': frac>=0.6?'var(--lime)': frac<0.35?'var(--dim)':'var(--cyan)';
+  $('fatigue-l').textContent = 'Jaw fatigue: '+(S.fatigue<10?'fresh':S.fatigue<40?'warming':S.fatigue<75?'tired':'cooked');
+  $('mutebtn').textContent=S.mute?'🔇':'🔊';
+  // tabs
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===S.tab));
+  $('panel').innerHTML=PANELS[S.tab]();
+}
+
+// ---------- wiring ----------
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ if(S.busy)return; S.tab=t.dataset.t; render(); save(); });
+$('panel').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  if(b.dataset.train!=null) train(TRAIN[+b.dataset.train]);
+  else if(b.dataset.work!=null) work(JOBS[+b.dataset.work]);
+  else if(b.dataset.buy!=null) buy(SURGERY[+b.dataset.buy]);
+  else if(b.dataset.comp!=null) enterComp(COMPS[+b.dataset.comp],+b.dataset.comp);
+  else if(b.id==='restbtn') rest();
+  else if(b.id==='imobtn') buyImodium();
+});
+$('endday').onclick=endDay;
+$('mutebtn').onclick=()=>{ S.mute=!S.mute; if(!S.mute)SFX.good(); render(); save(); };
+$('reset').onclick=()=>{ if(confirm('Reset Hank back to Day 1?')){ S=fresh(); save(); log('— New game. —'); render(); } };
+
+// ---------- boot ----------
+load();
+log('Welcome to the circuit, Hank. <span class="y">Train, work, then enter the Pie-Off.</span>');
+render();
+})();
+</script>
+</body>
+</html>

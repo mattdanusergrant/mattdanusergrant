@@ -1,0 +1,2493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#15171c">
+<title>Sigil Tactics</title>
+<link rel="icon" type="image/png" href="assets/ui/logo-mark.png">
+<meta name="description" content="Sigil Tactics — a 5v5 tactical card-battler on a 5×4 grid. Initiative by speed, push and pull positioning, and free sigils that chain into combo turns.">
+<meta property="og:title" content="Sigil Tactics">
+<meta property="og:description" content="5v5 tactical card-battler. Initiative by speed, push and pull positioning, and free sigils that chain into combo turns. Wipe out the enemy heroes.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg:#15171c; --panel:#1e2128; --line:#2c303a; --ink:#e8eaf0; --dim:#8a91a3;
+    --pa:#2d6cdf; --pb:#d8453b; --gold:#e7b53b; --hi:#f4f6fb;
+    --move:#2d6cdf; --atk:#d8453b; --heal:#3fb36a; --deploy:#e7b53b; --spell:#b878ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  #app{max-width:480px; margin:0 auto; padding:8px 8px 14px; display:flex; flex-direction:column; gap:8px; min-height:100vh;}
+  h1{font-size:32px; margin:10px 0 0; letter-spacing:2px; text-align:center; color:var(--gold); font-weight:800;}
+  .sub{font-size:11px; color:var(--dim); text-align:center; margin:-2px 0 2px;}
+
+  /* (side hero stat-cards removed — HP/init/buffs/facing now live on the tile sprite below) */
+
+  #init{display:flex; gap:4px; overflow-x:auto; padding:4px 6px; background:var(--panel);
+    border:1px solid var(--line); border-radius:9px; min-height:34px; align-items:center;}
+  #init .lbl{font-size:10px; color:var(--dim); flex:0 0 auto; padding-right:2px; letter-spacing:.5px;}
+  #init .init-div{padding:0 2px 0 4px; border-left:1px solid var(--line); margin-left:2px;}
+  .ichip{flex:0 0 auto; display:flex; align-items:center; gap:3px; padding:3px 7px; border-radius:6px;
+    font-size:11px; font-weight:700; background:#262a33; border:1px solid var(--line); white-space:nowrap;}
+  .ichip.A{color:#9ec1ff;} .ichip.B{color:#ff9c95;}
+  .ichip.active{background:var(--gold); color:#1a1407; border-color:var(--gold);}
+  .ichip.acted{opacity:.35;}
+  .ichip.spent{opacity:.3; filter:grayscale(.6);}
+  .ichip .spd{font-size:9px; opacity:.7;}
+
+  #board{display:grid; grid-template-columns:repeat(5,1fr); gap:4px; background:var(--panel);
+    padding:6px; border-radius:12px; border:1px solid var(--line);}
+  .tile{position:relative; aspect-ratio:1/1; background:#23262f; border-radius:8px;
+    display:flex; align-items:center; justify-content:center; user-select:none; transition:background .1s;}
+  .tile.terrain{background:#2c4a35; box-shadow:inset 0 0 0 1px #3a7d44;}
+  .tile.terrain::after{content:"▲"; position:absolute; bottom:2px; right:4px; font-size:9px; color:#6fcf8a; opacity:.8;}
+  .tile.hl-move{outline:2px solid var(--move); outline-offset:-2px; cursor:pointer;}
+  .tile.hl-move::before{content:""; position:absolute; width:30%; height:30%; border-radius:50%; background:var(--move); opacity:.45;}
+  .tile.hl-atk{outline:2px solid var(--atk); outline-offset:-2px; cursor:pointer;}
+  .tile.hl-heal{outline:2px solid var(--heal); outline-offset:-2px; cursor:pointer;}
+  .tile.hl-spell{outline:2px solid var(--spell); outline-offset:-2px; cursor:pointer;}
+  .tile.hl-step{outline:2px solid var(--gold); outline-offset:-2px; cursor:pointer; background:rgba(212,165,116,.15);}
+  /* Pick-phase: a pulsing gold ring on each unacted unit's tile to invite a tap. */
+  .tile.hl-pick{outline:2px solid var(--gold); outline-offset:-2px; cursor:pointer; animation:pick-pulse 1.4s ease-in-out infinite;}
+  @keyframes pick-pulse{0%,100%{outline-color:var(--gold); box-shadow:0 0 0 0 rgba(212,165,116,0);} 50%{outline-color:#f7d699; box-shadow:0 0 0 4px rgba(212,165,116,.25);}}
+  .tile.active{outline:3px solid var(--gold); outline-offset:-2px;}
+  /* One-shot feedback flashes — fired by tileFx(r,c,kind) and applied for a single render. */
+  .tile.fx-dmg{animation:fx-dmg 520ms ease-out;}
+  .tile.fx-heal{animation:fx-heal 520ms ease-out;}
+  @keyframes fx-dmg{
+    0%  {box-shadow:inset 0 0 0 6px var(--atk), 0 0 16px 4px var(--atk);}
+    60% {box-shadow:inset 0 0 0 3px var(--atk), 0 0 6px 1px var(--atk);}
+    100%{box-shadow:none;}
+  }
+  @keyframes fx-heal{
+    0%  {box-shadow:inset 0 0 0 6px var(--heal), 0 0 14px 3px var(--heal);}
+    60% {box-shadow:inset 0 0 0 3px var(--heal), 0 0 5px 1px var(--heal);}
+    100%{box-shadow:none;}
+  }
+
+  .unit{width:88%; height:88%; border-radius:8px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; position:relative; color:#fff; font-weight:700;
+    overflow:hidden;}
+  /* Side-coloured backgrounds — act as a fallback if the portrait PNG is missing, and as a
+     coloured frame around the painting when it loads (the portrait covers the centre, leaving
+     a side-tinted edge from the gradient + outline). */
+  .unit.A{background:linear-gradient(160deg,#3a7bef,#214fb0); outline:2px solid var(--pa); outline-offset:-1px;}
+  .unit.B{background:linear-gradient(160deg,#e8584d,#a82f26); outline:2px solid var(--pb); outline-offset:-1px;}
+  .unit.hero{box-shadow:inset 0 0 0 2px var(--gold);}
+  /* Emoji symbol sits behind the portrait so it shows if the PNG fails to load. */
+  .unit .sym{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:min(5.2vw,22px); line-height:1; z-index:0;}
+  /* Hero portrait painting — fills the tile, cropped to upper-third so the head shows.
+     object-position avoids the Gemini sparkle (bottom-right) entirely. */
+  .unit .portrait{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    object-position:50% 18%; z-index:1; pointer-events:none;}
+  .unit.done{filter:grayscale(.55) brightness(.8);}
+
+  /* on-tile stat overlays — z-index:2 keeps them above the portrait painting */
+  .unit .stat-init{position:absolute; top:1px; left:3px; font-size:9px; font-weight:800; color:#fff; text-shadow:0 1px 2px #000, 0 0 3px #000; z-index:2;}
+  .unit .stat-hp{position:absolute; top:1px; right:3px; font-size:9.5px; font-weight:800; color:#fff; text-shadow:0 1px 2px #000, 0 0 3px #000; z-index:2;}
+  .unit .hpwrap{position:absolute; left:3px; right:3px; bottom:3px; height:4px; background:rgba(0,0,0,.55); border-radius:2px; overflow:hidden; z-index:2;}
+  .unit .hpbar{height:100%; background:#3fb36a; transition:width .25s;}
+  .unit .hpbar.low{background:#e8b53b;}
+  .unit .hpbar.crit{background:#e8584d;}
+  .unit .buffs{position:absolute; left:3px; bottom:9px; font-size:8.5px; font-weight:800; color:#fff;
+    text-shadow:0 0 3px #000; background:rgba(12,13,17,.7); padding:0 3px; border-radius:4px; line-height:1.35; z-index:2;}
+
+  /* facing arrow — bigger, anchored to the side the unit is facing (half on the edge, half outside) */
+  .unit .face{position:absolute; font-size:16px; font-weight:900; line-height:1; color:var(--gold);
+    text-shadow:0 0 3px #000, 0 0 5px #000; pointer-events:none; z-index:3;}
+  .unit .face.face-N{top:-6px; left:50%; transform:translateX(-50%);}
+  .unit .face.face-S{bottom:-6px; left:50%; transform:translateX(-50%);}
+  .unit .face.face-E{right:-6px; top:50%; transform:translateY(-50%);}
+  .unit .face.face-W{left:-6px; top:50%; transform:translateY(-50%);}
+
+  #turnbar{display:none; background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:8px 12px; align-items:center; justify-content:space-between; gap:10px; font-size:13px;}
+  #turnbar.show{display:flex;}
+  #turnbar .tb-name b{color:var(--gold);}
+  #turnbar.B .tb-name b{color:var(--pb);}
+  #turnbar .tb-ctrs{display:flex; gap:8px; flex:0 0 auto;}
+  #turnbar .tb-ctr{font-size:11px; color:var(--dim); background:#262a33; border:1px solid var(--line);
+    border-radius:6px; padding:2px 7px; white-space:nowrap;}
+  #turnbar .tb-ctr b{color:var(--ink); font-weight:700;}
+  #status{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:7px 10px;
+    font-size:12.5px; min-height:34px; display:flex; align-items:center;}
+  #status b{color:var(--gold);}
+
+  .barrow{display:flex; gap:8px; align-items:center;}
+  .deck-info{font-size:11px; color:var(--dim); font-weight:600; margin-left:auto;}
+  .btn-icon{flex:0 0 auto; padding:11px 14px; min-width:42px;}
+  #cardDetail{display:none; background:#1a1c22; border:1px solid var(--gold); border-radius:8px; padding:8px 10px; margin:4px 0; gap:10px; align-items:center;}
+  #cardDetail.show{display:flex;}
+  #cardDetail .cd-glyph{font-size:24px; line-height:1;}
+  #cardDetail .cd-info{flex:1; min-width:0;}
+  #cardDetail .cd-name{font-size:12px; font-weight:800; color:var(--gold); letter-spacing:.5px;}
+  #cardDetail .cd-eff{font-size:11px; color:#e6e7eb; margin-top:1px;}
+  #cardDetail .cd-hint{font-size:10px; color:var(--dim); margin-top:2px; font-style:italic;}
+  #cardDetail .cd-cancel{background:transparent; border:1px solid var(--line); color:var(--dim); border-radius:6px; padding:5px 10px; font-size:10px; font-weight:700; letter-spacing:1px; cursor:pointer;}
+  #cardDetail .cd-cancel:hover{color:#fff; border-color:#fff;}
+  .btn{flex:1; background:var(--gold); color:#1a1407; border:none; border-radius:10px; padding:11px;
+    font-size:14px; font-weight:800; letter-spacing:.3px;}
+  .btn:active{filter:brightness(.9);}
+  .btn:disabled{opacity:.4;}
+  .btn.ghost{background:transparent; color:var(--dim); border:1px solid var(--line); flex:0 0 auto; padding:11px 14px;}
+
+  #hand{display:flex; flex-direction:column; gap:4px; padding:2px; max-height:300px; overflow-y:auto;}
+  .card{background:#262a33; border:1px solid var(--line); border-radius:8px;
+    display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:start;
+    padding:6px 8px 6px 10px; position:relative; cursor:pointer; user-select:none;}
+  .card .csym{font-size:18px; line-height:1; padding-top:1px;}
+  .card .ctext{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .card .ctop{display:flex; gap:6px; align-items:baseline; flex-wrap:wrap;}
+  .card .cname{font-size:12.5px; font-weight:700; color:#fff;}
+  .card .cowner{font-size:10.5px; color:#d4a574; font-weight:600;}
+  .card .ctag{font-size:8.5px; color:var(--dim); letter-spacing:.5px; font-weight:700; margin-left:auto;}
+  .card .ceff{font-size:10.5px; color:#c8cad2; line-height:1.35;}
+  .card .cassist{font-size:10.5px; color:#c8cad2; line-height:1.35;}
+  .card .cassist b{color:#d4a574;}
+  .card.sel{border-color:var(--hi); box-shadow:0 0 0 2px var(--hi);}
+  .card.cant{opacity:.4;}
+  .card.dead-src{filter:grayscale(1) brightness(.55);}
+  .card.dead-src::after{content:"✕"; position:absolute; top:6px; right:8px; color:#e8584d; font-weight:800; font-size:14px;}
+  .btn.active{background:var(--gold); color:#0c0d11;}
+  .card.tier-C{border-left:3px solid #6a6e78;}
+  .card.tier-E{border-left:3px solid #b878ff;}
+  .card.tier-E .csym{color:#d6bcff;}
+  .card.tier-L{border-left:3px solid var(--gold); background:linear-gradient(165deg,#2a241a 0%,#1c1f24 65%);}
+  .card.tier-L .csym{color:var(--gold);}
+  .card.tier-L .cname{color:var(--gold);}
+  .card.tier-G{border-left:3px solid #3fc7c2; background:linear-gradient(165deg,#1a2a2a 0%,#1c1f24 65%);}
+  .card.tier-G .csym{color:#7fe6e0;}
+  .card.tier-G .ctag{color:#7fe6e0;}
+
+  #codex{position:fixed; inset:0; background:rgba(8,9,12,.92); display:none; align-items:flex-start; justify-content:center; z-index:20; overflow-y:auto; padding:20px 12px;}
+  #codex.open{display:flex;}
+  #codex .cbox{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 16px 22px; max-width:420px; width:100%; position:relative;}
+  #codex h2{margin:0 0 2px; text-align:center; color:var(--gold); letter-spacing:2px;}
+  #codex .cdx-sub{font-size:11px; color:var(--dim); text-align:center; margin-bottom:14px;}
+  #codex h3{margin:14px 0 6px; font-size:13px; color:var(--gold); border-bottom:1px solid var(--line); padding-bottom:3px;}
+  #codex ul{margin:0; padding-left:18px; font-size:12px; color:#d6d8de; line-height:1.55;}
+  #codex ul.kinds li{margin-bottom:2px;}
+  #codex .cdx-tbl{width:100%; border-collapse:collapse; font-size:12px;}
+  #codex .cdx-tbl th, #codex .cdx-tbl td{padding:3px 6px; border-bottom:1px solid var(--line); text-align:left;}
+  #codex .cdx-tbl th{color:var(--dim); font-weight:600;}
+  #codex .x{position:absolute; top:8px; right:10px; background:transparent; border:none; color:var(--dim); font-size:22px; cursor:pointer; line-height:1;}
+  #codex .x:hover{color:#fff;}
+  #codex .suite{margin-bottom:10px;}
+  #codex .suite-h{font-size:12px; color:var(--gold); margin:8px 0 4px; font-weight:700;}
+  #codex .cdx-card{display:grid; grid-template-columns:80px 1fr 18px; gap:6px; align-items:center; font-size:11px; padding:3px 4px; border-left:3px solid var(--line); margin-bottom:2px; background:rgba(255,255,255,.02);}
+  #codex .cdx-card .cdx-cat{color:var(--dim); font-size:10px;}
+  #codex .cdx-card .cdx-name{color:#fff;}
+  #codex .cdx-card .cdx-eff{color:var(--dim); font-size:10px; grid-column:1/-1; padding-left:24px;}
+  #codex .cdx-card .cdx-assist{display:inline-block; margin-top:1px; color:#c8cad2;}
+  #codex .cdx-card .cdx-assist b{color:#d4a574;}
+  #codex .cdx-card.tier-C{border-left-color:#6a6e78;}
+  #codex .cdx-card.tier-E{border-left-color:#b878ff;}
+  #codex .cdx-card.tier-L{border-left-color:var(--gold);}
+  #codex .cdx-card.tier-G{border-left-color:#3fc7c2;}
+  #codex .cdx-card.unused-Weapon{display:none;}
+  #codex .cdx-card.cat-Weapon{border-left-color:#c14a3a;}
+  #codex .cdx-card.cat-Armor{border-left-color:#4a78c1;}
+  #codex .cdx-card.cat-Helmet{border-left-color:#4ac1a8;}
+  #codex .cdx-card.cat-Boots{border-left-color:#7fb04a;}
+  #codex .cdx-card.cat-Artifact{border-left-color:var(--gold);}
+  #codex .cdx-card.cat-Action{border-left-color:#c7c9d1;}
+  #codex .cdx-card.spell{border-left-color:#b878ff;}
+  #title, #missions, #missionIntro, #victory{position:fixed; inset:0; background:rgba(8,9,12,.97); display:none; align-items:center; justify-content:center; z-index:35; overflow-y:auto; padding:20px 12px;}
+  #title.open, #missions.open, #missionIntro.open, #victory.open{display:flex;}
+  #title .tbox, #missions .mbox, #missionIntro .ibox, #victory .vbox{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 18px; max-width:420px; width:100%; text-align:center; position:relative;}
+  #title h1{margin:0 0 4px; font-size:36px; letter-spacing:3px; color:var(--gold);}
+  #title h1.title-h1{padding:0;}
+  #title .wordmark{display:block; margin:0 auto; max-width:min(320px,72vw); height:auto;}
+  #title .tag{font-size:11px; color:var(--dim); margin-bottom:22px;}
+  .tbtn{display:block; width:100%; background:var(--gold); color:#0c0d11; border:none; border-radius:8px; padding:12px; font-weight:800; letter-spacing:2px; font-size:14px; cursor:pointer; margin-bottom:8px;}
+  .tbtn.ghost{background:transparent; color:var(--gold); border:1px solid var(--gold);}
+  .tbtn:hover{filter:brightness(1.1);}
+  .treset{background:transparent; border:none; color:var(--dim); font-size:10px; cursor:pointer; text-decoration:underline; margin-top:14px;}
+  #title .tprog{font-size:11px; color:var(--dim); margin-top:18px;}
+  #missions h2, #missionIntro h2, #victory h2{margin:0 0 4px; color:var(--gold); letter-spacing:3px;}
+  #missions .m-sub{font-size:11px; color:var(--dim); margin-bottom:14px;}
+  #missions .x, #missionIntro .x{position:absolute; top:8px; right:10px; background:transparent; border:none; color:var(--dim); font-size:22px; cursor:pointer; line-height:1;}
+  #missionList{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
+  .mrow{display:grid; grid-template-columns:36px 1fr 80px; gap:8px; align-items:center; padding:8px 10px; background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:8px; cursor:pointer;}
+  .mrow:hover:not(.locked){background:rgba(212,165,116,.10);}
+  .mrow.locked{opacity:.4; cursor:not-allowed;}
+  .mrow.done{border-color:#7fb04a;}
+  .mrow .mgly{font-size:24px;}
+  .mrow .mtitle{font-size:12px; color:#fff; font-weight:700; text-align:left;}
+  .mrow .msub{font-size:10px; color:var(--dim); text-align:left;}
+  .mrow .mstat{font-size:9px; color:var(--dim); letter-spacing:1px; text-align:right;}
+  .mrow.done .mstat{color:#7fb04a;}
+  .m-prog{font-size:11px; color:var(--dim); border-top:1px solid var(--line); padding-top:10px;}
+  #missionIntro .i-boss{font-size:60px; line-height:1; margin:8px 0;}
+  #missionIntro .i-text{font-size:12px; color:#d6d8de; line-height:1.55; text-align:left; margin:10px 0;}
+  #missionIntro .i-team-row{font-size:11px; color:var(--dim); text-align:left; margin-bottom:4px;}
+  #missionIntro .i-team-row span{color:#fff; font-size:14px;}
+  #missionIntro .i-pick-h{font-size:11px; color:var(--dim); text-align:left; margin-top:12px; margin-bottom:6px;}
+  #missionIntro .i-pick{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px;}
+  #missionIntro .ipick{background:#1a1c22; border:1px solid var(--line); border-radius:8px; padding:8px 4px; cursor:pointer; color:#fff; display:flex; flex-direction:column; align-items:center; gap:2px;}
+  #missionIntro .ipick:hover{background:#23262e;}
+  #missionIntro .ipick.sel{border-color:var(--gold); background:rgba(212,165,116,.18);}
+  #missionIntro .ipick.cant{opacity:.35; cursor:not-allowed;}
+  #missionIntro .ipick.cant:hover{background:#1a1c22;}
+  #missionIntro .ipick-h{grid-column:1/-1; font-size:11px; color:var(--gold); letter-spacing:.5px; text-transform:uppercase; margin:4px 0 2px;}
+  #missionIntro .ipgly{font-size:22px; line-height:1;}
+  #missionIntro .ipname{font-size:10px;}
+  #missionIntro .i-pick-count{font-size:10px; color:var(--dim); text-align:right; margin-bottom:10px;}
+  #missionIntro .tbtn:disabled{opacity:.4; cursor:not-allowed;}
+  #victory .v-text{font-size:12px; color:#d6d8de; margin:8px 0 14px; line-height:1.5;}
+  #victory .v-unlock{background:rgba(212,165,116,.10); border:1px solid var(--gold); border-radius:8px; padding:14px; margin-bottom:14px;}
+  #victory .v-glyph{font-size:48px; line-height:1; margin-bottom:6px;}
+  #victory .v-name{font-size:16px; color:var(--gold); letter-spacing:2px; font-weight:800;}
+  #victory .v-stats{font-size:10px; color:var(--dim); margin-top:4px;}
+
+  #draft{position:fixed; inset:0; background:rgba(8,9,12,.96); display:none; align-items:flex-start; justify-content:center; z-index:30; overflow-y:auto; padding:18px 10px;}
+  #draft.open{display:flex;}
+  #draft .dbox{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 14px; max-width:460px; width:100%;}
+  #draft h2{margin:0 0 2px; text-align:center; color:var(--gold); letter-spacing:3px;}
+  #draft ul.d-sub{font-size:11px; color:var(--dim); line-height:1.5; margin:12px 0 0; padding:10px 0 0 18px; border-top:1px solid var(--line); list-style:disc;}
+  #draft ul.d-sub li{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #draft .d-status{text-align:center; font-size:12px; color:#fff; padding:6px; background:rgba(212,165,116,.1); border-radius:6px; margin-bottom:10px; font-weight:600;}
+  #draft .d-status .d-tag{display:inline-block; background:var(--gold); color:#0c0d11; padding:1px 6px; border-radius:3px; font-size:10px; letter-spacing:1px; font-weight:800; margin-right:6px; vertical-align:1px;}
+  #draft .d-teams{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
+  #draft .d-team{background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:8px; padding:6px;}
+  #draft .d-team-h{font-size:10px; color:var(--dim); text-align:center; margin-bottom:4px; letter-spacing:1px;}
+  #draft .d-A .d-team-h{color:#7fb04a;}
+  #draft .d-B .d-team-h{color:#c14a3a;}
+  #draft .d-slots{display:flex; flex-direction:column; gap:3px; min-height:90px;}
+  #draft .d-slot{font-size:11px; padding:4px 6px; background:rgba(0,0,0,.3); border-radius:4px; color:#fff;}
+  #draft .d-slot.empty{color:var(--dim); border:1px dashed var(--line); background:transparent;}
+  #draft .d-roster{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;}
+  #draft .rcard{background:#1a1c22; border:1px solid var(--line); border-radius:8px; padding:8px 6px; text-align:center; cursor:pointer; transition:transform .08s, background .08s;}
+  #draft .rcard:hover:not(.taken):not(.cant){background:#23262e;}
+  #draft .rcard.taken{opacity:.35; cursor:not-allowed; position:relative;}
+  #draft .rcard.taken::after{content:attr(data-by); position:absolute; top:2px; right:4px; font-size:9px; font-weight:700;}
+  #draft .rcard.taken.by-A::after{color:#7fb04a;}
+  #draft .rcard.taken.by-B::after{color:#c14a3a;}
+  #draft .rcard.cant{opacity:.5; cursor:not-allowed;}
+  #draft .rcard .rsym{font-size:22px; font-weight:800; color:var(--gold);}
+  #draft .rcard .rname{font-size:11px; color:#fff; margin:2px 0;}
+  #draft .rcard .rstats{font-size:9px; color:var(--dim); line-height:1.3;}
+  #draft .rcard .rtags{font-size:9px; color:#b878ff; margin-top:2px; min-height:11px;}
+
+
+  #over{position:fixed; inset:0; background:rgba(8,9,12,.85); display:none; align-items:center; justify-content:center; z-index:9;}
+  #over .box{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; text-align:center; max-width:300px;}
+  #over h2{margin:0 0 6px;} #over p{color:var(--dim); font-size:13px; margin:0 0 16px;}
+  /* Hotseat pass-phone overlay — blanks the screen between human side switches. */
+  #pass{position:fixed; inset:0; background:#0c0d11; display:none; flex-direction:column;
+    align-items:center; justify-content:center; z-index:25; padding:24px; text-align:center;}
+  #pass.show{display:flex;}
+  #pass .pmark{font-size:48px; margin-bottom:8px; color:var(--gold);}
+
+  /* Card zoom — tap a hand card to see the full TCG-style card: frame + hero art +
+     name + effect text. Acts as the "preview before play" step. */
+  #cardZoom{position:fixed; inset:0; background:rgba(8,9,12,.92); display:none;
+    align-items:center; justify-content:center; z-index:20; padding:24px;}
+  #cardZoom.show{display:flex;}
+  #cardZoom .cz-card{position:relative; width:min(82vw,360px); aspect-ratio:2/3;
+    filter:drop-shadow(0 8px 18px rgba(0,0,0,.55));}
+  /* Art window position is calibrated to the card-frame.png layout. If the frame's
+     window dimensions shift, tweak these % values. */
+  #cardZoom .cz-art{position:absolute; top:6%; left:8%; right:8%; height:46%;
+    object-fit:cover; object-position:50% 18%; z-index:1;}
+  #cardZoom .cz-frame{position:absolute; inset:0; width:100%; height:100%; z-index:2;
+    pointer-events:none;}
+  #cardZoom .cz-name{position:absolute; top:54%; left:14%; right:14%; height:6%;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    font-size:clamp(13px,3.6vw,17px); font-weight:800; color:#3a2410;
+    letter-spacing:.5px; z-index:3;}
+  #cardZoom .cz-sub{position:absolute; top:60%; left:14%; right:14%; text-align:center;
+    font-size:10px; font-weight:700; color:#6b4a28; letter-spacing:1.5px; z-index:3;}
+  #cardZoom .cz-text{position:absolute; top:65%; left:14%; right:14%; bottom:8%;
+    font-size:clamp(11px,2.9vw,13px); color:#2a1f12; line-height:1.35; z-index:3;
+    overflow:hidden; text-align:center; padding:4px;}
+  #cardZoom .cz-text .assist{display:block; margin-top:6px; font-size:10.5px;
+    color:#4a3320; font-style:italic;}
+  #cardZoom .cz-actions{position:absolute; left:0; right:0; bottom:-58px;
+    display:flex; gap:10px; justify-content:center; z-index:5;}
+  #cardZoom .cz-btn{border:none; border-radius:8px; padding:11px 22px; font-size:13px;
+    font-weight:800; letter-spacing:1.5px; cursor:pointer;}
+  #cardZoom .cz-play{background:var(--gold); color:#1a1407;}
+  #cardZoom .cz-play:disabled{background:#5a4a28; color:#888; cursor:not-allowed;}
+  #cardZoom .cz-close{background:#2c303a; color:var(--ink); border:1px solid var(--line);}
+  #pass h2{margin:0 0 6px; color:var(--ink); letter-spacing:1px;}
+  #pass p{color:var(--dim); font-size:13px; margin:0 0 22px;}
+  #pass .pbtn{background:var(--gold); color:#0c0d11; border:none; border-radius:10px;
+    padding:14px 28px; font-size:14px; font-weight:800; letter-spacing:1.5px; cursor:pointer;}
+  #pass.B .pmark{color:var(--pb);} #pass.B .pbtn{background:var(--pb); color:#fff;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="turnbar"></div>
+  <div id="board"></div>
+  <div id="status"></div>
+  <div id="cardDetail">
+    <span class="cd-glyph" id="cdGlyph">—</span>
+    <div class="cd-info">
+      <div class="cd-name" id="cdName">—</div>
+      <div class="cd-eff" id="cdEff">—</div>
+      <div class="cd-hint" id="cdHint">—</div>
+    </div>
+    <button class="cd-cancel" onclick="cancelCard()">CANCEL</button>
+  </div>
+  <div id="init"></div>
+  <div id="hand"></div>
+
+  <div class="barrow">
+    <button class="btn" id="endBtn">END TURN</button>
+    <button class="btn ghost" id="undoBtn">UNDO MOVE</button>
+    <span class="deck-info" id="deckInfo">—</span>
+    <button class="btn ghost btn-icon" id="rulesBtn" onclick="openCodex()" title="Rules">?</button>
+  </div>
+</div>
+
+<div id="codex"><div class="cbox">
+  <button class="x" onclick="closeCodex()">×</button>
+  <h2>SIGIL TACTICS</h2>
+  <div class="cdx-sub">v0.21 — 5v5 · 11-hero roster · 88-card pool (4 STD / 3 EPIC / 1 LEG per hero) · per-side Initiative deck</div>
+
+  <h3>Modes</h3>
+  <ul>
+    <li><b>Campaign:</b> start with Knight, Ranger, Mage. Defeat each of 6 boss heroes (Paladin, Druid, Scout, Berserker, Warlock, Assassin) to add them to your roster. Progress is saved between sessions.</li>
+    <li><b>Skirmish:</b> single match using the full 9-hero roster, random AI draft.</li>
+  </ul>
+
+  <h3>Match flow</h3>
+  <ul>
+    <li><b>Draft (skirmish only):</b> 1-2-2-2-2-1 snake — alternating snake draft, 10 picks total. Each side ends with 5 heroes from the 11-hero active roster.</li>
+    <li><b>Team select (campaign only):</b> in the mission intro, tap to pick 5 heroes from your unlocked pool. AI's team is the boss plus themed allies from a mission-specific priority list. No draft phase.</li>
+    <li><b>Team:</b> every party is exactly <b>3 melee + 2 ranged</b> (the picker enforces it).</li>
+    <li><b>Auto-deploy:</b> at the start of each match both teams snap into a fixed checkerboard formation — A in the bottom half, B in the top half. Your 3 melee shuffle across the 3 melee slots; your 2 ranged shuffle across the 2 ranged slots. Same comp, fresh layout each match. Reposition on turn 1; UNDO MOVE catches misclicks.</li>
+    <li><b>Play:</b> standard initiative-order combat.</li>
+  </ul>
+
+  <h3>Rules</h3>
+  <ul>
+    <li><b>Win:</b> defeat all enemy heroes (5v5 — both sides field 5 drafted heroes).</li>
+    <li><b>Initiative:</b> sides alternate activations — one of yours, then one of theirs, repeating until every living unit has acted once. The current side freely picks which of their unactivated units goes; tap a glowing unit on the board to start its turn. When one side has spent all its units for the round, the other keeps going until the round ends. The starter alternates each round so neither side gets a permanent first-mover edge.</li>
+    <li><b>Facing:</b> attacks from the SIDE deal ×1.5, REAR ×2 (Assassin: ×2 / ×2.5).</li>
+    <li><b>Terrain:</b> ▲ high ground gives +1 ATK while standing on it.</li>
+    <li><b>Cards:</b> start with 3 in hand, no max. <b>Draw 1 at the end of every turn</b> (yours or the AI's). Each card is one-shot.</li>
+    <li><b>Instant only:</b> no buffs, no counters, no lingering effects. Every card resolves entirely this turn — damage, healing, pushes, pulls, dashes, or swaps.</li>
+    <li><b>Assist casting:</b> <i>any</i> of your units may cast <i>any</i> card. The card's owner (the hero from whose suite the card came) provides an instant <i>assist</i> — typically a free step, heal, or strike. The owner must be alive and on the board for the assist to fire.</li>
+    <li><b>Sigils:</b> 10 generic action cards (✦) shipped in every deck. Any unit may cast them. <b>Sigils are FREE — they consume neither action nor movement</b>, so you can chain multiple sigils + a hero card + your move all in one turn. They lock once the unit has spent both its move and action (the turn auto-ends then). Effects are intentionally small; save them for big combo turns. Removed from the game on use; no owner, no assist.</li>
+    <li><b>Push / pull:</b> direction is the straight line between caster and target. If the slide is blocked by an edge or another unit, the target takes <i>impact damage</i> equal to the card's kb value.</li>
+    <li><b>Dash:</b> caster teleports to any empty tile within the card's range (ignores blockers along the way).</li>
+    <li><b>Range:</b> damage / push / pull cards target enemies within the <i>casting unit's</i> attack range. Heal and swap cards reach any of your allies.</li>
+    <li><b>Opportunity cost:</b> playing a card consumes the unit's <i>action</i>. You may still move before or after a hero card; sigils consume the move as well.</li>
+    <li><b>HP dice:</b> every unit's max HP is a polyhedral die face count (4/6/8/10/12/20).</li>
+  </ul>
+
+  <h3>Hero roster (11)</h3>
+  <table class="cdx-tbl"><tr><th>Hero</th><th>HP</th><th>ATK</th><th>Mv</th><th>Rng</th><th>Init</th><th>Passive</th></tr>
+    <tr><td>🏰 Sentinel</td><td>12</td><td>1</td><td>1</td><td>1</td><td>2</td><td>Anchor — Sentinel & adjacent allies are push/pull immune</td></tr>
+    <tr><td>🛡️ Paladin</td><td>10</td><td>1</td><td>1</td><td>1</td><td>2</td><td>Guardian — heal cards restore +1 HP on most-wounded ally</td></tr>
+    <tr><td>⚔️ Knight</td><td>10</td><td>1</td><td>1</td><td>1</td><td>3</td><td>Steadfast — cannot be pushed or pulled</td></tr>
+    <tr><td>🩸 Warlock</td><td>6</td><td>1</td><td>1</td><td>3</td><td>3</td><td>Soul Drain — heal 2 HP whenever any enemy dies</td></tr>
+    <tr><td>🌿 Druid</td><td>8</td><td>1</td><td>1</td><td>2</td><td>3</td><td>Symbiosis — heal cards also heal Druid 1 HP</td></tr>
+    <tr><td>🔮 Mage</td><td>6</td><td>1</td><td>1</td><td>2</td><td>3</td><td>Resonance — your AoE cards do +1 splash / +1 kb</td></tr>
+    <tr><td>🪓 Berserker</td><td>8</td><td>2</td><td>1</td><td>1</td><td>3</td><td>Bloodthirst — heals 1 HP whenever he damages an enemy</td></tr>
+    <tr><td>💀 Necromancer</td><td>6</td><td>1</td><td>1</td><td>2</td><td>3</td><td>Death Touch — enemies adjacent take +1 dmg</td></tr>
+    <tr><td>🏹 Ranger</td><td>8</td><td>1</td><td>1</td><td>2</td><td>4</td><td>Spotter — your dmg/push/pull cards gain +1 range</td></tr>
+    <tr><td>👁️ Scout</td><td>4</td><td>1</td><td>2</td><td>2</td><td>4</td><td>Pathfinder — your dash cards gain +1 range</td></tr>
+    <tr><td>🗡️ Assassin</td><td>6</td><td>2</td><td>2</td><td>1</td><td>4</td><td>Shadow Step — after Assassin moves, her next attack is rear-arc</td></tr>
+  </table>
+
+  <h3>Deck composition</h3>
+  <ul class="kinds">
+    <li><b>Hero cards (6 per hero):</b> 3 Common, 2 Epic, 1 Legendary. Owned by their hero but castable by any of your units (the owner assists from off-field — they must be alive).</li>
+    <li><b>Sigils (10):</b> generic action cards any unit can cast. <b>Free</b> — no action or movement cost. Small effects, chainable into combos. Removed from the game on use.</li>
+    <li><b>Your deck:</b> 40 cards built at deploy time — 5 drafted heroes × 6 cards + 10 sigils. Shuffled before round 1.</li>
+  </ul>
+
+  <h3>Card kinds (effects)</h3>
+  <p style="font-size:11px;color:var(--dim);margin:4px 0 6px;">All effects resolve <i>this turn</i>. No buffs, no counters, no lingering modifiers.</p>
+  <ul class="kinds">
+    <li><b>dmg</b> — N damage to target enemy</li>
+    <li><b>dmg-adj</b> — N damage to target + S splash to orthogonal adjacent enemies</li>
+    <li><b>dmg-self-heal</b> — N damage + caster heals H HP (lifesteal)</li>
+    <li><b>dmg-push</b> — N damage + push target K tiles away (kb damage if blocked)</li>
+    <li><b>dmg-pull</b> — N damage + pull target K tiles toward caster (kb damage if blocked)</li>
+    <li><b>push / pull</b> — pure displacement K tiles (kb damage if blocked)</li>
+    <li><b>push-adj</b> — shove every enemy adjacent to caster K tiles away (kb if blocked)</li>
+    <li><b>dash</b> — caster teleports to any empty tile within R (ignores blockers)</li>
+    <li><b>dash-attack</b> — caster dashes adjacent to a chosen enemy (in range R), then attacks for +N damage</li>
+    <li><b>swap</b> — caster swaps places with a target ally</li>
+    <li><b>heal</b> — restore N HP to target ally</li>
+    <li><b>heal-all</b> — restore N HP to every ally</li>
+  </ul>
+  <h3>Owner assists</h3>
+  <p style="font-size:11px;color:var(--dim);margin:4px 0 6px;">Every hero card carries a bonus that fires after the main effect if the card's owner is alive on the board. Sigils have no owner and no assist.</p>
+  <ul class="kinds">
+    <li><b>ownerStep</b> — the owner takes N free steps; player picks each tile (AI auto-paths)</li>
+    <li><b>ownerHeal</b> — the owner heals N HP</li>
+    <li><b>ownerStrike</b> — the owner deals N damage to its weakest adjacent enemy</li>
+    <li><b>ownerDrain</b> — the owner deals N to its weakest adjacent enemy AND heals N</li>
+  </ul>
+
+  <h3>Deck — 40 cards (5 hero suites × 6 + 10 sigils)</h3>
+  <div id="cdxCards"></div>
+</div></div>
+
+<div id="draft"><div class="dbox">
+  <h2>SIGIL TACTICS</h2>
+  <div class="d-status" id="draftStatus">—</div>
+  <div class="d-roster" id="draftRoster"></div>
+  <div class="d-teams">
+    <div class="d-team d-A"><div class="d-team-h">YOU (P1)</div><div class="d-slots" id="draftA"></div></div>
+    <div class="d-team d-B"><div class="d-team-h">AI (P2)</div><div class="d-slots" id="draftB"></div></div>
+  </div>
+  <ul class="d-sub">
+    <li>Snake draft: P1, P2-P2, P1-P1, P2</li>
+    <li>5 heroes per side</li>
+    <li>9 active classes, no duplicates</li>
+  </ul>
+</div></div>
+
+<div id="title"><div class="tbox">
+  <h1 class="title-h1"><img class="wordmark" src="assets/ui/wordmark.png" alt="SIGIL TACTICS" onerror="this.replaceWith(document.createTextNode('SIGIL TACTICS'))"></h1>
+  <div class="tag">tactical drafting · grid combat · card opportunity-cost</div>
+  <button class="tbtn" onclick="enterCampaign()">CAMPAIGN</button>
+  <button class="tbtn ghost" onclick="enterSkirmish()">SKIRMISH</button>
+  <button class="tbtn ghost" onclick="enterHotseat()">HOTSEAT (LOCAL 2P)</button>
+  <div class="tprog" id="titleProgress">—</div>
+  <button class="treset" onclick="if(confirm('Reset campaign progress?'))resetProgress()">reset progress</button>
+</div></div>
+
+<div id="missions"><div class="mbox">
+  <button class="x" onclick="exitToTitle()">×</button>
+  <h2>CAMPAIGN</h2>
+  <div class="m-sub">defeat each hero to add them to your roster</div>
+  <div id="missionList"></div>
+  <div class="m-prog" id="missionProg">—</div>
+</div></div>
+
+<div id="missionIntro"><div class="ibox">
+  <button class="x" onclick="cancelMission()">×</button>
+  <h2 id="intTitle"></h2>
+  <div class="i-boss" id="intBoss"></div>
+  <p class="i-text" id="intText"></p>
+  <div class="i-team-row">Enemy team: <span id="intTeam"></span></div>
+  <div class="i-pick-h">Pick 3 melee + 2 ranged for your party:</div>
+  <div class="i-pick" id="intPick"></div>
+  <div class="i-pick-count" id="intCount">0/3 selected</div>
+  <button class="tbtn" id="beginBtn" onclick="beginMission()" disabled>BEGIN</button>
+</div></div>
+
+<div id="victory"><div class="vbox">
+  <h2>VICTORY</h2>
+  <div class="v-text" id="vText">—</div>
+  <div class="v-unlock" id="vUnlock"></div>
+  <button class="tbtn" onclick="returnToMissions()">CONTINUE</button>
+</div></div>
+
+<div id="over"><div class="box"><h2 id="overT"></h2><p id="overP"></p><button class="btn" id="overBtn">Continue</button></div></div>
+<div id="pass">
+  <div class="pmark" id="passMark">▶</div>
+  <h2 id="passTitle">PASS THE PHONE</h2>
+  <p id="passSub">Hand the phone to the next player.</p>
+  <button class="pbtn" id="passBtn">I'M READY</button>
+</div>
+
+<div id="cardZoom" onclick="closeCardZoom(event)">
+  <div class="cz-card" onclick="event.stopPropagation()">
+    <img class="cz-art" id="czArt" src="" alt="">
+    <img class="cz-frame" src="assets/ui/card-frame.png" alt="">
+    <div class="cz-name" id="czName">—</div>
+    <div class="cz-sub" id="czSub">—</div>
+    <div class="cz-text" id="czText">—</div>
+    <div class="cz-actions">
+      <button class="cz-btn cz-close" onclick="closeCardZoom()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const R=4,C=5;
+
+/* ---------- definitions ---------- */
+// Hero roster. HP must come from {4,6,8,10,12,20} (polyhedral dice).
+// `init` is how many cards this unit contributes to its side's per-round Initiative deck.
+const CLASSES={
+  knight:     {name:"Knight",     sym:"⚔️", hp:10, atk:1, move:1, range:1, init:3, hero:true,            passive:"Steadfast: cannot be pushed or pulled by any effect."},
+  ranger:     {name:"Ranger",     sym:"🏹", hp:8,  atk:1, move:1, range:2, init:4, hero:true,            passive:"Spotter: your damage / push / pull cards have +1 range while Ranger is alive."},
+  mage:       {name:"Mage",       sym:"🔮", hp:6,  atk:1, move:1, range:2, init:3, hero:true,            passive:"Resonance: your AoE cards (dmg-adj, push-adj) gain +1 splash / +1 kb while Mage is alive."},
+  berserker:  {name:"Berserker",  sym:"🪓", hp:8,  atk:2, move:1, range:1, init:3, hero:true,            passive:"Bloodthirst: Berserker heals 1 HP whenever he damages an enemy — basic attack, damage card, or assist strike."},
+  paladin:    {name:"Paladin",    sym:"🛡️", hp:10, atk:1, move:1, range:1, init:2, hero:true, heal:true, passive:"Guardian: after you cast a heal card, Paladin restores 1 extra HP to your most-wounded ally."},
+  assassin:   {name:"Assassin",   sym:"🗡️", hp:6,  atk:2, move:2, range:1, init:4, hero:true, flank:true, passive:"Shadow Step: any time Assassin moves, her next attack this match counts as rear-arc (×3) regardless of facing."},
+  warlock:    {name:"Warlock",    sym:"🩸", hp:6,  atk:1, move:1, range:3, init:3, hero:true,            passive:"Soul Drain: whenever any enemy dies anywhere on the board, Warlock heals 2 HP."},
+  druid:      {name:"Druid",      sym:"🌿", hp:8,  atk:1, move:1, range:2, init:3, hero:true, heal:true, passive:"Symbiosis: after you cast a heal card, Druid heals 1 HP."},
+  scout:      {name:"Scout",      sym:"👁️", hp:4,  atk:1, move:2, range:2, init:4, hero:true,            passive:"Pathfinder: your dash cards have +1 range while Scout is alive."},
+  sentinel:   {name:"Sentinel",   sym:"🏰", hp:12, atk:1, move:1, range:1, init:2, hero:true,            passive:"Anchor: Sentinel and orthogonally adjacent allies cannot be pushed or pulled."},
+  necromancer:{name:"Necromancer",sym:"💀", hp:6,  atk:1, move:1, range:2, init:3, hero:true,            passive:"Death Touch: enemies orthogonally adjacent to Necromancer take +1 damage from all sources."},
+  // hidden — kept in data, excluded from roster
+  crusader:   {name:"Crusader",   sym:"✝️", hp:10, atk:1, move:1, range:1, init:3, hero:true, hidden:true, passive:"—"}
+};
+const ROSTER=Object.keys(CLASSES).filter(k=>!CLASSES[k].hidden);
+const DRAFT_SEQUENCE=["A","B","B","A","A","B","B","A","A","B"]; // 5v5 snake (1-2-2-2-2-1)
+const TEAM_SIZE=5;
+const TEAM_MELEE=3;
+const TEAM_RANGED=2;
+function isMeleeClass(cls){ return CLASSES[cls] && CLASSES[cls].range === 1; }
+function isRangedClass(cls){ return CLASSES[cls] && CLASSES[cls].range >= 2; }
+function teamRoleCounts(picks){
+  let m=0,r=0; for(const c of picks){ if(isMeleeClass(c)) m++; else if(isRangedClass(c)) r++; } return {m,r};
+}
+function teamIsValid(picks){
+  if(picks.length!==TEAM_SIZE) return false;
+  const {m,r}=teamRoleCounts(picks); return m===TEAM_MELEE && r===TEAM_RANGED;
+}
+
+/* ---------- PvE campaign ---------- */
+const STARTERS=["knight","ranger","mage","assassin","berserker"];
+const MISSIONS=[
+  {id:1, boss:"paladin",     aiPool:["paladin","knight","mage","ranger","assassin"],
+    title:"The Sworn Oath",
+    intro:"A knight of the old order guards the mountain pass. To win their loyalty, you must defeat them in honorable combat."},
+  {id:2, boss:"druid",       aiPool:["druid","mage","ranger","paladin","berserker"],
+    title:"The Wild Heart",
+    intro:"Deep in the grove, a druid binds nature against trespassers. Earn their trust through battle."},
+  {id:3, boss:"scout",       aiPool:["scout","ranger","knight","assassin","druid"],
+    title:"The Quick Shadow",
+    intro:"A swift scout has been shadowing your party for days. Catch them and they'll join you."},
+  {id:4, boss:"warlock",     aiPool:["warlock","mage","druid","ranger","paladin"],
+    title:"The Pact of Shadows",
+    intro:"A warlock bargains with old powers. Break their will, gain a mighty caster."},
+  {id:5, boss:"sentinel",    aiPool:["sentinel","paladin","knight","warlock","druid"],
+    title:"The Iron Watcher",
+    intro:"A towering sentinel guards a ruined keep. Bring down the fortress."},
+  {id:6, boss:"necromancer", aiPool:["necromancer","warlock","mage","assassin","scout"],
+    title:"The Pale Hand",
+    intro:"A necromancer commands the shadows of the dead. End their reign over the graveyard."}
+];
+let mode="title"; // "title" | "campaign-menu" | "skirmish" | "campaign-play" | "hotseat"
+// Pass-phone gating for hotseat. When the next active unit belongs to a different human side
+// than the unit that just finished, we pause behind a #pass overlay until the current player
+// taps "I'M READY". Single-player matches never enter this state.
+let pendingHandoff=false;
+let lastActedSide=null;
+function activeSide(){ const u=activeUnit(); return u?u.owner:null; }
+// Whose unit is currently being actively controlled by a human.
+function humanSide(){
+  const u=activeUnit();
+  return (u && players[u.owner] && players[u.owner].human) ? u.owner : null;
+}
+// Whose hand + buttons + highlights are shown on screen. In single-player this is always
+// the human (A); in hotseat it tracks whoever is currently up.
+function hudSide(){
+  const h=humanSide(); if(h) return h;
+  if(players && players.A && players.A.human) return "A";
+  if(players && players.B && players.B.human) return "B";
+  return "A";
+}
+function isHotseat(){ return !!(players && players.A && players.A.human && players.B && players.B.human); }
+let campaign={
+  unlocked:new Set(STARTERS),
+  completed:new Set(),
+  currentMission:null,
+  teamSelection:[],
+  savedTeam:[] // persists across missions: the player's preferred 5-hero party
+};
+function saveProgress(){
+  try{ localStorage.setItem("sigil-progress", JSON.stringify({
+    unlocked:[...campaign.unlocked], completed:[...campaign.completed], savedTeam:campaign.savedTeam
+  })); }catch(e){}
+}
+function loadProgress(){
+  try{
+    const s=JSON.parse(localStorage.getItem("sigil-progress"));
+    if(s){
+      campaign.unlocked=new Set(s.unlocked||STARTERS);
+      campaign.completed=new Set(s.completed||[]);
+      campaign.savedTeam=Array.isArray(s.savedTeam)?s.savedTeam.slice():[];
+    }
+  }catch(e){}
+}
+function resetProgress(){
+  campaign.unlocked=new Set(STARTERS);
+  campaign.completed=new Set();
+  campaign.savedTeam=[];
+  saveProgress();
+  renderTitle(); renderMissions();
+}
+
+function showTitle(){
+  mode="title";
+  document.getElementById("title").classList.add("open");
+  document.getElementById("missions").classList.remove("open");
+  document.getElementById("missionIntro").classList.remove("open");
+  document.getElementById("victory").classList.remove("open");
+  renderTitle();
+}
+function renderTitle(){
+  const u=campaign.unlocked.size, c=campaign.completed.size;
+  document.getElementById("titleProgress").textContent=`Roster ${u}/9 · Missions ${c}/6`;
+}
+function enterCampaign(){
+  document.getElementById("title").classList.remove("open");
+  openMissions();
+}
+function enterSkirmish(){
+  document.getElementById("title").classList.remove("open");
+  mode="skirmish";
+  newGame(null);
+}
+function enterHotseat(){
+  // Local 2-player on one phone. Fixed starter teams, no draft, no AI.
+  document.getElementById("title").classList.remove("open");
+  mode="hotseat";
+  newGame(null);
+}
+function exitToTitle(){ showTitle(); }
+function openMissions(){
+  mode="campaign-menu";
+  document.getElementById("missions").classList.add("open");
+  renderMissions();
+}
+function renderMissions(){
+  const list=document.getElementById("missionList"); list.innerHTML="";
+  for(const m of MISSIONS){
+    const prevDone = m.id===1 || campaign.completed.has(m.id-1);
+    const locked = !prevDone;
+    const done = campaign.completed.has(m.id);
+    const cls = "mrow"+(locked?" locked":"")+(done?" done":"");
+    const c = CLASSES[m.boss];
+    const row=document.createElement("div");
+    row.className=cls;
+    row.innerHTML=`<div class="mgly">${c.sym}</div>
+      <div><div class="mtitle">${m.id}. ${m.title}</div><div class="msub">Defeat ${c.name}</div></div>
+      <div class="mstat">${done?"COMPLETE":locked?"LOCKED":"AVAILABLE"}</div>`;
+    if(!locked && !done) row.onclick=()=>openMissionIntro(m);
+    else if(done) row.onclick=()=>openMissionIntro(m); // replay completed missions
+    list.appendChild(row);
+  }
+  const u=campaign.unlocked.size, c=campaign.completed.size;
+  document.getElementById("missionProg").textContent=`Roster ${u}/9 · Missions ${c}/6`;
+}
+function computeMissionAITeam(m, playerPicks){
+  // playerPicks is unused for uniqueness — both teams may share a class (and on the starter
+  // roster they must, because the player drafts 3 of 5 melee classes and the AI still needs 3).
+  // `taken` only enforces no-duplicates WITHIN the AI team.
+  const team=[]; const taken=new Set();
+  const counts=()=>teamRoleCounts(team);
+  const tryAdd=(cls)=>{
+    if(taken.has(cls)) return false;
+    const {m:mc,r:rc}=counts();
+    if(isMeleeClass(cls)  && mc>=TEAM_MELEE)  return false;
+    if(isRangedClass(cls) && rc>=TEAM_RANGED) return false;
+    team.push(cls); taken.add(cls); return true;
+  };
+  tryAdd(m.boss);
+  for(const cls of m.aiPool){ if(team.length>=TEAM_SIZE) break; tryAdd(cls); }
+  for(const cls of ROSTER){   if(team.length>=TEAM_SIZE) break; tryAdd(cls); }
+  return team;
+}
+function openMissionIntro(m){
+  campaign.currentMission=m;
+  // Pre-fill from the player's saved team, dropping any heroes no longer unlocked.
+  // Clear it entirely if the saved team isn't a valid 3 melee + 2 ranged comp.
+  const candidate = campaign.savedTeam.filter(cls => campaign.unlocked.has(cls));
+  campaign.teamSelection = teamIsValid(candidate) ? candidate.slice() : [];
+  document.getElementById("missions").classList.remove("open");
+  document.getElementById("missionIntro").classList.add("open");
+  const c=CLASSES[m.boss];
+  document.getElementById("intTitle").textContent=`${m.id}. ${m.title}`;
+  document.getElementById("intBoss").textContent=c.sym;
+  document.getElementById("intText").textContent=m.intro;
+  const aiTeam=computeMissionAITeam(m, []);
+  document.getElementById("intTeam").textContent=aiTeam.map(cls=>CLASSES[cls].sym+" "+CLASSES[cls].name).join(" · ");
+  renderTeamPicker();
+}
+function renderTeamPicker(){
+  const root=document.getElementById("intPick"); root.innerHTML="";
+  const unlocked=[...campaign.unlocked];
+  // Auto-fill when the player's unlocked roster is exactly TEAM_SIZE and naturally satisfies
+  // the role split (true for the starting roster: 3 melee + 2 ranged).
+  if(unlocked.length===TEAM_SIZE && campaign.teamSelection.length===0 && teamIsValid(unlocked)){
+    campaign.teamSelection=unlocked.slice();
+  }
+  const {m,r}=teamRoleCounts(campaign.teamSelection);
+  const melees = unlocked.filter(isMeleeClass);
+  const ranged = unlocked.filter(isRangedClass);
+  const section = (label, list, roleFull) => {
+    const h=document.createElement("div"); h.className="ipick-h"; h.textContent=label; root.appendChild(h);
+    for(const cls of list){
+      const c=CLASSES[cls];
+      const picked=campaign.teamSelection.includes(cls);
+      const disabled = !picked && roleFull;
+      const btn=document.createElement("button");
+      btn.className="ipick"+(picked?" sel":"")+(disabled?" cant":"");
+      btn.innerHTML=`<span class="ipgly">${c.sym}</span><span class="ipname">${c.name}</span>`;
+      btn.disabled=disabled;
+      btn.onclick=()=>toggleTeamPick(cls);
+      root.appendChild(btn);
+    }
+  };
+  section(`Melee — ${m}/${TEAM_MELEE} (front line)`, melees, m>=TEAM_MELEE);
+  section(`Ranged — ${r}/${TEAM_RANGED} (back line)`, ranged, r>=TEAM_RANGED);
+  document.getElementById("intCount").textContent = `${campaign.teamSelection.length}/${TEAM_SIZE} (${m} melee · ${r} ranged)`;
+  document.getElementById("beginBtn").disabled = !teamIsValid(campaign.teamSelection);
+}
+function toggleTeamPick(cls){
+  const i=campaign.teamSelection.indexOf(cls);
+  if(i>=0){ campaign.teamSelection.splice(i,1); }
+  else {
+    const {m,r}=teamRoleCounts(campaign.teamSelection);
+    if(isMeleeClass(cls)  && m>=TEAM_MELEE)  return;
+    if(isRangedClass(cls) && r>=TEAM_RANGED) return;
+    campaign.teamSelection.push(cls);
+  }
+  renderTeamPicker();
+}
+function cancelMission(){
+  campaign.currentMission=null;
+  document.getElementById("missionIntro").classList.remove("open");
+  openMissions();
+}
+function beginMission(){
+  // Remember this team for next mission — one-tap startup on the next intro.
+  campaign.savedTeam = campaign.teamSelection.slice();
+  saveProgress();
+  document.getElementById("missionIntro").classList.remove("open");
+  mode="campaign-play";
+  newGame(campaign.currentMission.id);
+}
+function returnToMissions(){
+  document.getElementById("victory").classList.remove("open");
+  openMissions();
+}
+// Tiers: 3 Common / 2 Epic / 1 Legendary per hero suite, plus a 10-card universal sigil pool.
+// Equipment/Spell split removed; cards just have a tier band for flavor and tuning guidelines.
+const CARDS={
+  /* === HERO CARDS — 6 per hero (3 Common / 2 Epic / 1 Legendary) ==============================
+     Every card may be cast by any of your units (active unit = caster). The card's owner provides
+     the per-card "bonus" — fires after the main effect if the owner is alive on the board.
+     No persistent buffs anywhere in the pool — heals, damage, displacement, and movement only.
+
+     Mechanics summary:
+       dmg / dmg-adj      — single / AoE damage (existing)
+       dmg-self-heal      — damage + caster heals N (instant)
+       dmg-push           — damage + push K (knockback dmg P if blocked)
+       dmg-pull           — damage + pull K toward caster (knockback dmg P if blocked)
+       push / pull        — pure displacement (kb dmg P if blocked)
+       push-adj           — push every enemy orthogonally adjacent to caster K (kb P if blocked)
+       dash               — caster moves to any empty tile within R manhattan (ignores blockers)
+       swap               — caster swaps positions with target ally (any range)
+       heal / heal-all    — restore N HP (instant)
+
+     Bonus.kind:
+       ownerStep   — owner takes N free steps (player picks each; AI auto-paths toward nearest enemy)
+       ownerHeal   — owner heals N HP
+       ownerStrike — owner deals N to its weakest orthogonally-adjacent enemy
+       ownerDrain  — owner deals N to its weakest adjacent enemy AND heals N
+  ============================================================================================ */
+
+  /* ⚔️ KNIGHT — pushing frontline */
+  kn_greatsword:{hero:"knight",  tier:"C", kind:"dmg-push",  dmg:2, push:1, kb:1, bonus:{kind:"ownerStep", amount:1}, sym:"⚔", name:"Greatsword"},
+  kn_shove:     {hero:"knight",  tier:"C", kind:"push",      push:2, kb:1,        bonus:{kind:"ownerStep", amount:1}, sym:"⛨", name:"Bulwark Shove"},
+  kn_cleave:    {hero:"knight",  tier:"C", kind:"dmg-adj",   dmg:1, splash:1,     bonus:{kind:"ownerStrike",amount:1}, sym:"⚒", name:"Cleave"},
+  kn_hammer:    {hero:"knight",  tier:"E", kind:"dmg",       dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"⚒", name:"Hammer Down"},
+  kn_ironwall:  {hero:"knight",  tier:"E", kind:"push-adj",  push:1, kb:1,        bonus:{kind:"ownerStep", amount:1}, sym:"⛨", name:"Iron Wall"},
+  kn_champion:  {hero:"knight",  tier:"L", kind:"dash-attack",dmg:3, push:1, kb:1, range:2, bonus:{kind:"ownerStrike",amount:1}, sym:"☄", name:"Champion's Charge"},
+
+  /* 🏹 RANGER — knockback ranged */
+  rn_quickshot: {hero:"ranger",  tier:"C", kind:"dmg",       dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"›", name:"Quick Shot"},
+  rn_knockback: {hero:"ranger",  tier:"C", kind:"dmg-push",  dmg:1, push:1, kb:1, bonus:{kind:"ownerStep", amount:1}, sym:"➶", name:"Knockback Arrow"},
+  rn_pinning:   {hero:"ranger",  tier:"C", kind:"dmg-pull",  dmg:1, pull:1, kb:1, bonus:{kind:"ownerStep", amount:1}, sym:"⫯", name:"Pinning Shot"},
+  rn_longbow:   {hero:"ranger",  tier:"E", kind:"dmg",       dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"➶", name:"Longbow"},
+  rn_volley:    {hero:"ranger",  tier:"E", kind:"dmg-adj",   dmg:1, splash:1,     bonus:{kind:"ownerStep", amount:1}, sym:"⋮", name:"Volley"},
+  rn_pierce:    {hero:"ranger",  tier:"L", kind:"dmg-push",  dmg:2, push:1, kb:2, bonus:{kind:"ownerStrike",amount:1}, sym:"✸", name:"Piercing Arrow"},
+
+  /* 🔮 MAGE — AoE + pulls (blink theme on bonus) */
+  mg_blink:     {hero:"mage",    tier:"C", kind:"dash",      dash:1,              bonus:{kind:"ownerStep", amount:1}, sym:"≈", name:"Blink"},
+  mg_frostpull: {hero:"mage",    tier:"C", kind:"dmg-pull",  dmg:1, pull:1, kb:1, bonus:{kind:"ownerStep", amount:1}, sym:"❄", name:"Frost Pull"},
+  mg_arcane:    {hero:"mage",    tier:"C", kind:"dmg-adj",   dmg:1, splash:1,     bonus:{kind:"ownerStep", amount:1}, sym:"⛨", name:"Arcane Blast"},
+  mg_fireball:  {hero:"mage",    tier:"E", kind:"dmg-adj",   dmg:2, splash:2,     bonus:{kind:"ownerStep", amount:1}, sym:"🔥", name:"Fireball"},
+  mg_gravity:   {hero:"mage",    tier:"E", kind:"pull",      pull:2, kb:1,        bonus:{kind:"ownerStep", amount:2}, sym:"⚙", name:"Gravity Well"},
+  mg_meteor:    {hero:"mage",    tier:"L", kind:"dmg-adj",   dmg:2, splash:2,     bonus:{kind:"ownerStep", amount:2}, sym:"☄", name:"Meteor"},
+
+  /* 🪓 BERSERKER — heavy hits + push */
+  br_axe:       {hero:"berserker",tier:"C", kind:"dmg",      dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"⚔", name:"Battle Axe"},
+  br_smash:     {hero:"berserker",tier:"C", kind:"dmg-push", dmg:1, push:1, kb:1, bonus:{kind:"ownerStep", amount:1}, sym:"⚒", name:"Smash"},
+  br_whirl:     {hero:"berserker",tier:"C", kind:"dmg-adj",  dmg:2, splash:1,     bonus:{kind:"ownerStep", amount:1}, sym:"⚒", name:"Whirlwind"},
+  br_rend:      {hero:"berserker",tier:"E", kind:"dmg",      dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"✸", name:"Rend"},
+  br_bloodyrush:{hero:"berserker",tier:"E", kind:"dmg-push", dmg:2, push:1, kb:1, bonus:{kind:"ownerStrike",amount:1}, sym:"»", name:"Bloody Rush"},
+  br_thirster:  {hero:"berserker",tier:"L", kind:"dmg",      dmg:3,               bonus:{kind:"ownerStrike",amount:2}, sym:"⚑", name:"Bloodthirster"},
+
+  /* 🛡️ PALADIN — heal + defensive push */
+  pl_smite:     {hero:"paladin", tier:"C", kind:"dmg",       dmg:2,               bonus:{kind:"ownerHeal", amount:1}, sym:"✸", name:"Smite"},
+  pl_holyword:  {hero:"paladin", tier:"C", kind:"heal",      amount:3,            bonus:{kind:"ownerHeal", amount:1}, sym:"✚", name:"Holy Word"},
+  pl_pushback:  {hero:"paladin", tier:"C", kind:"dmg-push",  dmg:1, push:1, kb:2, bonus:{kind:"ownerHeal", amount:1}, sym:"⛨", name:"Pushback"},
+  pl_loh:       {hero:"paladin", tier:"E", kind:"heal",      amount:5,            bonus:{kind:"ownerHeal", amount:1}, sym:"+", name:"Lay on Hands"},
+  pl_consec:    {hero:"paladin", tier:"E", kind:"dmg-adj",   dmg:2, splash:1,     bonus:{kind:"ownerHeal", amount:1}, sym:"☄", name:"Consecration"},
+  pl_wrath:     {hero:"paladin", tier:"L", kind:"dmg-adj",   dmg:2, splash:2,     bonus:{kind:"ownerHeal", amount:2}, sym:"☼", name:"Divine Wrath"},
+
+  /* 🩸 WARLOCK — pulls + drain */
+  wl_hex:       {hero:"warlock", tier:"C", kind:"dmg",       dmg:2,               bonus:{kind:"ownerDrain",amount:1}, sym:"⚔", name:"Hex"},
+  wl_tether:    {hero:"warlock", tier:"C", kind:"dmg-pull",  dmg:1, pull:2, kb:1, bonus:{kind:"ownerDrain",amount:1}, sym:"⫯", name:"Soul Tether"},
+  wl_athame:    {hero:"warlock", tier:"C", kind:"dmg-pull",  dmg:1, pull:1, kb:1, bonus:{kind:"ownerDrain",amount:1}, sym:"⚔", name:"Athame"},
+  wl_drain:     {hero:"warlock", tier:"E", kind:"dmg-self-heal", dmg:2, heal:2,   bonus:{kind:"ownerHeal", amount:1}, sym:"🩸", name:"Drain Soul"},
+  wl_pulse:     {hero:"warlock", tier:"E", kind:"dmg-adj",   dmg:1, splash:1,     bonus:{kind:"ownerDrain",amount:2}, sym:"❦", name:"Pulse of Decay"},
+  wl_blast:     {hero:"warlock", tier:"L", kind:"dmg",       dmg:3,               bonus:{kind:"ownerDrain",amount:2}, sym:"☠", name:"Eldritch Blast"},
+
+  /* 🌿 DRUID — heals + plant pulls */
+  dr_thorns:    {hero:"druid",   tier:"C", kind:"dmg",       dmg:2,               bonus:{kind:"ownerHeal", amount:1}, sym:"❦", name:"Thorns"},
+  dr_entangle:  {hero:"druid",   tier:"C", kind:"dmg-pull",  dmg:1, pull:1, kb:1, bonus:{kind:"ownerHeal", amount:1}, sym:"⋮", name:"Entangle"},
+  dr_mend:      {hero:"druid",   tier:"C", kind:"heal",      amount:3,            bonus:{kind:"ownerHeal", amount:1}, sym:"✚", name:"Mend"},
+  dr_regrowth:  {hero:"druid",   tier:"E", kind:"heal",      amount:4,            bonus:{kind:"ownerHeal", amount:1}, sym:"✚", name:"Regrowth"},
+  dr_sunbeam:   {hero:"druid",   tier:"E", kind:"dmg-adj",   dmg:2, splash:1,     bonus:{kind:"ownerHeal", amount:1}, sym:"☼", name:"Sunbeam"},
+  dr_livingwood:{hero:"druid",   tier:"L", kind:"heal-all",  amount:3,            bonus:{kind:"ownerHeal", amount:2}, sym:"⚑", name:"Living Wood"},
+
+  /* 👁️ SCOUT — dashes */
+  sc_shortbow:  {hero:"scout",   tier:"C", kind:"dmg",       dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"⚔", name:"Shortbow"},
+  sc_dart:      {hero:"scout",   tier:"C", kind:"dmg-push",  dmg:1, push:1, kb:1, bonus:{kind:"ownerStep", amount:1}, sym:"›", name:"Dart"},
+  sc_vanish:    {hero:"scout",   tier:"C", kind:"dash",      dash:2,              bonus:{kind:"ownerStep", amount:1}, sym:"≈", name:"Vanish"},
+  sc_snipe:     {hero:"scout",   tier:"E", kind:"dmg",       dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"✸", name:"Snipe"},
+  sc_pathfinder:{hero:"scout",   tier:"E", kind:"dash",      dash:3,              bonus:{kind:"ownerStep", amount:1}, sym:"»", name:"Pathfinder"},
+  sc_vanishshot:{hero:"scout",   tier:"L", kind:"dash-attack",dmg:3, range:4,      bonus:{kind:"ownerStep", amount:1}, sym:"◉", name:"Vanishing Shot"},
+
+  /* 🗡️ ASSASSIN — single-target burst + swap */
+  as_dagger:    {hero:"assassin",tier:"C", kind:"dmg",       dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"⚔", name:"Dagger"},
+  as_stab:      {hero:"assassin",tier:"C", kind:"dmg",       dmg:2,               bonus:{kind:"ownerStep", amount:1}, sym:"⚒", name:"Vicious Stab"},
+  as_shadowstep:{hero:"assassin",tier:"C", kind:"swap",                           bonus:{kind:"ownerStep", amount:1}, sym:"≈", name:"Shadow Step"},
+  as_backstab:  {hero:"assassin",tier:"E", kind:"dash-attack",dmg:2, range:3,      bonus:{kind:"ownerStep", amount:1}, sym:"✸", name:"Backstab"},
+  as_deathmark: {hero:"assassin",tier:"E", kind:"dmg-pull",  dmg:2, pull:1, kb:1, bonus:{kind:"ownerStep", amount:1}, sym:"⚑", name:"Death Mark"},
+  as_strike:    {hero:"assassin",tier:"L", kind:"dmg",       dmg:3,               bonus:{kind:"ownerStep", amount:2}, sym:"☠", name:"Shadow Strike"},
+
+  /* 🏰 SENTINEL — AoE push, heavy tank */
+  sn_halberd:   {hero:"sentinel",tier:"C", kind:"dmg",       dmg:2,               bonus:{kind:"ownerStrike",amount:1}, sym:"⚔", name:"Halberd"},
+  sn_bash:      {hero:"sentinel",tier:"C", kind:"dmg-push",  dmg:1, push:1, kb:1, bonus:{kind:"ownerStrike",amount:1}, sym:"⚒", name:"Bash"},
+  sn_walloff:   {hero:"sentinel",tier:"C", kind:"push-adj",  push:1, kb:1,        bonus:{kind:"ownerStep", amount:1}, sym:"⛨", name:"Wall of Force"},
+  sn_stonesmash:{hero:"sentinel",tier:"E", kind:"dmg-push",  dmg:2, push:1, kb:1, bonus:{kind:"ownerStep", amount:1}, sym:"⚒", name:"Stone Smash"},
+  sn_holdline:  {hero:"sentinel",tier:"E", kind:"push",      push:2, kb:2,        bonus:{kind:"ownerStep", amount:1}, sym:"⛨", name:"Hold the Line"},
+  sn_lastkeep:  {hero:"sentinel",tier:"L", kind:"push-adj",  push:2, kb:2,        bonus:{kind:"ownerHeal", amount:2}, sym:"⚑", name:"Last Keep"},
+
+  /* 💀 NECROMANCER — pull, drain, AoE */
+  nc_wand:      {hero:"necromancer",tier:"C", kind:"dmg",     dmg:2,              bonus:{kind:"ownerDrain",amount:1}, sym:"⚔", name:"Bone Wand"},
+  nc_grasp:     {hero:"necromancer",tier:"C", kind:"dmg-pull",dmg:1, pull:1, kb:1,bonus:{kind:"ownerDrain",amount:1}, sym:"⫯", name:"Withering Grasp"},
+  nc_seize:     {hero:"necromancer",tier:"C", kind:"dmg-pull",dmg:1, pull:1, kb:1, bonus:{kind:"ownerDrain",amount:1}, sym:"❦", name:"Grave Seize"},
+  nc_corpse:    {hero:"necromancer",tier:"E", kind:"dmg-self-heal", dmg:2, heal:2,bonus:{kind:"ownerHeal", amount:1}, sym:"💀", name:"Corpse Feast"},
+  nc_gravepull: {hero:"necromancer",tier:"E", kind:"pull",    pull:2, kb:2,       bonus:{kind:"ownerDrain",amount:1}, sym:"⫯", name:"Grave Pull"},
+  nc_reaper:    {hero:"necromancer",tier:"L", kind:"dmg-pull",dmg:2, pull:1, kb:1,bonus:{kind:"ownerDrain",amount:2}, sym:"☠", name:"Reaper's Scythe"},
+
+  /* === ✦ SIGILS (10) — generic, FREE to cast (no action, no movement consumed), removed from
+     game on use, no owner bonus. Limited supply (10 per deck) and one-shot — save them for
+     big combo turns. Effects intentionally weak vs hero cards. ===================================== */
+  sg_banish:    {hero:"sigil", tier:"G", kind:"push",      push:1,                sym:"✦", name:"Sigil of Banishment"},
+  sg_magnet:    {hero:"sigil", tier:"G", kind:"pull",      pull:1,                sym:"✦", name:"Sigil of Magnetism"},
+  sg_whirlwind: {hero:"sigil", tier:"G", kind:"push-adj",  push:1,                sym:"✦", name:"Sigil of the Whirlwind"},
+  sg_recall:    {hero:"sigil", tier:"G", kind:"dash",      dash:2,                sym:"✦", name:"Sigil of Recall"},
+  sg_step:      {hero:"sigil", tier:"G", kind:"dash",      dash:1,                sym:"✦", name:"Sigil of the Step"},
+  sg_crashing:  {hero:"sigil", tier:"G", kind:"dmg-push",  dmg:1, push:1,         sym:"✦", name:"Sigil of Crashing Tide"},
+  sg_riptide:   {hero:"sigil", tier:"G", kind:"dmg-pull",  dmg:1, pull:1,         sym:"✦", name:"Sigil of Riptide"},
+  sg_sanctuary: {hero:"sigil", tier:"G", kind:"heal",      amount:2,              sym:"✦", name:"Sigil of Sanctuary"},
+  sg_smite:     {hero:"sigil", tier:"G", kind:"dmg",       dmg:1,                 sym:"✦", name:"Sigil of Smite"},
+  sg_swap:      {hero:"sigil", tier:"G", kind:"swap",                             sym:"✦", name:"Sigil of Exchange"}
+};
+const SIGIL_KEYS = Object.keys(CARDS).filter(k => CARDS[k].hero === "sigil");
+// Per-player deck built at finishDeploy: each drafted hero contributes 6 cards (3S/2E/1L),
+// plus the 10 generic SIGILS. With TEAM_SIZE=5 that's 5*6 + 10 = 40 cards.
+function buildDeckFor(player){
+  const cls=new Set(draft[player]);
+  const heroCards = Object.keys(CARDS).filter(k => CARDS[k].hero!=="sigil" && cls.has(CARDS[k].hero));
+  return heroCards.concat(SIGIL_KEYS);
+}
+
+const VEC={N:[-1,0],S:[1,0],E:[0,1],W:[0,-1]};
+const OPP={N:"S",S:"N",E:"W",W:"E"};
+
+let board, players, sel, busy, uid, heroes, units, roundNum, acted, activeId, over;
+// Tracks the player's most recent move for the active unit, undoable until they act or end the turn.
+// Shape: {unitId, prevR, prevC, prevFacing} or null.
+let lastMove=null;
+// Interactive owner-step assist for player A. When an A-side card with an ownerStep bonus
+// resolves, set this so the player can hand-pick each step. Shape: {ownerId, stepsLeft}.
+let pendingOwnerMove=null;
+let initiativeToken;
+let phase, draft, pickIdx, unplaced;
+
+/* ---------- helpers ---------- */
+function inB(r,c){ return r>=0&&r<R&&c>=0&&c<C; }
+function manh(a,b){ return Math.abs(a.r-b.r)+Math.abs(a.c-b.c); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function newUnit(owner,cls,r,c,facing){
+  const d=CLASSES[cls];
+  const u={id:++uid,owner,cls,r,c,facing,hp:d.hp,maxHp:d.hp,atk:d.atk,move:d.move,range:d.range,init:d.init,
+    flank:!!d.flank,heal:!!d.heal,hero:!!d.hero,sym:d.sym,name:d.name,
+    hasMoved:false,hasActed:false,deployed:true,
+    shield:0,bonusAtkRound:0,bonusMoveTurn:0,vuln:0};
+  units.push(u);
+  return u;
+}
+function place(u){ board[u.r][u.c].unit=u; }
+function activeUnit(){ return units.find(u=>u.id===activeId)||null; }
+
+function newGame(missionId){
+  campaign.currentMission = missionId ? MISSIONS.find(m=>m.id===missionId) : null;
+  board=[]; for(let r=0;r<R;r++){board.push([]); for(let c=0;c<C;c++) board[r].push({unit:null,terrain:null});}
+  uid=0; sel=null; busy=false; over=false; units=[]; acted=new Set(); activeId=null; roundNum=0;
+  lastMove=null; pendingOwnerMove=null;
+  turnSide="A"; roundStarter="A";
+  pendingHandoff=false; lastActedSide=null;
+  document.getElementById("pass").classList.remove("show","B");
+  heroes={A:[],B:[]};
+  players={
+    A:{deck:[],hand:[],human:true},
+    B:{deck:[],hand:[],human: mode==="hotseat"}
+  };
+  document.getElementById("over").style.display="none";
+  draft={A:[],B:[]}; pickIdx=0; unplaced=null;
+  if(campaign.currentMission){
+    // Campaign mode: skip draft entirely. Teams come from the intro picker and the mission's AI pool.
+    draft.A=campaign.teamSelection.slice();
+    draft.B=computeMissionAITeam(campaign.currentMission, draft.A);
+    pickIdx=DRAFT_SEQUENCE.length;
+    finishDraft();
+  } else if(mode==="hotseat"){
+    // Hotseat: skip draft. Both sides field the starter roster — fixed teams keep setup fast.
+    draft.A=STARTERS.slice();
+    draft.B=STARTERS.slice();
+    pickIdx=DRAFT_SEQUENCE.length;
+    finishDraft();
+  } else {
+    phase="draft";
+    openDraftUI();
+    render();
+    advanceDraft();
+  }
+}
+
+/* ---------- draft phase ---------- */
+function openDraftUI(){ document.getElementById("draft").classList.add("open"); buildDraftRoster(); renderDraft(); }
+function closeDraftUI(){ document.getElementById("draft").classList.remove("open"); }
+function draftedSet(){ return new Set([...draft.A, ...draft.B]); }
+function buildDraftRoster(){
+  const root=document.getElementById("draftRoster"); root.innerHTML="";
+  for(const cls of ROSTER){
+    const c=CLASSES[cls];
+    const tags=[c.heal?"heal":"", c.flank?"flank":""].filter(Boolean).join(" · ");
+    const el=document.createElement("div");
+    el.className="rcard"; el.dataset.cls=cls;
+    el.innerHTML=`<div class="rsym">${c.sym}</div><div class="rname">${c.name}</div>`+
+      `<div class="rstats">HP ${c.hp} · ATK ${c.atk} · MV ${c.move} · RNG ${c.range} · INIT ${c.init}</div>`+
+      `<div class="rtags">${tags}</div>`;
+    el.onclick=()=>onDraftPick(cls);
+    root.appendChild(el);
+  }
+}
+function renderDraft(){
+  const taken=new Set(); for(const cls of draft.A) taken.add(cls+":A"); for(const cls of draft.B) taken.add(cls+":B");
+  const takenAll=draftedSet();
+  const inCampaign=!!campaign.currentMission;
+  const aCounts = teamRoleCounts(draft.A);
+  const aMeleeFull = aCounts.m>=TEAM_MELEE;
+  const aRangedFull = aCounts.r>=TEAM_RANGED;
+  for(const el of document.querySelectorAll("#draftRoster .rcard")){
+    const cls=el.dataset.cls;
+    el.className="rcard";
+    const lockedInCampaign = inCampaign && !campaign.unlocked.has(cls);
+    const roleFull = (isMeleeClass(cls) && aMeleeFull) || (isRangedClass(cls) && aRangedFull);
+    if(takenAll.has(cls)){
+      const by=draft.A.includes(cls)?"A":"B";
+      el.classList.add("taken","by-"+by);
+      el.dataset.by="P"+(by==="A"?1:2);
+    } else if(lockedInCampaign){
+      el.classList.add("cant"); el.dataset.by="🔒";
+    } else if(phase!=="draft" || currentPicker()!=="A" || busy){
+      el.classList.add("cant");
+    } else if(roleFull){
+      el.classList.add("cant"); el.dataset.by=isMeleeClass(cls)?"M✓":"R✓";
+    }
+  }
+  // team slots
+  const slotsA=document.getElementById("draftA"), slotsB=document.getElementById("draftB");
+  slotsA.innerHTML=""; slotsB.innerHTML="";
+  for(let i=0;i<TEAM_SIZE;i++){
+    const sa=document.createElement("div"); sa.className="d-slot"+(draft.A[i]?"":" empty");
+    sa.textContent=draft.A[i]?`${CLASSES[draft.A[i]].sym}  ${CLASSES[draft.A[i]].name}`:"—"; slotsA.appendChild(sa);
+    const sb=document.createElement("div"); sb.className="d-slot"+(draft.B[i]?"":" empty");
+    sb.textContent=draft.B[i]?`${CLASSES[draft.B[i]].sym}  ${CLASSES[draft.B[i]].name}`:"—"; slotsB.appendChild(sb);
+  }
+  // status
+  const stat=document.getElementById("draftStatus");
+  if(pickIdx>=DRAFT_SEQUENCE.length){ stat.innerHTML=`<span class="d-tag">DRAFT</span> complete — starting…`; }
+  else {
+    const who=currentPicker(); const remainingPicks=DRAFT_SEQUENCE.slice(pickIdx).filter(p=>p===who).length;
+    stat.innerHTML=`<span class="d-tag">DRAFT</span> ${who==="A"?"YOUR":"AI"} pick — ${remainingPicks} left in this phase`;
+  }
+}
+function currentPicker(){ return DRAFT_SEQUENCE[pickIdx]; }
+function onDraftPick(cls){
+  if(phase!=="draft" || busy) return;
+  if(currentPicker()!=="A") return;
+  if(draftedSet().has(cls)) return;
+  if(campaign.currentMission && !campaign.unlocked.has(cls)) return;
+  const {m,r}=teamRoleCounts(draft.A);
+  if(isMeleeClass(cls)  && m>=TEAM_MELEE)  return;
+  if(isRangedClass(cls) && r>=TEAM_RANGED) return;
+  doPick("A",cls);
+}
+function doPick(player,cls){
+  draft[player].push(cls);
+  pickIdx++;
+  renderDraft();
+  if(pickIdx>=DRAFT_SEQUENCE.length){ setTimeout(finishDraft,400); return; }
+  advanceDraft();
+}
+function advanceDraft(){
+  if(currentPicker()==="B"){
+    busy=true; renderDraft();
+    setTimeout(()=>{ busy=false; aiDraftPick(); },550);
+  }
+}
+function aiDraftPick(){
+  const taken=draftedSet();
+  const {m,r}=teamRoleCounts(draft.B);
+  const valid = cls => !taken.has(cls)
+    && !(isMeleeClass(cls)  && m>=TEAM_MELEE)
+    && !(isRangedClass(cls) && r>=TEAM_RANGED);
+  let cls=null;
+  if(campaign.currentMission){
+    for(const c of campaign.currentMission.aiPool){ if(valid(c)){ cls=c; break; } }
+    if(!cls){ const pool=ROSTER.filter(valid); cls=pool[Math.floor(Math.random()*pool.length)]; }
+  } else {
+    const pool=ROSTER.filter(valid);
+    cls=pool[Math.floor(Math.random()*pool.length)];
+  }
+  doPick("B",cls);
+}
+function finishDraft(){
+  closeDraftUI();
+  // Fixed-slot auto-placement: each side's 3 melee shuffle across their melee slots and
+  // the 2 ranged shuffle across their ranged slots. No interactive deploy phase.
+  unplaced={A:draft.A.slice(), B:draft.B.slice()};
+  autoPlaceAllFor("A");
+  autoPlaceAllFor("B");
+  finishDeploy();
+}
+
+/* ---------- start-slot formation ---------------------------------------------------------
+   Diagonal checkerboard layout — A in the bottom half, B in the top half.
+
+       .  B  .  B  .     row 0  (B ranged slots: 0,1 · 0,3)
+       B  .  B  .  B     row 1  (B melee  slots: 1,0 · 1,2 · 1,4)
+       A  .  A  .  A     row 2  (A melee  slots: 2,0 · 2,2 · 2,4)
+       .  A  .  A  .     row 3  (A ranged slots: 3,1 · 3,3)
+
+   Melee shuffle within the 3 melee slots; ranged within the 2 ranged slots. All A units
+   face N (toward B); all B units face S (toward A).
+*/
+const FORMATION = {
+  A: { melee: [{r:2,c:0},{r:2,c:2},{r:2,c:4}], ranged: [{r:3,c:1},{r:3,c:3}] },
+  B: { melee: [{r:1,c:0},{r:1,c:2},{r:1,c:4}], ranged: [{r:0,c:1},{r:0,c:3}] }
+};
+function deployFacing(o){ return o==="A"?"N":"S"; }
+function placeDeployedUnit(owner,cls,r,c){
+  const u=newUnit(owner,cls,r,c,deployFacing(owner));
+  place(u); heroes[owner].push(u);
+  unplaced[owner]=unplaced[owner].filter(x=>x!==cls);
+}
+function autoPlaceAllFor(side){
+  const melees = shuffle(unplaced[side].filter(isMeleeClass));
+  const ranged = shuffle(unplaced[side].filter(isRangedClass));
+  const slots = FORMATION[side];
+  for(let i=0;i<slots.melee.length && i<melees.length;i++){
+    const t=slots.melee[i]; placeDeployedUnit(side, melees[i], t.r, t.c);
+  }
+  for(let i=0;i<slots.ranged.length && i<ranged.length;i++){
+    const t=slots.ranged[i]; placeDeployedUnit(side, ranged[i], t.r, t.c);
+  }
+}
+function finishDeploy(){
+  phase="play";
+  // Build each player's deck from their drafted heroes' suites
+  for(const o of ["A","B"]){
+    players[o].deck=shuffle(buildDeckFor(o));
+  }
+  for(let i=0;i<3;i++){players.A.hand.push(players.A.deck.pop()); players.B.hand.push(players.B.deck.pop());}
+  // Random first-mover for round 1; from then on the round starter alternates.
+  initiativeToken = Math.random()<0.5 ? "A" : "B";
+  initInitiative();
+  render();
+  promptOrAi();
+}
+
+/* ---------- round / initiative (strict alternation) ----------
+   Each round both sides alternate activating one unit at a time. The current player freely
+   picks any of their living, deployed, unactivated units. When a side runs out of unacted
+   units mid-round, the other side keeps going until the round is exhausted. At round end,
+   `acted` resets and `roundStarter` flips so neither side has a permanent first-mover edge.
+
+   State:
+     turnSide      — whose pick is up while `activeId` is null
+     roundStarter  — side that opened the current round
+     acted         — Set of unit ids that have acted this round
+*/
+let turnSide = "A";
+let roundStarter = "A";
+// One-shot board flashes (damage / heal). Each entry is consumed by the next render(): the
+// matching tile gets a brief CSS animation, then the entry clears. Lets you see WHERE an
+// effect landed without slowing the game down.
+let fxQueue = [];               // [{r, c, kind: "dmg" | "heal"}]
+function tileFx(r, c, kind){ if(r!=null && c!=null && r>=0 && c>=0) fxQueue.push({r, c, kind}); }
+const otherSide = s => s==="A" ? "B" : "A";
+
+function initInitiative(){
+  // First call at the start of the match — bootstraps into round 1.
+  roundNum = 0;
+  acted = new Set();
+  roundStarter = initiativeToken;
+  startRound(1);
+}
+function hasUnactedUnits(side){
+  for(const u of units){
+    if(u.owner===side && u.hp>0 && u.deployed && !acted.has(u.id)) return true;
+  }
+  return false;
+}
+function unactedUnits(side){
+  return units.filter(u=>u.owner===side && u.hp>0 && u.deployed && !acted.has(u.id));
+}
+function startRound(r){
+  roundNum = r;
+  acted = new Set();
+  for(const u of units){ u.hasMoved=false; u.hasActed=false; u.bonusAtkRound=0; u.bonusMoveTurn=0; u.vuln=0; }
+  // Round 1 uses the initiativeToken; later rounds flip the starter.
+  if(r===1) roundStarter = initiativeToken;
+  else roundStarter = otherSide(roundStarter);
+  turnSide = roundStarter;
+}
+function advance(){
+  // Called after endActiveTurn clears activeId. Decide whose pick is up next.
+  activeId = null;
+  if(!hasUnactedUnits("A") && !hasUnactedUnits("B")){
+    startRound(roundNum + 1);   // sets turnSide = roundStarter
+    return;
+  }
+  // Alternate to the other side; if that side is spent for the round, stay on this one.
+  let next = otherSide(turnSide);
+  if(!hasUnactedUnits(next)) next = turnSide;
+  turnSide = next;
+}
+function startActivation(unitId){
+  const u = units.find(x=>x.id===unitId);
+  if(!u || u.hp<=0 || acted.has(u.id) || u.owner!==turnSide) return false;
+  activeId = u.id;
+  u.hasMoved=false; u.hasActed=false; u.bonusMoveTurn=0;
+  sel=null;
+  return true;
+}
+function aiPickUnit(){
+  // Pick the unacted unit with the highest init (fast first), tiebreak by id. Cheap and
+  // matches the rough "fast units act first" intuition of the old pool.
+  const list = unactedUnits(turnSide);
+  if(list.length===0) return null;
+  list.sort((a,b)=> (b.init||2) - (a.init||2) || a.id - b.id);
+  return list[0].id;
+}
+function endActiveTurn(){
+  const u=activeUnit();
+  if(u){
+    acted.add(u.id);
+    u.bonusMoveTurn=0;
+    const p=players[u.owner];
+    if(p.deck.length) p.hand.push(p.deck.pop());
+    lastActedSide = u.owner;
+  }
+  activeId=null; sel=null; lastMove=null;
+  if(over) return;
+  advance();
+  // Hotseat: if the next side to pick is a different human, gate behind the pass-phone
+  // overlay so the previous player can hand the device over without leaking the next
+  // player's hand.
+  if(isHotseat() && lastActedSide && turnSide !== lastActedSide && players[turnSide].human){
+    pendingHandoff = true;
+    busy = true;
+    render();
+    showPassOverlay(turnSide);
+    return;
+  }
+  render(); promptOrAi();
+}
+function showPassOverlay(toSide){
+  const el=document.getElementById("pass");
+  el.classList.remove("A","B");
+  el.classList.add(toSide);
+  el.classList.add("show");
+  document.getElementById("passMark").textContent = toSide==="A" ? "◀" : "▶";
+  document.getElementById("passTitle").textContent = `PASS THE PHONE TO ${toSide==="A"?"PLAYER 1":"PLAYER 2"}`;
+  document.getElementById("passSub").textContent = "The next player taps when ready.";
+}
+function hidePassOverlay(){
+  document.getElementById("pass").classList.remove("show","A","B");
+}
+function promptOrAi(){
+  if(over) return;
+  // A unit is already mid-activation (player picked from board, or AI just resolved its pick).
+  const u=activeUnit();
+  if(u){
+    if(players[u.owner].human){
+      // The turn bar shows whose turn it is + counters; keep the status line clear for action feedback.
+      say("");
+      render();
+    } else {
+      busy=true; render();
+      say(`Enemy <b>${u.name}</b> is acting…`);
+      setTimeout(async ()=>{
+        if(over) return;
+        await aiAct(u);
+        if(over) return;
+        busy=false; render();
+        // brief gap before the next unit takes over, so the player can read the last result
+        await aiWait(250);
+        endActiveTurn();
+      }, 450);
+    }
+    return;
+  }
+  // Pick phase: no active unit. The current side chooses one of its unactivated units.
+  if(!hasUnactedUnits(turnSide)){
+    // Safety — should have been handled by advance(); resync.
+    advance();
+    if(activeUnit() || hasUnactedUnits(turnSide)) { promptOrAi(); return; }
+    return;
+  }
+  if(players[turnSide].human){
+    const label = isHotseat() ? (turnSide==="A"?"P1":"P2") : "Your";
+    say(`${label} pick — tap one of your units on the board.`);
+    render();
+  } else {
+    busy=true; render();
+    setTimeout(()=>{
+      if(over) return;
+      const id = aiPickUnit();
+      if(!id){ busy=false; return; }
+      startActivation(id);
+      busy=false;
+      promptOrAi();
+    }, 250);
+  }
+}
+
+/* ---------- combat / actions ---------- */
+function eachUnit(fn){ for(const u of units) if(u.hp>0 && u.deployed) fn(u); }
+function heroesAlive(o){ return heroes[o].filter(h=>h.hp>0); }
+function effMove(u){ return u.move + (u.bonusMoveTurn||0); }
+function adjacentTo(unit, classKey, ownerSide){
+  // True if a living unit of the given class and owner side is orthogonally adjacent to `unit`.
+  for(const k in VEC){
+    const [dr,dc]=VEC[k]; const nr=unit.r+dr, nc=unit.c+dc;
+    if(!inB(nr,nc)) continue;
+    const a=board[nr][nc].unit;
+    if(a && a.hp>0 && a.cls===classKey && a.owner===ownerSide) return true;
+  }
+  return false;
+}
+function anyLivingAlly(owner, classKey){
+  for(const u of units){ if(u.owner===owner && u.cls===classKey && u.hp>0 && u.deployed) return true; }
+  return false;
+}
+function effAtk(u){ return u.atk + (u.bonusAtkRound||0); }
+function reachable(u){
+  const dist={}, q=[{r:u.r,c:u.c}], res=[]; dist[u.r+","+u.c]=0;
+  const lim=effMove(u);
+  while(q.length){
+    const cur=q.shift(), d=dist[cur.r+","+cur.c];
+    for(const k in VEC){const[dr,dc]=VEC[k]; const nr=cur.r+dr,nc=cur.c+dc,key=nr+","+nc;
+      if(!inB(nr,nc)||key in dist||board[nr][nc].unit||d+1>lim)continue;
+      dist[key]=d+1; q.push({r:nr,c:nc}); res.push({r:nr,c:nc});}
+  }
+  return res;
+}
+function enemiesInRange(u){ const a=[]; eachUnit(t=>{if(t.owner!==u.owner&&manh(u,t)<=u.range)a.push(t);}); return a; }
+function healablyAdjacent(u){ const a=[]; eachUnit(t=>{if(t.owner===u.owner&&t.id!==u.id&&manh(u,t)===1&&t.hp<t.maxHp)a.push(t);}); return a; }
+
+function dirFromTo(from,to){
+  const dr=to.r-from.r, dc=to.c-from.c;
+  if(Math.abs(dr)>=Math.abs(dc)) return dr<0?"N":(dr>0?"S":"N");
+  return dc<0?"W":"E";
+}
+function arcOf(attacker,defender){
+  const incoming=dirFromTo(defender,attacker);
+  if(incoming===defender.facing) return "front";
+  if(incoming===OPP[defender.facing]) return "rear";
+  return "side";
+}
+function moveUnit(u,r,c){
+  board[u.r][u.c].unit=null;
+  u.facing=dirFromTo({r:u.r,c:u.c},{r,c});
+  u.r=r; u.c=c; board[r][c].unit=u; u.hasMoved=true;
+  // Assassin — Shadow Step: any movement primes a one-shot rear-arc attack.
+  if(u.cls==="assassin") u.pounceReady=true;
+}
+// Knight is push/pull immune. Sentinel and any orthogonally-adjacent ally of Sentinel are immune.
+function isDisplacementImmune(unit){
+  if(unit.cls==="knight") return true;
+  if(unit.cls==="sentinel") return true;
+  if(adjacentTo(unit, "sentinel", unit.owner)) return true;
+  return false;
+}
+function killCheck(defender){
+  if(defender.hp<=0){
+    if(board[defender.r][defender.c].unit===defender) board[defender.r][defender.c].unit=null;
+    // Strict alternation: nothing to clean up — a dead unit just won't be eligible for
+    // future picks (acted Set and hasUnactedUnits handle the filtering).
+    // Warlock — Soul Drain: any Warlock on the opposing side heals 2 HP when an enemy dies.
+    const enemySide = defender.owner==="A"?"B":"A";
+    for(const u of units){
+      if(u.cls==="warlock" && u.owner===enemySide && u.hp>0 && u.deployed){
+        const before=u.hp; u.hp=Math.min(u.maxHp, u.hp+2);
+        if(u.hp>before){ tileFx(u.r, u.c, "heal"); say(`${u.name} drains soul — +${u.hp-before} HP.`); }
+      }
+    }
+    if(defender.hero){
+      const side=defender.owner;
+      if(heroesAlive(side).length===0) endGame(side==="A"?"B":"A");
+    }
+  }
+}
+function applyDamage(defender,raw,attackerSide){
+  // Necromancer — Death Touch: +1 dmg if defender is orthogonally adjacent to a Necromancer
+  // on the attacker's side. The only persistent passive in the new pool.
+  if(attackerSide && adjacentTo(defender,"necromancer",attackerSide)) raw += 1;
+  const res = applyDamageRaw(defender,raw);
+  if(res.taken>0) tileFx(defender.r, defender.c, "dmg");
+  return res;
+}
+function applyDamageRaw(defender,raw){
+  let dmg=raw;
+  if(defender.shield>0){
+    const absorbed=Math.min(defender.shield,dmg);
+    defender.shield-=absorbed; dmg-=absorbed;
+  }
+  defender.hp-=dmg;
+  return {absorbed:raw-dmg, taken:dmg};
+}
+function attack(attacker,defender,opts){
+  // opts.bonusDmg     — flat damage added AFTER arc/multiplier (used by card-based attacks).
+  // opts.consumeAction — set attacker.hasActed=true (true for normal attacks; false for
+  //                      card-based attacks since the playCard end-block manages the slot).
+  // opts.label         — short tag to flavour the say() output, e.g. card name.
+  opts = opts || {};
+  const bonusDmg = opts.bonusDmg || 0;
+  const consumeAction = opts.consumeAction !== false;
+  const arc=arcOf(attacker,defender);
+  let mult=arc==="front"?1:arc==="side"?1.5:2;
+  if(attacker.flank){ if(arc==="side")mult=2; if(arc==="rear")mult=2.5; }
+  // Assassin — Shadow Step: any movement this match primes pounceReady; her next attack
+  // resolves as rear-arc regardless of facing. One-shot — clears after the attack.
+  let pounceUsed=false;
+  if(attacker.cls==="assassin" && attacker.pounceReady){ mult = 3; pounceUsed=true; }
+  const high=board[attacker.r][attacker.c].terrain==="high"?1:0;
+  let raw=Math.round((effAtk(attacker)+high)*mult) + bonusDmg;
+  attacker.facing=dirFromTo(attacker,defender);
+  const {taken}=applyDamage(defender,raw,attacker.owner);
+  if(consumeAction) attacker.hasActed=true;
+  if(pounceUsed) attacker.pounceReady=false;
+  const shielded=raw-taken;
+  const pounceTag = pounceUsed ? ` <i>SHADOW STEP</i>` : "";
+  const bonusTag = bonusDmg ? ` <i>+${bonusDmg}</i>` : "";
+  const cardTag = opts.label ? `<i>${opts.label}</i> — ` : "";
+  say(`${cardTag}${attacker.name} hit ${defender.name} <b>(${arc.toUpperCase()} ×${mult})</b>${pounceTag}${bonusTag} for ${taken}${shielded?` <i>(${shielded} absorbed)</i>`:""}.`);
+  // Berserker — Bloodthirst: heal 1 HP on any damaging attack.
+  if(attacker.cls==="berserker" && taken>0 && attacker.hp>0){
+    const before=attacker.hp; attacker.hp=Math.min(attacker.maxHp, attacker.hp+1);
+    if(attacker.hp>before){ tileFx(attacker.r, attacker.c, "heal"); say(`${attacker.name} drinks deep — +1 HP.`); }
+  }
+  killCheck(defender);
+}
+function healAct(mage,ally){
+  const before=ally.hp;
+  ally.hp=Math.min(ally.maxHp,ally.hp+3); mage.hasActed=true;
+  if(ally.hp>before) tileFx(ally.r, ally.c, "heal");
+  say(`${mage.name} mended ${ally.name} (+3).`);
+}
+function summon(o,cls,r,c){ const u=newUnit(o,cls,r,c,o==="A"?"N":"S"); place(u); return u; }
+
+/* ---------- card play (consumes the active unit's action; sigils also consume movement) ---------- */
+// Push/pull helpers — move `target` along the axis between caster and target. Diagonals
+// (which shouldn't normally arise in this game's manhattan range model) pick the longer axis.
+// If movement is blocked by an edge or another unit, the target takes `kb` knockback damage
+// per remaining step (capped once — single damage event), and we stop.
+function shoveUnit(target, axisFromR, axisFromC, distance, kb, owner){
+  // Knight Steadfast / Sentinel Anchor — push/pull immunity.
+  if(isDisplacementImmune(target)) return {moved:0, blocked:false, kbTaken:0, dead:false, immune:true};
+  let dirR = Math.sign(target.r - axisFromR);
+  let dirC = Math.sign(target.c - axisFromC);
+  if(dirR!==0 && dirC!==0){
+    if(Math.abs(target.r-axisFromR) >= Math.abs(target.c-axisFromC)) dirC=0; else dirR=0;
+  }
+  if(dirR===0 && dirC===0) return {moved:0, blocked:true, kbTaken:0, dead:false};
+  let moved=0, blocked=false;
+  for(let i=0;i<distance;i++){
+    const nr=target.r+dirR, nc=target.c+dirC;
+    if(!inB(nr,nc) || (board[nr][nc].unit && !(nr===target.r && nc===target.c))){ blocked=true; break; }
+    board[target.r][target.c].unit=null;
+    target.r=nr; target.c=nc;
+    board[nr][nc].unit=target;
+    if(target.cls==="assassin") target.pounceReady=true; // Shadow Step triggers on any movement
+    // pushed units keep their facing — they're being shoved, not turning
+    moved++;
+  }
+  let kbTaken=0, dead=false;
+  if(blocked && kb>0){
+    const res = applyDamage(target, kb, owner);
+    kbTaken = res.taken;
+    killCheck(target);
+    if(target.hp<=0) dead=true;
+  }
+  return {moved, blocked, kbTaken, dead};
+}
+function pushTarget(target, caster, distance, kb, owner){ return shoveUnit(target, caster.r, caster.c, distance, kb, owner); }
+function pullTarget(target, caster, distance, kb, owner){
+  // Knight Steadfast / Sentinel Anchor — push/pull immunity.
+  if(isDisplacementImmune(target)) return {moved:0, blocked:false, kbTaken:0, dead:false, immune:true};
+  // pulled toward caster — direction is from target toward caster, but the caller's tile counts as a wall
+  // (we can't land on the caster). Re-implement with a per-step toward-caster vector.
+  let moved=0, blocked=false;
+  for(let i=0;i<distance;i++){
+    let dirR = Math.sign(caster.r - target.r);
+    let dirC = Math.sign(caster.c - target.c);
+    if(dirR!==0 && dirC!==0){
+      if(Math.abs(caster.r-target.r) >= Math.abs(caster.c-target.c)) dirC=0; else dirR=0;
+    }
+    if(dirR===0 && dirC===0){ blocked=true; break; }
+    const nr=target.r+dirR, nc=target.c+dirC;
+    if(nr===caster.r && nc===caster.c){ blocked=true; break; }       // can't land on caster
+    if(!inB(nr,nc) || board[nr][nc].unit){ blocked=true; break; }
+    board[target.r][target.c].unit=null;
+    target.r=nr; target.c=nc;
+    board[nr][nc].unit=target;
+    if(target.cls==="assassin") target.pounceReady=true;
+    target.facing = dirFromTo({r:target.r,c:target.c}, caster);     // face the caster
+    moved++;
+  }
+  let kbTaken=0, dead=false;
+  if(blocked && kb>0){
+    const res = applyDamage(target, kb, owner);
+    kbTaken = res.taken;
+    killCheck(target);
+    if(target.hp<=0) dead=true;
+  }
+  return {moved, blocked, kbTaken, dead};
+}
+// Dash-attack support: pick an enemy within `card.range` manhattan that has at least one
+// orthogonally-adjacent free tile (the caster's own tile counts as free since they'd vacate).
+function dashAttackTargets(u, card){
+  const range = card.range || (u.move + 1);
+  const out=[];
+  eachUnit(t=>{
+    if(t.owner===u.owner) return;
+    if(manh(u,t) > range) return;
+    if(pickDashLanding(u, t)) out.push(t);
+  });
+  return out;
+}
+function pickDashLanding(u, target){
+  // Closest orthogonally-adjacent free tile to `target`; caster's own tile counts as free.
+  let best=null, bestDist=999;
+  for(const k in VEC){
+    const [dr,dc]=VEC[k]; const nr=target.r+dr, nc=target.c+dc;
+    if(!inB(nr,nc)) continue;
+    const occupant = board[nr][nc].unit;
+    if(occupant && occupant.id !== u.id) continue;
+    const d = Math.abs(nr-u.r)+Math.abs(nc-u.c);
+    if(d < bestDist){ bestDist=d; best={r:nr,c:nc}; }
+  }
+  return best;
+}
+function dashCaster(caster, target){
+  // teleport-style — destination is an empty in-bounds tile; no path validation between.
+  if(!caster) return false;
+  if(!inB(target.r,target.c) || board[target.r][target.c].unit) return false;
+  board[caster.r][caster.c].unit=null;
+  caster.facing = dirFromTo({r:caster.r,c:caster.c}, target);
+  caster.r=target.r; caster.c=target.c;
+  board[target.r][target.c].unit=caster;
+  if(caster.cls==="assassin") caster.pounceReady=true;
+  return true;
+}
+function swapWithAlly(caster, ally){
+  if(!caster || !ally || caster.owner!==ally.owner) return false;
+  const cr=caster.r, cc=caster.c, ar=ally.r, ac=ally.c;
+  board[cr][cc].unit=null; board[ar][ac].unit=null;
+  caster.r=ar; caster.c=ac; board[ar][ac].unit=caster;
+  ally.r=cr; ally.c=cc;     board[cr][cc].unit=ally;
+  caster.facing = dirFromTo({r:cr,c:cc},{r:ar,c:ac});
+  if(caster.cls==="assassin") caster.pounceReady=true;
+  if(ally.cls==="assassin")  ally.pounceReady=true;
+  return true;
+}
+function ownerUnitFor(owner, heroClass){
+  return heroes[owner].find(h => h.cls===heroClass && h.hp>0 && h.deployed) || null;
+}
+// Orthogonally-adjacent, in-bounds, empty tiles around `u` — the legal step targets.
+function ownerStepFreeTiles(u){
+  const out=[];
+  for(const k in VEC){
+    const [dr,dc]=VEC[k]; const nr=u.r+dr, nc=u.c+dc;
+    if(!inB(nr,nc)) continue;
+    if(board[nr][nc].unit) continue;
+    out.push({r:nr,c:nc});
+  }
+  return out;
+}
+function pendingOwnerUnit(){
+  return pendingOwnerMove ? units.find(x=>x.id===pendingOwnerMove.ownerId) || null : null;
+}
+function commitOwnerStep(r,c){
+  // Player tapped a highlighted tile during a pending owner-step assist.
+  if(!pendingOwnerMove) return;
+  const ou = pendingOwnerUnit();
+  if(!ou || ou.hp<=0){ endOwnerStep(); return; }
+  const valid = ownerStepFreeTiles(ou).some(t=>t.r===r&&t.c===c);
+  if(!valid) return;
+  moveUnit(ou, r, c);
+  ou.hasMoved=false; // out-of-turn — does not consume the owner's own move action
+  pendingOwnerMove.stepsLeft--;
+  if(pendingOwnerMove.stepsLeft<=0 || ownerStepFreeTiles(ou).length===0){
+    endOwnerStep();
+  } else {
+    say(`<b>${ou.name}</b> moves again — tap a green tile (or SKIP).`);
+    render();
+  }
+}
+function endOwnerStep(){
+  pendingOwnerMove = null;
+  render();
+  const u = activeUnit();
+  if(u && players[u.owner].human) maybeAutoEnd(u);
+}
+// Paladin Guardian + Druid Symbiosis — extra heals after a heal-kind card resolves.
+function healAfterEffect(side){
+  const pal = ownerUnitFor(side, "paladin");
+  if(pal){
+    // most-wounded ally on this side, ties broken by hero
+    let best=null, bestDef=-1;
+    eachUnit(u=>{ if(u.owner===side && u.hp<u.maxHp){
+      const def=(u.maxHp-u.hp)+(u.hero?0.1:0);
+      if(def>bestDef){ bestDef=def; best=u; }
+    }});
+    if(best){
+      const before=best.hp; best.hp=Math.min(best.maxHp, best.hp+1);
+      if(best.hp>before){ tileFx(best.r, best.c, "heal"); say(`Guardian: ${pal.name} restores +1 HP on ${best.name}.`); }
+    }
+  }
+  const dr = ownerUnitFor(side, "druid");
+  if(dr){
+    const before=dr.hp; dr.hp=Math.min(dr.maxHp, dr.hp+1);
+    if(dr.hp>before){ tileFx(dr.r, dr.c, "heal"); say(`Symbiosis: ${dr.name} +1 HP.`); }
+  }
+}
+function weakestAdjacentEnemy(u){
+  let best=null;
+  for(const k in VEC){
+    const [dr,dc]=VEC[k]; const nr=u.r+dr, nc=u.c+dc;
+    if(!inB(nr,nc)) continue;
+    const e=board[nr][nc].unit;
+    if(e && e.owner!==u.owner && (best===null || e.hp<best.hp)) best=e;
+  }
+  return best;
+}
+function fireOwnerBonus(card, ownerSide){
+  if(!card.bonus) return;
+  const ou = ownerUnitFor(ownerSide, card.hero);
+  if(!ou) return; // owner is dead or off-field; no assist
+  const b=card.bonus, ownerLabel=`${ou.sym} ${ou.name}`;
+  if(b.kind==="ownerStep"){
+    const steps = b.amount||1;
+    if(players[ownerSide].human){
+      // Interactive: the controlling human picks each step on the board.
+      if(ownerStepFreeTiles(ou).length===0) return; // surrounded → silent skip
+      pendingOwnerMove = {ownerId: ou.id, stepsLeft: steps};
+      say(`${ownerLabel} moves ${steps} step${steps>1?"s":""} — tap a green tile (or SKIP).`);
+      return;
+    }
+    // AI side: auto-step toward nearest enemy.
+    const enemy = nearestHeroOrUnit(ou);
+    if(!enemy) return;
+    for(let i=0;i<steps;i++){
+      const step=bestStep(ou, enemy); if(!step) break;
+      moveUnit(ou, step.r, step.c);
+      ou.hasMoved=false; // out-of-turn step doesn't consume the owner's own move action
+    }
+    say(`${ownerLabel} assists — stepped forward.`);
+  } else if(b.kind==="ownerHeal"){
+    const before=ou.hp; ou.hp=Math.min(ou.maxHp, ou.hp+(b.amount||1));
+    const restored=ou.hp-before;
+    if(restored>0){ tileFx(ou.r, ou.c, "heal"); say(`${ownerLabel} assists — +${restored} HP.`); }
+  } else if(b.kind==="ownerStrike"){
+    const e = weakestAdjacentEnemy(ou); if(!e) return;
+    const res = applyDamage(e, b.amount||1, ownerSide);
+    say(`${ownerLabel} assists — strikes ${e.name} for ${res.taken}.`);
+    // Berserker — Bloodthirst: any damaging strike by Berserker heals him 1 HP.
+    if(ou.cls==="berserker" && res.taken>0 && ou.hp>0){
+      const bef=ou.hp; ou.hp=Math.min(ou.maxHp, ou.hp+1);
+      if(ou.hp>bef){ tileFx(ou.r, ou.c, "heal"); say(`${ou.name} drinks deep — +1 HP.`); }
+    }
+    killCheck(e);
+  } else if(b.kind==="ownerDrain"){
+    const e = weakestAdjacentEnemy(ou); if(!e) return;
+    const res = applyDamage(e, b.amount||1, ownerSide);
+    const before=ou.hp; ou.hp=Math.min(ou.maxHp, ou.hp+(b.amount||1));
+    const restored=ou.hp-before;
+    if(restored>0) tileFx(ou.r, ou.c, "heal");
+    say(`${ownerLabel} assists — drains ${res.taken} from ${e.name}${restored?` (+${restored} HP)`:""}.`);
+    killCheck(e);
+  }
+}
+function playCard(owner,handIdx,target){
+  const p=players[owner]; const key=p.hand[handIdx]; const card=CARDS[key];
+  p.hand.splice(handIdx,1);
+  // In single-player, A is "You" / B is "Enemy". In hotseat, label by player number.
+  const who = isHotseat() ? (owner==="A"?"P1":"P2") : (owner==="A"?"You":"Enemy");
+  const caster=activeUnit();
+  // Damage cards route through attack() so they use the caster's atk/range/arc bonuses,
+  // pounceReady, Berserker Bloodthirst, terrain, etc. The card's `dmg` value is a flat
+  // bonus added AFTER the multiplier. consumeAction:false lets the playCard end-block
+  // own the slot bookkeeping (hero cards consume, sigils don't).
+  if(card.kind==="dmg"){
+    const u=board[target.r][target.c].unit;
+    if(caster) attack(caster, u, {bonusDmg: card.dmg, consumeAction:false, label: card.name});
+  } else if(card.kind==="dmg-adj"){
+    const u=board[target.r][target.c].unit;
+    if(caster) attack(caster, u, {bonusDmg: card.dmg, consumeAction:false, label: card.name});
+    // Splash to orthogonal neighbours — raw damage (not an attack), Mage Resonance buffs it.
+    const splashDmg = (card.splash||0) + (anyLivingAlly(owner,"mage") ? 1 : 0);
+    const splashed=[];
+    for(const k in VEC){
+      const [dr,dc]=VEC[k]; const nr=u.r+dr, nc=u.c+dc;
+      if(!inB(nr,nc)) continue;
+      const adj=board[nr][nc].unit;
+      if(adj && adj.owner!==owner && adj.hp>0){ applyDamage(adj,splashDmg,owner); splashed.push(adj); }
+    }
+    if(splashed.length) say(`${card.name}: +${splashDmg} splash to ${splashed.length} adjacent enemies.`);
+    for(const a of splashed) killCheck(a);
+  } else if(card.kind==="dmg-self-heal"){
+    const u=board[target.r][target.c].unit;
+    if(caster) attack(caster, u, {bonusDmg: card.dmg, consumeAction:false, label: card.name});
+    // Lifesteal from the card text — independent of damage dealt, so it still heals if shielded.
+    if(caster && caster.hp>0){
+      const before=caster.hp; caster.hp=Math.min(caster.maxHp,caster.hp+card.heal); const restored=caster.hp-before;
+      if(restored>0){ tileFx(caster.r,caster.c,"heal"); say(`${card.name}: ${caster.name} drains +${restored} HP.`); }
+    }
+  } else if(card.kind==="dmg-push"){
+    const u=board[target.r][target.c].unit;
+    if(caster) attack(caster, u, {bonusDmg: card.dmg, consumeAction:false, label: card.name});
+    if(u.hp>0 && caster){
+      const r=pushTarget(u, caster, card.push||1, card.kb||0, owner);
+      say(`${card.name}: pushed ${r.moved}${r.blocked?` (impact ${r.kbTaken})`:""}.`);
+    }
+  } else if(card.kind==="dmg-pull"){
+    const u=board[target.r][target.c].unit;
+    if(caster) attack(caster, u, {bonusDmg: card.dmg, consumeAction:false, label: card.name});
+    if(u.hp>0 && caster){
+      const r=pullTarget(u, caster, card.pull||1, card.kb||0, owner);
+      say(`${card.name}: pulled ${r.moved}${r.blocked?` (impact ${r.kbTaken})`:""}.`);
+    }
+  } else if(card.kind==="dash-attack"){
+    // Charge an enemy: dash to an empty tile orthogonally adjacent to them, then attack.
+    // Range gate is handled by validity / highlight; here we assume the target is legal.
+    const u=board[target.r][target.c].unit;
+    if(u && caster){
+      const landing = pickDashLanding(caster, u);
+      if(landing && !(landing.r===caster.r && landing.c===caster.c)){
+        dashCaster(caster, landing); // teleport-style, sets facing toward landing
+      }
+      attack(caster, u, {bonusDmg: card.dmg, consumeAction:false, label: card.name});
+      if(u.hp>0 && card.push){
+        const r=pushTarget(u, caster, card.push, card.kb||0, owner);
+        say(`${card.name}: pushed ${r.moved}${r.blocked?` (impact ${r.kbTaken})`:""}.`);
+      }
+    }
+  } else if(card.kind==="push"){
+    const u=board[target.r][target.c].unit;
+    if(caster){
+      const r=pushTarget(u, caster, card.push||1, card.kb||0, owner);
+      say(`${card.name}: ${u.name} pushed ${r.moved}${r.blocked?` (impact ${r.kbTaken})`:""}.`);
+    }
+  } else if(card.kind==="pull"){
+    const u=board[target.r][target.c].unit;
+    if(caster){
+      const r=pullTarget(u, caster, card.pull||1, card.kb||0, owner);
+      say(`${card.name}: ${u.name} pulled ${r.moved}${r.blocked?` (impact ${r.kbTaken})`:""}.`);
+    }
+  } else if(card.kind==="push-adj"){
+    if(caster){
+      let moved=0, impacts=0;
+      // Mage — Resonance: +1 kb on AoE push while a Mage is alive on caster's side.
+      const kbAmt = (card.kb||0) + (anyLivingAlly(owner,"mage") ? 1 : 0);
+      const targets=[];
+      for(const k in VEC){
+        const [dr,dc]=VEC[k]; const nr=caster.r+dr, nc=caster.c+dc;
+        if(!inB(nr,nc)) continue;
+        const e=board[nr][nc].unit;
+        if(e && e.owner!==owner) targets.push(e);
+      }
+      for(const e of targets){
+        if(e.hp<=0) continue;
+        const r=pushTarget(e, caster, card.push||1, kbAmt, owner);
+        moved+=r.moved; if(r.blocked) impacts++;
+        killCheck(e);
+      }
+      say(`${card.name}: ${targets.length} enemies pushed (${moved} steps${impacts?`, ${impacts} impacts`:""}).`);
+    }
+  } else if(card.kind==="dash"){
+    if(caster && dashCaster(caster, target)){
+      say(`${card.name}: ${caster.name} dashed to (${target.r+1},${target.c+1}).`);
+    }
+  } else if(card.kind==="swap"){
+    const ally=board[target.r][target.c].unit;
+    if(caster && ally && swapWithAlly(caster, ally)){
+      say(`${card.name}: ${caster.name} swapped with ${ally.name}.`);
+    }
+  } else if(card.kind==="heal"){
+    const u=board[target.r][target.c].unit;
+    const before=u.hp; u.hp=Math.min(u.maxHp,u.hp+card.amount);
+    if(u.hp>before) tileFx(u.r, u.c, "heal");
+    say(`${card.name}: ${u.name} +${u.hp-before} HP.`);
+    healAfterEffect(owner);
+  } else if(card.kind==="heal-all"){
+    let total=0;
+    eachUnit(u=>{
+      if(u.owner===owner){ const before=u.hp; u.hp=Math.min(u.maxHp,u.hp+card.amount); const gained=u.hp-before; total+=gained; if(gained>0) tileFx(u.r,u.c,"heal"); }
+    });
+    say(`${who} cast ${card.name} — all allies +${card.amount} HP (${total} restored).`);
+    healAfterEffect(owner);
+  }
+  // Berserker Bloodthirst on damage cards: handled inside attack() now (which the damage
+  // card branches above route through). The ownerStrike assist branch still triggers it
+  // separately via fireOwnerBonus.
+  // Owner-assist bonus (skip for sigils — they have no owner).
+  fireOwnerBonus(card, owner);
+  // Cost economy: SIGILS are FREE — they consume neither the action nor the move slot, so
+  // they can chain into combo turns. Hero cards consume the unit's action. Hero cards with
+  // kind=dash/swap additionally consume the move (they ARE the unit's movement for the turn).
+  if(caster && caster.owner===owner && card.hero!=="sigil"){
+    caster.hasActed=true;
+    if(card.kind==="dash" || card.kind==="swap" || card.kind==="dash-attack") caster.hasMoved=true;
+  }
+}
+function canPlayCardNow(){
+  // True if the active unit could play *some* card right now. Sigils don't require the
+  // action, but once the unit has spent BOTH move and action it's truly done — sigils block
+  // too so the turn can auto-end cleanly.
+  if(pendingOwnerMove || pendingHandoff) return false;
+  const u=activeUnit();
+  if(!u || !players[u.owner].human || !u.deployed) return false;
+  if(u.hasMoved && u.hasActed) return false;
+  return true;
+}
+function canPlayCard(card){
+  if(pendingOwnerMove || pendingHandoff) return false;
+  const u=activeUnit();
+  if(!u || !players[u.owner].human || !u.deployed) return false;
+  // Once the unit has used BOTH move and action, even sigils are off — there's nothing left
+  // to combo with, so the turn ends.
+  if(u.hasMoved && u.hasActed) return false;
+  // Sigils otherwise are free.
+  if(card.hero === "sigil") return true;
+  // Hero cards consume the action slot.
+  if(u.hasActed) return false;
+  // Any unit may cast any hero card — the card's owner "assists" the caster.
+  // The owner must still be alive (and on the caster's side) to provide the assist.
+  return heroes[u.owner].some(h=>h.cls===card.hero && h.hp>0 && h.deployed);
+}
+function cardCastRange(u){
+  // Ranger — Spotter: +1 range on damage / push / pull cards while a Ranger lives on caster's side.
+  return u.range + (anyLivingAlly(u.owner, "ranger") ? 1 : 0);
+}
+function cardEnemyTargets(u){
+  const range = cardCastRange(u);
+  const list=[]; eachUnit(t=>{ if(t.owner!==u.owner && manh(u,t)<=range) list.push(t); }); return list;
+}
+function maybeAutoEnd(u){
+  // End the turn automatically when nothing useful is left. With sigils gated to "at least
+  // one slot remaining", a unit with both move + action spent has no plays left, so we close
+  // the turn for the player. Otherwise the turn stays live — the top bar shows Moves/Actions
+  // remaining, so no extra hint needed in the status line.
+  if(over) return;
+  if(pendingOwnerMove) return; // wait for player to resolve the owner-step assist
+  if(!u || u.hp<=0){ endActiveTurn(); return; }
+  if(u.hasMoved && u.hasActed){ endActiveTurn(); return; }
+  // Edge case: can't move and can't act → done.
+  if(!reachable(u).length && u.hasActed){ endActiveTurn(); return; }
+}
+
+/* ---------- player interaction ---------- */
+function onTile(r,c){
+  if(busy||over) return;
+  if(phase!=="play") return;
+  // Pending owner-step assist takes precedence over normal turn actions.
+  if(pendingOwnerMove){
+    const cell=board[r][c];
+    if(cell._hl==="step") commitOwnerStep(r,c);
+    return;
+  }
+  if(pendingHandoff) return;
+  // Pick phase — no active unit, the human picks which of their unactivated units acts.
+  if(!activeId){
+    if(!players[turnSide].human) return; // AI picks itself
+    const cellU = board[r][c].unit;
+    if(cellU && cellU.owner===turnSide && cellU.hp>0 && cellU.deployed && !acted.has(cellU.id)){
+      if(startActivation(cellU.id)){ render(); promptOrAi(); }
+    }
+    return;
+  }
+  const u=activeUnit(); if(!u || !players[u.owner].human) return;
+  const cell=board[r][c];
+  if(sel&&sel.t==="card"){
+    if(cell._hl){
+      lastMove=null; playCard("A",sel.i,{r,c}); sel=null; render();
+      // If the card kicked off an interactive owner-step, defer end-of-turn until resolved.
+      if(!pendingOwnerMove) maybeAutoEnd(u);
+    }
+    else { sel=null; render(); }
+    return;
+  }
+  // unit-turn actions: move and/or act on the active unit only
+  const tgt=cell.unit;
+  if(cell._hl==="move"){
+    lastMove={unitId:u.id, prevR:u.r, prevC:u.c, prevFacing:u.facing};
+    moveUnit(u,r,c); render(); maybeAutoEnd(u); return;
+  }
+  if(cell._hl==="atk"){ lastMove=null; attack(u,tgt); render(); if(over) return; maybeAutoEnd(u); return; }
+  if(cell._hl==="heal"){ lastMove=null; healAct(u,tgt); render(); maybeAutoEnd(u); return; }
+}
+function anyAlly(o){ let any=false; eachUnit(u=>{if(u.owner===o)any=true;}); return any; }
+function onCard(i){
+  if(busy||over) return;
+  const u=activeUnit();
+  if(!u || !players[u.owner].human){ say("Wait for one of your units' turns to play cards."); render(); return; }
+  const key=players[u.owner].hand[i]; const card=CARDS[key];
+  if(u.hasMoved && u.hasActed){ say(`${u.name} has used both move and action — turn complete.`); render(); return; }
+  // Hero cards need the action; sigils are free.
+  if(u.hasActed && card.hero!=="sigil"){ say(`${u.name} already used their action this turn — only sigils remain.`); render(); return; }
+  if(card.hero !== "sigil"){
+    const ownerAlive = heroes[u.owner].some(h=>h.cls===card.hero && h.hp>0 && h.deployed);
+    if(!ownerAlive){
+      const h=CLASSES[card.hero];
+      say(`${card.name}: ${h.sym} ${h.name} has fallen and cannot assist.`);
+      return;
+    }
+  }
+  const k=card.kind;
+  const needsEnemyInRange = (k==="dmg"||k==="dmg-adj"||k==="dmg-self-heal"||k==="dmg-push"||k==="dmg-pull"||k==="push"||k==="pull");
+  if(k==="heal" && !anyDamagedAlly("A")){ say("No wounded ally to heal."); return; }
+  if(k==="heal-all" && !anyAlly("A")){ say("No ally to heal."); return; }
+  if(needsEnemyInRange && cardEnemyTargets(u).length===0){ say(`No enemy within ${u.name}'s range (${cardCastRange(u)}).`); return; }
+  if(k==="push-adj"){
+    let hasAdj=false;
+    for(const key in VEC){ const [dr,dc]=VEC[key]; const nr=u.r+dr, nc=u.c+dc;
+      if(inB(nr,nc) && board[nr][nc].unit && board[nr][nc].unit.owner!==u.owner){ hasAdj=true; break; } }
+    if(!hasAdj){ say(`No enemy adjacent to ${u.name}.`); return; }
+  }
+  if(k==="dash"){
+    if(dashTilesFor(u, card.dash||1).length===0){ say(`No empty tile in range to dash to.`); return; }
+  }
+  if(k==="swap"){
+    let hasAlly=false; eachUnit(au=>{ if(au.owner===u.owner && au.id!==u.id) hasAlly=true; });
+    if(!hasAlly){ say(`No other ally to swap with.`); return; }
+  }
+  if(k==="dash-attack"){
+    if(dashAttackTargets(u, card).length===0){ say(`No enemy in charge range (or no room to land).`); return; }
+  }
+  sel=(sel&&sel.t==="card"&&sel.i===i)?null:{t:"card",i}; render();
+}
+function dashTilesFor(u, range){
+  // Scout — Pathfinder: dash cards get +1 range while a Scout is alive on caster's side.
+  const effRange = range + (anyLivingAlly(u.owner, "scout") ? 1 : 0);
+  const out=[];
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    if(board[r][c].unit) continue;
+    if(Math.abs(r-u.r)+Math.abs(c-u.c) > effRange) continue;
+    if(r===u.r && c===u.c) continue;
+    out.push({r,c});
+  }
+  return out;
+}
+function anyDamagedAlly(o){ let any=false; eachUnit(u=>{if(u.owner===o&&u.hp<u.maxHp)any=true;}); return any; }
+function anyEnemy(o){ let any=false; eachUnit(u=>{if(u.owner!==o)any=true;}); return any; }
+
+/* ---------- AI (single-unit activation) ---------- */
+// Brief pause helper — used to space out AI sub-actions so the player can register each step.
+const aiWait = ms => new Promise(r=>setTimeout(r, ms));
+async function aiAct(u){
+  // 1) card? Resolve, render, hold a beat so the result registers.
+  const cardPlay=aiPickCardForUnit(u);
+  const normalScore=aiNormalActionScore(u);
+  if(cardPlay && cardPlay.score > normalScore){
+    playCard("B",cardPlay.handIdx,cardPlay.target);
+    render();
+    await aiWait(650);
+    return;
+  }
+  // 2) Warden free heal — adjacent action; happens before move/attack.
+  if(u.heal){
+    const h=healablyAdjacent(u);
+    if(h.length){
+      h.sort((a,b)=>(a.hp-(a.hero?99:0))-(b.hp-(b.hero?99:0)));
+      healAct(u,h[0]); render(); await aiWait(450);
+    }
+  }
+  // 3) attack-or-approach
+  if(!u.hasActed){
+    let tgt=pickTarget(u,enemiesInRange(u));
+    if(!tgt && !u.hasMoved){
+      const goal=nearestHeroOrUnit(u);
+      if(goal){ const step=bestStep(u,goal); if(step){ moveUnit(u,step.r,step.c); render(); await aiWait(380); } }
+      tgt=pickTarget(u,enemiesInRange(u));
+    }
+    if(tgt){ attack(u,tgt); render(); await aiWait(500); }
+    else if(!u.hasMoved){
+      const goal=nearestHeroOrUnit(u);
+      if(goal){ const step=bestStep(u,goal); if(step){ moveUnit(u,step.r,step.c); render(); await aiWait(380); } }
+    }
+  } else if(!u.hasMoved){
+    const goal=nearestHeroOrUnit(u);
+    if(goal){ const step=bestStep(u,goal); if(step){ moveUnit(u,step.r,step.c); render(); await aiWait(380); } }
+  }
+}
+function aiNormalActionScore(u){
+  // rough value of the unit's own move/attack this turn
+  let best=0;
+  for(const e of enemiesInRange(u)){
+    const arc=arcOf(u,e); let m=arc==="front"?1:arc==="side"?1.5:2; if(u.flank){if(arc==="side")m=2;if(arc==="rear")m=2.5;}
+    const dmg=Math.round(u.atk*m); let s=dmg+(dmg>=e.hp?6:0)+(e.hero?3:0); if(s>best)best=s;
+  }
+  return best || 1; // small baseline for "advance"
+}
+function aiPickCardForUnit(u){
+  // Rough scoring per kind. Owner-assist bonus adds a small flat bonus when the AI owns the card.
+  const B=players.B; let best=null;
+  const aliveB = cls => heroes.B.some(h=>h.cls===cls && h.hp>0 && h.deployed);
+  // Push/pull payoff: damage when blocked (target backed against wall or another unit).
+  const blockedScore=(target,kb,dirR,dirC)=>{
+    const nr=target.r+dirR, nc=target.c+dirC;
+    if(!inB(nr,nc) || board[nr][nc].unit) return kb;
+    return 0;
+  };
+  B.hand.forEach((key,i)=>{
+    const card=CARDS[key];
+    if(card.hero!=="sigil" && !aliveB(card.hero)) return;
+    let score=0, target=null;
+    const k=card.kind;
+    if(k==="heal"){
+      const t=aiHealTarget("B"); if(!t) return;
+      const heal=Math.min(card.amount, t.maxHp-t.hp);
+      if(heal<=0) return;
+      score=heal+(t.hero?3:0); target={r:t.r,c:t.c};
+    } else if(k==="heal-all"){
+      let wounded=0; eachUnit(au=>{ if(au.owner==="B" && au.hp<au.maxHp) wounded+=Math.min(card.amount, au.maxHp-au.hp); });
+      if(wounded<=0) return; score=wounded;
+      let any=null; eachUnit(au=>{ if(au.owner==="B" && !any) any=au; });
+      if(!any) return; target={r:any.r,c:any.c};
+    } else if(k==="dmg"){
+      const t=aiDmgTarget("B",card.dmg,u); if(!t) return;
+      score=card.dmg*1.5+(t.hp<=card.dmg?6:0)+(t.hero?3:0); target={r:t.r,c:t.c};
+    } else if(k==="dmg-adj"){
+      let bestT=null,bs=-1;
+      for(const au of cardEnemyTargets(u)){
+        let splashTargets=0;
+        for(const kk in VEC){ const [dr,dc]=VEC[kk]; const nr=au.r+dr,nc=au.c+dc;
+          if(!inB(nr,nc)) continue;
+          const adj=board[nr][nc].unit;
+          if(adj && adj.owner==="A") splashTargets++;
+        }
+        const s=card.dmg*1.5 + splashTargets*card.splash + (au.hp<=card.dmg?6:0) + (au.hero?3:0);
+        if(s>bs){bs=s;bestT=au;}
+      }
+      if(!bestT) return; score=bs; target={r:bestT.r,c:bestT.c};
+    } else if(k==="dmg-self-heal"){
+      const t=aiDmgTarget("B",card.dmg,u); if(!t) return;
+      const heal = Math.min(card.heal||0, u.maxHp-u.hp);
+      score=card.dmg*1.5 + heal*0.8 + (t.hp<=card.dmg?6:0) + (t.hero?3:0); target={r:t.r,c:t.c};
+    } else if(k==="dmg-push" || k==="dmg-pull"){
+      const t=aiDmgTarget("B",card.dmg,u); if(!t) return;
+      const dirR = k==="dmg-push" ? Math.sign(t.r-u.r) : Math.sign(u.r-t.r);
+      const dirC = k==="dmg-push" ? Math.sign(t.c-u.c) : Math.sign(u.c-t.c);
+      const kbBonus = blockedScore(t, card.kb||0, dirR, dirC);
+      score=card.dmg*1.5 + 1 + kbBonus + (t.hp<=card.dmg?6:0) + (t.hero?3:0); target={r:t.r,c:t.c};
+    } else if(k==="push" || k==="pull"){
+      let bestT=null,bs=-1;
+      for(const t of cardEnemyTargets(u)){
+        const dirR = k==="push" ? Math.sign(t.r-u.r) : Math.sign(u.r-t.r);
+        const dirC = k==="push" ? Math.sign(t.c-u.c) : Math.sign(u.c-t.c);
+        const s = blockedScore(t, card.kb||0, dirR, dirC) + (t.hero?2:0) + 1;
+        if(s>bs){bs=s; bestT=t;}
+      }
+      if(!bestT) return; score=bs; target={r:bestT.r,c:bestT.c};
+    } else if(k==="push-adj"){
+      let n=0,kbHits=0;
+      for(const kk in VEC){
+        const [dr,dc]=VEC[kk]; const nr=u.r+dr, nc=u.c+dc;
+        if(!inB(nr,nc)) continue;
+        const e=board[nr][nc].unit;
+        if(e && e.owner==="A"){ n++; const br=e.r+dr, bc=e.c+dc;
+          if(!inB(br,bc) || board[br][bc].unit) kbHits++;
+        }
+      }
+      if(n===0) return; score = n + kbHits*(card.kb||0); target={r:u.r,c:u.c};
+    } else if(k==="dash"){
+      // Step toward nearest A unit if it improves position by ≥2 tiles
+      const goal = nearestHeroOrUnit(u); if(!goal) return;
+      let bestT=null,bs=-1;
+      for(const t of dashTilesFor(u, card.dash||1)){
+        const improvement = (Math.abs(u.r-goal.r)+Math.abs(u.c-goal.c)) - (Math.abs(t.r-goal.r)+Math.abs(t.c-goal.c));
+        const s = improvement;
+        if(s>bs){bs=s; bestT=t;}
+      }
+      if(!bestT || bs<2) return; score=bs; target=bestT;
+    } else if(k==="dash-attack"){
+      // Charge an enemy in extended range; pick the best target by (damage + hero bonus +
+      // finisher bump). The AI doesn't simulate the landing arc, so this is just "find a
+      // good enemy to charge".
+      let bestT=null,bs=-1;
+      for(const t of dashAttackTargets(u, card)){
+        const s = card.dmg*1.5 + (t.hp<=card.dmg+u.atk?6:0) + (t.hero?3:0);
+        if(s>bs){ bs=s; bestT=t; }
+      }
+      if(!bestT) return; score=bs; target={r:bestT.r,c:bestT.c};
+    } else if(k==="swap"){
+      return; // AI skips swap — too situational for the simple heuristics
+    }
+    if(score<=0) return;
+    // small bump if the assist will fire
+    if(card.bonus && card.hero!=="sigil" && aliveB(card.hero)) score += 1;
+    if(!best || score>best.score){ best={handIdx:i,target,score}; }
+  });
+  return best;
+}
+function pickTarget(u,list){
+  if(!list.length) return null;
+  const score=t=>{ const arc=arcOf(u,t); let m=arc==="front"?1:arc==="side"?1.5:2; if(u.flank){if(arc==="side")m=2;if(arc==="rear")m=2.5;}
+    const dmg=Math.round(u.atk*m); let s=dmg; if(dmg>=t.hp)s+=100; if(t.hero)s+=30; s+=(t.maxHp-t.hp); return s; };
+  return list.slice().sort((a,b)=>score(b)-score(a))[0];
+}
+function nearestHeroOrUnit(u){
+  let best=null,bd=99; eachUnit(t=>{ if(t.owner!==u.owner){ let d=manh(u,t)-(t.hero?0.5:0); if(d<bd){bd=d;best=t;} } }); return best;
+}
+function aiHealTarget(o){
+  let best=null,bs=-1; eachUnit(u=>{ if(u.owner===o&&u.hp<u.maxHp){ let s=(u.maxHp-u.hp)+(u.hero?5:0); if(s>bs){bs=s;best=u;} } }); return best;
+}
+function aiDmgTarget(o,dmg,source){
+  let best=null,bs=-1; eachUnit(u=>{
+    if(u.owner===o) return;
+    if(source && manh(source,u)>source.range) return;
+    const s=1+(u.hp<=dmg?8:0)+(u.hero?4:0)-u.hp*0.2; if(s>bs){bs=s;best=u;}
+  }); return best;
+}
+function bestStep(u,goal){ const tiles=reachable(u); if(!tiles.length) return null;
+  tiles.sort((a,b)=>(Math.abs(a.r-goal.r)+Math.abs(a.c-goal.c))-(Math.abs(b.r-goal.r)+Math.abs(b.c-goal.c)));
+  const cur=Math.abs(u.r-goal.r)+Math.abs(u.c-goal.c); const top=tiles[0];
+  return (Math.abs(top.r-goal.r)+Math.abs(top.c-goal.c))<cur?top:null;
+}
+
+/* ---------- codex ---------- */
+function cardMainText(c, caster){
+  // Damage cards now route through attack() with c.dmg as a flat bonus, so the line
+  // reads "[unit] attacks for +N damage" — the actual damage is the attacker's normal
+  // hit + this card's bonus. When no caster is known (codex view), use "Caster".
+  const who = caster ? caster.name : "Caster";
+  switch(c.kind){
+    case "dmg": return `${who} attacks for +${c.dmg} damage`;
+    case "dmg-adj": return `${who} attacks for +${c.dmg} damage; +${c.splash} splash to adjacent enemies`;
+    case "dmg-self-heal": return `${who} attacks for +${c.dmg} damage; caster heals +${c.heal} HP`;
+    case "dmg-push": return `${who} attacks for +${c.dmg} damage, pushing target ${c.push||1}${c.kb?` (+${c.kb} impact if blocked)`:""}`;
+    case "dmg-pull": return `${who} attacks for +${c.dmg} damage, pulling target ${c.pull||1} toward caster${c.kb?` (+${c.kb} impact if blocked)`:""}`;
+    case "dash-attack": return `${who} charges an enemy within ${c.range||3}: dash adjacent, then attack for +${c.dmg} damage${c.push?`, push ${c.push}${c.kb?` (+${c.kb} impact if blocked)`:""}`:""}`;
+    case "push": return `push enemy ${c.push||1} tiles away${c.kb?` (${c.kb} impact dmg if blocked)`:""}`;
+    case "pull": return `pull enemy ${c.pull||1} tiles toward caster${c.kb?` (${c.kb} impact dmg if blocked)`:""}`;
+    case "push-adj": return `push every enemy adjacent to caster ${c.push||1} tiles${c.kb?` (${c.kb} impact dmg if blocked)`:""}`;
+    case "dash": return `caster teleports to any empty tile within ${c.dash||1} (ignores blockers)`;
+    case "swap": return `caster swaps places with a target ally`;
+    case "heal": return `heal ally +${c.amount}`;
+    case "heal-all": return `heal all allies +${c.amount}`;
+  }
+  return c.kind;
+}
+// Returns {ownerName, action} for the owner-assist bonus, or null if the card has no assist.
+function cardAssistInfo(c){
+  if(!c.bonus || c.hero==="sigil") return null;
+  const owner = CLASSES[c.hero]; if(!owner) return null;
+  const b=c.bonus, amt=b.amount||1;
+  const action = b.kind==="ownerStep"   ? `moves ${amt} step${amt>1?"s":""}`
+               : b.kind==="ownerHeal"   ? `heals ${amt} HP`
+               : b.kind==="ownerStrike" ? `strikes adjacent enemy for ${amt}`
+               : b.kind==="ownerDrain"  ? `drains ${amt} from adjacent enemy`
+               : "";
+  return action ? {ownerName: owner.name, action} : null;
+}
+function cardAssistHTML(c){
+  const info = cardAssistInfo(c); if(!info) return "";
+  return `<b>${info.ownerName}</b> ${info.action}.`;
+}
+// Codex / backward-compat: main effect + assist on one line (HTML)
+function cardEffText(c){
+  const main = cardMainText(c);
+  const assist = cardAssistHTML(c);
+  return assist ? `${main}<br><span class="cdx-assist">${assist}</span>` : main;
+}
+function buildCodex(){
+  const root=document.getElementById("cdxCards"); if(!root||root.dataset.built) return;
+  const groups={};
+  for(const cls of ROSTER) groups[cls]={name:CLASSES[cls].name, sym:CLASSES[cls].sym, cards:[]};
+  const sigilCards=[];
+  for(const k in CARDS){ const c=CARDS[k]; if(c.hero==="sigil") sigilCards.push(c); else if(groups[c.hero]) groups[c.hero].cards.push(c); }
+  let html="";
+  for(const cls of ROSTER){
+    const g=groups[cls]; if(!g.cards.length) continue;
+    html+=`<div class="suite"><div class="suite-h">${g.sym} ${g.name} suite — ${g.cards.length} cards</div>`;
+    g.cards.sort((a,b)=>("CEL".indexOf(a.tier))-("CEL".indexOf(b.tier))); // Common, Epic, Legendary
+    for(const c of g.cards){
+      const css="cdx-card tier-"+c.tier;
+      const tag = c.tier==="L" ? "Legendary" : c.tier==="E" ? "Epic" : "Common";
+      html+=`<div class="${css}"><span class="cdx-cat">${tag}</span><span class="cdx-name">${c.name}</span><span>${c.sym}</span><span class="cdx-eff">${cardEffText(c)}</span></div>`;
+    }
+    html+=`</div>`;
+  }
+  if(sigilCards.length){
+    html+=`<div class="suite"><div class="suite-h">✦ Sigils — ${sigilCards.length} cards (in every deck; any unit may cast; FREE to play — chain for combos; removed from game on use)</div>`;
+    for(const c of sigilCards){
+      html+=`<div class="cdx-card tier-G"><span class="cdx-cat">Sigil</span><span class="cdx-name">${c.name}</span><span>${c.sym}</span><span class="cdx-eff">${cardEffText(c)}</span></div>`;
+    }
+    html+=`</div>`;
+  }
+  root.innerHTML=html; root.dataset.built="1";
+}
+function openCodex(){ buildCodex(); document.getElementById("codex").classList.add("open"); }
+function closeCodex(){ document.getElementById("codex").classList.remove("open"); }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeCodex(); });
+document.addEventListener("click",e=>{ const cx=document.getElementById("codex"); if(e.target===cx) closeCodex(); });
+
+/* ---------- render ---------- */
+function say(html){ document.getElementById("status").innerHTML=html; }
+function endGame(winner){
+  over=true; busy=true; activeId=null;
+  // Campaign victory: unlock the boss and show the campaign victory screen instead of the generic over modal.
+  if(winner==="A" && campaign.currentMission){
+    const m=campaign.currentMission;
+    const wasNew=!campaign.unlocked.has(m.boss);
+    campaign.unlocked.add(m.boss);
+    campaign.completed.add(m.id);
+    saveProgress();
+    const c=CLASSES[m.boss];
+    document.getElementById("vText").textContent = wasNew
+      ? `You defeated ${c.name}. They now follow your banner.`
+      : `Mission cleared again. ${c.name} stays at your side.`;
+    document.getElementById("vUnlock").innerHTML =
+      `<div class="v-glyph">${c.sym}</div>
+       <div class="v-name">${c.name.toUpperCase()}</div>
+       <div class="v-stats">HP ${c.hp} · ATK ${c.atk} · MV ${c.move} · RNG ${c.range} · INIT ${c.init}</div>`;
+    document.getElementById("victory").classList.add("open");
+    return;
+  }
+  // Generic over modal for skirmish + campaign defeat.
+  document.getElementById("overT").textContent = winner==="A"?"Victory":"Defeat";
+  document.getElementById("overP").textContent = winner==="A"
+    ? "All enemy heroes have fallen." : "All your heroes have fallen.";
+  document.getElementById("over").style.display="flex";
+  const btn=document.getElementById("overBtn");
+  if(campaign.currentMission){
+    btn.textContent="Back to missions";
+    btn.onclick=()=>{ document.getElementById("over").style.display="none"; openMissions(); };
+  } else {
+    btn.textContent="Play again";
+    btn.onclick=()=>{ document.getElementById("over").style.display="none"; showTitle(); };
+  }
+}
+function clearHl(){ for(let r=0;r<R;r++)for(let c=0;c<C;c++) board[r][c]._hl=null; }
+function computeHl(){
+  clearHl();
+  if(over) return;
+  if(phase!=="play"||busy) return;
+  // Pending owner-step assist — light up the owner's free adjacent tiles.
+  if(pendingOwnerMove){
+    const ou = pendingOwnerUnit();
+    if(ou){ for(const t of ownerStepFreeTiles(ou)) board[t.r][t.c]._hl="step"; }
+    return;
+  }
+  if(pendingHandoff) return;
+  // Pick phase: highlight the current human's unacted units so they know what's tappable.
+  if(!activeId){
+    if(players[turnSide].human){
+      for(const u of unactedUnits(turnSide)) board[u.r][u.c]._hl="pick";
+    }
+    return;
+  }
+  const u=activeUnit(); if(!u || !players[u.owner].human) return;
+  if(sel&&sel.t==="card"){
+    const key=players[u.owner].hand[sel.i]; const card=CARDS[key];
+    const k=card.kind;
+    if(k==="heal"){
+      eachUnit(au=>{ if(au.owner===u.owner && au.hp<au.maxHp) board[au.r][au.c]._hl="heal"; });
+    } else if(k==="heal-all"){
+      eachUnit(au=>{ if(au.owner===u.owner) board[au.r][au.c]._hl="heal"; });
+    } else if(k==="dmg"||k==="dmg-adj"||k==="dmg-self-heal"||k==="dmg-push"||k==="dmg-pull"||k==="push"||k==="pull"){
+      for(const e of cardEnemyTargets(u)) board[e.r][e.c]._hl="spell";
+    } else if(k==="push-adj"){
+      // any orthogonally-adjacent enemy of the caster will get pushed; tap caster's tile to confirm
+      board[u.r][u.c]._hl="spell";
+    } else if(k==="dash"){
+      for(const t of dashTilesFor(u, card.dash||1)) board[t.r][t.c]._hl="move";
+    } else if(k==="dash-attack"){
+      for(const e of dashAttackTargets(u, card)) board[e.r][e.c]._hl="spell";
+    } else if(k==="swap"){
+      eachUnit(au=>{ if(au.owner===u.owner && au.id!==u.id) board[au.r][au.c]._hl="heal"; });
+    }
+    return;
+  }
+  if(!u.hasMoved) for(const t of reachable(u)) board[t.r][t.c]._hl="move";
+  if(!u.hasActed){ for(const e of enemiesInRange(u)) board[e.r][e.c]._hl="atk";
+    if(u.heal) for(const a of healablyAdjacent(u)) board[a.r][a.c]._hl="heal"; }
+}
+function renderTurnbar(){
+  // Top-of-screen panel: whose turn it is + this turn's move/action economy.
+  // Each turn a unit gets exactly one move and one action (sigils are free and don't count).
+  const el=document.getElementById("turnbar");
+  const u=activeUnit();
+  if(!u){
+    // Pick phase — show whose pick is up and how many activations remain this round.
+    el.className=turnSide;
+    el.classList.add("show");
+    const left = unactedUnits(turnSide).length;
+    const label = isHotseat() ? (turnSide==="A"?"P1":"P2") : (turnSide==="A"?"You":"Enemy");
+    el.innerHTML =
+      `<span class="tb-name">${label} — pick a unit</span>`+
+      `<span class="tb-ctrs"><span class="tb-ctr">${left} left this round</span></span>`;
+    return;
+  }
+  const mv=u.hasMoved?1:0, ac=u.hasActed?1:0;
+  el.className=u.owner;
+  el.classList.add("show");
+  el.innerHTML =
+    `<span class="tb-name">${u.sym} <b>${u.name}</b>'s turn</span>`+
+    `<span class="tb-ctrs">`+
+      `<span class="tb-ctr">Moves <b>${mv}/1</b></span>`+
+      `<span class="tb-ctr">Actions <b>${ac}/1</b></span>`+
+    `</span>`;
+}
+function renderInit(){
+  // Round status: each side's living deployed units as chips; acted ones dim out so both
+  // players can see at a glance who's spent and who's still available this round.
+  const el=document.getElementById("init"); el.innerHTML="";
+  const lbl=document.createElement("span"); lbl.className="lbl"; lbl.textContent="R"+roundNum; el.appendChild(lbl);
+  const drawSide = side => {
+    const tag=document.createElement("span"); tag.className="lbl"; tag.style.opacity=".7";
+    tag.textContent = side===turnSide ? "▶" : "·";
+    el.appendChild(tag);
+    for(const u of units){
+      if(u.owner!==side || u.hp<=0 || !u.deployed) continue;
+      const c=document.createElement("span");
+      const isActive = u.id===activeId;
+      const isSpent = acted.has(u.id);
+      c.className="ichip "+side+(isActive?" active":"")+(isSpent?" spent":"");
+      c.innerHTML=`${u.sym}`;
+      c.style.cursor="pointer";
+      c.title=`${u.name} — tap to view card`;
+      c.onclick=()=>openHeroZoom(u.cls);
+      el.appendChild(c);
+    }
+  };
+  drawSide("A");
+  const sep=document.createElement("span"); sep.className="lbl init-div"; sep.textContent="vs"; el.appendChild(sep);
+  drawSide("B");
+}
+function render(){
+  computeHl();
+  const bd=document.getElementById("board"); bd.innerHTML="";
+  // Consume any pending tile flashes (damage / heal) — applied as a one-shot CSS animation
+  // on the matching tile so the player can see WHERE an effect landed.
+  const fxByTile = new Map();
+  for(const fx of fxQueue) fxByTile.set(fx.r+","+fx.c, fx.kind);
+  fxQueue = [];
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const cell=board[r][c]; const t=document.createElement("div");
+    t.className="tile"+(cell.terrain?" terrain":"");
+    if(cell._hl==="move")t.classList.add("hl-move");
+    if(cell._hl==="atk")t.classList.add("hl-atk");
+    if(cell._hl==="heal")t.classList.add("hl-heal");
+    if(cell._hl==="spell")t.classList.add("hl-spell");
+    if(cell._hl==="step")t.classList.add("hl-step");
+    if(cell._hl==="pick")t.classList.add("hl-pick");
+    const fxKind = fxByTile.get(r+","+c);
+    if(fxKind) t.classList.add("fx-"+fxKind);
+    const u=cell.unit;
+    if(u&&u.id===activeId)t.classList.add("active");
+    if(u){
+      {
+        const arrow={N:"▲",S:"▼",E:"▶",W:"◀"}[u.facing]; const done=acted.has(u.id);
+        const buffs=(u.shield?`⛨${u.shield}`:"")+(u.bonusAtkRound?` +${u.bonusAtkRound}A`:"")+(u.vuln?` ☠${u.vuln}`:"");
+        const pct=100*Math.max(0,u.hp)/u.maxHp;
+        const hpCls = pct<=25?" crit" : pct<=50?" low" : "";
+        t.innerHTML=`<div class="unit ${u.owner}${u.hero?" hero":""}${done?" done":""}">
+          <span class="sym">${u.sym}</span>
+          <img class="portrait" src="assets/heroes/${u.cls}.png" alt="" onerror="this.remove()">
+          <span class="face face-${u.facing}">${arrow}</span>
+          <span class="stat-init">i${u.init}</span>
+          <span class="stat-hp">${Math.max(0,u.hp)}/${u.maxHp}</span>
+          ${buffs?`<span class="buffs">${buffs}</span>`:""}
+          <div class="hpwrap"><div class="hpbar${hpCls}" style="width:${pct}%"></div></div>
+        </div>`;
+      }
+    }
+    t.onclick=()=>onTile(r,c);
+    bd.appendChild(t);
+  }
+  const playing=(phase==="play");
+  document.getElementById("hand").style.display=playing?"":"none";
+  if(!playing) document.getElementById("cardDetail").classList.remove("show");
+  document.getElementById("init").style.display=playing?"":"none";
+  document.querySelector(".barrow").style.display=playing?"":"none";
+  if(!playing){ document.getElementById("turnbar").classList.remove("show"); return; }
+  renderTurnbar();
+  renderInit();
+  // Whose hand to display: in single-player always A; in hotseat, whichever human is up.
+  // pendingHandoff blanks the hand so a passing player can't see the next player's cards.
+  const view = hudSide();
+  const showHand = !pendingHandoff;
+  document.getElementById("deckInfo").textContent = showHand
+    ? `Hand ${players[view].hand.length} · Deck ${players[view].deck.length}`
+    : `— hidden —`;
+  const h=document.getElementById("hand"); h.innerHTML="";
+  const cardable=canPlayCardNow();
+  const heroAlive = cls => heroes[view].some(h=>h.cls===cls && h.hp>0 && h.deployed);
+  // For damage-card lines, substitute the active player unit's name so cards read like
+  // "[Knight] attacks for +2 damage" rather than the generic "Caster" placeholder.
+  const liveCaster = (function(){ const u=activeUnit(); return (u && players[u.owner].human) ? u : null; })();
+  if(showHand) players[view].hand.forEach((key,i)=>{ const card=CARDS[key]; const el=document.createElement("div");
+    const playable = cardable && canPlayCard(card) && !busy && !over;
+    const sourceDead = card.hero!=="sigil" && !heroAlive(card.hero);
+    const cant = !playable;
+    el.className="card tier-"+card.tier+(cant?" cant":"")+(sourceDead?" dead-src":"")+((sel&&sel.t==="card"&&sel.i===i)?" sel":"");
+    const tag = card.tier==="L" ? "LEG" : card.tier==="E" ? "EPIC" : card.tier==="G" ? "SIGIL" : "COM";
+    const ownerCls = CLASSES[card.hero];
+    const ownerLabel = card.hero==="sigil" ? `<span class="cowner">✦ Sigil</span>` :
+                       ownerCls ? `<span class="cowner">${ownerCls.sym} ${ownerCls.name}</span>` : "";
+    const assistHTML = cardAssistHTML(card);
+    el.innerHTML =
+      `<span class="csym">${card.sym}</span>`+
+      `<span class="ctext">`+
+        `<span class="ctop"><span class="cname">${card.name}</span>${ownerLabel}<span class="ctag">${tag}</span></span>`+
+        `<span class="ceff">${cardMainText(card, liveCaster)}</span>`+
+        (assistHTML ? `<span class="cassist">${assistHTML}</span>` : "") +
+      `</span>`;
+    el.onclick=()=>onCard(i); h.appendChild(el); });
+  const ebtn=document.getElementById("endBtn"); const u=activeUnit();
+  if(pendingOwnerMove){
+    ebtn.disabled = over || busy;
+    ebtn.textContent = "SKIP";
+  } else if(pendingHandoff){
+    ebtn.disabled = true;
+    ebtn.textContent = "—";
+  } else if(!u){
+    // Pick phase — no unit is mid-turn yet.
+    ebtn.disabled = true;
+    ebtn.textContent = players[turnSide].human ? "PICK A UNIT" : "ENEMY PICKING…";
+  } else {
+    const myTurn = players[u.owner].human;
+    ebtn.disabled = over || busy || !myTurn;
+    ebtn.textContent = myTurn ? "END TURN" : "ENEMY…";
+  }
+  const ubtn=document.getElementById("undoBtn");
+  ubtn.disabled = over || busy || !!pendingOwnerMove || pendingHandoff || !canUndoMove();
+  const cd=document.getElementById("cardDetail");
+  if(!over && u && players[u.owner].human && !pendingHandoff && sel && sel.t==="card"){
+    const card=CARDS[players[u.owner].hand[sel.i]];
+    let hint="";
+    const k=card.kind;
+    if(k==="heal") hint="tap a wounded ally";
+    else if(k==="heal-all") hint="tap any ally — heals every ally";
+    else if(k==="dmg") hint="tap an enemy in range";
+    else if(k==="dmg-adj") hint="tap an enemy — splash hits orthogonal neighbors";
+    else if(k==="dmg-self-heal") hint="tap an enemy — caster heals from the strike";
+    else if(k==="dmg-push") hint="tap an enemy — damages and shoves them away";
+    else if(k==="dmg-pull") hint="tap an enemy — damages and yanks them closer";
+    else if(k==="push") hint="tap an enemy — shoves them straight away from the caster";
+    else if(k==="pull") hint="tap an enemy — yanks them straight toward the caster";
+    else if(k==="push-adj") hint="tap the caster's tile to shove every adjacent enemy";
+    else if(k==="dash") hint="tap an empty tile to teleport there";
+    else if(k==="dash-attack") hint="tap an enemy — dash adjacent and strike them";
+    else if(k==="swap") hint="tap an ally to swap places with the caster";
+    const tag=card.spell?"Spell · "+card.cat:card.cat;
+    const src=CLASSES[card.hero];
+    document.getElementById("cdGlyph").textContent=card.sym;
+    document.getElementById("cdName").textContent=`${card.name} — ${tag}`;
+    document.getElementById("cdEff").innerHTML=cardEffText(card);
+    const castLine = card.hero==="sigil"
+      ? `Sigil — free to cast (no action or movement consumed). Chain them for combos. Removed from game on use.`
+      : `Owned by ${src.sym} ${src.name} (must be alive to assist). Any of your units may cast — uses the caster's range. Consumes this unit's action.`;
+    document.getElementById("cdHint").innerHTML = `${castLine} ${hint}.`;
+    cd.classList.add("show");
+    say(`Play <b>${card.name}</b> — ${hint}.`);
+  } else {
+    cd.classList.remove("show");
+  }
+}
+function cancelCard(){ if(sel && sel.t==="card"){ sel=null; render(); } }
+
+/* ---------- hero zoom (full hero card: art + name + stats + passive) ----------
+   Triggered by tapping a hero's chip in the round-status bar above the board.
+*/
+function openHeroZoom(cls){
+  const d = CLASSES[cls]; if(!d) return;
+  document.getElementById("czArt").src = `assets/heroes/${cls}.png`;
+  document.getElementById("czName").textContent = d.name;
+  document.getElementById("czSub").textContent = "HERO";
+  const stats =
+    `<div style="font-weight:800;color:#3a2410;margin-bottom:6px;letter-spacing:.5px;">`+
+      `HP ${d.hp} · ATK ${d.atk} · MV ${d.move} · RNG ${d.range} · INIT ${d.init}`+
+    `</div>`;
+  const passive = d.passive && d.passive !== "—"
+    ? `<div style="text-align:left;">${d.passive}</div>`
+    : `<div style="font-style:italic;color:#6b4a28;">No passive ability.</div>`;
+  document.getElementById("czText").innerHTML = stats + passive;
+  document.getElementById("cardZoom").classList.add("show");
+}
+function closeCardZoom(e){
+  // Tapping the backdrop closes; tapping inside the card itself doesn't (stopPropagation in HTML).
+  if(e && e.currentTarget !== e.target && !e.target.classList.contains("cz-close")) return;
+  document.getElementById("cardZoom").classList.remove("show");
+}
+
+document.getElementById("endBtn").onclick=()=>{
+  if(over||busy||pendingHandoff) return;
+  if(pendingOwnerMove){ endOwnerStep(); return; }
+  const u=activeUnit(); if(u && players[u.owner].human) endActiveTurn();
+};
+document.getElementById("undoBtn").onclick=()=>undoMove();
+document.getElementById("passBtn").onclick=()=>{
+  if(!pendingHandoff) return;
+  pendingHandoff=false; busy=false;
+  hidePassOverlay();
+  render(); promptOrAi();
+};
+function canUndoMove(){
+  if(!lastMove || pendingHandoff) return false;
+  const u=activeUnit();
+  // Undo is only allowed while the same unit is active, controlled by a human, and hasn't
+  // taken an action since moving.
+  return !!(u && players[u.owner].human && u.id===lastMove.unitId && !u.hasActed);
+}
+function undoMove(){
+  if(!canUndoMove()) return;
+  const u=activeUnit();
+  board[u.r][u.c].unit=null;
+  u.r=lastMove.prevR; u.c=lastMove.prevC; u.facing=lastMove.prevFacing;
+  board[u.r][u.c].unit=u;
+  u.hasMoved=false;
+  lastMove=null; sel=null;
+  render();
+  say(`<b>${u.name}</b> stepped back — turn restarted.`);
+}
+loadProgress();
+showTitle();
+</script>
+</body>
+</html>

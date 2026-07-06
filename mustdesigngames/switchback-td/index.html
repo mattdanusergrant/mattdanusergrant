@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Switchback</title>
+<meta name="description" content="Switchback — maze-building tower defence. Wind the path, hold the wave.">
+<meta property="og:title" content="Switchback">
+<meta property="og:description" content="Maze-building tower defence — wind the path, hold the wave.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #0b0d12; color: #e6ebff; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; user-select: none; }
+  #app { display: flex; flex-direction: column; height: 100vh; max-width: 1400px; margin: 0 auto; }
+  #hud { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; padding: 8px 10px; background: #11141c; border-bottom: 1px solid #1c2030; font-size: 14px; }
+  .stat { display: flex; flex-direction: column; align-items: center; }
+  .stat .lbl { color: #6a7290; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .stat .val { font-weight: 700; font-size: 16px; }
+  .stat.lives .val { color: #ff6a82; }
+  .stat.gold .val { color: #ffd47a; }
+  .stat.wave .val { color: #7ee0ff; }
+  .stat.lenb .val { color: #9fffa8; }
+  #boardwrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; background: #0b0d12; overflow: hidden; }
+  canvas { display: block; background: #15182a; border-radius: 6px; box-shadow: 0 0 20px rgba(0,0,0,0.6); }
+  #banner { position: absolute; top: 10%; left: 0; right: 0; text-align: center; font-size: 22px; font-weight: 800; color: #ffaa55; text-shadow: 0 0 12px #ff5500; pointer-events: none; opacity: 0; transition: opacity 0.3s; padding: 0 10px; }
+  #banner.show { opacity: 1; }
+  #tutorial-tip { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); max-width: 92%; width: 520px; text-align: center; color: #ffe7a8; font-size: 13px; padding: 10px 16px; background: rgba(11,13,18,0.92); border: 1px solid #c8a44e; border-radius: 8px; line-height: 1.45; pointer-events: none; display: none; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+  #tutorial-tip.show { display: block; }
+  #tutorial-tip .tag { display: inline-block; color: #c8a44e; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  #bottombar { background: #11141c; border-top: 1px solid #1c2030; padding: 8px; }
+  #towers { margin-bottom: 6px; }
+  .shape-draft { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .shape-btn { display: flex; gap: 8px; align-items: center; background: #1a1f30; border: 2px solid #2a3045; border-radius: 6px; padding: 6px 8px; cursor: pointer; font-family: inherit; color: #e6ebff; text-align: left; }
+  .shape-btn.armed { border-color: #7ee0ff; background: #1f2940; }
+  .shape-btn.poor { opacity: 0.5; cursor: not-allowed; }
+  .shape-btn .sb-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .shape-btn .sb-name { font-size: 11px; font-weight: 700; color: #cdd5ee; }
+  .shape-btn .sb-cost { color: #ffd47a; font-size: 11px; }
+  .shape-btn.poor .sb-cost { color: #6a7290; }
+  .shape-grid { display: grid; gap: 1px; flex: 0 0 auto; }
+  .shape-grid .sg-cell { background: transparent; width: 8px; height: 8px; }
+  .shape-grid .sg-cell.fill { background: #7ee0ff; }
+  .shape-grid .sg-cell.center { background: #ffd47a; }
+  #actions { display: grid; grid-template-columns: 1fr 0.6fr 1.4fr; gap: 6px; }
+  #speed-btn { background: #2a4870; font-variant-numeric: tabular-nums; }
+  /* Fixed height so selecting/deselecting a tower never reflows the board. */
+  #tower-info { background: #11141c; border: 1px solid #2a3045; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; height: 112px; display: flex; flex-direction: column; justify-content: center; }
+  #tower-info .ti-empty { display: none; color: #6a7290; font-size: 12px; font-style: italic; text-align: center; }
+  #tower-info.empty .ti-content { display: none; }
+  #tower-info.empty .ti-empty { display: block; }
+  #ti-name { font-weight: 700; color: #7ee0ff; font-size: 13px; margin-bottom: 2px; }
+  #ti-stats { font-size: 11px; color: #aab; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .upg-btn.upgrade-btn { background: #1d3424; border: 1px solid #2b6f4a; color: #cdf0d9; }
+  .upg-btn.upgrade-btn .cost { color: #ffd47a; margin-left: 6px; }
+  .upg-btn.upgrade-btn.disabled, .upg-btn.upgrade-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  #ti-upgrades { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .upg-btn { background: #1f2940; border: 1px solid #2a5a8a; color: #e6ebff; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 11px; text-align: center; font-family: inherit; }
+  .upg-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .upg-btn .label { font-weight: 700; font-size: 12px; }
+  .upg-btn .branch { color: #aab; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .ti-maxed { color: #6a7290; font-size: 10px; text-align: left; padding: 4px 0; font-style: italic; }
+  /* Card modal */
+  #card-modal { position: fixed; inset: 0; z-index: 200; background: rgba(8,10,18,0.92); display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
+  #card-modal.show { display: flex; }
+  #cm-title { color: #7ee0ff; font-size: 22px; font-weight: 700; margin-bottom: 4px; text-align: center; letter-spacing: 0.06em; text-transform: uppercase; }
+  #cm-subtitle { color: #aab; font-size: 13px; margin-bottom: 14px; text-align: center; }
+  #cm-current { max-width: 720px; width: 100%; background: #11141c; border: 1px solid #2a3045; border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; text-align: center; }
+  #cm-current-stats { color: #aab; font-size: 12px; margin-bottom: 6px; }
+  #cm-current-cards { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  #cm-current-cards:empty { display: none; }
+  #cm-slots { color: #6a7290; font-size: 11px; margin-top: 6px; font-style: italic; }
+  .cm-owned { background: #1f2940; border: 1px solid #3a4a6a; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #ffd47a; }
+  #cm-current-cards .cm-none { color: #6a7290; font-size: 11px; font-style: italic; }
+  #cm-cards { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+  .cm-card { width: 220px; min-height: 220px; background: linear-gradient(180deg, #1f2940, #11141c); border: 2px solid #2a5a8a; border-radius: 10px; padding: 18px 14px; cursor: pointer; color: #e6ebff; font-family: inherit; display: flex; flex-direction: column; align-items: center; text-align: center; transition: transform 0.15s, border-color 0.15s; }
+  .cm-card.cm-card-stack { border-color: #c8a44e; background: linear-gradient(180deg, #2a2418, #11141c); }
+  .cm-card:hover { border-color: #7ee0ff; transform: translateY(-4px); box-shadow: 0 8px 24px rgba(126,224,255,0.25); }
+  .cm-card.cm-card-stack:hover { border-color: #ffd47a; box-shadow: 0 8px 24px rgba(255,212,122,0.25); }
+  .cm-card-emoji { font-size: 44px; line-height: 1; margin-bottom: 6px; }
+  .cm-card-name { font-size: 17px; font-weight: 700; color: #ffd47a; margin-bottom: 10px; }
+  .cm-card-lvl { display: inline-block; margin-left: 6px; font-size: 11px; color: #aab; font-weight: 500; vertical-align: middle; }
+  .cm-card-desc { font-size: 13px; color: #cdd5ee; line-height: 1.45; flex: 1; }
+  .cm-card-cost { font-size: 14px; font-weight: 700; color: #ffd47a; margin-top: 8px; }
+  .cm-card.poor { opacity: 0.45; cursor: not-allowed; }
+  .cm-empty { color: #aab; font-size: 14px; }
+  #cm-cancel { margin-top: 18px; background: #2a3045; border: none; color: #cdd5ee; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 13px; }
+  #cm-cancel:hover { background: #3a4055; color: #fff; }
+  #cm-cost-hint { color: #ffd47a; }
+  .action-btn { background: #2a3045; border: none; color: #e6ebff; padding: 12px 6px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; }
+  .action-btn.primary { background: #2b6f4a; }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .action-btn:active:not(:disabled) { transform: translateY(1px); }
+  #msg { text-align: center; font-size: 11px; color: #8a93b2; padding: 4px 0; min-height: 16px; }
+  #overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(8, 10, 18, 0.94); z-index: 10; padding: 20px; }
+  #overlay.show { display: flex; }
+  #overlay h1 { font-size: 44px; margin-bottom: 8px; color: #7ee0ff; text-shadow: 0 0 14px #2090d0; letter-spacing: 0.12em; }
+  #overlay p { color: #aab; margin-bottom: 18px; text-align: center; max-width: 340px; font-size: 14px; line-height: 1.5; }
+  #overlay .stats { margin: 8px 0 18px; color: #ffd47a; text-align: center; font-size: 15px; max-width: 880px; width: 92%; }
+  #overlay .stats .row { margin: 4px 0; }
+  #overlay .stats .go-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; text-align: left; }
+  #overlay .stats .go-col { background: rgba(17,20,28,0.6); border: 1px solid #2a3045; border-radius: 8px; padding: 10px 12px; }
+  #overlay .stats .go-hd { color: #7ee0ff; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+  #overlay .stats .go-row { color: #cdd5ee; font-size: 12px; margin: 3px 0; }
+  #overlay .stats .go-row b { color: #ffd47a; }
+  #overlay .stats .go-cards { margin-top: 12px; background: rgba(17,20,28,0.6); border: 1px solid #2a3045; border-radius: 8px; padding: 10px 12px; }
+  #overlay .stats .go-chip { display: inline-block; background: #1f2940; border: 1px solid #3a4a6a; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #ffd47a; margin: 3px 4px 0 0; }
+  #overlay button { padding: 14px 32px; font-size: 16px; font-weight: 700; background: #2b6f4a; border: none; color: white; border-radius: 8px; cursor: pointer; letter-spacing: 0.04em; }
+  #overlay .tip { font-size: 12px; color: #6a7290; margin-top: 14px; max-width: 320px; text-align: center; }
+  #design-toggle { position: fixed; top: 8px; right: 8px; z-index: 100; background: #1a1f30; color: #aab; border: 1px solid #2a3045; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; }
+  #design-toggle:hover { background: #232940; color: #e6ebff; }
+  #design-panel { position: fixed; top: 44px; right: 8px; width: 300px; max-height: 86vh; overflow-y: auto; background: #11141c; border: 1px solid #2a3045; border-radius: 8px; padding: 12px; z-index: 99; font-size: 12px; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+  #design-panel.show { display: block; }
+  #design-panel h3 { font-size: 13px; color: #7ee0ff; margin-bottom: 8px; letter-spacing: 0.06em; text-transform: uppercase; }
+  #design-panel h4 { font-size: 11px; color: #6a7290; margin: 10px 0 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .dp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .dp-row label { color: #aab; flex: 1; padding-right: 8px; }
+  .dp-row input { width: 80px; background: #1a1f30; border: 1px solid #2a3045; color: #e6ebff; padding: 4px 6px; border-radius: 4px; font-family: inherit; font-size: 12px; }
+  .dp-note { color: #6a7290; font-size: 11px; margin: 10px 0; font-style: italic; }
+  .dp-buttons { display: flex; gap: 6px; margin-top: 10px; }
+  .dp-buttons button { flex: 1; background: #2a3045; border: none; color: #e6ebff; padding: 8px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; }
+  #dp-auto.on { background: #2b6f4a; color: #fff; }
+  .dp-buttons button.primary { background: #2b6f4a; }
+  .dp-buttons button:hover { filter: brightness(1.2); }
+</style>
+</head>
+<body>
+<button id="design-toggle">⚙ Design</button>
+<div id="design-panel">
+  <h3>Game Design</h3>
+  <h4>Economy</h4>
+  <div class="dp-row"><label>Start lives</label><input type="number" data-key="startLives" step="1" min="1"></div>
+  <div class="dp-row"><label>Start gold</label><input type="number" data-key="startGold" step="10" min="0"></div>
+  <div class="dp-row"><label>Interest %</label><input type="number" data-key="interestPct" step="0.5" min="0"></div>
+  <div class="dp-row"><label>Sell-back %</label><input type="number" data-key="sellBackPct" step="5" min="0" max="100"></div>
+  <h4>Map</h4>
+  <div class="dp-row"><label>Start width (cols)</label><input type="number" data-key="startCols" step="2" min="3"></div>
+  <div class="dp-row"><label>Map camera width (cols)</label><input type="number" data-key="mapTargetCols" step="2" min="5"></div>
+  <div class="dp-row"><label>Grow every N waves</label><input type="number" data-key="growEveryWaves" step="1" min="1"></div>
+  <div class="dp-row"><label>Grow cols / side</label><input type="number" data-key="growColsPerSide" step="1" min="0"></div>
+  <div class="dp-row"><label>Length bonus / tile %</label><input type="number" data-key="lengthBonusPerTile" step="0.05" min="0"></div>
+  <h4>Waves</h4>
+  <div class="dp-row"><label>Creep HP × n × </label><input type="number" data-key="waveHpScale" step="0.02" min="0"></div>
+  <div class="dp-row"><label>Boss HP × n ×</label><input type="number" data-key="bossHpScale" step="0.02" min="0"></div>
+  <div class="dp-row"><label>Wave count base</label><input type="number" data-key="waveCountBase" step="1" min="1"></div>
+  <div class="dp-row"><label>Wave count / wave</label><input type="number" data-key="waveCountPerWave" step="1" min="0"></div>
+  <h4>Tutorial (waves 1-10)</h4>
+  <div class="dp-row"><label>Enabled (1 / 0)</label><input type="number" data-key="tutorialEnabled" step="1" min="0" max="1"></div>
+  <div class="dp-row"><label>HP scale ×</label><input type="number" data-key="tutorialHpScale" step="0.05" min="0"></div>
+  <div class="dp-row"><label>Count scale ×</label><input type="number" data-key="tutorialCountScale" step="0.05" min="0"></div>
+  <h4>Combat</h4>
+  <div class="dp-row"><label>Tower damage ×</label><input type="number" data-key="towerDmgMul" step="0.1" min="0"></div>
+  <div class="dp-row"><label>Tower fire rate ×</label><input type="number" data-key="towerRateMul" step="0.1" min="0"></div>
+  <div class="dp-row"><label>Creep speed ×</label><input type="number" data-key="creepSpeedMul" step="0.1" min="0"></div>
+  <div class="dp-row"><label>Projectile speed ×</label><input type="number" data-key="projectileSpeedMul" step="0.1" min="0"></div>
+  <div class="dp-note">Start values (lives, gold, map width) apply on restart. Everything else is live.</div>
+  <div class="dp-buttons">
+    <button id="dp-auto">▶ Auto Test: OFF</button>
+  </div>
+  <div id="dp-auto-stats" class="dp-note"></div>
+  <div class="dp-buttons">
+    <button id="dp-reset">Reset</button>
+    <button id="dp-apply" class="primary">Apply + Restart</button>
+  </div>
+</div>
+<div id="card-modal">
+  <div id="cm-title">Upgrade Tower<span id="cm-level"></span></div>
+  <div id="cm-subtitle">Pick 1 of 3 cards · <span id="cm-remaining"></span><span id="cm-cost-hint">50g each</span></div>
+  <div id="cm-current">
+    <div id="cm-current-stats"></div>
+    <div id="cm-current-cards"></div>
+    <div id="cm-slots"></div>
+  </div>
+  <div id="cm-cards"></div>
+  <button id="cm-cancel">Cancel</button>
+</div>
+<div id="app">
+  <div id="hud">
+    <div class="stat wave"><span class="lbl">Wave</span><span class="val" id="wave">0</span></div>
+    <div class="stat lives"><span class="lbl">Lives</span><span class="val" id="lives">20</span></div>
+    <div class="stat gold"><span class="lbl">Gold</span><span class="val" id="gold">200</span></div>
+    <div class="stat lenb"><span class="lbl">Length</span><span class="val" id="lenb">+0%</span></div>
+  </div>
+  <div id="boardwrap">
+    <canvas id="cv"></canvas>
+    <div id="banner"></div>
+    <div id="tutorial-tip"></div>
+    <div id="overlay" class="show">
+      <h1 id="ov-title">Switchback</h1>
+      <p id="ov-desc">Place towers to wind the path the creeps walk. Longer maze = more damage. Hold them off — wave by wave.</p>
+      <div class="stats" id="ov-stats"></div>
+      <button id="ov-btn">Start</button>
+      <div class="tip">Pick 1 of 3 tower shapes at the bottom (20g per cell). The center cell fires — the others extend your maze. Towers gain XP from damage; click a glowing tower to draw a card.</div>
+    </div>
+  </div>
+  <div id="bottombar">
+    <div id="towers"></div>
+    <div id="tower-info" class="empty">
+      <div class="ti-content">
+        <div id="ti-name">—</div>
+        <div id="ti-stats">—</div>
+        <div id="ti-upgrades"></div>
+      </div>
+      <div class="ti-empty">Tap a tower to inspect &amp; upgrade it</div>
+    </div>
+    <div id="actions">
+      <button class="action-btn" id="sell-btn" disabled>Sell</button>
+      <button class="action-btn" id="speed-btn">2×</button>
+      <button class="action-btn primary" id="wave-btn">Start Wave</button>
+    </div>
+    <div id="msg"></div>
+  </div>
+</div>
+<script>
+// === BALANCE (tweakable via Design panel) ===
+const DEFAULT_BAL = {
+  startLives: 25,
+  startGold: 200,
+  interestPct: 7,
+  sellBackPct: 80,
+  startCols: 20,
+  mapTargetCols: 20,
+  growEveryWaves: 5,
+  growColsPerSide: 0,
+  lengthBonusPerTile: 0.5,
+  waveHpScale: 0.30,
+  bossHpScale: 0.25,
+  waveCountBase: 6,
+  waveCountPerWave: 2,
+  towerDmgMul: 1.0,
+  towerRateMul: 1.0,
+  creepSpeedMul: 1.0,
+  projectileSpeedMul: 1.0,
+  tutorialEnabled: 1,
+  tutorialHpScale: 1.0,
+  tutorialCountScale: 1.0,
+};
+let BAL = { ...DEFAULT_BAL };
+try {
+  const s = JSON.parse(localStorage.getItem('switchback-bal'));
+  if (s && typeof s === 'object') Object.assign(BAL, s);
+} catch(e) {}
+
+// === CONFIG ===
+const ROWS = 20;
+let COLS = BAL.startCols;
+const ENTRY = { c: Math.floor(BAL.startCols / 2), r: 0 };
+const EXIT  = { c: Math.floor(BAL.startCols / 2), r: ROWS - 1 };
+const BASELINE_PATH = ROWS - 1;
+
+const BASIC_TOWER = {
+  name: 'Tower', cost: 50,
+  dmg: 6, range: 3.0, rate: 1.0,
+  color: '#7ee0ff', proj: '#dffaff',
+};
+
+// Each tower is limited to 3 DISTINCT cards. Picking the same card again upgrades it.
+// Effects diverge by level: descIntro/applyIntro fire when the card is first picked,
+// descStack/applyStack fire on subsequent picks (each stack independently calls apply).
+// If applyStack is omitted, applyIntro is reused (e.g. flat stat boosts).
+// A tower can hold as many distinct cards as it has cells (1, 2, or 3).
+function towerSlotLimit(t) { return (t && t.cells) ? t.cells.length : 3; }
+const CARDS = [
+  // basic stat boosts — same effect every pick
+  { id:'sharp',     emoji:'🔪', name:'Sharpened',    weight:10, canOffer:t=>true, descIntro:'+22% damage',                applyIntro:t=>{ t.dmg *= 1.22; } },
+  { id:'brutal',    emoji:'💪', name:'Brutal',       weight:8,  canOffer:t=>true, descIntro:'+40% damage, ×0.88 fire rate',applyIntro:t=>{ t.dmg *= 1.4; t.rate *= 0.88; } },
+  { id:'quick',     emoji:'💨', name:'Quickdraw',    weight:10, canOffer:t=>true, descIntro:'+35% fire rate',             applyIntro:t=>{ t.rate *= 1.35; } },
+  { id:'longbarrel',emoji:'📏', name:'Long Barrel',  weight:10, canOffer:t=>true, descIntro:'+1 range',                   applyIntro:t=>{ t.range += 1; } },
+  { id:'eagleeye',  emoji:'🦅', name:'Eagle Eye',    weight:6,  canOffer:t=>true, descIntro:'+2 range, ×0.85 fire rate',  applyIntro:t=>{ t.range += 2; t.rate *= 0.85; } },
+  // mechanic intros — first pick adds the mechanic, subsequent picks deepen it
+  { id:'splash',    emoji:'💥', name:'Splash Round', weight:8,  canOffer:t=>true,
+    descIntro:'Shots explode (1.2 radius)',
+    descStack:'+0.5 splash radius, +15% damage',
+    applyIntro:t=>{ t.splash = 1.2; },
+    applyStack:t=>{ t.splash += 0.5; t.dmg *= 1.15; } },
+  { id:'frost',     emoji:'❄️', name:'Frostbite',    weight:8,  canOffer:t=>true,
+    descIntro:'Shots slow 40% for 1.5s',
+    descStack:'+15% slow, +0.5s duration',
+    applyIntro:t=>{ t.slow = 0.4; t.slowDur = 1.5; },
+    applyStack:t=>{ t.slow = Math.min(0.95, t.slow + 0.15); t.slowDur += 0.5; } },
+  { id:'chain',     emoji:'⚡', name:'Lightning',    weight:8,  canOffer:t=>true,
+    descIntro:'Shots chain to 2 nearby creeps (70% falloff)',
+    descStack:'+2 chain bounces, +6% falloff',
+    applyIntro:t=>{ t.bounces = 2; t.chainRange = 2.6; t.chainFalloff = 0.7; },
+    applyStack:t=>{ t.bounces += 2; t.chainFalloff = Math.min(0.95, t.chainFalloff + 0.06); } },
+  { id:'burn',      emoji:'🔥', name:'Embers',       weight:8,  canOffer:t=>true,
+    descIntro:'Shots burn for 5/s over 3s',
+    descStack:'+6/s burn damage, +0.5s duration',
+    applyIntro:t=>{ t.burn = 5; t.burnDur = 3; },
+    applyStack:t=>{ t.burn += 6; t.burnDur += 0.5; } },
+  { id:'crit',      emoji:'🎯', name:'Headshot',     weight:8,  canOffer:t=>true,
+    descIntro:'20% crit chance, ×2.0 damage on crit',
+    descStack:'+10% crit chance, +0.25× crit multiplier',
+    applyIntro:t=>{ t.crit = 0.20; t.critMul = 2.0; },
+    applyStack:t=>{ t.crit = Math.min(1.0, t.crit + 0.10); t.critMul += 0.25; } },
+  { id:'multi',     emoji:'🏹', name:'Multishot',    weight:6,  canOffer:t=>true, descIntro:'+1 projectile per shot',    applyIntro:t=>{ t.multishot += 1; } },
+  // rare / late
+  { id:'exec',      emoji:'💀', name:'Executioner',  weight:4,  canOffer:t=>Object.keys(t.cardLevels).length >= 2,
+    descIntro:'Instakill non-boss below 18% HP',
+    descStack:'+5% execute threshold',
+    applyIntro:t=>{ t.execute = 0.18; },
+    applyStack:t=>{ t.execute = Math.min(0.5, t.execute + 0.05); } },
+  { id:'greed',     emoji:'💰', name:'Greed',        weight:4,  canOffer:t=>true, descIntro:'+40% gold from kills',       applyIntro:t=>{ t.goldMul *= 1.4; } },
+];
+
+function cardDescFor(card, tower) {
+  const stacked = (tower.cardLevels[card.id] || 0) > 0;
+  return stacked ? (card.descStack || card.descIntro) : card.descIntro;
+}
+function applyCardTo(card, tower) {
+  const stacked = (tower.cardLevels[card.id] || 0) > 0;
+  const fn = stacked ? (card.applyStack || card.applyIntro) : card.applyIntro;
+  fn(tower);
+}
+
+function newTowerInstance(c, r) {
+  return {
+    type: 'tower', c, r, cooldown: 0,
+    invested: BASIC_TOWER.cost,
+    dmg: BASIC_TOWER.dmg, range: BASIC_TOWER.range, rate: BASIC_TOWER.rate,
+    color: BASIC_TOWER.color, proj: BASIC_TOWER.proj,
+    splash: 0,
+    slow: 0, slowDur: 0, slowRadius: 0,
+    bounces: 0, chainRange: 0, chainFalloff: 0,
+    burn: 0, burnDur: 0,
+    execute: 0, crit: 0, critMul: 1,
+    multishot: 1,
+    goldMul: 1,
+    cardLevels: {},
+  };
+}
+
+// Each card pick costs gold (no XP system). Each click of "Upgrade" draws a
+// fresh 1-of-3 from the eligible pool.
+const UPGRADE_COST = 50;
+
+// === TOWER SHAPES ===
+// Polyominoes built around a center (cells include [0,0] which fires).
+// Cost = 20g * cell count. Sell refunds BAL.sellBackPct of that.
+const COST_PER_CELL = 20;
+const SHAPES = [
+  // 1-cell
+  { id:'S1',  name:'Pellet',   cells:[[0,0]] },
+  // 2-cell
+  { id:'P-H', name:'Pair →',   cells:[[0,0],[1,0]] },
+  { id:'P-V', name:'Pair ↓',   cells:[[0,0],[0,1]] },
+  // 3-cell elbows + tri-lines
+  { id:'L3a', name:'Elbow ↘',  cells:[[0,0],[1,0],[0,1]] },
+  { id:'L3b', name:'Elbow ↙',  cells:[[0,0],[-1,0],[0,1]] },
+  { id:'L3c', name:'Elbow ↗',  cells:[[0,0],[1,0],[0,-1]] },
+  { id:'L3d', name:'Elbow ↖',  cells:[[0,0],[-1,0],[0,-1]] },
+  { id:'I3h', name:'Tri ─',    cells:[[0,0],[1,0],[-1,0]] },
+  { id:'I3v', name:'Tri │',    cells:[[0,0],[0,1],[0,-1]] },
+];
+function shapeCost(shape) { return shape.cells.length * COST_PER_CELL; }
+// Weighted by size: ~25% 1-cell, ~35% 2-cell, ~40% 3-cell.
+function randomShape() {
+  const r = Math.random();
+  const size = r < 0.25 ? 1 : (r < 0.60 ? 2 : 3);
+  const pool = SHAPES.filter(s => s.cells.length === size);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function newShapeDraft() { return [randomShape(), randomShape(), randomShape()]; }
+
+function isCellOpenForShape(c, r) {
+  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return false;
+  if (c === ENTRY.c && r === ENTRY.r) return false;
+  if (c === EXIT.c && r === EXIT.r) return false;
+  if (state.grid[r][c]) return false;
+  return true;
+}
+// Returns the absolute cell list if the shape can be placed at (cc,cr), else null.
+function shapeFitsAt(shape, cc, cr) {
+  const cells = [];
+  for (const [dc, dr] of shape.cells) {
+    const c = cc + dc, r = cr + dr;
+    if (!isCellOpenForShape(c, r)) return null;
+    cells.push({ c, r });
+  }
+  // Tentatively block every cell, see if a path still exists.
+  for (const cell of cells) state.grid[cell.r][cell.c] = { type: '_probe_' };
+  const ok = !!findPathOn(state.grid);
+  for (const cell of cells) state.grid[cell.r][cell.c] = null;
+  return ok ? cells : null;
+}
+
+// Distinct accent colors for the per-tower outline (helps tell adjacent towers
+// apart at a glance — picked at placement time).
+const TOWER_TINTS = ['#7ee0ff','#ffd47a','#ff8aa0','#9fffa8','#c89bff','#ff8a55','#dbe2ff','#ffe066'];
+
+function placeShape(shape, cc, cr) {
+  if (state.waveActive) { setMsg('Build between waves.'); return false; }
+  const cost = shapeCost(shape);
+  if (state.gold < cost) { setMsg('Not enough gold.'); return false; }
+  const cells = shapeFitsAt(shape, cc, cr);
+  if (!cells) { setMsg('Shape doesn’t fit (or would seal the path).'); return false; }
+  const tower = newTowerInstance(cc, cr);
+  tower.shape = shape;
+  tower.cells = cells;
+  tower.invested = cost;
+  tower.tint = TOWER_TINTS[Math.floor(Math.random() * TOWER_TINTS.length)];
+  state.grid[cr][cc] = tower;
+  for (const cell of cells) {
+    if (cell.c === cc && cell.r === cr) continue;
+    state.grid[cell.r][cell.c] = { type: 'blocker', tower };
+  }
+  state.gold -= cost;
+  if (state.stats) { state.stats.goldSpent += cost; state.stats.towersBuilt += 1; }
+  recomputePath();
+  state.selectedCell = null;
+  syncHUD();
+  return true;
+}
+
+// Seed random rocks (immutable blockers) at game start.
+function seedRocks() {
+  const target = Math.floor(COLS * ROWS * 0.10);
+  let placed = 0, attempts = 0;
+  while (placed < target && attempts++ < target * 12) {
+    const c = Math.floor(Math.random() * COLS);
+    const r = Math.floor(Math.random() * ROWS);
+    if (!isCellOpenForShape(c, r)) continue;
+    state.grid[r][c] = { type: 'rock' };
+    if (findPathOn(state.grid)) { placed++; }
+    else { state.grid[r][c] = null; }
+  }
+}
+
+const CREEPS = {
+  standard: { hp:20, speed:1.4, bounty:4, color:'#aab2c8', size:0.32 },
+  fast:     { hp:10, speed:2.8, bounty:3, color:'#ffe066', size:0.28 },
+  armored:  { hp:55, speed:0.9, bounty:8, color:'#8a8a99', size:0.40, armor:0.5 },
+  swarm:    { hp:5,  speed:1.8, bounty:1, color:'#ff8aa0', size:0.22 },
+  boss:     { hp:220,speed:0.8, bounty:80, color:'#ff6a82', size:0.55, boss:true, armor:0.25 },
+};
+
+const BOSS_NAMES = ['Vorlak the Unending', 'Mournwight', 'Thresh-Iron Warden', 'Cinderwidow', 'Pale Margrave', 'The Long Knell'];
+
+const TUTORIAL_WAVES = 20;
+// Hand-tuned tutorial waves. Boss waves (10, 20) are handled by the boss override.
+// Calibrated for a 3-tower opening (150g, 0 spare): early power comes from leveling
+// those 3 towers via cards, not from adding towers, so the HP/count ramp stays gentle
+// until gold income (kills + interest) lets the player widen the maze.
+// Standards-only through wave 6, fast at 7, armored at 11, swarm at 14.
+const TUTORIAL_WAVE_SPECS = [
+  /*  1 */ { count: 2,  hpMul: 0.5, delay: 1.0,  pool: ['standard'] },
+  /*  2 */ { count: 3,  hpMul: 0.6, delay: 0.85, pool: ['standard'] },
+  /*  3 */ { count: 3,  hpMul: 0.75,delay: 0.8,  pool: ['standard'] },
+  /*  4 */ { count: 4,  hpMul: 0.9, delay: 0.75, pool: ['standard'] },
+  /*  5 */ { count: 4,  hpMul: 1.0, delay: 0.7,  pool: ['standard'] },
+  /*  6 */ { count: 5,  hpMul: 1.1, delay: 0.65, pool: ['standard'] },
+  /*  7 */ { count: 5,  hpMul: 1.2, delay: 0.6,  pool: ['standard','standard','fast'] },
+  /*  8 */ { count: 6,  hpMul: 1.3, delay: 0.55, pool: ['standard','standard','fast'] },
+  /*  9 */ { count: 7,  hpMul: 1.4, delay: 0.5,  pool: ['standard','fast'] },
+  /* 10 */ null,
+  /* 11 */ { count: 6,  hpMul: 1.5, delay: 0.55, pool: ['standard','standard','standard','fast','armored'] },
+  /* 12 */ { count: 7,  hpMul: 1.6, delay: 0.5,  pool: ['standard','standard','fast','fast','armored'] },
+  /* 13 */ { count: 8,  hpMul: 1.7, delay: 0.5,  pool: ['standard','standard','fast','armored','armored'] },
+  /* 14 */ { count: 9,  hpMul: 1.8, delay: 0.45, pool: ['standard','standard','fast','armored','swarm','swarm'] },
+  /* 15 */ { count: 11, hpMul: 1.9, delay: 0.45, pool: ['standard','fast','armored','swarm','swarm'] },
+  /* 16 */ { count: 13, hpMul: 2.0, delay: 0.4,  pool: ['standard','fast','armored','swarm','swarm'] },
+  /* 17 */ { count: 15, hpMul: 2.2, delay: 0.4,  pool: ['standard','fast','armored','swarm'] },
+  /* 18 */ { count: 17, hpMul: 2.4, delay: 0.4,  pool: ['standard','fast','armored','swarm'] },
+  /* 19 */ { count: 19, hpMul: 2.6, delay: 0.38, pool: ['standard','fast','armored','swarm'] },
+  /* 20 */ null,
+];
+const TUTORIAL_TIPS = [
+  'Wave 1 — Pick one of the 3 tower shapes (20g per cell). The center cell fires; the rest extend your maze. Drop 2-3 between waves.',
+  'Wave 2 — Used shapes refill; unused stay. The map already has random rocks — work them into your wall plan.',
+  'Wave 3 — Towers level up from dealing damage. A glowing tower has a card waiting — click it to choose an upgrade.',
+  'Wave 4 — Place towers IN the path: they block tiles and force creeps to walk around — that\'s your maze.',
+  'Wave 5 — Try a zigzag: alternate gaps so the path winds. Map grows after this wave!',
+  'Wave 6 — Watch LENGTH rise as your maze gets longer. That % boosts every tower\'s damage.',
+  'Wave 7 — Fast creeps now! Pick a Frostbite card on level up — shots slow targets.',
+  'Wave 8 — Splash Round card makes shots explode — hits whole groups at once.',
+  'Wave 9 — Click any tower to see its stats, level, and XP bar.',
+  'Wave 10 — Boss wave! Bosses leak 5 lives. Stack damage cards (Sharpened, Brutal) on one tower.',
+  'Wave 11 — Armored creeps now (grey, slow). Big single hits beat them — try Headshot (crit) or Brutal.',
+  'Wave 12 — Lightning card chains shots between creeps — great for clumps and armored lines.',
+  'Wave 13 — Embers card adds burn damage over time — bypasses armor effectively.',
+  'Wave 14 — Swarm creeps now (pink, tiny). Splash + Lightning chew through them.',
+  'Wave 15 — Each tower holds 3 different cards max — re-pick the same card to level it up (Splash Lv 2, Lightning Lv 3...).',
+  'Wave 16 — Multishot fires multiple projectiles per shot — pairs with Crit or Splash.',
+  'Wave 17 — Sell underperforming towers (80% refund) and rebuild for length bonus.',
+  'Wave 18 — Executioner card instakills weakened creeps. Strong endgame finisher.',
+  'Wave 19 — Last tutorial wave before the boss. Normal scaling kicks in after wave 20.',
+  'Wave 20 — Final tutorial boss. Show what your stacked towers can do.',
+];
+
+// === STATE ===
+let cv, ctx, cell = 32, gW, gH;
+let state;
+let hoverCell = null;
+let hudDirty = false; // set by the sim; flushed to the DOM once per frame in the loop
+let autoPlay = false; // AI auto-play mode (Design panel "Auto Test")
+let autoTimer = 0;    // wall-clock accumulator that throttles AI decisions
+let autoStats = { games: 0, bestWave: 0 };
+
+function newState() {
+  COLS = BAL.startCols;
+  ENTRY.c = Math.floor(BAL.startCols / 2);
+  EXIT.c  = Math.floor(BAL.startCols / 2);
+  return {
+    phase: 'TITLE',
+    wave: 0,
+    lives: BAL.startLives,
+    gold: BAL.startGold,
+    grid: Array.from({length: ROWS}, () => Array(COLS).fill(null)),
+    path: null,
+    creeps: [],
+    projectiles: [],
+    effects: [],
+    modalTower: null,
+    modalCards: null,
+    selectedCell: null,
+    shapeDraft: newShapeDraft(),
+    armedShape: null, // index into shapeDraft when a shape is selected for placement
+    waveQueue: [],
+    spawnTimer: 0,
+    waveActive: false,
+    bossName: '',
+    gameTime: 0,
+    speedMul: 2,
+    stats: {
+      startedAt: performance.now(),
+      kills: { standard: 0, fast: 0, armored: 0, swarm: 0, boss: 0 },
+      leaks: 0,
+      bossLeaks: 0,
+      totalDmgDealt: 0,
+      goldEarned: 0,
+      goldSpent: 0,
+      towersBuilt: 0,
+      towersSold: 0,
+      cardsTaken: {}, // id -> count
+    },
+  };
+}
+
+function showTutorialTip(forWave) {
+  const el = document.getElementById('tutorial-tip');
+  if (!BAL.tutorialEnabled || forWave > TUTORIAL_TIPS.length || forWave < 1) { el.classList.remove('show'); return; }
+  el.innerHTML = '<div class="tag">Tutorial</div>' + TUTORIAL_TIPS[forWave - 1];
+  el.classList.add('show');
+}
+function hideTutorialTip() {
+  document.getElementById('tutorial-tip').classList.remove('show');
+}
+
+const SPEED_OPTIONS = [1, 2, 4, 8, 16];
+function cycleSpeed() {
+  const i = SPEED_OPTIONS.indexOf(state.speedMul);
+  state.speedMul = SPEED_OPTIONS[(i + 1) % SPEED_OPTIONS.length];
+  syncHUD();
+}
+
+// === PATHFINDING ===
+function findPathOn(grid) {
+  const dist = Array.from({length: ROWS}, () => Array(COLS).fill(-1));
+  const prev = Array.from({length: ROWS}, () => Array(COLS).fill(null));
+  dist[ENTRY.r][ENTRY.c] = 0;
+  const q = [{ c: ENTRY.c, r: ENTRY.r }];
+  let qi = 0;
+  while (qi < q.length) {
+    const { c, r } = q[qi++];
+    if (c === EXIT.c && r === EXIT.r) break;
+    for (const [dc, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const nc = c+dc, nr = r+dr;
+      if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+      if (grid[nr][nc]) continue;
+      if (dist[nr][nc] !== -1) continue;
+      dist[nr][nc] = dist[r][c]+1;
+      prev[nr][nc] = { c, r };
+      q.push({ c: nc, r: nr });
+    }
+  }
+  if (dist[EXIT.r][EXIT.c] === -1) return null;
+  const path = [];
+  let cur = { c: EXIT.c, r: EXIT.r };
+  while (cur) { path.unshift({c:cur.c, r:cur.r}); cur = prev[cur.r][cur.c]; }
+  return path;
+}
+
+function recomputePath() { state.path = findPathOn(state.grid); }
+function pathLength() { return state.path ? state.path.length - 1 : 0; }
+function lengthBonus() { return 1 + Math.max(0, pathLength() - BASELINE_PATH) * (BAL.lengthBonusPerTile / 100); }
+
+// === PLACEMENT ===
+function canPlace(c, r) {
+  if (c === ENTRY.c && r === ENTRY.r) return false;
+  if (c === EXIT.c  && r === EXIT.r)  return false;
+  if (state.grid[r][c]) return false;
+  state.grid[r][c] = { type: '_test_' };
+  const ok = !!findPathOn(state.grid);
+  state.grid[r][c] = null;
+  return ok;
+}
+
+// Resolve the actual tower object behind a selected cell (handles blockers).
+function towerFromCell(t) {
+  if (!t) return null;
+  const cell = state.grid[t.r][t.c];
+  if (!cell) return null;
+  if (cell.type === 'tower') return cell;
+  if (cell.type === 'blocker' && cell.tower) return cell.tower;
+  return null;
+}
+
+function sellSelected() {
+  const sel = state.selectedCell;
+  const tower = towerFromCell(sel);
+  if (!tower) return;
+  state.gold += Math.floor(tower.invested * (BAL.sellBackPct / 100));
+  if (state.stats) state.stats.towersSold += 1;
+  for (const cell of (tower.cells || [{ c: tower.c, r: tower.r }])) {
+    state.grid[cell.r][cell.c] = null;
+  }
+  state.selectedCell = null;
+  recomputePath();
+  closeCardModal();
+  syncHUD();
+}
+
+// === CARDS / UPGRADES ===
+function drawCards(tower, n) {
+  const ownedCount = Object.keys(tower.cardLevels).length;
+  const slotsFull = ownedCount >= towerSlotLimit(tower);
+  const eligible = CARDS.filter(c => {
+    if (!c.canOffer(tower)) return false;
+    // Slot rule: if slots are full, only restacks of owned cards are offered.
+    if (slotsFull && !tower.cardLevels[c.id]) return false;
+    return true;
+  });
+  const pool = eligible.slice();
+  const drawn = [];
+  for (let i = 0; i < n && pool.length > 0; i++) {
+    const totalW = pool.reduce((s, c) => s + c.weight, 0);
+    let r = Math.random() * totalW;
+    let pickIdx = pool.length - 1;
+    for (let j = 0; j < pool.length; j++) {
+      r -= pool[j].weight;
+      if (r <= 0) { pickIdx = j; break; }
+    }
+    drawn.push(pool[pickIdx]);
+    pool.splice(pickIdx, 1);
+  }
+  return drawn;
+}
+
+// Open the upgrade draft for a tower. Cards drawn fresh on every open.
+function openCardModal(tower) {
+  if (!tower) return;
+  if (state.waveActive) { setMsg('Upgrade between waves.'); return; }
+  const opts = drawCards(tower, 3);
+  if (opts.length === 0) {
+    setMsg('No more cards available for this tower.');
+    return;
+  }
+  state.modalTower = tower;
+  state.modalCards = opts;
+  const wrap = document.getElementById('cm-cards');
+  wrap.innerHTML = '';
+  document.getElementById('cm-level').textContent = '';
+  document.getElementById('cm-remaining').textContent = '';
+  document.getElementById('cm-current-stats').textContent = towerStatParts(tower).join(' · ');
+  const ownedWrap = document.getElementById('cm-current-cards');
+  ownedWrap.innerHTML = '';
+  const owned = towerCardSummary(tower);
+  if (owned.length === 0) {
+    const none = document.createElement('span');
+    none.className = 'cm-none';
+    none.textContent = 'No cards yet';
+    ownedWrap.appendChild(none);
+  } else {
+    for (const label of owned) {
+      const chip = document.createElement('span');
+      chip.className = 'cm-owned';
+      chip.textContent = label;
+      ownedWrap.appendChild(chip);
+    }
+  }
+  const slotInfo = document.getElementById('cm-slots');
+  if (slotInfo) {
+    const used = Object.keys(tower.cardLevels).length;
+    const limit = towerSlotLimit(tower);
+    slotInfo.textContent = used + ' / ' + limit + ' card slots used · each pick costs ' + UPGRADE_COST + 'g' +
+      (used >= limit ? ' · only restacks available' : '');
+  }
+  for (const card of opts) {
+    const lvl = tower.cardLevels[card.id] || 0;
+    const isStack = lvl > 0;
+    const headline = isStack
+      ? card.emoji + ' ' + card.name + ' <span class="cm-card-lvl">Lv ' + lvl + ' → ' + (lvl + 1) + '</span>'
+      : card.emoji + ' ' + card.name + ' <span class="cm-card-lvl">New</span>';
+    const desc = cardDescFor(card, tower);
+    const btn = document.createElement('button');
+    btn.className = 'cm-card' + (isStack ? ' cm-card-stack' : ' cm-card-new');
+    const tooPoor = state.gold < UPGRADE_COST;
+    if (tooPoor) btn.classList.add('poor');
+    btn.disabled = tooPoor;
+    btn.innerHTML =
+      '<div class="cm-card-emoji">' + card.emoji + '</div>' +
+      '<div class="cm-card-name">' + headline + '</div>' +
+      '<div class="cm-card-desc">' + desc + '</div>' +
+      '<div class="cm-card-cost">' + UPGRADE_COST + 'g</div>';
+    btn.onclick = () => pickCard(card);
+    wrap.appendChild(btn);
+  }
+  document.getElementById('card-modal').classList.add('show');
+}
+
+function pickCard(card) {
+  const tower = state.modalTower;
+  if (!tower) return;
+  if (state.gold < UPGRADE_COST) { setMsg('Not enough gold.'); return; }
+  state.gold -= UPGRADE_COST;
+  if (state.stats) state.stats.goldSpent += UPGRADE_COST;
+  applyCardTo(card, tower);
+  tower.cardLevels[card.id] = (tower.cardLevels[card.id] || 0) + 1;
+  if (state.stats) state.stats.cardsTaken[card.id] = (state.stats.cardsTaken[card.id] || 0) + 1;
+  closeCardModal();
+  syncHUD();
+}
+
+function closeCardModal() {
+  document.getElementById('card-modal').classList.remove('show');
+  state.modalTower = null;
+  state.modalCards = null;
+}
+
+// === WAVES ===
+function makeWave(n) {
+  const q = [];
+  const tut = BAL.tutorialEnabled && n <= TUTORIAL_WAVES;
+  if (n % 10 === 0) {
+    state.bossName = BOSS_NAMES[Math.floor(Math.random()*BOSS_NAMES.length)];
+    const bossHp = tut ? (1 + n*BAL.bossHpScale * BAL.tutorialHpScale * 0.32) : (1 + n*BAL.bossHpScale);
+    q.push({ type:'boss', delay:0.5, hpMul: bossHp, bountyMul: 1 + (n/10) });
+    const entourage = tut ? 2 : 6;
+    const entHp = tut ? 1.0 : (1 + n*BAL.waveHpScale * 0.75);
+    for (let i = 0; i < entourage; i++) q.push({ type:'standard', delay:0.6, hpMul: entHp });
+    return q;
+  }
+  if (tut && n <= TUTORIAL_WAVE_SPECS.length) {
+    const spec = TUTORIAL_WAVE_SPECS[n - 1];
+    const count = Math.max(1, Math.round(spec.count * BAL.tutorialCountScale));
+    const hpMul = spec.hpMul * BAL.tutorialHpScale;
+    for (let i = 0; i < count; i++) {
+      const t = spec.pool[Math.floor(Math.random() * spec.pool.length)];
+      q.push({ type: t, delay: t === 'swarm' ? 0.18 : spec.delay, hpMul });
+    }
+    return q;
+  }
+  const count = BAL.waveCountBase + n * BAL.waveCountPerWave;
+  const pool = ['standard'];
+  if (n >= 3) pool.push('fast');
+  if (n >= 4) pool.push('armored');
+  if (n >= 5) pool.push('swarm','swarm');
+  const hpMul = 1 + n * BAL.waveHpScale;
+  for (let i = 0; i < count; i++) {
+    const t = pool[Math.floor(Math.random()*pool.length)];
+    q.push({ type: t, delay: t === 'swarm' ? 0.18 : 0.5, hpMul });
+  }
+  return q;
+}
+
+function startWave() {
+  if (state.waveActive) return;
+  state.wave += 1;
+  state.waveQueue = makeWave(state.wave);
+  state.spawnTimer = 0;
+  state.waveActive = true;
+  if (state.wave % 10 === 0) showBanner('Wave ' + state.wave + ' — ' + state.bossName);
+  else showBanner('Wave ' + state.wave);
+  hideTutorialTip();
+  syncHUD();
+}
+
+function endWaveIfDone() {
+  if (state.waveActive && state.waveQueue.length === 0 && state.creeps.length === 0) {
+    state.waveActive = false;
+    const interest = Math.floor(state.gold * (BAL.interestPct / 100));
+    state.gold += interest;
+    setMsg('Wave cleared. +' + interest + ' interest.');
+    if (state.wave > 0 && BAL.growEveryWaves > 0 && state.wave % BAL.growEveryWaves === 0) growMap();
+    showTutorialTip(state.wave + 1);
+    syncHUD();
+  }
+}
+
+function growMap() {
+  const add = BAL.growColsPerSide;
+  if (add <= 0) return;
+  for (let r = 0; r < ROWS; r++) {
+    for (let i = 0; i < add; i++) state.grid[r].unshift(null);
+    for (let i = 0; i < add; i++) state.grid[r].push(null);
+  }
+  COLS += add * 2;
+  ENTRY.c += add;
+  EXIT.c  += add;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const t = state.grid[r][c];
+      if (t) t.c = c;
+    }
+  }
+  // Shift each multi-cell tower's recorded cells (touch each tower once).
+  const seen = new Set();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = state.grid[r][c];
+    if (!t || t.type !== 'tower' || seen.has(t)) continue;
+    seen.add(t);
+    if (t.cells) for (const cell of t.cells) cell.c += add;
+  }
+  if (state.selectedCell) state.selectedCell.c += add;
+  state.projectiles = [];
+  state.effects = [];
+  recomputePath();
+  resize();
+  showBanner('Map expanded — +' + add + ' col' + (add>1?'s':'') + ' each side');
+}
+
+function spawnCreep(spec) {
+  const c = CREEPS[spec.type];
+  let hp = c.hp * (spec.hpMul || 1);
+  let armor = c.armor || 0;
+  // Tutorial mode: armored creeps are softer so new players can chew through them.
+  if (BAL.tutorialEnabled && state.wave <= TUTORIAL_WAVES && spec.type === 'armored') {
+    hp *= 0.7;
+    armor *= 0.5;
+  }
+  state.creeps.push({
+    type: spec.type, x: ENTRY.c + 0.5, y: ENTRY.r + 0.5,
+    hp, maxhp: hp, baseSpeed: c.speed,
+    color: c.color, size: c.size, boss: !!c.boss, armor,
+    bounty: Math.floor(c.bounty * (spec.bountyMul || 1)),
+    slow: 0, slowUntil: 0, hitFlash: 0,
+    burn: 0, burnUntil: 0,
+  });
+}
+
+// === COMBAT ===
+function damageCreep(cr, dmg, sourceTower, ignoreArmor, silent) {
+  if (cr.dead) return;
+  const before = cr.hp;
+  const eff = ignoreArmor ? dmg : dmg * (1 - cr.armor);
+  cr.hp -= eff;
+  cr.hitFlash = 0.1;
+  if (!silent) state.effects.push({ type:'dmg', x: cr.x, y: cr.y - 0.2, text: Math.ceil(eff), age: 0, life: 0.8 });
+  const realDealt = Math.max(0, Math.min(eff, before));
+  if (state.stats) state.stats.totalDmgDealt += realDealt;
+  if (cr.hp <= 0 && !cr.dead) {
+    cr.dead = true;
+    const goldGain = Math.floor(cr.bounty * (sourceTower ? sourceTower.goldMul : 1));
+    state.gold += goldGain;
+    if (state.stats) {
+      state.stats.goldEarned += goldGain;
+      const k = state.stats.kills;
+      if (k[cr.type] != null) k[cr.type] += 1;
+    }
+    state.effects.push({ type:'poof', x: cr.x, y: cr.y, age: 0, life: 0.4, color: cr.color });
+    hudDirty = true;
+  }
+}
+
+function applySlow(cr, slow, dur) {
+  const now = state.gameTime;
+  if (slow > cr.slow || now > cr.slowUntil) cr.slow = slow;
+  cr.slowUntil = now + dur;
+}
+
+// === UPDATE ===
+function update(dt) {
+  // spawn
+  if (state.waveActive && state.waveQueue.length > 0) {
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0) {
+      const spec = state.waveQueue.shift();
+      spawnCreep(spec);
+      state.spawnTimer = spec.delay;
+    }
+  }
+
+  // creep motion + burn DoT
+  const now = state.gameTime;
+  for (const cr of state.creeps) {
+    if (cr.dead) continue;
+    if (cr.hitFlash > 0) cr.hitFlash -= dt;
+    if (now > cr.slowUntil) cr.slow = 0;
+    if (cr.burn > 0) {
+      if (now > cr.burnUntil) cr.burn = 0;
+      else damageCreep(cr, cr.burn * dt, cr.burnSource, false, true); // silent: no per-tick popup
+    }
+    if (cr.dead) continue;
+    const sp = cr.baseSpeed * BAL.creepSpeedMul * (1 - cr.slow);
+    let tx, ty;
+    if (!state.path) continue;
+    {
+      const cc = Math.floor(cr.x), rr = Math.floor(cr.y);
+      let idx = -1;
+      for (let i = 0; i < state.path.length; i++) {
+        if (state.path[i].c === cc && state.path[i].r === rr) { idx = i; break; }
+      }
+      if (idx < 0) {
+        // off-path (path changed under us) — head to nearest path cell
+        let best = null, bd = Infinity;
+        for (const p of state.path) {
+          const d = Math.hypot(p.c + 0.5 - cr.x, p.r + 0.5 - cr.y);
+          if (d < bd) { bd = d; best = p; }
+        }
+        tx = best.c + 0.5; ty = best.r + 0.5;
+      } else if (idx === state.path.length - 1) {
+        tx = EXIT.c + 0.5; ty = EXIT.r + 0.5;
+      } else {
+        const nxt = state.path[idx + 1];
+        tx = nxt.c + 0.5; ty = nxt.r + 0.5;
+      }
+    }
+    const dx = tx - cr.x, dy = ty - cr.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 0.02) { cr.x = tx; cr.y = ty; }
+    else { cr.x += dx/d * sp * dt; cr.y += dy/d * sp * dt; }
+    if (Math.abs(cr.x - (EXIT.c + 0.5)) < 0.25 && Math.abs(cr.y - (EXIT.r + 0.5)) < 0.25) {
+      cr.leaked = true;
+      state.lives -= cr.boss ? 5 : 1;
+      if (state.stats) { state.stats.leaks += 1; if (cr.boss) state.stats.bossLeaks += 1; }
+      hudDirty = true;
+      if (state.lives <= 0) { gameOver(); return; }
+    }
+  }
+  state.creeps = state.creeps.filter(c => !c.dead && !c.leaked);
+
+  // towers fire (skip rocks and blocker cells of multi-cell towers)
+  const lenMul = lengthBonus();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = state.grid[r][c];
+    if (!t || t.type !== 'tower') continue;
+    t.cooldown -= dt;
+    if (t.cooldown > 0) continue;
+    const inRange = [];
+    for (const cr of state.creeps) {
+      if (cr.dead) continue;
+      const d = Math.hypot(cr.x - (c + 0.5), cr.y - (r + 0.5));
+      if (d > t.range) continue;
+      inRange.push({ cr, prog: cr.y * 10 + cr.x * 0.01 });
+    }
+    if (!inRange.length) continue;
+    inRange.sort((a, b) => b.prog - a.prog);
+    t.cooldown = 1 / (t.rate * BAL.towerRateMul);
+    const shots = Math.min(t.multishot || 1, inRange.length);
+    for (let i = 0; i < shots; i++) {
+      const target = inRange[i].cr;
+      state.projectiles.push({
+        x: c + 0.5, y: r + 0.5, tx: target.x, ty: target.y,
+        target, speed: 14 * BAL.projectileSpeedMul, def: t, color: t.proj, lenMul,
+        sourceTower: t,
+        bouncesLeft: t.bounces || 0,
+        dmgMul: 1,
+        visited: t.bounces ? new Set() : null,
+      });
+    }
+  }
+
+  // projectiles
+  for (const p of state.projectiles) {
+    if (p.dead) continue;
+    if (p.target && !p.target.dead) { p.tx = p.target.x; p.ty = p.target.y; }
+    const dx = p.tx - p.x, dy = p.ty - p.y;
+    const d = Math.hypot(dx, dy);
+    const step = p.speed * dt;
+    if (d <= step) {
+      let dmg = p.def.dmg * p.lenMul * (p.dmgMul || 1) * BAL.towerDmgMul;
+      if (p.def.crit > 0 && Math.random() < p.def.crit) dmg *= p.def.critMul;
+      if (p.def.splash) {
+        for (const cr of state.creeps) {
+          if (cr.dead) continue;
+          if (Math.hypot(cr.x - p.tx, cr.y - p.ty) <= p.def.splash) {
+            damageCreep(cr, dmg, p.sourceTower);
+            if (p.def.burn) { cr.burn = Math.max(cr.burn, p.def.burn); cr.burnUntil = state.gameTime + p.def.burnDur; cr.burnSource = p.sourceTower; }
+            if (p.def.slow) applySlow(cr, p.def.slow, p.def.slowDur);
+          }
+        }
+        state.effects.push({ type:'boom', x: p.tx, y: p.ty, age: 0, life: 0.35, r: p.def.splash, color: p.color });
+      } else {
+        if (p.target && !p.target.dead) {
+          damageCreep(p.target, dmg, p.sourceTower);
+          if (p.def.burn) { p.target.burn = Math.max(p.target.burn, p.def.burn); p.target.burnUntil = state.gameTime + p.def.burnDur; p.target.burnSource = p.sourceTower; }
+          if (p.def.execute && !p.target.dead && p.target.hp / p.target.maxhp < p.def.execute && !p.target.boss) {
+            damageCreep(p.target, p.target.hp + 1, p.sourceTower, true); // true damage, bypass armor
+          }
+          if (p.def.slow) applySlow(p.target, p.def.slow, p.def.slowDur);
+          if (p.def.slowRadius) {
+            for (const cr of state.creeps) {
+              if (cr === p.target || cr.dead) continue;
+              if (Math.hypot(cr.x - p.target.x, cr.y - p.target.y) <= p.def.slowRadius) applySlow(cr, p.def.slow, p.def.slowDur);
+            }
+          }
+          if (p.def.bounces && p.bouncesLeft > 0) {
+            const hit = p.target;
+            p.visited.add(hit);
+            let next = null, bd = Infinity;
+            for (const cr of state.creeps) {
+              if (cr.dead || p.visited.has(cr)) continue;
+              const dd = Math.hypot(cr.x - hit.x, cr.y - hit.y);
+              if (dd > p.def.chainRange) continue;
+              if (dd < bd) { bd = dd; next = cr; }
+            }
+            if (next) {
+              state.effects.push({ type:'chain', x1: hit.x, y1: hit.y, x2: next.x, y2: next.y, age: 0, life: 0.22, color: p.color });
+              state.projectiles.push({
+                x: hit.x, y: hit.y, tx: next.x, ty: next.y,
+                target: next, speed: p.speed * 1.5, def: p.def, color: p.color, lenMul: p.lenMul,
+                sourceTower: p.sourceTower,
+                bouncesLeft: p.bouncesLeft - 1,
+                dmgMul: (p.dmgMul || 1) * p.def.chainFalloff,
+                visited: p.visited,
+              });
+            }
+          }
+        }
+      }
+      p.dead = true;
+    } else {
+      p.x += dx/d * step;
+      p.y += dy/d * step;
+    }
+  }
+  state.projectiles = state.projectiles.filter(p => !p.dead);
+
+  for (const e of state.effects) e.age += dt;
+  state.effects = state.effects.filter(e => e.age < e.life);
+
+  endWaveIfDone();
+}
+
+// === DRAW ===
+function draw() {
+  ctx.clearRect(0, 0, gW, gH);
+  // Locked-area backdrop (everything outside current play area)
+  const ox = colOffset();
+  ctx.fillStyle = '#0a0c12';
+  ctx.fillRect(0, 0, gW, gH);
+  // Active-area subtle frame
+  ctx.fillStyle = '#0e1320';
+  ctx.fillRect(ox*cell, 0, COLS*cell, ROWS*cell);
+  // Translate so all subsequent drawing uses logical [0, COLS) on x.
+  ctx.save();
+  ctx.translate(ox * cell, 0);
+  // grid tiles
+  ctx.fillStyle = '#1a1e2e';
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    ctx.fillRect(c*cell+1, r*cell+1, cell-2, cell-2);
+  }
+  // path highlight
+  if (state.path) {
+    ctx.fillStyle = 'rgba(126,224,255,0.09)';
+    for (const p of state.path) ctx.fillRect(p.c*cell+1, p.r*cell+1, cell-2, cell-2);
+    ctx.strokeStyle = 'rgba(126,224,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    state.path.forEach((p,i) => {
+      const x = (p.c+0.5)*cell, y = (p.r+0.5)*cell;
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+  // entry/exit
+  drawSpecialTile(ENTRY.c, ENTRY.r, '#2b6f4a', 'IN');
+  drawSpecialTile(EXIT.c,  EXIT.r,  '#a83a3a', 'OUT');
+  // hover preview (armed shape footprint)
+  if (hoverCell && !state.waveActive && state.phase === 'PLAYING' && state.armedShape != null) {
+    const shape = state.shapeDraft[state.armedShape];
+    if (shape) {
+      const fit = shapeFitsAt(shape, hoverCell.c, hoverCell.r);
+      const ok = fit && state.gold >= shapeCost(shape);
+      ctx.strokeStyle = ok ? '#7ee0ff90' : '#ff5a5a90';
+      ctx.fillStyle = ok ? 'rgba(126,224,255,0.18)' : 'rgba(255,90,90,0.18)';
+      ctx.lineWidth = 2;
+      for (const [dc, dr] of shape.cells) {
+        const c = hoverCell.c + dc, r = hoverCell.r + dr;
+        if (c < 0 || c >= COLS || r < 0 || r >= ROWS) continue;
+        ctx.fillRect(c*cell+2, r*cell+2, cell-4, cell-4);
+        ctx.strokeRect(c*cell+2, r*cell+2, cell-4, cell-4);
+      }
+    }
+  }
+  // rocks (drawn under tower iteration as their own pass for clarity)
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = state.grid[r][c];
+    if (!t || t.type !== 'rock') continue;
+    ctx.fillStyle = '#2a2620';
+    ctx.fillRect(c*cell+2, r*cell+2, cell-4, cell-4);
+    ctx.fillStyle = '#3d362d';
+    ctx.fillRect(c*cell+5, r*cell+5, cell-10, cell-10);
+  }
+  // towers - each cell holds one card emoji (or stays empty), enforced by the
+  // slot-limit-equals-cell-count rule. Walks the grid but dedupes by tower
+  // identity so each multi-cell tower is drawn once.
+  // Pulse runs on wall-clock so it doesn't speed up at high game-speed.
+  // Trace only the external edges of a tower's polyomino footprint with the
+  // current strokeStyle/lineWidth. Used for per-tower outlines, pending glow,
+  // and selection highlight - so cells of the same tower don't draw seams.
+  const strokeFootprint = (cells, inset) => {
+    const set = new Set(cells.map(cl => cl.r + ',' + cl.c));
+    ctx.beginPath();
+    for (const cl of cells) {
+      const x0 = cl.c * cell + inset, y0 = cl.r * cell + inset;
+      const x1 = (cl.c + 1) * cell - inset, y1 = (cl.r + 1) * cell - inset;
+      if (!set.has((cl.r - 1) + ',' + cl.c)) { ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); }
+      if (!set.has((cl.r + 1) + ',' + cl.c)) { ctx.moveTo(x0, y1); ctx.lineTo(x1, y1); }
+      if (!set.has(cl.r + ',' + (cl.c - 1))) { ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); }
+      if (!set.has(cl.r + ',' + (cl.c + 1))) { ctx.moveTo(x1, y0); ctx.lineTo(x1, y1); }
+    }
+    ctx.stroke();
+  };
+  const drawnTowers = new Set();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const cellRef = state.grid[r][c];
+    if (!cellRef || cellRef.type === 'rock') continue;
+    const tower = cellRef.type === 'tower' ? cellRef : cellRef.tower;
+    if (!tower || drawnTowers.has(tower)) continue;
+    drawnTowers.add(tower);
+    const cardIds = Object.keys(tower.cardLevels);
+    const cells = tower.cells || [{ c: tower.c, r: tower.r }];
+    for (let i = 0; i < cells.length; i++) {
+      const cl = cells[i];
+      const isCenter = (cl.c === tower.c && cl.r === tower.r);
+      const ccx = cl.c * cell + cell / 2;
+      const ccy = cl.r * cell + cell / 2;
+      // Base plate (slightly dimmer for non-center cells)
+      ctx.fillStyle = isCenter ? '#22263a' : '#1c2236';
+      ctx.fillRect(cl.c*cell+3, cl.r*cell+3, cell-6, cell-6);
+      // One emoji per cell (in pick order). If no card for this slot:
+      //   center -> colored dot;  blocker -> dim tinted square.
+      if (cardIds[i]) {
+        const card = CARDS.find(cc => cc.id === cardIds[i]);
+        if (card) {
+          const sz = Math.max(12, Math.floor(cell * 0.6));
+          ctx.font = sz + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(card.emoji, ccx, ccy);
+        }
+      } else if (isCenter) {
+        ctx.fillStyle = tower.color;
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, cell*0.28, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = tower.color;
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(cl.c*cell+6, cl.r*cell+6, cell-12, cell-12);
+        ctx.globalAlpha = 1;
+      }
+    }
+    // Per-tower colored outline (traces only external edges of the footprint
+    // so cells of the same tower don't draw seams between them).
+    ctx.strokeStyle = tower.tint || '#7ee0ff';
+    ctx.lineWidth = 2;
+    strokeFootprint(cells, 1);
+    // Selection: white outline around the whole footprint + range circle.
+    if (state.selectedCell && state.selectedCell.c === tower.c && state.selectedCell.r === tower.r) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2.5;
+      strokeFootprint(cells, 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.beginPath();
+      ctx.arc(tower.c*cell + cell/2, tower.r*cell + cell/2, tower.range*cell, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+  // creeps
+  for (const cr of state.creeps) {
+    const cx = cr.x*cell, cy = cr.y*cell;
+    ctx.fillStyle = cr.hitFlash > 0 ? '#fff' : cr.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, cell*cr.size, 0, Math.PI*2);
+    ctx.fill();
+    if (cr.burn > 0) {
+      ctx.strokeStyle = '#ff8a55';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, cell*cr.size + 1, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    if (cr.boss) {
+      ctx.strokeStyle = '#ffe066';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    // hp bar
+    const barW = cell * (cr.boss ? 0.85 : 0.5);
+    const hpF = Math.max(0, cr.hp / cr.maxhp);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(cx - barW/2, cy - cell*cr.size - 6, barW, 3);
+    ctx.fillStyle = hpF > 0.5 ? '#6f6' : hpF > 0.25 ? '#fc6' : '#f55';
+    ctx.fillRect(cx - barW/2, cy - cell*cr.size - 6, barW*hpF, 3);
+    if (cr.slow > 0) {
+      ctx.strokeStyle = '#aaddff';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, cell*cr.size + 2, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+  // projectiles
+  for (const p of state.projectiles) {
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x*cell, p.y*cell, 3, 0, Math.PI*2);
+    ctx.fill();
+  }
+  // effects
+  for (const e of state.effects) {
+    const a = 1 - e.age / e.life;
+    if (e.type === 'dmg') {
+      ctx.fillStyle = `rgba(255,200,80,${a})`;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(e.text, e.x*cell, e.y*cell - 30*(1-a));
+    } else if (e.type === 'poof') {
+      ctx.strokeStyle = `rgba(200,200,220,${a})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(e.x*cell, e.y*cell, (1-a)*cell*0.4, 0, Math.PI*2);
+      ctx.stroke();
+    } else if (e.type === 'boom') {
+      ctx.strokeStyle = `rgba(255,170,80,${a*0.85})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(e.x*cell, e.y*cell, e.r*cell*(1-a*0.4), 0, Math.PI*2);
+      ctx.stroke();
+    } else if (e.type === 'chain') {
+      ctx.strokeStyle = `rgba(220,180,255,${a})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(e.x1*cell, e.y1*cell);
+      ctx.lineTo(e.x2*cell, e.y2*cell);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+  // Locked-area dim cell lattice (drawn in absolute coords, outside translate)
+  const tc = targetCols();
+  ctx.fillStyle = '#10131c';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < ox; c++) ctx.fillRect(c*cell+1, r*cell+1, cell-2, cell-2);
+    for (let c = ox + COLS; c < tc; c++) ctx.fillRect(c*cell+1, r*cell+1, cell-2, cell-2);
+  }
+  // Active-area border
+  ctx.strokeStyle = '#2a3045';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(ox*cell + 0.5, 0.5, COLS*cell - 1, ROWS*cell - 1);
+}
+
+function drawSpecialTile(c, r, color, label) {
+  ctx.fillStyle = color;
+  ctx.fillRect(c*cell+1, r*cell+1, cell-2, cell-2);
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${Math.max(9, cell*0.28)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, c*cell + cell/2, r*cell + cell/2);
+}
+
+// === UI ===
+function syncHUD() {
+  document.getElementById('wave').textContent = state.wave;
+  document.getElementById('lives').textContent = Math.max(0, state.lives);
+  document.getElementById('gold').textContent = state.gold;
+  const lb = Math.round((lengthBonus() - 1) * 100);
+  document.getElementById('lenb').textContent = '+' + lb + '%';
+  renderShapeDraft();
+  const sel = towerFromCell(state.selectedCell);
+  document.getElementById('sell-btn').disabled = !sel || state.waveActive;
+  const wb = document.getElementById('wave-btn');
+  wb.textContent = state.waveActive ? 'Wave running…' : 'Start Wave';
+  wb.disabled = state.waveActive;
+  document.getElementById('speed-btn').textContent = state.speedMul + '×';
+  refreshTowerInfo(sel);
+}
+
+function towerStatParts(t) {
+  const parts = [
+    'DMG ' + t.dmg.toFixed(0),
+    'RNG ' + t.range.toFixed(1),
+    'RATE ' + (t.rate * BAL.towerRateMul).toFixed(1) + '/s',
+  ];
+  if (t.splash) parts.push('SPL ' + t.splash.toFixed(1));
+  if (t.slow) parts.push('SLOW ' + Math.round(t.slow*100) + '%');
+  if (t.slowRadius) parts.push('AOE ' + t.slowRadius.toFixed(1));
+  if (t.bounces) parts.push('BNC ' + t.bounces);
+  if (t.burn) parts.push('BURN ' + t.burn.toFixed(0) + '/s');
+  if (t.crit) parts.push('CRT ' + Math.round(t.crit*100) + '%×' + t.critMul.toFixed(1));
+  if (t.execute) parts.push('EXEC <' + Math.round(t.execute*100) + '%');
+  if (t.multishot > 1) parts.push('×' + t.multishot);
+  return parts;
+}
+
+// Owned cards as "Name" or "Name ×N" (stackable cards picked more than once).
+function towerCardSummary(t) {
+  return Object.entries(t.cardLevels).map(([id, n]) => {
+    const card = CARDS.find(c => c.id === id);
+    const emoji = card ? card.emoji : '';
+    const name = card ? card.name : id;
+    return emoji + ' ' + name + (n > 1 ? ' Lv ' + n : '');
+  });
+}
+
+function refreshTowerInfo(sel) {
+  const ti = document.getElementById('tower-info');
+  if (!sel) { ti.classList.add('empty'); return; }
+  ti.classList.remove('empty');
+  const ownedCount = Object.keys(sel.cardLevels).length;
+  const limit = towerSlotLimit(sel);
+  document.getElementById('ti-name').textContent = 'Tower · ' + ownedCount + '/' + limit + ' cards';
+  document.getElementById('ti-stats').textContent = towerStatParts(sel).join(' · ');
+  const wrap = document.getElementById('ti-upgrades');
+  wrap.innerHTML = '';
+  const canAfford = state.gold >= UPGRADE_COST;
+  const b = document.createElement('button');
+  b.className = 'upg-btn upgrade-btn' + (canAfford && !state.waveActive ? '' : ' disabled');
+  b.disabled = !canAfford || state.waveActive;
+  b.innerHTML = '<div class="label">★ Upgrade — pick 1 of 3 cards <span class="cost">' + UPGRADE_COST + 'g</span></div>';
+  b.onclick = () => openCardModal(sel);
+  wrap.appendChild(b);
+  if (ownedCount > 0) {
+    const m = document.createElement('div');
+    m.className = 'ti-maxed';
+    m.textContent = 'Cards: ' + towerCardSummary(sel).join(', ');
+    wrap.appendChild(m);
+  }
+}
+
+function setMsg(m) {
+  document.getElementById('msg').textContent = m;
+  clearTimeout(setMsg._to);
+  setMsg._to = setTimeout(() => { document.getElementById('msg').textContent = ''; }, 2400);
+}
+
+function showBanner(text) {
+  const b = document.getElementById('banner');
+  b.textContent = text;
+  b.classList.add('show');
+  clearTimeout(showBanner._to);
+  showBanner._to = setTimeout(() => b.classList.remove('show'), 2200);
+}
+
+function gameOver() {
+  state.phase = 'GAMEOVER';
+  state.waveActive = false;
+  hideTutorialTip();
+  // If auto-play is on, record this run in the session counters. Don't toggle
+  // auto-play off - the autoTick loop will sit idle on GAMEOVER, holding the
+  // stats screen until the user clicks Restart, then resume on the new game.
+  if (autoPlay) {
+    autoStats.games += 1;
+    autoStats.bestWave = Math.max(autoStats.bestWave, state.wave - 1);
+    updateAutoStatsUI();
+  }
+  const o = document.getElementById('overlay');
+  document.getElementById('ov-title').textContent = 'Overrun';
+  document.getElementById('ov-desc').textContent = 'The maze ran out. Stats below — tune balance, then Restart.';
+  document.getElementById('ov-stats').innerHTML = renderGameOverStats();
+  document.getElementById('ov-btn').textContent = 'Restart';
+  o.classList.add('show');
+}
+
+function renderGameOverStats() {
+  const s = state.stats || {};
+  const elapsedSec = Math.max(1, ((performance.now() - (s.startedAt || performance.now())) / 1000) | 0);
+  const mm = Math.floor(elapsedSec / 60), ss = (elapsedSec % 60).toString().padStart(2,'0');
+  // Surviving towers
+  const towers = [];
+  const seen = new Set();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = state.grid[r][c];
+    if (!t) continue;
+    const tower = t.type === 'tower' ? t : (t.type === 'blocker' ? t.tower : null);
+    if (tower && !seen.has(tower)) { seen.add(tower); towers.push(tower); }
+  }
+  // Card count per tower as a proxy for upgrade depth (was levels, removed with XP system).
+  const cardCounts = towers.map(t => Object.values(t.cardLevels || {}).reduce((a,b)=>a+b,0));
+  const totalCards = cardCounts.reduce((a,b)=>a+b,0);
+  const avgCards = towers.length ? (totalCards / towers.length).toFixed(1) : '0';
+  const maxCards = cardCounts.length ? Math.max(...cardCounts) : 0;
+  const totalCells = towers.reduce((a,t)=>a+(t.cells?t.cells.length:1), 0);
+  // Kills
+  const k = s.kills || {};
+  const totalKills = (k.standard||0)+(k.fast||0)+(k.armored||0)+(k.swarm||0)+(k.boss||0);
+  // Cards taken
+  const cardLines = Object.entries(s.cardsTaken || {})
+    .sort((a,b)=>b[1]-a[1])
+    .map(([id,n])=>{ const card = CARDS.find(c=>c.id===id); return (card?card.emoji+' '+card.name:id) + ' ×' + n; });
+  return `
+    <div class="go-grid">
+      <div class="go-col">
+        <div class="go-hd">Run</div>
+        <div class="go-row">Waves cleared: <b>${state.wave - 1}</b></div>
+        <div class="go-row">Time: <b>${mm}:${ss}</b></div>
+        <div class="go-row">Speed: <b>${state.speedMul}×</b></div>
+        <div class="go-row">Leaks: <b>${s.leaks||0}</b>${s.bossLeaks?' (boss '+s.bossLeaks+')':''}</div>
+        <div class="go-row">Path length: <b>${pathLength()}</b> tiles · bonus <b>+${Math.round((lengthBonus()-1)*100)}%</b></div>
+      </div>
+      <div class="go-col">
+        <div class="go-hd">Economy</div>
+        <div class="go-row">Gold earned: <b>${s.goldEarned||0}</b></div>
+        <div class="go-row">Gold spent: <b>${s.goldSpent||0}</b></div>
+        <div class="go-row">Gold banked: <b>${state.gold}</b></div>
+        <div class="go-row">Towers built: <b>${s.towersBuilt||0}</b> · sold <b>${s.towersSold||0}</b></div>
+        <div class="go-row">Total damage: <b>${Math.round(s.totalDmgDealt||0).toLocaleString()}</b></div>
+      </div>
+      <div class="go-col">
+        <div class="go-hd">Kills (${totalKills.toLocaleString()})</div>
+        <div class="go-row">Standard: <b>${k.standard||0}</b></div>
+        <div class="go-row">Fast: <b>${k.fast||0}</b></div>
+        <div class="go-row">Armored: <b>${k.armored||0}</b></div>
+        <div class="go-row">Swarm: <b>${k.swarm||0}</b></div>
+        <div class="go-row">Boss: <b>${k.boss||0}</b></div>
+      </div>
+      <div class="go-col">
+        <div class="go-hd">Towers (${towers.length})</div>
+        <div class="go-row">Cells placed: <b>${totalCells}</b></div>
+        <div class="go-row">Avg cards/tower: <b>${avgCards}</b></div>
+        <div class="go-row">Most-upgraded: <b>${maxCards}</b> picks</div>
+      </div>
+    </div>
+    ${cardLines.length ? '<div class="go-cards"><div class="go-hd">Cards taken</div>' + cardLines.map(s=>'<span class="go-chip">'+s+'</span>').join('') + '</div>' : ''}
+  `;
+}
+
+function startGame() {
+  document.getElementById('card-modal').classList.remove('show');
+  state = newState();
+  state.phase = 'PLAYING';
+  seedRocks();
+  recomputePath();
+  document.getElementById('overlay').classList.remove('show');
+  buildTowerBar();
+  resize();
+  showTutorialTip(1);
+  syncHUD();
+}
+
+function buildTowerBar() {
+  document.getElementById('towers').innerHTML = '<div class="shape-draft" id="shape-draft"></div>';
+  renderShapeDraft();
+}
+
+// Mini-icon for a shape: a CSS grid of fill/empty cells, centered cell highlighted.
+function shapeIconHTML(shape) {
+  const cells = shape.cells;
+  let mnC = Infinity, mxC = -Infinity, mnR = Infinity, mxR = -Infinity;
+  for (const [dc, dr] of cells) {
+    if (dc < mnC) mnC = dc; if (dc > mxC) mxC = dc;
+    if (dr < mnR) mnR = dr; if (dr > mxR) mxR = dr;
+  }
+  const w = mxC - mnC + 1, h = mxR - mnR + 1;
+  let html = '<div class="shape-grid" style="grid-template-columns:repeat(' + w + ',8px);grid-template-rows:repeat(' + h + ',8px);">';
+  for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
+    const dc = mnC + c, dr = mnR + r;
+    const isFill = cells.some(([sc, sr]) => sc === dc && sr === dr);
+    const isCenter = dc === 0 && dr === 0;
+    const cls = !isFill ? 'sg-cell' : (isCenter ? 'sg-cell fill center' : 'sg-cell fill');
+    html += '<div class="' + cls + '"></div>';
+  }
+  return html + '</div>';
+}
+
+function renderShapeDraft() {
+  if (!state || !state.shapeDraft) return;
+  const wrap = document.getElementById('shape-draft');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  for (let i = 0; i < state.shapeDraft.length; i++) {
+    const shape = state.shapeDraft[i];
+    const cost = shapeCost(shape);
+    const armed = state.armedShape === i;
+    const poor = state.gold < cost;
+    const btn = document.createElement('button');
+    btn.className = 'shape-btn' + (armed ? ' armed' : '') + (poor ? ' poor' : '');
+    btn.innerHTML = shapeIconHTML(shape) +
+      '<div class="sb-info"><span class="sb-name">' + shape.name + '</span>' +
+      '<span class="sb-cost">' + cost + 'g</span></div>';
+    btn.onclick = () => {
+      if (state.waveActive) { setMsg('Build between waves.'); return; }
+      if (state.gold < cost) { setMsg('Not enough gold for that shape.'); return; }
+      state.armedShape = armed ? null : i;
+      state.selectedCell = null;
+      syncHUD();
+    };
+    wrap.appendChild(btn);
+  }
+}
+
+// === DESIGN PANEL ===
+function syncDesignPanelInputs() {
+  document.querySelectorAll('#design-panel input[data-key]').forEach(inp => {
+    inp.value = BAL[inp.dataset.key];
+  });
+}
+function applyDesignPanel() {
+  document.querySelectorAll('#design-panel input[data-key]').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v)) BAL[inp.dataset.key] = v;
+  });
+  try { localStorage.setItem('switchback-bal', JSON.stringify(BAL)); } catch(e) {}
+  startGame();
+  document.getElementById('design-panel').classList.remove('show');
+}
+function resetDesignPanel() {
+  BAL = { ...DEFAULT_BAL };
+  syncDesignPanelInputs();
+  try { localStorage.removeItem('switchback-bal'); } catch(e) {}
+}
+
+// === AUTO-TEST AI ===
+// Picks the highest-priority offered card. Favors offense so a "competent" build
+// is produced — good for surfacing whether damage keeps pace with wave scaling.
+// Card priority: tuned around the new gold-cost system.
+// Pure stat boosters (sharp/quick) stack with no downside, so they're worth more
+// than they look. Splash + Multishot is a top combo, so both rate high.
+// Brutal slows fire rate every stack which hurts DPS less than expected after the
+// stacking nerf, but still ranks below sharp. Frost is mostly defensive => low.
+const CARD_PRIORITY = { sharp:10, splash:9, quick:8, multi:8, brutal:7, crit:7, chain:7, exec:7, burn:6, longbarrel:5, greed:4, frost:3, eagleeye:3 };
+function autoPickCard(opts, tower) {
+  let best = opts[0], bestP = -Infinity;
+  for (const c of opts) {
+    const owned = tower && tower.cardLevels ? (tower.cardLevels[c.id] || 0) : 0;
+    // Strong specialization bonus so an established tower stacks one mechanic deep.
+    const stackBonus = owned > 0 ? 4.0 : 0;
+    // Penalize a third Brutal/EagleEye stack (compound fire-rate penalty hurts).
+    const rateHit = ((c.id === 'brutal' || c.id === 'eagleeye') && owned >= 2) ? -3.0 : 0;
+    const p = (CARD_PRIORITY[c.id] || 1) + stackBonus + rateHit + Math.random() * 0.3;
+    if (p > bestP) { bestP = p; best = c; }
+  }
+  return best;
+}
+
+// Count path tiles a tower at (c,r) with given range can shoot at.
+function autoCoverageOf(c, r, range, path) {
+  let n = 0;
+  for (const p of (path || state.path || [])) {
+    const d = Math.hypot(p.c + 0.5 - (c + 0.5), p.r + 0.5 - (r + 0.5));
+    if (d <= range) n++;
+  }
+  return n;
+}
+
+// Refund towers whose firing center can no longer shoot any path tile - but
+// only if they have no cards (preserve player investment in upgraded ones).
+function autoSellDeadweight() {
+  const path = state.path || [];
+  const toSell = [];
+  const seen = new Set();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = state.grid[r][c];
+    if (!t || t.type !== 'tower' || seen.has(t)) continue;
+    seen.add(t);
+    if (Object.keys(t.cardLevels).length > 0) continue; // never sell upgraded towers
+    if (autoCoverageOf(t.c, t.r, t.range, path) === 0) toSell.push(t);
+  }
+  for (const t of toSell) {
+    state.gold += Math.floor(t.invested * (BAL.sellBackPct / 100));
+    for (const cell of t.cells) state.grid[cell.r][cell.c] = null;
+  }
+  if (toSell.length) recomputePath();
+}
+
+// Upgrade phase: focus gold on the highest-coverage towers (most shots per wave).
+// Skip towers that can't shoot anything yet (probably about to be sold or already
+// orphaned by a path shift).
+function autoUpgrade() {
+  const entries = [];
+  const seen = new Set();
+  const path = state.path || [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = state.grid[r][c];
+    if (!t || t.type !== 'tower' || seen.has(t)) continue;
+    seen.add(t);
+    const cov = autoCoverageOf(t.c, t.r, t.range, path);
+    if (cov === 0) continue;
+    entries.push({ tower: t, cov });
+  }
+  if (!entries.length) return;
+  // Highest coverage first; tiebreak by closer-to-entry (creeps eat damage sooner).
+  entries.sort((a, b) => b.cov - a.cov || a.tower.r - b.tower.r);
+  // Reserve enough gold to keep building reasonably between waves.
+  // Spend everything that's left. autoBuild already reserved upgrade money,
+  // and kills + interest fund the next gap's build phase.
+  const reserve = 0;
+  // First pass: top 40% of towers get priority - concentrated DPS beats spread.
+  const focusN = Math.max(2, Math.ceil(entries.length * 0.5));
+  let safety = 200;
+  // Round-robin within the focused group until budget exhausted, then expand.
+  for (let group = 0; group < 2 && safety > 0; group++) {
+    const pool = entries.slice(0, group === 0 ? focusN : entries.length);
+    let bought = true;
+    while (bought && state.gold >= UPGRADE_COST + reserve && safety-- > 0) {
+      bought = false;
+      for (const { tower } of pool) {
+        if (state.gold < UPGRADE_COST + reserve) break;
+        const opts = drawCards(tower, 3);
+        if (!opts.length) continue;
+        const pick = autoPickCard(opts, tower);
+        state.gold -= UPGRADE_COST;
+        if (state.stats) {
+          state.stats.goldSpent += UPGRADE_COST;
+          state.stats.cardsTaken[pick.id] = (state.stats.cardsTaken[pick.id] || 0) + 1;
+        }
+        applyCardTo(pick, tower);
+        tower.cardLevels[pick.id] = (tower.cardLevels[pick.id] || 0) + 1;
+        bought = true;
+      }
+    }
+  }
+}
+
+// Resulting path length if a blocker sat on (c,r); -1 if it would seal the path.
+function autoPathLenWith(c, r) {
+  state.grid[r][c] = { type: '_probe_' };
+  const p = findPathOn(state.grid);
+  state.grid[r][c] = null;
+  return p ? p.length - 1 : -1;
+}
+
+// Serpentine maze plan: walls every 2 rows (rows 2, 4, 6, ...) with the gap
+// alternating sides. Each wall is filled in order toward the gap so the path is
+// forced to wind. Returns positions in build priority order.
+function autoMazePlan() {
+  const plan = [];
+  for (let i = 0; i * 2 + 2 < ROWS - 1; i++) {
+    const r = 2 + i * 2;
+    const gapRight = i % 2 === 0;
+    if (gapRight) {
+      // gap at col COLS-1; fill from 0 .. COLS-2
+      for (let c = 0; c < COLS - 1; c++) plan.push({ c, r });
+    } else {
+      // gap at col 0; fill from COLS-1 .. 1
+      for (let c = COLS - 1; c > 0; c--) plan.push({ c, r });
+    }
+  }
+  return plan;
+}
+
+function autoNextPlannedTile() {
+  const plan = autoMazePlan();
+  for (const pos of plan) {
+    if (state.grid[pos.r][pos.c]) continue;
+    if (pos.c === ENTRY.c && pos.r === ENTRY.r) continue;
+    if (pos.c === EXIT.c && pos.r === EXIT.r) continue;
+    if (autoPathLenWith(pos.c, pos.r) < 0) continue;
+    return pos;
+  }
+  return null;
+}
+
+// Fallback when the maze plan is full: greedy single-tile path-length maximizer.
+function autoBestSpot() {
+  const pathSet = new Set((state.path || []).map(p => p.r + ',' + p.c));
+  let best = null, bestScore = -Infinity;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (state.grid[r][c]) continue;
+    if (c === ENTRY.c && r === ENTRY.r) continue;
+    if (c === EXIT.c && r === EXIT.r) continue;
+    const len = autoPathLenWith(c, r);
+    if (len < 0) continue;
+    let adj = 0;
+    for (const [dc, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) if (pathSet.has((r+dr) + ',' + (c+dc))) adj = 1;
+    const score = len * 100 + adj * 10 + Math.random();
+    if (score > bestScore) { bestScore = score; best = { c, r }; }
+  }
+  return best;
+}
+
+// Build phase: pick the shape+anchor with the best (path-gain + coverage) per gold.
+// Looks across ALL three draft shapes each iteration (so cheap shapes win when
+// they offer the best value) and only considers anchors near the current path.
+// Build phase: pick the shape+anchor that maximizes path-gain plus coverage of
+// the NEW path. Path extension is weighted 2-3x coverage because every extra
+// path tile is a shot for EVERY tower (multiplicative across the maze) while
+// coverage is local to one tower. Tower count is capped by wave so the AI
+// stops dumping gold on placements and starts feeding upgrades.
+function autoBuild() {
+  autoSellDeadweight();
+  // Count existing towers so we know how many more we want.
+  let towerCount = 0;
+  const seenT = new Set();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = state.grid[r][c];
+    if (t && t.type === 'tower' && !seenT.has(t)) { seenT.add(t); towerCount++; }
+  }
+  // Target grows slowly: 3 to start, +1 every 4 waves. Tight cap forces gold
+  // into upgrades instead of endless tower placement.
+  const targetTowers = 3 + Math.floor((state.wave || 0) / 4);
+  if (towerCount >= targetTowers) return;
+  const maxPlace = targetTowers - towerCount;
+
+  let placed = 0, stuck = 0;
+  while (placed < maxPlace && stuck < 4) {
+    // Reserve enough for ONE upgrade per existing tower (recomputed every step
+    // so the cap actually moves as we place). Also enforce at least one upgrade
+    // worth so even the first placement leaves room for an upgrade afterwards.
+    const currentTowers = towerCount + placed;
+    const upgradeReserve = Math.max(UPGRADE_COST, currentTowers * UPGRADE_COST);
+    const minShapeCost = state.shapeDraft.reduce((m, s) => Math.min(m, shapeCost(s)), Infinity);
+    if (state.gold < minShapeCost + upgradeReserve) break;
+
+    const currentPath = state.path || [];
+    const currentLen = currentPath.length - 1;
+    const seen = new Set();
+    const candidates = [];
+    for (const p of currentPath) {
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
+        const c = p.c + dc, r = p.r + dr;
+        if (c < 0 || c >= COLS || r < 0 || r >= ROWS) continue;
+        if (state.grid[r][c]) continue;
+        const k = r + ',' + c;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        candidates.push({ c, r });
+      }
+    }
+    if (!candidates.length) {
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+        if (!state.grid[r][c]) candidates.push({ c, r });
+      }
+    }
+
+    let bestPick = null;
+    for (let i = 0; i < state.shapeDraft.length; i++) {
+      const shape = state.shapeDraft[i];
+      const cost = shapeCost(shape);
+      if (state.gold < cost + upgradeReserve) continue;
+      for (const cand of candidates) {
+        const fit = shapeFitsAt(shape, cand.c, cand.r);
+        if (!fit) continue;
+        for (const cl of fit) state.grid[cl.r][cl.c] = { type: '_probe_' };
+        const p = findPathOn(state.grid);
+        for (const cl of fit) state.grid[cl.r][cl.c] = null;
+        if (!p) continue;
+        const newLen = p.length - 1;
+        const pathGain = Math.max(0, newLen - currentLen);
+        const coverage = autoCoverageOf(cand.c, cand.r, BASIC_TOWER.range, p);
+        const proximity = (ROWS - cand.r) * 0.04;
+        // Path extension weighted 8x (every tile = a shot for every tower);
+        // coverage weighted 3x (direct DPS, but local to this tower).
+        const score = pathGain * 8 + coverage * 3 + proximity - cost * 0.06;
+        if (!bestPick || score > bestPick.score) {
+          bestPick = { idx: i, shape, spot: cand, score, coverage };
+        }
+      }
+    }
+    if (!bestPick) { stuck += 1; break; }
+    if (!placeShape(bestPick.shape, bestPick.spot.c, bestPick.spot.r)) { stuck += 1; continue; }
+    state.shapeDraft[bestPick.idx] = randomShape();
+    placed += 1;
+  }
+}
+
+function autoTick() {
+  // Sit idle on the game-over screen so the user can analyze stats; resume on Restart.
+  if (state.phase !== 'PLAYING') return;
+  if (state.modalTower) closeCardModal(); // never use the modal in auto mode
+  if (!state.waveActive) {
+    // Upgrade-first: existing towers are proven assets, multiply their damage
+    // before adding new bodies. autoBuild has its own gold reserve so this
+    // doesn't starve placements. Final pass picks up any leftover after build.
+    autoUpgrade();
+    autoBuild();
+    autoUpgrade();
+    startWave();
+  }
+  hudDirty = true;
+}
+
+function updateAutoStatsUI() {
+  const el = document.getElementById('dp-auto-stats');
+  if (!el) return;
+  if (!autoPlay) { el.textContent = ''; return; }
+  let towerCount = 0, maxCards = 0;
+  const seen = new Set();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = state.grid[r][c];
+    if (!t || t.type !== 'tower' || seen.has(t)) continue;
+    seen.add(t);
+    towerCount += 1;
+    const cards = Object.values(t.cardLevels || {}).reduce((a,b)=>a+b,0);
+    if (cards > maxCards) maxCards = cards;
+  }
+  // AI-build tag bumps when build/upgrade logic changes - confirms the deployed
+  // JS isn't a stale cached version.
+  el.textContent = '[AIv3] Games: ' + autoStats.games + ' · best wave ' + autoStats.bestWave +
+    ' · towers ' + towerCount + ' · max picks ' + maxCards;
+}
+
+function toggleAutoPlay() {
+  autoPlay = !autoPlay;
+  const btn = document.getElementById('dp-auto');
+  btn.textContent = (autoPlay ? '⏸ Auto Test: ON' : '▶ Auto Test: OFF');
+  btn.classList.toggle('on', autoPlay);
+  if (autoPlay) {
+    autoStats = { games: 0, bestWave: 0 };
+    autoTimer = 0;
+    if (state.phase !== 'PLAYING') startGame();
+  }
+  updateAutoStatsUI();
+}
+
+// === RESIZE ===
+function targetCols() { return Math.max(COLS, BAL.mapTargetCols | 0); }
+function colOffset() { return Math.floor((targetCols() - COLS) / 2); }
+function resize() {
+  const wrap = document.getElementById('boardwrap');
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  const tc = targetCols();
+  cell = Math.max(12, Math.floor(Math.min(w / tc, h / ROWS)));
+  gW = cell * tc;
+  gH = cell * ROWS;
+  cv.width = gW; cv.height = gH;
+  cv.style.width = gW + 'px';
+  cv.style.height = gH + 'px';
+}
+
+// === INPUT ===
+function cellFromEvent(e) {
+  const rect = cv.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const ox = colOffset();
+  const c = Math.floor(x / cell) - ox;
+  const r = Math.floor(y / cell);
+  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return null;
+  return { c, r };
+}
+
+function onTap(e) {
+  e.preventDefault();
+  if (state.phase !== 'PLAYING') return;
+  if (state.modalTower) return;
+  const p = cellFromEvent(e);
+  if (!p) return;
+  const existing = state.grid[p.r][p.c];
+  if (existing) {
+    if (existing.type === 'rock') { state.selectedCell = null; state.armedShape = null; syncHUD(); return; }
+    const tower = towerFromCell(p);
+    state.selectedCell = tower ? { c: tower.c, r: tower.r } : null;
+    state.armedShape = null;
+    syncHUD();
+    return;
+  }
+  // Empty cell: try to place the armed shape from the draft.
+  if (state.armedShape != null) {
+    const shape = state.shapeDraft[state.armedShape];
+    if (shape && placeShape(shape, p.c, p.r)) {
+      state.shapeDraft[state.armedShape] = randomShape();
+      state.armedShape = null;
+    }
+  } else {
+    setMsg('Pick a shape below first, then tap an empty tile.');
+  }
+  syncHUD();
+}
+
+function onMove(e) { hoverCell = cellFromEvent(e); }
+
+// === BOOT ===
+window.addEventListener('DOMContentLoaded', () => {
+  cv = document.getElementById('cv');
+  ctx = cv.getContext('2d');
+  state = newState();
+  resize();
+  window.addEventListener('resize', resize);
+  cv.addEventListener('pointerdown', onTap);
+  cv.addEventListener('pointermove', onMove);
+  cv.addEventListener('pointerleave', () => { hoverCell = null; });
+  document.getElementById('sell-btn').onclick = sellSelected;
+  document.getElementById('wave-btn').onclick = startWave;
+  document.getElementById('speed-btn').onclick = cycleSpeed;
+  document.getElementById('ov-btn').onclick = startGame;
+  document.getElementById('design-toggle').onclick = () => {
+    document.getElementById('design-panel').classList.toggle('show');
+    syncDesignPanelInputs();
+  };
+  document.getElementById('dp-apply').onclick = applyDesignPanel;
+  document.getElementById('dp-reset').onclick = resetDesignPanel;
+  document.getElementById('dp-auto').onclick = () => {
+    toggleAutoPlay();
+    document.getElementById('design-panel').classList.remove('show'); // get the panel out of the way
+  };
+  // Cancel + backdrop click both close the modal without buying.
+  document.getElementById('cm-cancel').onclick = closeCardModal;
+  document.getElementById('card-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'card-modal') closeCardModal();
+  });
+  syncDesignPanelInputs();
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (autoPlay) {
+      autoTimer += dt;
+      if (autoTimer >= 0.25) { autoTimer = 0; autoTick(); updateAutoStatsUI(); }
+    }
+    if (state.phase === 'PLAYING' && !state.modalTower) {
+      const steps = state.speedMul || 1;
+      for (let i = 0; i < steps; i++) {
+        state.gameTime += dt;
+        update(dt);
+        if (state.phase !== 'PLAYING') break;
+      }
+    }
+    if (hudDirty) { syncHUD(); hudDirty = false; }
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#082b3a">
+<title>Prism Pond</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #082b3a; touch-action: none; overscroll-behavior: none; }
+  canvas { display: block; width: 100%; height: 100%; cursor: default; touch-action: none; }
+  #score  { position: fixed; top: 12px; left: 16px; color: #fff; font: 600 22px system-ui, -apple-system, sans-serif; text-shadow: 0 1px 4px rgba(0,0,0,.4); pointer-events: none; user-select: none; }
+  #zone   { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); color: #fff; font: 600 16px system-ui, -apple-system, sans-serif; text-shadow: 0 1px 4px rgba(0,0,0,.5); pointer-events: none; user-select: none; opacity: 0; transition: opacity .5s ease; letter-spacing: .04em; }
+  #hint   { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); color: #cdebff; font: 500 16px system-ui, -apple-system, sans-serif; text-shadow: 0 1px 4px rgba(0,0,0,.4); pointer-events: none; user-select: none; opacity: .85; transition: opacity 1.2s ease; text-align: center; }
+  .tbtn   { position: fixed; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(8,30,45,.65); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 2px 6px rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; padding: 0; z-index: 5; }
+  .tbtn:active { transform: scale(.94); }
+  #mapBtn   { top: 12px;  right: 12px; }
+  #postBtn  { top: 64px;  right: 12px; }
+  #maneBtn  { top: 116px; right: 12px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="score">⭐ 0</div>
+<div id="zone"></div>
+<div id="hint">tap and hold where you want to swim — chase the rainbow!</div>
+<button id="mapBtn"  class="tbtn" aria-label="Open map"      title="Map">🗺</button>
+<button id="postBtn" class="tbtn" aria-label="Postcards"     title="Postcards">📷</button>
+<button id="maneBtn" class="tbtn" aria-label="Change mane"   title="Mane">🦄</button>
+<script>
+(() => {
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const scoreEl  = document.getElementById('score');
+  const zoneEl   = document.getElementById('zone');
+  const hintEl   = document.getElementById('hint');
+
+  // --- audio: pentatonic chimes (no assets) ---
+  let ac = null;
+  const NOTES = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66]; // C5 D E G A C6 D6
+  function ensureAudio() {
+    if (ac) return;
+    try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  }
+  function chime(i, vol = 0.16) {
+    if (!ac) return;
+    const t = ac.currentTime;
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = 'triangle';
+    o.frequency.value = NOTES[((i % NOTES.length) + NOTES.length) % NOTES.length];
+    o.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o.start(t); o.stop(t + 0.6);
+  }
+  function arpeggio(steps, vol = 0.14) {
+    if (!ac) return;
+    steps.forEach((step, i) => {
+      const t = ac.currentTime + i * 0.07;
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = 'triangle';
+      o.frequency.value = NOTES[((step % NOTES.length) + NOTES.length) % NOTES.length];
+      o.connect(g); g.connect(ac.destination);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      o.start(t); o.stop(t + 0.45);
+    });
+  }
+
+  // --- canvas sizing ---
+  let VW = 0, VH = 0; // viewport in CSS pixels
+  function resize() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    VW = window.innerWidth;
+    VH = window.innerHeight;
+    cv.width  = Math.round(VW * dpr);
+    cv.height = Math.round(VH * dpr);
+    cv.style.width  = VW + 'px';
+    cv.style.height = VH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // --- world + camera ---
+  const WORLD = { w: 40000, h: 25000 };
+  const camera = { x: 0, y: 0 }; // top-left of viewport, in world coords
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  // --- zones ---
+  const ZONES = [
+    { name: 'The Pond',          cx: WORLD.w * 0.50, cy: WORLD.h * 0.50, r: 950, color: '#1a5b7a', tint: 'rgba( 90,180,210,0.40)', poi: 'sunbeam', stars: 5,  cool: 6000  },
+    { name: 'Sunshine Shallows', cx: WORLD.w * 0.50, cy: WORLD.h * 0.12, r: 720, color: '#7fb86f', tint: 'rgba(255,220,120,0.45)', poi: 'lilypad', stars: 3,  cool: 5000  },
+    { name: 'Coral Garden',      cx: WORLD.w * 0.88, cy: WORLD.h * 0.55, r: 760, color: '#c84e6c', tint: 'rgba(230,110,150,0.42)', poi: 'coral',   stars: 5,  cool: 6000  },
+    { name: 'Kelp Forest',       cx: WORLD.w * 0.12, cy: WORLD.h * 0.55, r: 760, color: '#2c6b4e', tint: 'rgba( 60,160,110,0.45)', poi: 'kelp',    stars: 3,  cool: 7000  },
+    { name: 'Glowy Cave',        cx: WORLD.w * 0.50, cy: WORLD.h * 0.88, r: 720, color: '#3a2880', tint: 'rgba(120, 90,230,0.50)', poi: 'crystal', stars: 10, cool: 10000 },
+    { name: 'Pearl Cove',        cx: WORLD.w * 0.18, cy: WORLD.h * 0.20, r: 680, color: '#9c7fc7', tint: 'rgba(220,210,255,0.40)', poi: 'pearl',   stars: 5,  cool: 6000  },
+    { name: 'Music Reef',        cx: WORLD.w * 0.82, cy: WORLD.h * 0.22, r: 700, color: '#3c8bbf', tint: 'rgba(120,200,240,0.42)', poi: 'music',   stars: 4,  cool: 5000  },
+    { name: 'Star Pool',         cx: WORLD.w * 0.18, cy: WORLD.h * 0.82, r: 700, color: '#1c1f48', tint: 'rgba( 80,100,200,0.42)', poi: 'stars',   stars: 7,  cool: 7000  },
+    { name: 'Bubble Falls',      cx: WORLD.w * 0.82, cy: WORLD.h * 0.78, r: 680, color: '#3aa0a8', tint: 'rgba(140,220,230,0.42)', poi: 'falls',   stars: 4,  cool: 5000  },
+    { name: 'Fog Patch',         cx: WORLD.w * 0.30, cy: WORLD.h * 0.65, r: 600, color: '#586878', tint: 'rgba(180,200,220,0.45)', poi: 'fog',     stars: 3,  cool: 5000  },
+  ];
+  ZONES.forEach(z => { z.px = z.cx; z.py = z.cy; z.cooldownUntil = 0; z.touchR = 120; z.visited = false; });
+
+  function zoneAt(x, y) {
+    let best = null, bestD = Infinity;
+    for (const z of ZONES) {
+      const d = Math.hypot(z.cx - x, z.cy - y);
+      if (d < z.r && d < bestD) { best = z; bestD = d; }
+    }
+    return best;
+  }
+
+  // --- input: tap/hold on a spot, unicorn swims toward it; WASD/arrows on desktop ---
+  const ARRIVE_R = 14; // stop within this many world units of the tap
+  const press = { active: false, sx: 0, sy: 0 };
+  const keys = {};
+
+  function pressStart(sx, sy) { if (mapOpen || postcardsOpen) { mapOpen = false; postcardsOpen = false; return; } press.active = true; press.sx = sx; press.sy = sy; ensureAudio(); }
+  function pressMove (sx, sy) { if (!press.active) return; press.sx = sx; press.sy = sy; }
+  function pressEnd()         { press.active = false; }
+
+  cv.addEventListener('mousedown',   e => { pressStart(e.clientX, e.clientY); });
+  cv.addEventListener('mousemove',   e => { pressMove (e.clientX, e.clientY); });
+  cv.addEventListener('mouseup',     ()=> { pressEnd(); });
+  cv.addEventListener('mouseleave',  ()=> { pressEnd(); });
+  cv.addEventListener('touchstart',  e => { e.preventDefault(); const t = e.touches[0]; pressStart(t.clientX, t.clientY); }, { passive: false });
+  cv.addEventListener('touchmove',   e => { e.preventDefault(); const t = e.touches[0]; pressMove (t.clientX, t.clientY); }, { passive: false });
+  cv.addEventListener('touchend',    e => { e.preventDefault(); pressEnd(); }, { passive: false });
+  cv.addEventListener('touchcancel', e => { e.preventDefault(); pressEnd(); }, { passive: false });
+
+  window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; ensureAudio(); });
+  window.addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
+
+  // --- top-right menu buttons (map / postcards / mane picker) ---
+  const mapBtn  = document.getElementById('mapBtn');
+  const postBtn = document.getElementById('postBtn');
+  const maneBtn = document.getElementById('maneBtn');
+  let mapOpen = false;
+  let postcardsOpen = false;
+  let manePick = 0;
+  function toggleMap()       { mapOpen = !mapOpen;       postcardsOpen = false; }
+  function togglePostcards() { postcardsOpen = !postcardsOpen; mapOpen = false; }
+  function cycleMane()       { manePick = (manePick + 1) % Math.max(1, 1 + maneShellsFound); }
+  function attachBtn(btn, fn) {
+    btn.addEventListener('click',      e => { e.stopPropagation(); fn(); });
+    btn.addEventListener('mousedown',  e => { e.stopPropagation(); });
+    btn.addEventListener('touchstart', e => { e.stopPropagation(); e.preventDefault(); fn(); }, { passive: false });
+  }
+  attachBtn(mapBtn,  toggleMap);
+  attachBtn(postBtn, togglePostcards);
+  attachBtn(maneBtn, cycleMane);
+
+  // --- player unicorn (world coords) ---
+  const unicorn = { x: WORLD.w / 2, y: WORLD.h / 2, angle: 0, wiggle: 0, speed: 0 };
+  const START = { x: unicorn.x, y: unicorn.y };
+  const BASE_SPEED = 150; // px/sec at full joystick deflection
+  const ZOOM = 0.45;     // <1 zooms the world out
+
+  // --- rainbow road network: persistent paths beneath the water ---
+  const COLORS = ['#ff5577', '#ff8a3d', '#ffd23f', '#7be86c', '#4fc3f7', '#7c6bff', '#c768ff'];
+  const ROAD_WIDTH = 56;      // world units (stroke width)
+  const ROAD_GRIP  = 30;      // distance from centerline that counts as "on road"
+  const ROAD_NEAR  = 110;     // within this distance counts as "near road"
+  const DOT_SPACING = 60;     // world units between sampled spline nodes
+  const HUB_RADIUS  = 130;    // ring of road around the starting point
+  const ROAD_BOOST  = 4.0;    // speed multiplier on a road
+  const NEAR_BOOST  = 2.0;    // speed multiplier near a road
+  const ROAD_BUFF_MS = 10000; // boost lingers this long after leaving
+
+  let score = 0;
+  let onUntil = 0, nearUntil = 0;
+  const paths = [];
+
+  // mix a road colour toward the pond's water blue so it reads as submerged
+  const WATER_RGB = { r: 8, g: 43, b: 58 };
+  function underwater(hex, mix) {
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const r = Math.round(parseInt(h.substr(0, 2), 16) * (1 - mix) + WATER_RGB.r * mix);
+    const g = Math.round(parseInt(h.substr(2, 2), 16) * (1 - mix) + WATER_RGB.g * mix);
+    const b = Math.round(parseInt(h.substr(4, 2), 16) * (1 - mix) + WATER_RGB.b * mix);
+    return `rgb(${r},${g},${b})`;
+  }
+  const ROAD_COLORS = COLORS.map(c => underwater(c, 0.22));
+
+  function pushBezierPoints(pts, ax, ay, cx, cy, bx, by, skipFirst = false) {
+    let approxLen = 0, prev = { x: ax, y: ay };
+    for (let s = 1; s <= 12; s++) {
+      const t = s / 12, u = 1 - t;
+      const x = u*u*ax + 2*u*t*cx + t*t*bx;
+      const y = u*u*ay + 2*u*t*cy + t*t*by;
+      approxLen += Math.hypot(x - prev.x, y - prev.y);
+      prev = { x, y };
+    }
+    const n = Math.max(4, Math.round(approxLen / DOT_SPACING));
+    const startI = skipFirst ? 1 : 0;
+    for (let i = startI; i < n; i++) {
+      const t = i / (n - 1), u = 1 - t;
+      const x = u*u*ax + 2*u*t*cx + t*t*bx;
+      const y = u*u*ay + 2*u*t*cy + t*t*by;
+      const idx = pts.length;
+      pts.push({ x, y, color: ROAD_COLORS[idx % ROAD_COLORS.length] });
+    }
+  }
+
+  // wistful path: chain of quadratic bezier segments with perpendicular
+  // control-point offsets that flip sign each segment → gentle S-curves
+  function makeEdge(ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    const px = -dy / len, py = dx / len;
+    const segs = 3 + Math.floor(Math.random() * 2); // 3 or 4 sub-curves
+    const seed = Math.random() < 0.5 ? 1 : -1;
+    const pts = [];
+    let lastX = ax, lastY = ay;
+    for (let s = 0; s < segs; s++) {
+      const t1 = (s + 1) / segs;
+      const tm = (s + 0.5) / segs;
+      const endX = ax + dx * t1;
+      const endY = ay + dy * t1;
+      const offMag = (0.20 + Math.random() * 0.22) * len / segs * 1.6;
+      const sign = (s % 2 === 0 ? 1 : -1) * seed;
+      const ctrlX = ax + dx * tm + px * offMag * sign;
+      const ctrlY = ay + dy * tm + py * offMag * sign;
+      pushBezierPoints(pts, lastX, lastY, ctrlX, ctrlY, endX, endY, s > 0);
+      lastX = endX; lastY = endY;
+    }
+    return { points: pts, closed: false };
+  }
+
+  function makeRing(cx, cy, radius, n) {
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const t = i / n * Math.PI * 2;
+      const wobble = 1 + Math.sin(t * 3 + Math.random() * 6) * 0.06;
+      pts.push({
+        x: cx + Math.cos(t) * radius * wobble,
+        y: cy + Math.sin(t) * radius * wobble,
+        color: ROAD_COLORS[i % ROAD_COLORS.length],
+      });
+    }
+    return { points: pts, closed: true };
+  }
+
+  function buildNetwork() {
+    paths.length = 0;
+    paths.push(makeRing(START.x, START.y, HUB_RADIUS, 22));
+    // every non-centre zone gets a spoke + sit on an outer ring sorted by angle
+    const outer = ZONES.slice(1)
+      .map(z => ({ z, ang: Math.atan2(z.cy - START.y, z.cx - START.x) }))
+      .sort((a, b) => a.ang - b.ang);
+    for (const { z, ang } of outer) {
+      const sx = START.x + Math.cos(ang) * HUB_RADIUS;
+      const sy = START.y + Math.sin(ang) * HUB_RADIUS;
+      paths.push(makeEdge(sx, sy, z.cx, z.cy));
+    }
+    for (let i = 0; i < outer.length; i++) {
+      const a = outer[i].z;
+      const b = outer[(i + 1) % outer.length].z;
+      paths.push(makeEdge(a.cx, a.cy, b.cx, b.cy));
+    }
+  }
+  buildNetwork();
+
+  function distToSegment(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const l2 = dx * dx + dy * dy;
+    if (l2 < 0.0001) return Math.hypot(px - ax, py - ay);
+    let t = ((px - ax) * dx + (py - ay) * dy) / l2;
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+
+  function roadDistance(x, y) {
+    let best = Infinity;
+    for (let pi = 0; pi < paths.length; pi++) {
+      const path = paths[pi];
+      const pts = path.points;
+      const n = pts.length;
+      const last = path.closed ? n : n - 1;
+      for (let i = 0; i < last; i++) {
+        const a = pts[i], b = pts[(i + 1) % n];
+        const d = distToSegment(x, y, a.x, a.y, b.x, b.y);
+        if (d < best) {
+          best = d;
+          if (best < 1) return best;
+        }
+      }
+    }
+    return best;
+  }
+
+  // --- rainbow bubbles: refresh the road speed buff anywhere on the map ---
+  const BUBBLE_COUNT       = 220;
+  const BUBBLE_TOUCH_R     = 50;
+  const BUBBLE_RESPAWN_MS  = 25000;
+  const BUBBLE_R           = 22;
+  const bubbles = [];
+  function spawnBubble() {
+    bubbles.push({
+      x: rand(220, WORLD.w - 220),
+      y: rand(220, WORLD.h - 220),
+      bob: Math.random() * Math.PI * 2,
+      spin: Math.random() * Math.PI * 2,
+    });
+  }
+  for (let i = 0; i < BUBBLE_COUNT; i++) spawnBubble();
+
+  // --- schools of fish wandering the pond ---
+  const SCHOOL_COUNT = 30;
+  const FISH_PER_SCHOOL = 8;
+  const SCHOOL_COLORS = ['#ffd23f', '#ff8a3d', '#7be86c', '#4fc3f7', '#c768ff', '#ff6bd1'];
+  const schools = [];
+  function makeSchool() {
+    const cx = rand(600, WORLD.w - 600);
+    const cy = rand(600, WORLD.h - 600);
+    const color = SCHOOL_COLORS[Math.floor(Math.random() * SCHOOL_COLORS.length)];
+    const fish = [];
+    for (let i = 0; i < FISH_PER_SCHOOL; i++) {
+      fish.push({
+        x: cx + rand(-80, 80), y: cy + rand(-80, 80),
+        ang: rand(0, Math.PI * 2),
+        phase: rand(0, Math.PI * 2),
+      });
+    }
+    return { cx, cy, tcx: cx, tcy: cy, drift: rand(0, Math.PI * 2), color, fish };
+  }
+  for (let i = 0; i < SCHOOL_COUNT; i++) schools.push(makeSchool());
+
+  // --- one slow drifting whale ---
+  const whale = { x: WORLD.w * 0.3, y: WORLD.h * 0.7, ang: 0, t: rand(0, 10), spoutAt: 0 };
+
+  // --- frogs perched on Sunshine Shallows lily pads ---
+  const frogs = [];
+  (function spawnFrogs() {
+    const sunshine = ZONES.find(z => z.poi === 'lilypad');
+    if (!sunshine) return;
+    const offsets = [[0,0],[-110,-50],[90,-80],[-60,100],[130,70]];
+    for (const [ox, oy] of offsets) {
+      frogs.push({ x: sunshine.cx + ox, y: sunshine.cy + oy - 4, hop: 0, hopUntil: 0 });
+    }
+  })();
+
+  // --- scattered tiny scenes for off-path delight ---
+  const SCENES = [
+    { kind: 'bottle',  x: WORLD.w * 0.35, y: WORLD.h * 0.25, msg: 'a message in a bottle — "swim brave, little one"', found: false },
+    { kind: 'bouquet', x: WORLD.w * 0.62, y: WORLD.h * 0.33, msg: 'a drifting bouquet',                                 found: false },
+    { kind: 'boat',    x: WORLD.w * 0.40, y: WORLD.h * 0.72, msg: 'a tiny paper boat',                                  found: false },
+    { kind: 'teacup',  x: WORLD.w * 0.72, y: WORLD.h * 0.62, msg: 'a sunken teacup, half full of pearls',               found: false },
+    { kind: 'heart',   x: WORLD.w * 0.15, y: WORLD.h * 0.40, msg: 'a heart-shaped lily pad',                            found: false },
+    { kind: 'shell',   x: WORLD.w * 0.86, y: WORLD.h * 0.42, msg: 'a rainbow shell — your mane glints anew',            found: false },
+    { kind: 'shell',   x: WORLD.w * 0.50, y: WORLD.h * 0.95, msg: 'another rainbow shell',                              found: false },
+    { kind: 'shell',   x: WORLD.w * 0.05, y: WORLD.h * 0.95, msg: 'another rainbow shell',                              found: false },
+  ];
+  let maneShellsFound = 0;
+  const MANE_PALETTES = [
+    null, // default: COLORS
+    ['#ff8a3d', '#ffd23f', '#ff8a3d', '#ffd23f', '#ff8a3d', '#ffd23f', '#ff8a3d'], // sunset
+    ['#7be86c', '#4fc3f7', '#7be86c', '#4fc3f7', '#7be86c', '#4fc3f7', '#7be86c'], // meadow
+    ['#ff6bd1', '#c768ff', '#ff6bd1', '#c768ff', '#ff6bd1', '#c768ff', '#ff6bd1'], // berry
+  ];
+  function unlockedManes() { return Math.min(MANE_PALETTES.length, 1 + maneShellsFound); }
+  function manePalette() { return MANE_PALETTES[manePick % unlockedManes()] || COLORS; }
+
+  // --- floating message overlay (screen-space) ---
+  let floatMsg = '';
+  let floatMsgEnd = 0;
+  function showMessage(text, ms = 3500) { floatMsg = text; floatMsgEnd = performance.now() + ms; }
+
+  // --- day/night cycle ---
+  const DAY_DURATION_MS = 240000; // 4 minute full cycle
+  const SKY_STOPS = [
+    { t: 0.00, c: [42, 28, 50] },  // dawn pink
+    { t: 0.18, c: [12, 60, 80] },  // morning cyan
+    { t: 0.40, c: [ 8, 43, 58] },  // bright day (original pond blue)
+    { t: 0.55, c: [55, 30, 60] },  // dusk
+    { t: 0.75, c: [ 6, 14, 36] },  // night
+    { t: 1.00, c: [42, 28, 50] },  // wrap
+  ];
+  function skyColour(now) {
+    const t = (now / DAY_DURATION_MS) % 1;
+    let i = 0;
+    while (i < SKY_STOPS.length - 1 && SKY_STOPS[i + 1].t < t) i++;
+    const a = SKY_STOPS[i], b = SKY_STOPS[i + 1];
+    const u = (t - a.t) / (b.t - a.t);
+    return [0,1,2].map(k => Math.round(a.c[k] * (1 - u) + b.c[k] * u));
+  }
+
+  // --- weather: clear → rain → rainbow → clear ---
+  let weather = 'clear';
+  let weatherUntil = 0;
+  let nextWeatherCheckAt = 8000;
+  function stepWeather(now) {
+    if (weather === 'rain' && now >= weatherUntil) {
+      weather = 'rainbow';
+      weatherUntil = now + 14000;
+    } else if (weather === 'rainbow' && now >= weatherUntil) {
+      weather = 'clear';
+      nextWeatherCheckAt = now + 25000;
+    } else if (weather === 'clear' && now >= nextWeatherCheckAt) {
+      if (Math.random() < 0.45) {
+        weather = 'rain';
+        weatherUntil = now + 12000;
+      } else {
+        nextWeatherCheckAt = now + 18000;
+      }
+    }
+  }
+
+  // --- exploration breadcrumbs (visited cell grid for the map) ---
+  const BREAD_CELL = 500;
+  const BREAD_W = Math.ceil(WORLD.w / BREAD_CELL);
+  const BREAD_H = Math.ceil(WORLD.h / BREAD_CELL);
+  const breadcrumbs = new Uint8Array(BREAD_W * BREAD_H);
+  function markBread(x, y) {
+    const cx = Math.floor(x / BREAD_CELL);
+    const cy = Math.floor(y / BREAD_CELL);
+    if (cx < 0 || cy < 0 || cx >= BREAD_W || cy >= BREAD_H) return;
+    breadcrumbs[cy * BREAD_W + cx] = 1;
+  }
+
+  // --- baby unicorn tangled in the Kelp Forest, waiting to be freed ---
+  const baby = { state: 'tangled', x: 0, y: 0, rescueStart: 0, ang: 0 };
+  (function placeBaby() {
+    const kelp = ZONES.find(z => z.poi === 'kelp');
+    if (!kelp) return;
+    baby.x = kelp.cx + 60;
+    baby.y = kelp.cy - 40;
+  })();
+
+  // --- particles ---
+  const particles = [];
+  function burst(x, y, color, count = 14, speedMul = 1) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = (70 + Math.random() * 160) * speedMul;
+      particles.push({
+        x, y,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0, max: 0.55 + Math.random() * 0.45,
+        size: 2.2 + Math.random() * 3.4,
+        color,
+      });
+    }
+  }
+
+  // --- ambient ripples (world coords, near fish) ---
+  const ripples = [];
+  let nextRippleAt = 0;
+
+  // --- POI drawing ---
+  function drawPOI(z, now) {
+    const t = now / 1000;
+    const x = z.px, y = z.py;
+    const ready = now >= z.cooldownUntil;
+    const dim = ready ? 1.0 : 0.55;
+
+    if (z.poi === 'sunbeam') {
+      const pulse = 0.7 + Math.sin(t * 0.9) * 0.3;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(t * 0.12);
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = `rgba(255,235,170,${0.10 * pulse * dim})`;
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(220, -34); ctx.lineTo(220, 34); ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      const grad = ctx.createRadialGradient(x, y, 10, x, y, 260);
+      grad.addColorStop(0, `rgba(255,235,150,${0.55 * pulse * dim})`);
+      grad.addColorStop(0.55, 'rgba(255,210,90,0.22)');
+      grad.addColorStop(1, 'rgba(255,210,90,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(x, y, 260, 0, Math.PI * 2); ctx.fill();
+    } else if (z.poi === 'lilypad') {
+      const pads = [
+        [   0,    0, 70, 18, 0.0],
+        [-110,  -50, 55, 14, 0.3],
+        [  90,  -80, 60, 16, 0.5],
+        [ -60,  100, 50, 14, 0.8],
+        [ 130,   70, 65, 18, 1.1],
+      ];
+      pads.forEach((p, i) => {
+        const bob = Math.sin(t * 1.2 + i) * 4;
+        const px = x + p[0], py = y + p[1] + bob;
+        ctx.fillStyle = `rgba(61, 138, 77, ${dim})`;
+        ctx.beginPath(); ctx.ellipse(px, py, p[2], p[2] * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#082b3a';
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + p[2] * 0.95, py - p[2] * 0.22);
+        ctx.lineTo(px + p[2] * 0.95, py + p[2] * 0.22);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = `rgba(255,234,255,${dim})`;
+        ctx.beginPath(); ctx.arc(px - p[2] * 0.25, py, p[3] * 0.55, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,189,107,${dim})`;
+        ctx.beginPath(); ctx.arc(px - p[2] * 0.25, py, p[3] * 0.20, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (z.poi === 'coral') {
+      const branches = [
+        [[0, 60], [0, -30], [-40, -100], [-30, -160]],
+        [[0, -30], [40, -90], [70, -140]],
+        [[0, 20], [-60, 0], [-110, -20]],
+        [[0, 20], [60, 30], [110, 40]],
+        [[0, 60], [30, 100], [50, 130]],
+      ];
+      ctx.strokeStyle = `rgba(255,138,168,${dim})`;
+      ctx.lineWidth = 16; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      branches.forEach(b => {
+        ctx.beginPath();
+        b.forEach((p, i) => i === 0 ? ctx.moveTo(x + p[0], y + p[1]) : ctx.lineTo(x + p[0], y + p[1]));
+        ctx.stroke();
+      });
+      ctx.strokeStyle = `rgba(255,194,209,${dim})`;
+      ctx.lineWidth = 7;
+      branches.forEach(b => {
+        ctx.beginPath();
+        b.forEach((p, i) => i === 0 ? ctx.moveTo(x + p[0], y + p[1]) : ctx.lineTo(x + p[0], y + p[1]));
+        ctx.stroke();
+      });
+      branches.forEach(b => {
+        const tip = b[b.length - 1];
+        ctx.fillStyle = `rgba(255,240,224,${dim})`;
+        ctx.beginPath(); ctx.arc(x + tip[0], y + tip[1], 10, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (z.poi === 'kelp') {
+      const fronds = [
+        [-110, 26],
+        [ -40, 20],
+        [  40, 24],
+        [ 110, 22],
+        [ 170, 18],
+        [-170, 18],
+      ];
+      fronds.forEach((f, i) => {
+        const phase = t * 0.8 + i * 0.7;
+        ctx.strokeStyle = `rgba(58, 138, 91, ${dim})`;
+        ctx.lineWidth = f[1]; ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let s = 0; s <= 280; s += 12) {
+          const sx = x + f[0] + Math.sin(phase + s * 0.025) * 18;
+          const sy = y + 220 - s;
+          if (s === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(180,240,180,${0.35 * dim})`;
+        ctx.lineWidth = f[1] * 0.4;
+        ctx.beginPath();
+        for (let s = 0; s <= 280; s += 12) {
+          const sx = x + f[0] + Math.sin(phase + s * 0.025) * 18;
+          const sy = y + 220 - s;
+          if (s === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+      });
+    } else if (z.poi === 'crystal') {
+      const pulse = 0.6 + Math.sin(t * 1.6) * 0.4;
+      const grad = ctx.createRadialGradient(x, y, 10, x, y, 240);
+      grad.addColorStop(0, `rgba(180,140,255,${0.55 * pulse * dim})`);
+      grad.addColorStop(0.55, 'rgba(140, 90,230,0.18)');
+      grad.addColorStop(1, 'rgba(80, 40,180,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(x, y, 240, 0, Math.PI * 2); ctx.fill();
+      const crystals = [
+        [   0,   0, 36, 110],
+        [ -55,  20, 28,  80],
+        [  60,  30, 30,  90],
+        [ -30,  55, 24,  62],
+        [  36,  65, 26,  70],
+      ];
+      crystals.forEach(c => {
+        const cx = x + c[0], cy = y + c[1];
+        ctx.fillStyle = `rgba(190,160,255,${(0.7 + pulse * 0.3) * dim})`;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - c[3] / 2);
+        ctx.lineTo(cx + c[2] / 2, cy);
+        ctx.lineTo(cx, cy + c[3] / 2);
+        ctx.lineTo(cx - c[2] / 2, cy);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = `rgba(255,255,255,${0.45 * dim})`;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - c[3] / 2);
+        ctx.lineTo(cx - 5, cy);
+        ctx.lineTo(cx, cy + c[3] / 2);
+        ctx.closePath(); ctx.fill();
+      });
+    } else if (z.poi === 'pearl') {
+      // cluster of glowing pearls
+      const pearls = [[0,0,28],[-60,-30,18],[55,-40,22],[-35,55,16],[60,40,20],[-90,10,14]];
+      pearls.forEach((p, i) => {
+        const bob = Math.sin(t * 1.4 + i) * 3;
+        const cx = x + p[0], cy = y + p[1] + bob, pr = p[2];
+        const grad = ctx.createRadialGradient(cx - pr*0.3, cy - pr*0.3, 1, cx, cy, pr);
+        grad.addColorStop(0, `rgba(255,255,255,${0.95 * dim})`);
+        grad.addColorStop(0.5, `rgba(230,210,255,${0.85 * dim})`);
+        grad.addColorStop(1, `rgba(160,130,210,${dim})`);
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(cx, cy, pr, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,255,255,${0.75 * dim})`;
+        ctx.beginPath(); ctx.arc(cx - pr*0.35, cy - pr*0.35, pr*0.18, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (z.poi === 'music') {
+      // coral reef with floating notes
+      ctx.fillStyle = `rgba(100,180,220,${dim})`;
+      const reefs = [[-80,40,30],[-20,50,26],[40,45,28],[100,40,24]];
+      reefs.forEach(r => {
+        ctx.beginPath(); ctx.ellipse(x + r[0], y + r[1], r[2], r[2]*0.6, 0, 0, Math.PI * 2); ctx.fill();
+      });
+      const notes = [[-70,-30,0],[-20,-60,1],[30,-50,2],[80,-30,3]];
+      notes.forEach((n, i) => {
+        const bob = Math.sin(t * 1.6 + i) * 8;
+        const nx = x + n[0], ny = y + n[1] + bob;
+        ctx.fillStyle = `rgba(255,235,120,${dim})`;
+        ctx.beginPath(); ctx.ellipse(nx, ny, 7, 5, -0.3, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(255,235,120,${dim})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(nx + 5, ny - 2); ctx.lineTo(nx + 7, ny - 22); ctx.stroke();
+      });
+    } else if (z.poi === 'stars') {
+      // starfield with constellation lines
+      const stars = [[0,0],[-60,-40],[40,-60],[-90,30],[80,20],[20,70],[-30,-90],[100,-30]];
+      ctx.strokeStyle = `rgba(140,180,255,${0.55 * dim})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      stars.forEach((s, i) => {
+        const sx = x + s[0], sy = y + s[1];
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.stroke();
+      stars.forEach((s, i) => {
+        const twinkle = 0.6 + Math.sin(t * 2 + i * 1.3) * 0.4;
+        const sx = x + s[0], sy = y + s[1];
+        const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 18);
+        grad.addColorStop(0, `rgba(255,255,255,${twinkle * dim})`);
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(sx, sy, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,255,255,${dim})`;
+        ctx.beginPath(); ctx.arc(sx, sy, 2.5, 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (z.poi === 'falls') {
+      // rising column of bubbles
+      ctx.fillStyle = `rgba(160,220,235,${0.35 * dim})`;
+      ctx.beginPath(); ctx.ellipse(x, y + 80, 90, 24, 0, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 18; i++) {
+        const phase = (t * 0.5 + i * 0.17) % 1;
+        const bx = x + Math.sin(t * 0.8 + i) * 28;
+        const by = y + 80 - phase * 220;
+        const r = 4 + (1 - phase) * 6;
+        ctx.fillStyle = `rgba(220,240,250,${(1 - phase) * dim})`;
+        ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(255,255,255,${(1 - phase) * 0.55 * dim})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.stroke();
+      }
+    } else if (z.poi === 'fog') {
+      // drifting fog clouds
+      for (let i = 0; i < 6; i++) {
+        const phase = t * 0.15 + i;
+        const fx = x + Math.cos(phase) * 90;
+        const fy = y + Math.sin(phase * 0.7 + i) * 50;
+        const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, 90);
+        grad.addColorStop(0, `rgba(220,225,235,${0.32 * dim})`);
+        grad.addColorStop(1, 'rgba(220,225,235,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(fx, fy, 90, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
+  // --- zone label fader ---
+  let currentZone = null;
+  let zoneFadeUntil = 0;
+  function updateZoneLabel(now) {
+    const z = zoneAt(unicorn.x, unicorn.y);
+    if (z && z !== currentZone) {
+      currentZone = z;
+      zoneEl.textContent = z.name;
+      zoneEl.style.opacity = '1';
+      zoneFadeUntil = now + 2400;
+    }
+    if (now > zoneFadeUntil && zoneEl.style.opacity !== '0') {
+      zoneEl.style.opacity = '0';
+    }
+  }
+
+  // --- main loop ---
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
+    last = now;
+
+    // unicorn update — swim toward the held tap, or WASD/arrows on desktop
+    let inX = 0, inY = 0;
+    if (press.active) {
+      const tx = press.sx / ZOOM + camera.x;
+      const ty = press.sy / ZOOM + camera.y;
+      const dx = tx - unicorn.x, dy = ty - unicorn.y;
+      const d = Math.hypot(dx, dy);
+      if (d > ARRIVE_R) {
+        const ramp = Math.min(1, (d - ARRIVE_R) / 60); // ease into / out of full speed
+        inX = (dx / d) * ramp;
+        inY = (dy / d) * ramp;
+      }
+    } else {
+      if (keys['w'] || keys['arrowup'])    inY -= 1;
+      if (keys['s'] || keys['arrowdown'])  inY += 1;
+      if (keys['a'] || keys['arrowleft'])  inX -= 1;
+      if (keys['d'] || keys['arrowright']) inX += 1;
+      const km = Math.hypot(inX, inY);
+      if (km > 1) { inX /= km; inY /= km; }
+    }
+    const dToRoad = roadDistance(unicorn.x, unicorn.y);
+    if (dToRoad < ROAD_GRIP)       { onUntil   = now + ROAD_BUFF_MS; nearUntil = onUntil; }
+    else if (dToRoad < ROAD_NEAR)  { nearUntil = now + ROAD_BUFF_MS; }
+    const roadMul = now < onUntil ? ROAD_BOOST : (now < nearUntil ? NEAR_BOOST : 1.0);
+    const vx = inX * BASE_SPEED * roadMul;
+    const vy = inY * BASE_SPEED * roadMul;
+    unicorn.x += vx * dt;
+    unicorn.y += vy * dt;
+    unicorn.speed = Math.hypot(vx, vy);
+    if (unicorn.speed > 5) unicorn.angle = Math.atan2(vy, vx);
+    unicorn.wiggle += dt * (5 + Math.min(unicorn.speed, 400) * 0.03);
+    markBread(unicorn.x, unicorn.y);
+    unicorn.x = clamp(unicorn.x, 40, WORLD.w - 40);
+    unicorn.y = clamp(unicorn.y, 40, WORLD.h - 40);
+
+    // fade tutorial hint once the unicorn has left the starting screen
+    if (hintEl.style.opacity !== '0') {
+      const away = Math.hypot(unicorn.x - START.x, unicorn.y - START.y);
+      if (away > Math.min(VW, VH) * 0.45 / ZOOM) hintEl.style.opacity = '0';
+    }
+
+    // camera follow + clamp — viewport in world units = VW/ZOOM × VH/ZOOM
+    const vw = VW / ZOOM, vh = VH / ZOOM;
+    camera.x += (unicorn.x - vw / 2 - camera.x) * 0.10;
+    camera.y += (unicorn.y - vh / 2 - camera.y) * 0.10;
+    camera.x = clamp(camera.x, 0, Math.max(0, WORLD.w - vw));
+    camera.y = clamp(camera.y, 0, Math.max(0, WORLD.h - vh));
+
+    updateZoneLabel(now);
+    stepWeather(now);
+    if (weather === 'rain') {
+      // splashes throughout the visible world
+      for (let r = 0; r < 6; r++) {
+        ripples.push({
+          x: camera.x + Math.random() * vw,
+          y: camera.y + Math.random() * vh,
+          life: 0, max: 1.0, grow: 22,
+        });
+      }
+    }
+
+    // --- background — time of day shifts the pond ---
+    const sky = skyColour(now);
+    ctx.fillStyle = `rgb(${sky[0]},${sky[1]},${sky[2]})`;
+    ctx.fillRect(0, 0, VW, VH);
+
+    ctx.save();
+    ctx.scale(ZOOM, ZOOM);
+    ctx.translate(-camera.x, -camera.y);
+
+    // zone gradient tints
+    ZONES.forEach(z => {
+      if (z.cx + z.r < camera.x || z.cx - z.r > camera.x + vw ||
+          z.cy + z.r < camera.y || z.cy - z.r > camera.y + vh) return;
+      const grad = ctx.createRadialGradient(z.cx, z.cy, 0, z.cx, z.cy, z.r);
+      grad.addColorStop(0, z.tint);
+      grad.addColorStop(1, 'rgba(8,43,58,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(z.cx, z.cy, z.r, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // ambient ripples (near fish so always visible)
+    if (now > nextRippleAt) {
+      ripples.push({
+        x: unicorn.x + rand(-vw * 0.8, vw * 0.8),
+        y: unicorn.y + rand(-vh * 0.8, vh * 0.8),
+        life: 0, max: rand(2.5, 4.0), grow: rand(28, 55),
+      });
+      nextRippleAt = now + rand(450, 1300);
+    }
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const r = ripples[i];
+      r.life += dt;
+      if (r.life > r.max) { ripples.splice(i, 1); continue; }
+      const tt = r.life / r.max;
+      ctx.strokeStyle = `rgba(180,220,240,${Math.max(0, 0.22 - tt * 0.22)})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.life * r.grow, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    // POIs in view + touch reward
+    ZONES.forEach(z => {
+      const inView = !(z.px + 320 < camera.x || z.px - 320 > camera.x + vw ||
+                       z.py + 320 < camera.y || z.py - 320 > camera.y + vh);
+      if (inView) drawPOI(z, now);
+      // proximity reward (anywhere — works even if POI is just offscreen)
+      if (now >= z.cooldownUntil && Math.hypot(z.px - unicorn.x, z.py - unicorn.y) < z.touchR) {
+        score += z.stars;
+        scoreEl.textContent = '⭐ ' + score;
+        const burstColor = z.poi === 'sunbeam' ? '#ffdc6b'
+                         : z.poi === 'lilypad' ? '#ffeaff'
+                         : z.poi === 'coral'   ? '#ff8aa8'
+                         : z.poi === 'kelp'    ? '#7be86c'
+                         : z.poi === 'crystal' ? '#c4a8ff'
+                         : z.poi === 'pearl'   ? '#e8dcff'
+                         : z.poi === 'music'   ? '#ffe680'
+                         : z.poi === 'stars'   ? '#a8c8ff'
+                         : z.poi === 'falls'   ? '#cfeef5'
+                         :                       '#dde4ec';
+        burst(z.px, z.py, burstColor, 22, 1.1);
+        const arp = z.poi === 'crystal' ? [4, 6, 8, 10]
+                  : z.poi === 'stars'   ? [6, 8, 10, 12]
+                  : z.poi === 'music'   ? [0, 2, 4, 6]
+                  : z.poi === 'falls'   ? [0, 1, 2, 3]
+                  : z.poi === 'pearl'   ? [2, 4, 6]
+                  : z.poi === 'fog'     ? [1, 3, 5]
+                  :                       [0, 2, 4];
+        arpeggio(arp);
+        z.cooldownUntil = now + z.cool;
+        if (!z.visited) { z.visited = true; showMessage('★ ' + z.name + ' discovered'); }
+      }
+    });
+
+    // rainbow bubbles — touch to refresh the 4x road speed buff for 10s
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      if (Math.hypot(b.x - unicorn.x, b.y - unicorn.y) < BUBBLE_TOUCH_R) {
+        bubbles.splice(i, 1);
+        onUntil = Math.max(onUntil, now + ROAD_BUFF_MS);
+        nearUntil = onUntil;
+        for (let k = 0; k < COLORS.length; k++) burst(b.x, b.y, COLORS[k], 6, 0.9);
+        arpeggio([0, 2, 4, 6]);
+        setTimeout(spawnBubble, BUBBLE_RESPAWN_MS);
+        continue;
+      }
+      if (b.x + 40 < camera.x || b.x - 40 > camera.x + vw ||
+          b.y + 40 < camera.y || b.y - 40 > camera.y + vh) continue;
+      b.bob += dt;
+      b.spin += dt * 0.6;
+      const x = b.x;
+      const y = b.y + Math.sin(b.bob * 1.5) * 4;
+      // rainbow wedges
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(b.spin);
+      for (let k = 0; k < COLORS.length; k++) {
+        const a0 = (k       / COLORS.length) * Math.PI * 2;
+        const a1 = ((k + 1) / COLORS.length) * Math.PI * 2;
+        ctx.fillStyle = COLORS[k];
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, BUBBLE_R - 4, a0, a1);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      // water-haze tint over the rainbow so it reads as submerged
+      ctx.fillStyle = 'rgba(8,30,45,0.20)';
+      ctx.beginPath(); ctx.arc(x, y, BUBBLE_R - 4, 0, Math.PI * 2); ctx.fill();
+      // bubble shell
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, BUBBLE_R, 0, Math.PI * 2); ctx.stroke();
+      // highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath(); ctx.arc(x - 7, y - 7, 3, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // rainbow roads — opaque submerged painted lanes
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const segCull = ROAD_WIDTH * 1.4;
+    // dark water shadow just below the road (offset down + right slightly for depth)
+    ctx.lineWidth = ROAD_WIDTH + 6;
+    ctx.strokeStyle = 'rgba(5,22,32,0.45)';
+    for (let pi = 0; pi < paths.length; pi++) {
+      const path = paths[pi];
+      const pts = path.points;
+      const n = pts.length;
+      const last = path.closed ? n : n - 1;
+      for (let i = 0; i < last; i++) {
+        const a = pts[i], b = pts[(i + 1) % n];
+        if (Math.max(a.x, b.x) + segCull < camera.x || Math.min(a.x, b.x) - segCull > camera.x + vw ||
+            Math.max(a.y, b.y) + segCull < camera.y || Math.min(a.y, b.y) - segCull > camera.y + vh) continue;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y + 4); ctx.lineTo(b.x, b.y + 4); ctx.stroke();
+      }
+    }
+    // solid muted-rainbow core (already pre-mixed with water in ROAD_COLORS)
+    ctx.lineWidth = ROAD_WIDTH;
+    for (let pi = 0; pi < paths.length; pi++) {
+      const path = paths[pi];
+      const pts = path.points;
+      const n = pts.length;
+      const last = path.closed ? n : n - 1;
+      for (let i = 0; i < last; i++) {
+        const a = pts[i], b = pts[(i + 1) % n];
+        if (Math.max(a.x, b.x) + segCull < camera.x || Math.min(a.x, b.x) - segCull > camera.x + vw ||
+            Math.max(a.y, b.y) + segCull < camera.y || Math.min(a.y, b.y) - segCull > camera.y + vh) continue;
+        ctx.strokeStyle = a.color;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+    // gentle water-haze overlay — covers the whole road to push it under the surface
+    ctx.lineWidth = ROAD_WIDTH;
+    ctx.strokeStyle = 'rgba(8,43,58,0.22)';
+    for (let pi = 0; pi < paths.length; pi++) {
+      const path = paths[pi];
+      const pts = path.points;
+      const n = pts.length;
+      const last = path.closed ? n : n - 1;
+      for (let i = 0; i < last; i++) {
+        const a = pts[i], b = pts[(i + 1) % n];
+        if (Math.max(a.x, b.x) + segCull < camera.x || Math.min(a.x, b.x) - segCull > camera.x + vw ||
+            Math.max(a.y, b.y) + segCull < camera.y || Math.min(a.y, b.y) - segCull > camera.y + vh) continue;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+    // shimmering caustic highlight — narrow drifting band on top
+    ctx.lineWidth = ROAD_WIDTH * 0.22;
+    const shimmer = 0.18 + Math.sin(now / 900) * 0.10;
+    ctx.strokeStyle = `rgba(190,225,240,${shimmer})`;
+    for (let pi = 0; pi < paths.length; pi++) {
+      const path = paths[pi];
+      const pts = path.points;
+      const n = pts.length;
+      const last = path.closed ? n : n - 1;
+      for (let i = 0; i < last; i++) {
+        const a = pts[i], b = pts[(i + 1) % n];
+        if (Math.max(a.x, b.x) + segCull < camera.x || Math.min(a.x, b.x) - segCull > camera.x + vw ||
+            Math.max(a.y, b.y) + segCull < camera.y || Math.min(a.y, b.y) - segCull > camera.y + vh) continue;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y - 6); ctx.lineTo(b.x, b.y - 6); ctx.stroke();
+      }
+    }
+
+
+    // --- schools of fish swimming around the pond ---
+    for (let si = 0; si < schools.length; si++) {
+      const s = schools[si];
+      s.drift += dt * 0.25;
+      s.tcx = clamp(s.tcx + Math.cos(s.drift) * dt * 36, 300, WORLD.w - 300);
+      s.tcy = clamp(s.tcy + Math.sin(s.drift * 0.83) * dt * 36, 300, WORLD.h - 300);
+      s.cx += (s.tcx - s.cx) * 0.015;
+      s.cy += (s.tcy - s.cy) * 0.015;
+      const inView = !(s.cx + 220 < camera.x || s.cx - 220 > camera.x + vw ||
+                       s.cy + 220 < camera.y || s.cy - 220 > camera.y + vh);
+      for (const f of s.fish) {
+        const fdx = s.cx - f.x, fdy = s.cy - f.y;
+        const fd  = Math.hypot(fdx, fdy) || 1;
+        // scatter from the unicorn if she gets too close
+        const ux = f.x - unicorn.x, uy = f.y - unicorn.y, ud = Math.hypot(ux, uy);
+        let targetAng;
+        if (ud < 120) targetAng = Math.atan2(uy, ux);
+        else          targetAng = Math.atan2(fdy, fdx);
+        let diff = targetAng - f.ang;
+        while (diff > Math.PI)  diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        f.ang += diff * 0.06;
+        f.phase += dt * 7;
+        const spd = ud < 120 ? 110 : 50;
+        f.x += Math.cos(f.ang) * spd * dt;
+        f.y += Math.sin(f.ang) * spd * dt;
+      }
+      if (!inView) continue;
+      for (const f of s.fish) {
+        if (f.x + 20 < camera.x || f.x - 20 > camera.x + vw ||
+            f.y + 20 < camera.y || f.y - 20 > camera.y + vh) continue;
+        const wig = Math.sin(f.phase) * 0.35;
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.ang);
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.moveTo(-6, 0);
+        ctx.lineTo(-12, -4 + wig * 4);
+        ctx.lineTo(-12,  4 + wig * 4);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(0, 0, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(3, -1, 0.9, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // --- whale drifting along a slow figure-of-eight ---
+    whale.t += dt * 0.04;
+    whale.x = 1500 + (Math.sin(whale.t * 0.7) * 0.5 + 0.5) * (WORLD.w - 3000);
+    whale.y = 1500 + (Math.sin(whale.t * 0.43 + 1.7) * 0.5 + 0.5) * (WORLD.h - 3000);
+    whale.ang = Math.atan2(
+      Math.cos(whale.t * 0.43 + 1.7) * 0.43,
+      Math.cos(whale.t * 0.7) * 0.7,
+    );
+    if (!(whale.x + 280 < camera.x || whale.x - 280 > camera.x + vw ||
+          whale.y + 280 < camera.y || whale.y - 280 > camera.y + vh)) {
+      ctx.save();
+      ctx.translate(whale.x, whale.y);
+      ctx.rotate(whale.ang);
+      // shadow / underwater body
+      ctx.fillStyle = 'rgba(8,32,52,0.55)';
+      ctx.beginPath(); ctx.ellipse(0, 14, 200, 70, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#577a96';
+      ctx.beginPath(); ctx.ellipse(0, 0, 180, 56, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#9fb6c8';
+      ctx.beginPath(); ctx.ellipse(20, 16, 150, 28, 0, 0, Math.PI * 2); ctx.fill();
+      // tail
+      ctx.fillStyle = '#466a86';
+      ctx.beginPath();
+      ctx.moveTo(-160, 0); ctx.lineTo(-230, -46); ctx.lineTo(-200, 0); ctx.lineTo(-230, 46);
+      ctx.closePath(); ctx.fill();
+      // fluke spots
+      ctx.fillStyle = 'rgba(220,235,245,0.45)';
+      ctx.beginPath(); ctx.arc(-40, -10, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-90,  18, 10, 0, Math.PI * 2); ctx.fill();
+      // eye + smile
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(130, -10, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#222';
+      ctx.beginPath(); ctx.arc(132, -10, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(60,40,30,0.7)';
+      ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(150, 6, 18, Math.PI * 0.15, Math.PI * 0.55); ctx.stroke();
+      // occasional spout
+      if (now > whale.spoutAt && Math.random() < 0.004) whale.spoutAt = now + 1200;
+      if (now < whale.spoutAt) {
+        const age = (whale.spoutAt - now) / 1200;
+        ctx.fillStyle = `rgba(220,240,255,${0.8 * age})`;
+        for (let i = 0; i < 10; i++) {
+          const a = -Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+          const r = (1 - age) * 80 + Math.random() * 12;
+          ctx.beginPath();
+          ctx.arc(40 + Math.cos(a) * r, -16 + Math.sin(a) * r, 3 + Math.random() * 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    // --- frogs on the Sunshine Shallows lily pads ---
+    for (const f of frogs) {
+      const d = Math.hypot(f.x - unicorn.x, f.y - unicorn.y);
+      if (d < 110 && now > f.hopUntil) {
+        f.hop = 1;
+        f.hopUntil = now + 1800;
+        chime(2 + Math.floor(Math.random() * 4));
+      }
+      f.hop = Math.max(0, f.hop - dt * 1.6);
+      if (f.x + 30 < camera.x || f.x - 30 > camera.x + vw ||
+          f.y + 30 < camera.y || f.y - 30 > camera.y + vh) continue;
+      const lift = Math.sin(f.hop * Math.PI) * 14;
+      const fy = f.y - lift;
+      ctx.fillStyle = '#3a8a4a';
+      ctx.beginPath(); ctx.ellipse(f.x, fy, 8, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#5cb56a';
+      ctx.beginPath(); ctx.ellipse(f.x, fy - 1, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(f.x - 3, fy - 4, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(f.x + 3, fy - 4, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(f.x - 3, fy - 4, 1.1, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(f.x + 3, fy - 4, 1.1, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // --- baby unicorn: hold near her to untangle, then she follows ---
+    {
+      const d = Math.hypot(baby.x - unicorn.x, baby.y - unicorn.y);
+      if (baby.state === 'tangled') {
+        if (d < 90 && press.active) {
+          if (!baby.rescueStart) baby.rescueStart = now;
+          if (now - baby.rescueStart > 1800) {
+            baby.state = 'free';
+            showMessage('✦ you freed the baby unicorn!');
+            for (let k = 0; k < COLORS.length; k++) burst(baby.x, baby.y, COLORS[k], 10, 1.3);
+            arpeggio([0, 2, 4, 7, 9]);
+          }
+        } else if (!press.active || d > 130) {
+          baby.rescueStart = 0;
+        }
+      } else {
+        // follow a bit behind the unicorn
+        const followDist = 95;
+        const tx = unicorn.x - Math.cos(unicorn.angle) * followDist;
+        const ty = unicorn.y - Math.sin(unicorn.angle) * followDist;
+        const ddx = tx - baby.x, ddy = ty - baby.y;
+        baby.x += ddx * 0.04;
+        baby.y += ddy * 0.04;
+        if (Math.hypot(ddx, ddy) > 1) baby.ang = Math.atan2(ddy, ddx);
+      }
+      const inView = !(baby.x + 60 < camera.x || baby.x - 60 > camera.x + vw ||
+                       baby.y + 60 < camera.y || baby.y - 60 > camera.y + vh);
+      if (inView) {
+        ctx.save();
+        ctx.translate(baby.x, baby.y);
+        ctx.rotate(baby.state === 'free' ? baby.ang : 0);
+        ctx.scale(0.55, 0.55);
+        // kelp wrap when tangled
+        if (baby.state === 'tangled') {
+          ctx.strokeStyle = 'rgba(58,138,91,0.9)';
+          ctx.lineWidth = 4; ctx.lineCap = 'round';
+          for (let s = -2; s <= 2; s++) {
+            ctx.beginPath();
+            ctx.moveTo(-40, s * 7);
+            ctx.quadraticCurveTo(0, s * 7 + Math.sin(now/300 + s) * 6, 40, s * 7);
+            ctx.stroke();
+          }
+        }
+        // mini body / head / horn (reuses the unicorn aesthetic)
+        const M = maneColors();
+        ctx.lineCap = 'round';
+        for (let i = 0; i < M.length; i++) {
+          ctx.strokeStyle = M[i];
+          ctx.lineWidth = 2.2;
+          const baseY = -7 + i * (14 / (M.length - 1));
+          ctx.beginPath();
+          ctx.moveTo(-14, baseY * 0.35);
+          ctx.quadraticCurveTo(-26, baseY, -38, baseY + 4);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(15, -3, 9, 6, -0.15, 0, Math.PI * 2); ctx.fill();
+        for (let i = 0; i < M.length; i++) {
+          ctx.strokeStyle = M[i];
+          ctx.lineWidth = 2;
+          const baseY = -9 + i * (16 / (M.length - 1));
+          ctx.beginPath();
+          ctx.moveTo(10, baseY * 0.4 - 4);
+          ctx.quadraticCurveTo(0, baseY * 0.7 - 4, -9, baseY - 3);
+          ctx.stroke();
+        }
+        // horn
+        ctx.fillStyle = '#ffd35c';
+        ctx.beginPath();
+        ctx.moveTo(20, -8); ctx.lineTo(31, -10); ctx.lineTo(20, -4); ctx.closePath();
+        ctx.fill();
+        // eye
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(19, -3, 1.4, 0, Math.PI * 2); ctx.fill();
+        // rescue hold ring
+        if (baby.state === 'tangled' && baby.rescueStart) {
+          const p = Math.min(1, (now - baby.rescueStart) / 1800);
+          ctx.strokeStyle = 'rgba(255,230,150,0.9)';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(0, 0, 32, -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2); ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    // --- scattered scenes ---
+    for (const s of SCENES) {
+      if (!s.found && Math.hypot(s.x - unicorn.x, s.y - unicorn.y) < 60) {
+        s.found = true;
+        showMessage('✦ ' + s.msg);
+        for (let k = 0; k < COLORS.length; k++) burst(s.x, s.y, COLORS[k], 5, 0.8);
+        arpeggio([0, 2, 4, 7]);
+        if (s.kind === 'shell') maneShellsFound++;
+      }
+      if (s.x + 40 < camera.x || s.x - 40 > camera.x + vw ||
+          s.y + 40 < camera.y || s.y - 40 > camera.y + vh) continue;
+      const bob = Math.sin(now / 700 + s.x * 0.001) * 3;
+      const sy = s.y + bob;
+      const dim = s.found ? 0.45 : 1.0;
+      ctx.save();
+      ctx.translate(s.x, sy);
+      if (s.kind === 'bottle') {
+        ctx.fillStyle = `rgba(120,180,150,${0.85 * dim})`;
+        ctx.beginPath(); ctx.ellipse(0, 0, 18, 7, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(80,60,40,${dim})`;
+        ctx.fillRect(15, -3, 5, 6);
+        ctx.fillStyle = `rgba(240,225,180,${dim})`;
+        ctx.fillRect(-6, -2, 10, 4);
+      } else if (s.kind === 'bouquet') {
+        const petals = ['#ff8aa8','#ffd23f','#c768ff','#7be86c','#ff6bd1'];
+        petals.forEach((c, i) => {
+          const a = (i / petals.length) * Math.PI * 2;
+          ctx.fillStyle = `rgba(${parseInt(c.substr(1,2),16)},${parseInt(c.substr(3,2),16)},${parseInt(c.substr(5,2),16)},${dim})`;
+          ctx.beginPath(); ctx.arc(Math.cos(a) * 5, Math.sin(a) * 5 - 4, 5, 0, Math.PI * 2); ctx.fill();
+        });
+        ctx.strokeStyle = `rgba(60,120,60,${dim})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 12); ctx.stroke();
+      } else if (s.kind === 'boat') {
+        ctx.fillStyle = `rgba(240,235,220,${dim})`;
+        ctx.beginPath();
+        ctx.moveTo(-14, 4); ctx.lineTo(14, 4); ctx.lineTo(10, 10); ctx.lineTo(-10, 10);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(0, 4); ctx.lineTo(0, -14); ctx.lineTo(12, 0); ctx.closePath();
+        ctx.fill();
+      } else if (s.kind === 'teacup') {
+        ctx.fillStyle = `rgba(240,235,250,${dim})`;
+        ctx.beginPath(); ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(180,160,200,${dim})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(13, 0, 5, -Math.PI/2, Math.PI/2); ctx.stroke();
+        ctx.fillStyle = `rgba(180,140,220,${0.7 * dim})`;
+        ctx.beginPath(); ctx.ellipse(0, -2, 9, 4, 0, 0, Math.PI * 2); ctx.fill();
+      } else if (s.kind === 'heart') {
+        ctx.fillStyle = `rgba(255,150,180,${0.9 * dim})`;
+        ctx.beginPath();
+        ctx.moveTo(0, 6);
+        ctx.bezierCurveTo(-12, -4, -18, -14, 0, -6);
+        ctx.bezierCurveTo(18, -14, 12, -4, 0, 6);
+        ctx.closePath(); ctx.fill();
+      } else if (s.kind === 'shell') {
+        const grad = ctx.createRadialGradient(-3, -3, 1, 0, 0, 14);
+        grad.addColorStop(0, `rgba(255,255,255,${dim})`);
+        grad.addColorStop(0.4, `rgba(255,210,230,${dim})`);
+        grad.addColorStop(1, `rgba(180,140,200,${dim})`);
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(255,140,200,${0.6 * dim})`;
+        ctx.lineWidth = 1;
+        for (let r = 0; r < 6; r++) {
+          const a = (r / 6) * Math.PI - Math.PI / 2;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(a) * 13, Math.sin(a) * 13);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    // particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life += dt;
+      const tt = p.life / p.max;
+      if (tt >= 1) { particles.splice(i, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.92; p.vy *= 0.92;
+      ctx.fillStyle = hexA(p.color, 1 - tt);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (1 - tt * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawUnicorn(now);
+
+    ctx.restore();
+
+    // UI (screen space)
+    // rainbow arc that drifts in after rain
+    if (weather === 'rainbow') {
+      const remain = weatherUntil - now;
+      const total  = 14000;
+      const age    = 1 - remain / total; // 0..1
+      const aIn   = Math.min(1, age * 3.5);
+      const aOut  = Math.min(1, remain / 1800);
+      const a     = Math.min(aIn, aOut);
+      const cx = VW / 2, cy = VH * 1.25;
+      const baseR = VH * 0.95;
+      for (let i = 0; i < COLORS.length; i++) {
+        ctx.strokeStyle = hexA(COLORS[i], 0.42 * a);
+        ctx.lineWidth = 11;
+        ctx.beginPath();
+        ctx.arc(cx, cy, baseR + (COLORS.length - i) * 12, Math.PI + 0.25, Math.PI * 2 - 0.25);
+        ctx.stroke();
+      }
+    }
+    drawMap();
+    drawPostcards(now);
+    if (floatMsg) {
+      if (now > floatMsgEnd) floatMsg = '';
+      else {
+        const remain = floatMsgEnd - now;
+        const a = Math.min(1, remain / 600);
+        ctx.font = '600 18px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        const w = ctx.measureText(floatMsg).width + 28;
+        const x = VW / 2 - w / 2, y = VH - 100;
+        ctx.fillStyle = `rgba(8,30,45,${0.72 * a})`;
+        ctx.beginPath();
+        ctx.moveTo(x + 12, y);
+        ctx.arcTo(x + w, y, x + w, y + 36, 12);
+        ctx.arcTo(x + w, y + 36, x, y + 36, 12);
+        ctx.arcTo(x, y + 36, x, y, 12);
+        ctx.arcTo(x, y, x + w, y, 12);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fillText(floatMsg, VW / 2, y + 24);
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  const RAINBOW = ['#ff5577', '#ff8a3d', '#ffd23f', '#7be86c', '#4fc3f7', '#7c6bff', '#c768ff'];
+  function maneColors() { return manePalette() || RAINBOW; }
+
+  function drawUnicorn(now) {
+    const scale = 1.0;
+    const wig = Math.sin(unicorn.wiggle) * (0.5 + Math.min(unicorn.speed, 300) / 600);
+    const wag = Math.sin(unicorn.wiggle * 1.2) * 8;
+
+    // ready-to-move glow — pulses while the screen is held
+    if (press.active) {
+      const pulse = 0.75 + Math.sin(now / 220) * 0.25;
+      const rOuter = 78 * scale;
+      const grad = ctx.createRadialGradient(unicorn.x, unicorn.y, 6, unicorn.x, unicorn.y, rOuter);
+      grad.addColorStop(0,    `rgba(255,240,180,${0.55 * pulse})`);
+      grad.addColorStop(0.55, `rgba(220,180,255,${0.20 * pulse})`);
+      grad.addColorStop(1,    'rgba(220,180,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(unicorn.x, unicorn.y, rOuter, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // wake — surface ripples trailing behind, drawn in world space (no rotation)
+    const wake = Math.min(0.55, unicorn.speed / 420);
+    if (wake > 0.05) {
+      ctx.save();
+      ctx.translate(unicorn.x, unicorn.y);
+      ctx.rotate(unicorn.angle);
+      ctx.strokeStyle = `rgba(200,230,255,${wake})`;
+      ctx.lineWidth = 1.6;
+      for (let i = 0; i < 3; i++) {
+        const off = -(24 + i * 14) * scale;
+        ctx.beginPath();
+        ctx.ellipse(off, 0, (12 + i * 9) * scale, (5 + i * 3) * scale, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(unicorn.x, unicorn.y);
+    ctx.rotate(unicorn.angle);
+    ctx.scale(scale, scale);
+
+    // tail — rainbow streamers behind
+    const MANE = maneColors();
+    ctx.lineCap = 'round';
+    for (let i = 0; i < MANE.length; i++) {
+      ctx.strokeStyle = MANE[i];
+      ctx.lineWidth = 2.4;
+      const baseY = -7 + i * (14 / (MANE.length - 1));
+      ctx.beginPath();
+      ctx.moveTo(-16, baseY * 0.35);
+      ctx.quadraticCurveTo(-28, baseY + wag * 0.4, -44 + wig * 4, baseY + wag);
+      ctx.stroke();
+    }
+
+    // water-line shadow under body (submerged hint)
+    ctx.fillStyle = 'rgba(40, 80, 110, 0.28)';
+    ctx.beginPath(); ctx.ellipse(0, 6, 22, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+    // body — soft white
+    const bodyGrad = ctx.createLinearGradient(-20, -8, 20, 8);
+    bodyGrad.addColorStop(0, '#ffffff');
+    bodyGrad.addColorStop(1, '#f1e8ff');
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, 20, 11, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(190,170,220,0.7)'; ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // paddling legs — tiny ripples under body
+    const legPhase = unicorn.wiggle * 1.6;
+    ctx.fillStyle = 'rgba(220,235,255,0.55)';
+    for (let i = 0; i < 2; i++) {
+      const lx = -4 + i * 12;
+      const ly = 10 + Math.sin(legPhase + i * Math.PI) * 1.5;
+      ctx.beginPath(); ctx.ellipse(lx, ly, 3, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // head
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(17, -3, 10, 7, -0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(190,170,220,0.7)'; ctx.lineWidth = 1; ctx.stroke();
+
+    // mane — rainbow streamers from neck/back of head
+    for (let i = 0; i < MANE.length; i++) {
+      ctx.strokeStyle = MANE[i];
+      ctx.lineWidth = 2.2;
+      const baseY = -9 + i * (16 / (MANE.length - 1));
+      ctx.beginPath();
+      ctx.moveTo(11, baseY * 0.4 - 4);
+      ctx.quadraticCurveTo(0, baseY * 0.7 - 4 + wag * 0.25, -10, baseY - 3 + wag * 0.5);
+      ctx.stroke();
+    }
+
+    // ear
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(17, -8); ctx.lineTo(20, -13); ctx.lineTo(22, -7); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,180,210,0.7)';
+    ctx.beginPath();
+    ctx.moveTo(18, -8.5); ctx.lineTo(20, -11.5); ctx.lineTo(21, -8); ctx.closePath();
+    ctx.fill();
+
+    // horn — golden, pointing forward
+    ctx.save();
+    ctx.translate(22, -7);
+    ctx.rotate(-0.35);
+    const hornGrad = ctx.createLinearGradient(0, 0, 14, 0);
+    hornGrad.addColorStop(0, '#fff3a8');
+    hornGrad.addColorStop(1, '#ffb83c');
+    ctx.fillStyle = hornGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, -2.2); ctx.lineTo(14, 0); ctx.lineTo(0, 2.2); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(170,110,30,0.75)'; ctx.lineWidth = 0.8;
+    for (let s = 0; s < 3; s++) {
+      ctx.beginPath();
+      ctx.moveTo(2 + s * 4, -1.6);
+      ctx.lineTo(4 + s * 4,  1.6);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // eye
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(21, -3, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(21.4, -3.4, 0.6, 0, Math.PI * 2); ctx.fill();
+
+    // cheek blush
+    ctx.fillStyle = 'rgba(255,170,200,0.55)';
+    ctx.beginPath(); ctx.arc(19, 1, 2, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  // --- map overlay (screen space) ---
+  // gallery of postcards for each zone (visited zones get a full POI scene, others are blank "?")
+  function drawPostcards(now) {
+    if (!postcardsOpen) return;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, 0, VW, VH);
+
+    const cols = VW > 700 ? 4 : 2;
+    const rows = Math.ceil(ZONES.length / cols);
+    const pad = 18;
+    const headerH = 44;
+    const footerH = 32;
+    const availW = VW - pad * 2;
+    const availH = VH - pad * 2 - headerH - footerH;
+    const cw = (availW - pad * (cols - 1)) / cols;
+    const ch = (availH - pad * (rows - 1)) / rows;
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 18px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Postcards', VW / 2, pad + 22);
+
+    for (let i = 0; i < ZONES.length; i++) {
+      const z = ZONES[i];
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = pad + col * (cw + pad);
+      const y = pad + headerH + row * (ch + pad);
+      // card
+      ctx.fillStyle = z.visited ? 'rgba(8,30,45,0.92)' : 'rgba(20,28,38,0.85)';
+      ctx.strokeStyle = z.visited ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1.5;
+      const cr = 10;
+      ctx.beginPath();
+      ctx.moveTo(x + cr, y);
+      ctx.arcTo(x + cw, y, x + cw, y + ch, cr);
+      ctx.arcTo(x + cw, y + ch, x, y + ch, cr);
+      ctx.arcTo(x, y + ch, x, y, cr);
+      ctx.arcTo(x, y, x + cw, y, cr);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      if (z.visited) {
+        // shrink the POI scene into the card
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x + 4, y + 4, cw - 8, ch - 30);
+        ctx.clip();
+        const tx = x + cw / 2, ty = y + (ch - 28) / 2 + 4;
+        // tint backdrop with the zone colour
+        ctx.fillStyle = z.color;
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(x + 4, y + 4, cw - 8, ch - 30);
+        ctx.globalAlpha = 1;
+        ctx.translate(tx, ty);
+        const fit = Math.min((cw - 16) / 320, (ch - 50) / 260);
+        ctx.scale(fit, fit);
+        // drawPOI expects z.px / z.py — render at origin
+        const savedPx = z.px, savedPy = z.py;
+        z.px = 0; z.py = 0;
+        drawPOI(z, now);
+        z.px = savedPx; z.py = savedPy;
+        ctx.restore();
+        ctx.fillStyle = '#fff';
+        ctx.font = '600 13px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('★ ' + z.name, x + cw / 2, y + ch - 10);
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.font = '700 38px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('?', x + cw / 2, y + ch / 2 + 6);
+        ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+        ctx.fillText('undiscovered', x + cw / 2, y + ch - 10);
+      }
+    }
+
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = '500 13px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('tap anywhere to close', VW / 2, VH - 12);
+  }
+
+  function drawMap() {
+    if (!mapOpen) return;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, VW, VH);
+
+    const pad = 36;
+    const maxW = VW - pad * 2;
+    const maxH = VH - pad * 2 - 80;
+    const ratio = WORLD.w / WORLD.h;
+    let mw = maxW, mh = mw / ratio;
+    if (mh > maxH) { mh = maxH; mw = mh * ratio; }
+    const x0 = (VW - mw) / 2;
+    const y0 = (VH - mh) / 2;
+
+    // panel background
+    const r = 14;
+    const px = x0 - 10, py = y0 - 10, pw = mw + 20, ph = mh + 20;
+    ctx.fillStyle = 'rgba(8,30,45,0.92)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.30)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px + r, py);
+    ctx.arcTo(px + pw, py, px + pw, py + ph, r);
+    ctx.arcTo(px + pw, py + ph, px, py + ph, r);
+    ctx.arcTo(px, py + ph, px, py, r);
+    ctx.arcTo(px, py, px + pw, py, r);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    const sx = mw / WORLD.w, sy = mh / WORLD.h;
+
+    // breadcrumb trail of cells the unicorn has visited
+    ctx.fillStyle = 'rgba(255,235,180,0.12)';
+    const cellW = BREAD_CELL * sx, cellH = BREAD_CELL * sy;
+    for (let cy = 0; cy < BREAD_H; cy++) {
+      for (let cx = 0; cx < BREAD_W; cx++) {
+        if (!breadcrumbs[cy * BREAD_W + cx]) continue;
+        ctx.fillRect(x0 + cx * cellW, y0 + cy * cellH, cellW + 0.5, cellH + 0.5);
+      }
+    }
+
+    ZONES.forEach(z => {
+      const zx = x0 + z.cx * sx;
+      const zy = y0 + z.cy * sy;
+      const zr = z.r * Math.min(sx, sy);
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = z.color;
+      ctx.beginPath(); ctx.arc(zx, zy, zr, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText((z.visited ? '★ ' : '? ') + z.name, zx, zy - zr - 6);
+    });
+    ZONES.forEach(z => {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(x0 + z.px * sx, y0 + z.py * sy, 4, 0, Math.PI * 2); ctx.fill();
+    });
+    // bubbles as tiny rainbow specks
+    for (let i = 0; i < bubbles.length; i++) {
+      const b = bubbles[i];
+      ctx.fillStyle = COLORS[i % COLORS.length];
+      ctx.fillRect(x0 + b.x * sx - 1, y0 + b.y * sy - 1, 2, 2);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0 + camera.x * sx, y0 + camera.y * sy, (VW / ZOOM) * sx, (VH / ZOOM) * sy);
+
+    ctx.fillStyle = '#ffcb6b';
+    ctx.beginPath(); ctx.arc(x0 + unicorn.x * sx, y0 + unicorn.y * sy, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = '500 14px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('tap anywhere to close', VW / 2, y0 + mh + 30);
+  }
+
+
+  function hexA(hex, a) {
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const r = parseInt(h.substr(0, 2), 16);
+    const g = parseInt(h.substr(2, 2), 16);
+    const b = parseInt(h.substr(4, 2), 16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

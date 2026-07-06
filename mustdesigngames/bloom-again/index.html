@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1b1a18">
+<title>Bloom Again</title>
+<!-- BLOOM AGAIN — prototype slice. The Hollow (charcoal) menu → the Lantern Frame
+     vignette → two styles (charcoal rub-to-erase + pixel tap-to-snap). #LLM-generated -->
+<style>
+  html,body{margin:0;height:100%;background:#100f0e;overflow:hidden;
+    font-family:ui-monospace,Menlo,Consolas,monospace;-webkit-user-select:none;user-select:none;
+    touch-action:none;overscroll-behavior:none;}
+  #c{display:block;width:100vw;height:100vh;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+import * as E from './engine.js';
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let DPR = 1, view = { scale: 1, ox: 0, oy: 0 }, hudH = 0;
+
+// ---- game shell state ----
+const MENU = 'menu', PLAY = 'play';
+let screen = MENU;
+let trans = null;             // {t, from, dir} zoom-fall transition
+const finished = new Set();   // frame ids that have been completed
+let currentFrameId = 'lantern';
+let st = E.createState(currentFrameId);
+let toast = '', toastT = 0;
+
+// menu frames (the Hollow gallery). Playability is derived from `finished`.
+const frames = [
+  { id: 'lantern', title: 'The Lantern Frame', sub: 'i.' },
+  { id: 'relit',   title: 'The Lantern, Relit', sub: 'ii.' },
+  { id: 'hollow3', title: 'unpainted',          sub: 'iii.' },
+];
+function isPlayable(f){
+  if (f.id === 'lantern') return true;
+  if (f.id === 'relit')   return finished.has('lantern');
+  return false;
+}
+
+// ---- layout ----
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  const w = window.innerWidth, h = window.innerHeight;
+  cv.width = w * DPR; cv.height = h * DPR;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  hudH = Math.max(96, Math.min(140, h * 0.16));
+  const playH = h - hudH;
+  view.scale = Math.min(w / E.W, playH / E.H);
+  view.ox = (w - E.W * view.scale) / 2;
+  view.oy = (playH - E.H * view.scale) / 2;
+  W = w; H = h;
+}
+let W = 0, H = 0;
+window.addEventListener('resize', resize);
+function S(v){ return v * view.scale; }                 // scene length -> screen
+function SX(x){ return view.ox + x * view.scale; }       // scene x -> screen
+function SY(y){ return view.oy + y * view.scale; }       // scene y -> screen
+function toScene(px, py){ return { x: (px - view.ox) / view.scale, y: (py - view.oy) / view.scale }; }
+
+// ---- input ----
+const pointers = new Map();
+let swipeArmed = false, swipeFired = false;
+const wheelBtn = () => ({ x: 16, y: H - hudH + hudH/2 - 30, r: 30 });
+function hit(b, x, y){ return Math.hypot(x - (b.x + 30), y - (b.y + 30)) < b.r; }
+
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  const p = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: 0 };
+  pointers.set(e.pointerId, p);
+  if (pointers.size === 2) { swipeArmed = true; swipeFired = false; }
+});
+cv.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.moved += Math.hypot(dx, dy);
+  // two-finger swipe = switch style (reserved channel; never collides with manipulation)
+  if (pointers.size >= 2 && swipeArmed && !swipeFired) {
+    let avg = 0; for (const q of pointers.values()) avg += (e.clientX - q.sx);
+    if (Math.abs(e.clientX - p.sx) > 46) { doSwitch(); swipeFired = true; }
+  }
+  // single-finger charcoal rub-to-erase
+  if (screen === PLAY && pointers.size === 1 && st.style === 'charcoal' && !st.won) {
+    const s = toScene(e.clientX, e.clientY);
+    const distScene = Math.hypot(dx, dy) / view.scale;
+    if (E.rubAt(st, s.x, s.y, distScene)) flash('The block dissolves into graphite dust.');
+  }
+  p.x = e.clientX; p.y = e.clientY;
+});
+cv.addEventListener('pointerup', e => {
+  const p = pointers.get(e.pointerId); pointers.delete(e.pointerId);
+  if (pointers.size < 2) swipeArmed = false;
+  if (!p) return;
+  const tap = p.moved < 10;
+  if (tap) handleTap(p.sx, p.sy);
+});
+cv.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); });
+
+function handleTap(x, y) {
+  if (screen === MENU) {
+    const r = frameRects();
+    for (let i = 0; i < frames.length; i++) {
+      if (isPlayable(frames[i]) && pointIn(r[i], x, y)) { startTransition(r[i], frames[i].id); return; }
+    }
+    return;
+  }
+  // PLAY
+  if (st.won) { exitToMenu(); return; }
+  if (hit(wheelBtn(), x, y)) { doSwitch(); return; }
+  if (pointIn(backBtn(), x, y)) { exitToMenu(); return; }
+  if (pointIn(resetBtn(), x, y)) { st = E.createState(currentFrameId); flash('Reset.'); return; }
+  // pixel tap-to-snap
+  if (st.style === 'pixel') {
+    const s = toScene(x, y);
+    if (E.tapAt(st, s.x, s.y)) flash('The gap quantizes into a staircase.');
+  }
+}
+function doSwitch(){ if (screen === PLAY && !st.won) { E.cycleStyle(st); flash(st.style === 'pixel' ? 'PIXEL — the world quantizes.' : 'CHARCOAL — only linework is solid.'); } }
+window.addEventListener('keydown', e => {            // desktop helpers
+  if (e.key === 's') doSwitch();
+  if (e.key === 'r' && screen === PLAY) { st = E.createState(currentFrameId); }
+  if (e.key === 'Escape' && screen === PLAY) exitToMenu();
+});
+
+function pointIn(r, x, y){ return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; }
+function flash(m){ toast = m; toastT = 2.4; }
+
+// ---- transitions ----
+function startTransition(r, id){ trans = { t: 0, from: r, dir: 1, id }; }
+function exitToMenu(){ if (st.won) finished.add(currentFrameId); screen = MENU; st = E.createState(currentFrameId); }
+
+// ---- loop ----
+let last = performance.now();
+function frame(now){
+  let dt = (now - last) / 1000; last = now; dt = Math.min(dt, 1/30);
+  update(dt); render();
+  requestAnimationFrame(frame);
+}
+function update(dt){
+  if (toastT > 0) toastT -= dt;
+  if (trans){
+    trans.t += dt * 2.2;
+    if (trans.t >= 1){ currentFrameId = trans.id; trans = null; screen = PLAY; st = E.createState(currentFrameId); }
+  }
+  if (screen === PLAY && !trans){
+    E.stepPhysics(st, dt);
+    if (st.won && toastT <= 0) flash('FRAME FINISHED — tap to return.');
+  }
+}
+
+// ---- render ----
+function render(){
+  ctx.clearRect(0, 0, W, H);
+  if (screen === MENU && !trans) { renderMenu(); return; }
+  if (screen === MENU && trans)  { renderMenu(); renderTransition(); return; }
+  renderVignette();
+  renderHUD();
+  renderToast();
+}
+
+// graphite paper background
+function paper(x, y, w, h, dark){
+  ctx.fillStyle = dark ? '#211f1c' : '#2b2926';
+  ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = 0.05; ctx.fillStyle = '#fff';
+  for (let i = 0; i < (w*h)/2600; i++) ctx.fillRect(x + Math.random()*w, y + Math.random()*h, 1, 1);
+  ctx.globalAlpha = 1;
+}
+
+// ---------- MENU (The Hollow / charcoal skin) ----------
+function frameRects(){
+  const colW = Math.min(W * 0.78, 360), x = (W - colW) / 2;
+  const top = H * 0.30, fh = Math.min(colW * 0.42, (H - top) / 3.4), gap = fh * 0.22;
+  return frames.map((f, i) => ({ x, y: top + i * (fh + gap), w: colW, h: fh }));
+}
+function renderMenu(){
+  paper(0, 0, W, H, true);
+  // title
+  ctx.textAlign = 'center'; ctx.fillStyle = '#e9e6df';
+  ctx.font = `600 ${Math.round(Math.min(W*0.085,40))}px ui-monospace,monospace`;
+  ctx.fillText('BLOOM AGAIN', W/2, H*0.135);
+  ctx.fillStyle = '#8a857c'; ctx.font = `${Math.round(Math.min(W*0.04,18))}px ui-monospace,monospace`;
+  ctx.fillText('i.  the hollow', W/2, H*0.135 + 28);
+  const t = performance.now()/1000;
+  const r = frameRects();
+  frames.forEach((f, i) => {
+    const b = r[i];
+    const playable = isPlayable(f);
+    const isFin = finished.has(f.id);
+    const ghost = !playable;
+    const a = ghost ? 0.30 + 0.16*Math.sin(t*1.3 + i) : 1;
+    ctx.globalAlpha = a;
+    ctx.lineWidth = 2; ctx.strokeStyle = isFin ? '#d9c27a' : '#cdc8bd';
+    ctx.setLineDash(ghost ? [5,6] : []);
+    sketchRect(b.x, b.y, b.w, b.h);
+    ctx.setLineDash([]);
+    // thumbnail glyph
+    if (playable) drawFrameThumb(b, f, isFin);
+    ctx.fillStyle = ghost ? '#6f6a61' : (isFin ? '#d9c27a' : '#e9e6df');
+    ctx.textAlign = 'left';
+    ctx.font = `600 ${Math.round(b.h*0.17)}px ui-monospace,monospace`;
+    const ghostLabel = f.id === 'hollow3' ? '— unpainted —' : '— locked —';
+    ctx.fillText(f.sub + '  ' + (ghost ? ghostLabel : f.title), b.x + 14, b.y + b.h - 16);
+    if (isFin){ ctx.textAlign='right'; ctx.fillText('✓ finished', b.x + b.w - 14, b.y + 26); }
+    ctx.globalAlpha = 1;
+  });
+  ctx.textAlign = 'center'; ctx.fillStyle = '#6f6a61';
+  ctx.font = `${Math.round(Math.min(W*0.033,15))}px ui-monospace,monospace`;
+  ctx.fillText(finished.size > 0 ? 'the gallery has changed.' : 'tap a frame to fall in', W/2, H*0.93);
+  ctx.textAlign = 'left';
+}
+function drawFrameThumb(b, f, isFin){
+  // tiny charcoal sketch of the puzzle
+  ctx.save(); ctx.globalAlpha *= 0.85; ctx.strokeStyle = isFin ? '#d9c27a' : '#9d978c'; ctx.lineWidth = 2;
+  const px = b.x + 22, py = b.y + b.h*0.34, ww = b.w - 44, hh = b.h*0.32;
+  if (f.id === 'lantern'){
+    ctx.beginPath();
+    ctx.moveTo(px, py); ctx.lineTo(px+ww*0.34, py+hh*0.25);
+    ctx.moveTo(px+ww*0.62, py+hh*0.8); ctx.lineTo(px+ww*0.84, py+hh*0.9);
+    ctx.stroke();
+    ctx.strokeRect(px+ww*0.82, py+hh*0.35, ww*0.13, hh*0.6); // door
+    ctx.beginPath(); ctx.arc(px+6, py-4, 4, 0, 7); ctx.stroke(); // figure
+  } else if (f.id === 'relit'){
+    // two ledges + landing, two blocks bracketing a gap
+    ctx.beginPath();
+    ctx.moveTo(px, py-hh*0.05); ctx.lineTo(px+ww*0.42, py+hh*0.05);
+    ctx.moveTo(px, py+hh*0.5);  ctx.lineTo(px+ww*0.5,  py+hh*0.6);
+    ctx.moveTo(px+ww*0.78, py+hh*0.9); ctx.lineTo(px+ww, py+hh);
+    ctx.stroke();
+    ctx.strokeRect(px+ww*0.35, py-hh*0.15, ww*0.08, hh*0.2); // block A
+    ctx.strokeRect(px+ww*0.78, py+hh*0.7,  ww*0.06, hh*0.2); // block B
+    ctx.beginPath(); ctx.arc(px+4, py-hh*0.12, 3.5, 0, 7); ctx.stroke(); // figure
+  }
+  ctx.restore();
+}
+function renderTransition(){
+  const k = trans.t, b = trans.from;
+  const cx = b.x + b.w/2, cy = b.y + b.h/2;
+  const sx = 1 + k * (W / b.w), sy = 1 + k * (H / b.h);
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.translate(cx, cy); ctx.scale(sx, sy); ctx.translate(-cx, -cy);
+  ctx.strokeStyle = '#cdc8bd'; ctx.lineWidth = 2; sketchRect(b.x, b.y, b.w, b.h);
+  ctx.restore();
+  ctx.globalAlpha = k; paper(0,0,W,H,true); ctx.globalAlpha = 1;
+}
+
+// ---------- VIGNETTE ----------
+function renderVignette(){
+  // destabilise warp (rapid switching) — soft, no fail
+  const d = st.destab;
+  ctx.save();
+  if (d > 0.01){ const wob = Math.sin(performance.now()/90)*d*3; ctx.translate(wob, 0); }
+  if (st.style === 'charcoal') renderCharcoal(); else renderPixel();
+  ctx.restore();
+  if (d > 0.01){ ctx.fillStyle = `rgba(180,120,200,${d*0.10})`; ctx.fillRect(0,0,W, H-hudH); }
+  // vignette darkening
+  const g = ctx.createRadialGradient(W/2,(H-hudH)/2,H*0.2,W/2,(H-hudH)/2,H*0.7);
+  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.45)');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H-hudH);
+}
+
+function line(x1,y1,x2,y2){ ctx.beginPath(); ctx.moveTo(SX(x1),SY(y1)); ctx.lineTo(SX(x2),SY(y2)); ctx.stroke(); }
+function hatch(r, alpha){
+  ctx.save(); ctx.beginPath(); ctx.rect(SX(r.x),SY(r.y),S(r.w),S(r.h)); ctx.clip();
+  ctx.globalAlpha = alpha; ctx.strokeStyle='#cdc8bd'; ctx.lineWidth=1;
+  for (let i=-r.h; i<r.w; i+=2.4){ line(r.x+i, r.y, r.x+i+r.h, r.y+r.h); }
+  ctx.restore();
+}
+
+function renderCharcoal(){
+  paper(0, 0, W, H - hudH, true);
+  const sc = E.getScene(st);
+  ctx.strokeStyle = '#d8d3c8'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  // static linework
+  for (const sg of sc.staticSegs) line(sg.x1, sg.y1, sg.x2, sg.y2);
+  // gaps — erased hole or snapped ramp
+  sc.gaps.forEach((g, i) => {
+    if (!st.snapped[i]){
+      ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='#171513';
+      ctx.beginPath(); ctx.ellipse(SX(g.x+g.w/2), SY(g.y+g.h*0.75), S(g.w*0.5), S(g.h*0.42),0,0,7); ctx.fill();
+      ctx.globalAlpha=0.3; ctx.strokeStyle='#7d776c'; ctx.setLineDash([3,4]);
+      ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+    } else {
+      ctx.strokeStyle = '#bdb8ad'; ctx.lineWidth = 2;
+      line(g.ramp.x1, g.ramp.y1, g.ramp.x2, g.ramp.y2);
+    }
+  });
+  // inked blocks — hatch fades with rub progress
+  sc.blocks.forEach((b, i) => {
+    if (st.erased[i]) return;
+    const prog = Math.min(1, st.rub[i] / 26);
+    ctx.strokeStyle = '#d8d3c8'; ctx.lineWidth = 2;
+    ctx.strokeRect(SX(b.x),SY(b.y),S(b.w),S(b.h));
+    hatch(b, 0.9*(1-prog));
+    if (prog>0){ ctx.fillStyle=`rgba(120,114,104,${0.25*prog})`; ctx.fillRect(SX(b.x-2),SY(b.y-2),S(b.w+4),S(b.h+4)); }
+    if (touchingBlock(b)) glowRect(b);
+  });
+  // doors — passable outline (an arched sketch)
+  sc.doors.forEach(d => {
+    ctx.save(); ctx.globalAlpha=0.7; ctx.strokeStyle='#a39d92'; ctx.lineWidth=2;
+    ctx.strokeRect(SX(d.x),SY(d.y),S(d.w),S(d.h));
+    ctx.beginPath(); ctx.moveTo(SX(d.x),SY(d.y)); ctx.quadraticCurveTo(SX(d.x+d.w/2),SY(d.y-5),SX(d.x+d.w),SY(d.y)); ctx.stroke();
+    ctx.restore();
+  });
+  goalMark(sc.goal, '#d9c27a');
+  drawFigureCharcoal();
+}
+
+function renderPixel(){
+  const sc = E.getScene(st);
+  paper(0,0,W,H-hudH,false);
+  ctx.fillStyle = '#141a2e'; ctx.fillRect(0,0,W,H-hudH);
+  // dither field
+  ctx.globalAlpha=0.06; ctx.fillStyle='#3a4a7a';
+  for (let y=0;y<H-hudH;y+=6) for (let x=(y/6%2?3:0);x<W;x+=6) ctx.fillRect(x,y,3,3);
+  ctx.globalAlpha=1;
+  // static segs: horizontal = platform bar + underbelly; vertical = thin column
+  for (const sg of sc.staticSegs){
+    if (sg.x1 !== sg.x2){
+      pxSeg(sg.x1, sg.y1, sg.x2, sg.y2, '#3b6e57');
+      const maxY = Math.max(sg.y1, sg.y2);
+      ctx.fillStyle = '#26405f';
+      ctx.fillRect(SX(sg.x1), SY(maxY+4), S(sg.x2-sg.x1), S(8));
+    } else {
+      ctx.fillStyle = '#26405f';
+      const y0 = Math.min(sg.y1, sg.y2), h0 = Math.abs(sg.y2-sg.y1);
+      ctx.fillRect(SX(sg.x1-1.5), SY(y0), S(3), S(h0));
+    }
+  }
+  // gaps: shimmering region or stepped staircase
+  sc.gaps.forEach((g, i) => {
+    if (!st.snapped[i]){
+      const a = 0.35 + 0.25*Math.sin(performance.now()/180);
+      ctx.fillStyle=`rgba(120,200,255,${a})`;
+      for (let gx=g.x; gx<g.x+g.w; gx+=4)
+        for (let gy=g.y+8; gy<g.y+g.h; gy+=4)
+          if ((gx+gy)%8<4) ctx.fillRect(SX(gx),SY(gy),S(3),S(3));
+      glowRect(g);
+    } else {
+      const r = g.ramp;
+      const steps = 5;
+      for (let k=0;k<steps;k++){
+        const t0=k/steps, t1=(k+1)/steps;
+        const x=r.x1+(r.x2-r.x1)*t0, y=r.y1+(r.y2-r.y1)*t1;
+        const w=(r.x2-r.x1)/steps;
+        ctx.fillStyle='#3b6e57'; ctx.fillRect(SX(x),SY(y-2),S(w+0.5),S(H));
+        ctx.fillStyle='rgba(255,255,255,0.14)'; ctx.fillRect(SX(x),SY(y-2),S(w+0.5),S(1.6));
+      }
+    }
+  });
+  const blk=(r,c)=>{ ctx.fillStyle=c; ctx.fillRect(SX(r.x),SY(r.y),S(r.w),S(r.h));
+    ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fillRect(SX(r.x),SY(r.y),S(r.w),S(2)); };
+  sc.blocks.forEach((b, i) => { if (!st.erased[i]) blk(b, '#7a5a8f'); });
+  sc.doors.forEach(d => blk(d, '#d24b4b'));
+  goalMark(sc.goal, '#ffd76a');
+  drawFigurePixel();
+}
+function pxSeg(x1,y1,x2,y2,c){ ctx.fillStyle=c; ctx.fillRect(SX(x1),SY(Math.min(y1,y2)),S(x2-x1),S(Math.abs(y2-y1)+4)); }
+
+function goalMark(g, col){
+  const t=performance.now()/1000;
+  ctx.save(); ctx.globalAlpha=0.5+0.3*Math.sin(t*3); ctx.strokeStyle=col; ctx.lineWidth=2;
+  ctx.strokeRect(SX(g.x),SY(g.y),S(g.w),S(g.h));
+  ctx.globalAlpha=0.85; ctx.fillStyle=col; ctx.font=`${Math.round(S(6))}px ui-monospace`; ctx.textAlign='center';
+  ctx.fillText('◊', SX(g.x+g.w/2), SY(g.y+g.h/2)+S(2)); ctx.restore(); ctx.textAlign='left';
+}
+function glowRect(r){ ctx.save(); ctx.strokeStyle='rgba(255,235,150,0.8)'; ctx.lineWidth=2;
+  ctx.shadowColor='rgba(255,225,120,0.9)'; ctx.shadowBlur=12;
+  ctx.strokeRect(SX(r.x),SY(r.y),S(r.w),S(r.h)); ctx.restore(); }
+function touchingBlock(b){ for (const p of pointers.values()){ const s=toScene(p.x,p.y);
+  if (s.x>b.x-4&&s.x<b.x+b.w+4&&s.y>b.y-4&&s.y<b.y+b.h+4) return true;} return false; }
+
+function drawFigureCharcoal(){
+  const f=st.fig; ctx.save();
+  ctx.fillStyle='#0d0c0b'; ctx.shadowColor='rgba(0,0,0,0.6)'; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.arc(SX(f.x),SY(f.y),S(f.r),0,7); ctx.fill();
+  ctx.shadowBlur=0; ctx.strokeStyle='#4a463f'; ctx.lineWidth=1; ctx.beginPath();
+  ctx.arc(SX(f.x),SY(f.y),S(f.r),0,7); ctx.stroke(); ctx.restore();
+}
+function drawFigurePixel(){
+  const f=st.fig, u=S(f.r*0.8);
+  ctx.fillStyle='#ffe08a';
+  ctx.fillRect(SX(f.x)-u,SY(f.y)-u,u*2,u*2);
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(SX(f.x)-u*0.4,SY(f.y)-u*0.4,u*0.5,u*0.5);
+}
+
+// ---------- HUD ----------
+function backBtn(){ return { x: W-110, y: H-hudH+14, w: 50, h: 30 }; }
+function resetBtn(){ return { x: W-54, y: H-hudH+14, w: 44, h: 30 }; }
+function renderHUD(){
+  ctx.fillStyle='#161412'; ctx.fillRect(0,H-hudH,W,hudH);
+  ctx.strokeStyle='#2c2925'; ctx.beginPath(); ctx.moveTo(0,H-hudH); ctx.lineTo(W,H-hudH); ctx.stroke();
+  // style wheel button (tap to switch; two-finger swipe also switches)
+  const b=wheelBtn(); const cy=b.y+30;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(b.x+30, cy, b.r, 0, 7);
+  ctx.fillStyle = st.style==='charcoal' ? '#2b2926' : '#1d2747'; ctx.fill();
+  ctx.lineWidth=2; ctx.strokeStyle='#cdc8bd'; ctx.stroke();
+  ctx.fillStyle = st.style==='charcoal' ? '#e9e6df' : '#7fb4ff'; ctx.textAlign='center';
+  ctx.font='700 12px ui-monospace'; ctx.fillText(st.style==='charcoal'?'CHAR':'PIXL', b.x+30, cy+4);
+  ctx.restore();
+  ctx.textAlign='left'; ctx.fillStyle='#7c766c'; ctx.font='11px ui-monospace';
+  ctx.fillText('tap ⟳  ·  two-finger swipe', b.x+8, cy+b.r+14);
+  // hint ladder — center in the band between wheel label (left) and buttons (right)
+  ctx.fillStyle='#cfc9bd'; ctx.font=`${Math.min(15,W*0.033)}px ui-monospace`; ctx.textAlign='center';
+  const hintL = 120, hintR = W - 120;
+  wrap(hint(), (hintL+hintR)/2, H-hudH+30, Math.max(120, hintR-hintL), 18);
+  // buttons
+  btn(backBtn(),'menu'); btn(resetBtn(),'↺');
+}
+function btn(r,label){ ctx.fillStyle='#23201d'; ctx.fillRect(r.x,r.y,r.w,r.h);
+  ctx.strokeStyle='#3a352f'; ctx.strokeRect(r.x,r.y,r.w,r.h);
+  ctx.fillStyle='#bdb8ad'; ctx.textAlign='center'; ctx.font='12px ui-monospace';
+  ctx.fillText(label,r.x+r.w/2,r.y+r.h/2+4); ctx.textAlign='left'; }
+function wrap(text,cx,y,maxw,lh){ const words=text.split(' '); let line='',yy=y;
+  for (const w of words){ const t=line?line+' '+w:w;
+    if (ctx.measureText(t).width>maxw){ ctx.fillText(line,cx,yy); line=w; yy+=lh; } else line=t; }
+  ctx.fillText(line,cx,yy); ctx.textAlign='left'; }
+function hint(){
+  if (st.won) return 'Finished. Tap to return — the gallery has changed.';
+  if (st.sceneId === 'lantern'){
+    const snapped = st.snapped[0], erased = st.erased[0];
+    if (snapped && erased && st.style==='pixel') return 'The door is a solid slab in pixel. Which style makes it a passable outline?';
+    if (snapped && st.style==='charcoal' && !erased) return 'Only linework is solid here — rub away the inked block.';
+    if (erased && !snapped) return 'The gap is an erased hole in charcoal. Find the style that fills it.';
+    if (st.style==='pixel' && !snapped) return 'Pixel quantizes the world. Tap the shimmering gap to snap it solid.';
+    return 'Two ways to draw this scene. Switch styles, set a state in one, exploit it in the other.';
+  }
+  if (st.sceneId === 'relit'){
+    const [eA, eB] = st.erased, [snap] = st.snapped;
+    if (!eA && st.style==='pixel')                 return 'Pixel won\'t erase the block. Switch styles.';
+    if (!eA)                                       return 'Rub the upper block to send the Figure falling.';
+    if (eA && !snap && st.style==='charcoal')      return 'The wide gap is a fatal hole in charcoal. Try the other style.';
+    if (eA && !snap && st.style==='pixel')         return 'Tap the shimmering gap to snap a long ramp.';
+    if (snap && !eB && st.style==='pixel')         return 'A second block stops the Figure. Charcoal erases it.';
+    if (snap && !eB)                               return 'Almost — rub the lower block to clear the goal.';
+    return 'Read each station in the right style. Rub, snap, rub.';
+  }
+  return '';
+}
+function renderToast(){
+  if (toastT<=0) return;
+  ctx.globalAlpha=Math.min(1,toastT); ctx.fillStyle='rgba(15,14,13,0.85)';
+  const w=Math.min(W*0.8,420), x=(W-w)/2, y=H-hudH-50;
+  ctx.fillRect(x,y,w,34); ctx.strokeStyle='#3a352f'; ctx.strokeRect(x,y,w,34);
+  ctx.fillStyle='#e9e6df'; ctx.textAlign='center'; ctx.font='13px ui-monospace';
+  ctx.fillText(toast, W/2, y+22); ctx.textAlign='left'; ctx.globalAlpha=1;
+}
+
+// sketchy rectangle (hand-drawn feel)
+function sketchRect(x,y,w,h){ const j=()=> (Math.random()-0.5)*1.5;
+  ctx.beginPath();
+  ctx.moveTo(x+j(),y+j()); ctx.lineTo(x+w+j(),y+j());
+  ctx.lineTo(x+w+j(),y+h+j()); ctx.lineTo(x+j(),y+h+j()); ctx.closePath(); ctx.stroke(); }
+
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

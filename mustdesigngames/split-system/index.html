@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>Split System — Charge Trainer</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#131a22; --panel2:#0f151c; --line:#243240;
+    --ink:#e8eef4; --dim:#8aa0b4; --good:#3fb950; --bad:#f0883e; --hot:#f85149;
+    --cool:#58a6ff; --accent:#ffd23f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{max-width:520px;margin:0 auto;padding:10px 12px calc(96px + env(safe-area-inset-bottom))}
+  h1{font-size:17px;letter-spacing:.14em;margin:0;font-weight:800}
+  .sub{font-size:11px;color:var(--dim);letter-spacing:.08em}
+  header{display:flex;align-items:center;justify-content:space-between;
+    padding:6px 2px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .mode{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:11px}
+  .mode button{background:transparent;color:var(--dim);border:0;padding:7px 11px;font-weight:700;letter-spacing:.06em}
+  .mode button.on{background:var(--accent);color:#1a1205}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:11px}
+  .lbl{font-size:10px;letter-spacing:.13em;color:var(--dim);text-transform:uppercase;margin-bottom:8px}
+  .ticket{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:13px}
+  .ticket div b{display:block;color:var(--dim);font-size:10px;letter-spacing:.08em;font-weight:600;margin-bottom:1px}
+  .ticket div span{font-weight:700;font-size:15px}
+  .gauges{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .g{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center;position:relative}
+  .g .t{font-size:10px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+  .g .v{font-size:30px;font-weight:800;line-height:1.1;margin-top:3px;font-variant-numeric:tabular-nums}
+  .g .u{font-size:11px;color:var(--dim)}
+  .g.low .v{color:var(--cool)} .g.high .v{color:var(--hot)}
+  .clamps{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .c{background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:10px;text-align:center}
+  .c .t{font-size:9.5px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+  .c .v{font-size:22px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
+  details.pt{margin-top:2px}
+  details.pt summary{cursor:pointer;font-size:11px;color:var(--accent);letter-spacing:.05em;list-style:none;padding:4px 0}
+  details.pt summary::-webkit-details-marker{display:none}
+  .pttable{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px;margin-top:8px}
+  .pttable .row{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 4px;text-align:center;font-size:11px;font-variant-numeric:tabular-nums}
+  .pttable .row b{display:block;color:var(--accent);font-size:13px}
+  .pttable .row.hl{outline:2px solid var(--cool);border-color:var(--cool)}
+  .pttable .row.hl2{outline:2px solid var(--hot);border-color:var(--hot)}
+  .pttable .row small{color:var(--dim)}
+  .learn{font-size:13px;line-height:1.55}
+  .learn .row{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 0}
+  .learn .row:last-child{border-bottom:0}
+  .learn b{font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800}
+  .pill.in{background:rgba(63,185,80,.16);color:var(--good)}
+  .pill.out{background:rgba(248,81,73,.16);color:var(--hot)}
+  .hint{font-size:11.5px;color:var(--dim);margin-top:8px;line-height:1.5}
+  .controls{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;
+    background:linear-gradient(180deg,transparent,#0b0f14 22%);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  .chargebar{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+  .chargebar button{padding:13px 0;border-radius:12px;border:1px solid var(--line);font-weight:800;font-size:14px;color:var(--ink);background:var(--panel)}
+  .chargebar button.rec{color:var(--hot)} .chargebar button.add{color:var(--good)}
+  .chargebar button:active{transform:translateY(1px)}
+  .verifyrow{display:grid;grid-template-columns:1.6fr 1fr;gap:8px}
+  .verifyrow button{padding:14px 0;border-radius:12px;border:0;font-weight:800;font-size:15px;letter-spacing:.04em}
+  #verify{background:var(--accent);color:#1a1205}
+  #newjob{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+  .scrim{position:fixed;inset:0;background:rgba(3,6,10,.72);display:none;align-items:flex-end;justify-content:center;z-index:9}
+  .scrim.show{display:flex}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:520px;
+    padding:18px 16px calc(20px + env(safe-area-inset-bottom));animation:up .18s ease}
+  @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+  .sheet h2{margin:0 0 4px;font-size:20px}
+  .verdict{font-size:13px;color:var(--dim);margin-bottom:12px}
+  .work{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:13px;line-height:1.7;font-variant-numeric:tabular-nums}
+  .work .step{display:flex;justify-content:space-between;gap:10px}
+  .work .step span:first-child{color:var(--dim)}
+  .scorebig{font-size:46px;font-weight:800;text-align:center;margin:6px 0 2px}
+  .scoresub{text-align:center;color:var(--dim);font-size:12px;margin-bottom:14px}
+  .sheet .verifyrow button#again{background:var(--accent);color:#1a1205}
+  .sheet .verifyrow button#close{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+  .banner{font-size:13px;font-weight:700;border-radius:10px;padding:9px 11px;margin-bottom:8px;line-height:1.45}
+  .banner.good{background:rgba(63,185,80,.16);color:var(--good)}
+  .banner.bad{background:rgba(248,81,73,.16);color:var(--hot)}
+  .diaglabel{font-size:10px;letter-spacing:.13em;color:var(--dim);text-transform:uppercase;margin-bottom:7px}
+  .diagbar{display:grid;gap:7px;margin-bottom:8px}
+  .diagbar button{padding:12px 12px;border-radius:11px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);font-weight:700;font-size:13px;text-align:left}
+  .diagbar button:active{transform:translateY(1px)}
+  .bigbtn{display:block;width:100%;padding:14px 0;border-radius:12px;border:0;font-weight:800;
+    font-size:15px;letter-spacing:.04em;margin-top:8px}
+  #verify.bigbtn{background:var(--accent);color:#1a1205}
+  #newjob.bigbtn{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+  .stats{display:flex;gap:10px;font-size:11.5px;color:var(--dim);margin:-4px 2px 12px;letter-spacing:.03em;flex-wrap:wrap}
+  .stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .stats .fire{color:var(--accent)}
+  #share.bigbtn{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>SPLIT SYSTEM</h1><div class="sub">CHARGE TRAINER · v0.3</div></div>
+  <div class="mode"><button id="mPro" class="on">PRO</button><button id="mLearn">LEARN</button></div>
+</header>
+<div id="stats" class="stats"></div>
+
+<div class="card">
+  <div class="lbl">Job ticket</div>
+  <div class="ticket" id="ticket"></div>
+</div>
+
+<div class="card">
+  <div class="lbl">Manifold gauges</div>
+  <div class="gauges">
+    <div class="g low"><div class="t">Low · suction</div><div class="v" id="lowP">—</div><div class="u">psig</div></div>
+    <div class="g high"><div class="t">High · liquid</div><div class="v" id="highP">—</div><div class="u">psig</div></div>
+  </div>
+  <div class="clamps">
+    <div class="c"><div class="t">Suction line temp</div><div class="v" id="slt">—</div></div>
+    <div class="c"><div class="t">Liquid line temp</div><div class="v" id="llt">—</div></div>
+  </div>
+  <details class="pt"><summary id="ptSummary">▸ PT chart</summary><div class="pttable" id="pttable"></div></details>
+</div>
+
+<div class="card" id="learnCard" style="display:none">
+  <div class="lbl">Your reading (LEARN mode)</div>
+  <div class="learn" id="learn"></div>
+</div>
+
+<div class="card" style="margin-bottom:4px">
+  <div id="banner" class="banner" style="display:none"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="controls">
+  <div id="diagWrap">
+    <div class="diaglabel">Step 1 · Diagnose the system</div>
+    <div id="diagBar" class="diagbar"></div>
+  </div>
+  <div id="chargeBar" class="chargebar" style="display:none">
+    <button class="rec" data-d="-4">−−</button>
+    <button class="rec" data-d="-1">− Recover</button>
+    <button class="add" data-d="1">Add +</button>
+    <button class="add" data-d="4">++</button>
+  </div>
+  <button id="verify" class="bigbtn" style="display:none">COMMISSION ✓</button>
+  <button id="newjob" class="bigbtn">New job</button>
+</div>
+
+<div class="scrim" id="scrim">
+  <div class="sheet">
+    <h2 id="rTitle">—</h2>
+    <div class="verdict" id="rVerdict"></div>
+    <div class="scorebig" id="rScore"></div>
+    <div class="scoresub" id="rScoreSub"></div>
+    <div class="work" id="rWork"></div>
+    <button id="share" class="bigbtn">Share result</button>
+    <div style="height:8px"></div>
+    <div class="verifyrow"><button id="again">Next job</button><button id="close">Keep tuning</button></div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var job, taps, misdx, pro = true, phase = 'diagnose', origFault = 'none';
+  var sessionScore = 0, streak = 0, best = +(localStorage.getItem('ss_best') || 0), lastShare = '';
+
+  function fmt(n,d){ return Number(n).toFixed(d==null?0:d); }
+
+  function start(seed){
+    job = HVAC.newJob(seed, true);      // v0.2+: jobs may carry a mechanical fault
+    origFault = job.fault;
+    taps = 0; misdx = 0; phase = 'diagnose';
+    $('scrim').classList.remove('show');
+    setBanner();
+    renderTicket();
+    buildDiag();
+    setPhase();
+    updateStats();
+    render();
+  }
+
+  function updateStats(){
+    $('stats').innerHTML = 'Session <b>'+sessionScore+'</b>'
+      + ' &nbsp;·&nbsp; Streak <b>'+streak+'</b><span class="fire">🔥</span>'
+      + ' &nbsp;·&nbsp; Best <b>'+best+'</b>';
+  }
+
+  function setBanner(msg, good){
+    var b = $('banner');
+    if (!msg){ b.style.display='none'; return; }
+    b.style.display='block';
+    b.className = 'banner ' + (good ? 'good' : 'bad');
+    b.innerHTML = msg;
+  }
+
+  function buildDiag(){
+    $('diagBar').innerHTML = HVAC.ACTIONS.map(function(a){
+      return '<button data-k="'+a.key+'">'+a.label+'</button>';
+    }).join('');
+    $('diagBar').querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){ diagnose(btn.getAttribute('data-k')); });
+    });
+  }
+
+  function setPhase(){
+    var diag = phase === 'diagnose';
+    $('diagWrap').style.display  = diag ? 'block' : 'none';
+    $('chargeBar').style.display = diag ? 'none'  : 'grid';
+    $('verify').style.display    = diag ? 'none'  : 'block';
+  }
+
+  function diagnose(key){
+    var correct = HVAC.evaluate(job).correctAction;
+    if (key === correct){
+      if (correct === 'inspec'){ commission(); return; }
+      if (correct === 'add' || correct === 'recover'){
+        setBanner('✔ Right read — now tune the charge to target.', true);
+      } else {                                  // mechanical fix clears the fault
+        setBanner('✔ Fixed: ' + HVAC.FAULTS[job.fault].label + '. Now confirm the charge.', true);
+        job.fault = 'none';
+      }
+      phase = 'tune'; setPhase(); render();
+    } else {
+      misdx++;
+      setBanner(consequence(key), false);
+    }
+  }
+
+  function consequence(key){
+    if (key === 'add')
+      return 'Pumping in more refrigerant won’t fix this pattern — read suction, superheat and subcool <i>together</i> before you touch the gauges.';
+    if (key === 'recover')
+      return 'Recovering won’t fix this — the numbers don’t read like an overcharge. Look again.';
+    if (key === 'inspec')
+      return 'Not in spec — something’s off in the readings. Re-diagnose.';
+    return 'That’s not what the gauges are telling you. Re-read and try again.';
+  }
+
+  function renderTicket(){
+    var s = HVAC.spec(job);
+    var rows = [
+      ['Refrigerant', job.ref],
+      ['Metering', job.metering==='piston' ? 'Fixed orifice (piston)' : 'TXV'],
+      ['Outdoor DB', job.outdoorDB+' °F'],
+      ['Indoor WB', job.indoorWB+' °F'],
+      ['Charge by', s.name],
+      [ job.metering==='piston' ? 'Method' : 'Nameplate subcool',
+        job.metering==='piston' ? 'Total superheat' : job.nameplateSubcool+' °F' ]
+    ];
+    $('ticket').innerHTML = rows.map(function(r){
+      return '<div><b>'+r[0]+'</b><span>'+r[1]+'</span></div>';
+    }).join('');
+    buildPT();
+  }
+
+  function buildPT(){
+    var t = HVAC.PT[job.ref];
+    $('pttable').innerHTML = t.map(function(p){
+      return '<div class="row" data-t="'+p[0]+'"><b>'+p[0]+'°</b><small>'+p[1]+'</small></div>';
+    }).join('');
+  }
+
+  function render(){
+    var rd = HVAC.readings(job), s = HVAC.spec(job);
+    $('lowP').textContent  = fmt(rd.lowP);
+    $('highP').textContent = fmt(rd.highP);
+    $('slt').textContent   = fmt(rd.suctionLineTemp,1)+'°';
+    $('llt').textContent   = fmt(rd.liquidLineTemp,1)+'°';
+
+    // highlight the PT rows nearest each saturation temp the player should look up
+    var rows = $('pttable').children;
+    var loT = rd.evapTemp, hiT = rd.condTemp;
+    for (var i=0;i<rows.length;i++){
+      var tt = +rows[i].getAttribute('data-t');
+      rows[i].className = 'row'
+        + (Math.abs(tt-loT)<2.5?' hl':'')
+        + (Math.abs(tt-hiT)<2.5?' hl2':'');
+    }
+
+    if (pro){
+      $('learnCard').style.display='none';
+      $('hint').innerHTML = phase === 'diagnose'
+        ? 'Read all four instruments <i>and</i> the ticket. Not every job is a charge problem — '
+          + 'low airflow, a restriction or air in the system all mimic one. Diagnose first.'
+        : 'Now look up saturation temps on the PT chart, work out your <b>'+s.name.toLowerCase()
+          + '</b>, and add/recover until it’s on target. <b>Commission</b> when you believe it’s in spec.';
+    } else {
+      var actual = job.metering==='piston' ? rd.superheat : rd.subcool;
+      var inSpec = Math.abs(actual - s.target) <= s.tol;
+      var loSat = HVAC.satTemp(job.ref, rd.lowP), hiSat = HVAC.satTemp(job.ref, rd.highP);
+      $('learnCard').style.display='block';
+      $('learn').innerHTML =
+        row('Low '+fmt(rd.lowP)+' psig → sat temp', fmt(loSat,1)+' °F') +
+        row('High '+fmt(rd.highP)+' psig → sat temp', fmt(hiSat,1)+' °F') +
+        row('Superheat = '+fmt(rd.suctionLineTemp,1)+' − '+fmt(loSat,1), '<b>'+fmt(rd.superheat,1)+' °F</b>') +
+        row('Subcooling = '+fmt(hiSat,1)+' − '+fmt(rd.liquidLineTemp,1), '<b>'+fmt(rd.subcool,1)+' °F</b>') +
+        row('Condenser split (cond − ambient)', '<b>'+fmt(hiSat-job.outdoorDB,1)+' °F</b>') +
+        row('Target '+s.name.toLowerCase(), '<b>'+fmt(s.target,1)+' ± '+s.tol+' °F</b>') +
+        '<div class="row"><span>Charge axis</span><span class="pill '+(inSpec?'in':'out')
+          +'">'+(inSpec?'IN SPEC':(actual>s.target?'TOO HIGH':'TOO LOW'))+'</span></div>';
+      $('hint').innerHTML = 'LEARN mode shows the math live. Switch to <b>PRO</b> to charge it blind like the truck.';
+    }
+  }
+  function row(a,b){ return '<div class="row"><span>'+a+'</span><span>'+b+'</span></div>'; }
+
+  function nudge(d){
+    if (phase !== 'tune') return;
+    job.charge += d;
+    taps++;
+    render();
+  }
+
+  function commission(){
+    var e = HVAC.evaluate(job);
+    var rd = HVAC.readings(job);
+    var base = HVAC.score(e.actual, e.target, taps);
+    var sc = Math.max(0, base - misdx * 15);
+    var loSat = HVAC.satTemp(job.ref, rd.lowP), hiSat = HVAC.satTemp(job.ref, rd.highP);
+    $('rTitle').textContent = e.inSpec ? 'System running — in spec ✓' : 'Not in spec yet';
+    $('rVerdict').innerHTML = e.inSpec
+      ? (origFault !== 'none'
+          ? 'Diagnosed <b>' + HVAC.FAULTS[origFault].label.toLowerCase() + '</b>, fixed it, charged dead-on.'
+          : 'Charged dead-on. That’s the job.')
+      : (e.needAdd ? 'Still '+(e.name==='Superheat'?'high superheat':'low subcooling')
+                     +' — add refrigerant.'
+                   : 'Too much charge — recover refrigerant.');
+    $('rScore').textContent = sc;
+    $('rScore').style.color = e.inSpec ? 'var(--good)' : 'var(--bad)';
+    $('rScoreSub').textContent = (e.inSpec
+        ? 'accuracy + a clean '+taps+'-move charge'
+        : 'off by '+fmt(Math.abs(e.err),1)+' °F · '+taps+' moves')
+      + (misdx ? ' · −'+(misdx*15)+' for '+misdx+' misdiagnosis'+(misdx>1?'es':'') : ' · clean diagnosis');
+    var steps = [
+      origFault !== 'none' ? ['Diagnosis', HVAC.FAULTS[origFault].label] : null,
+      ['Low side', fmt(rd.lowP)+' psig → '+fmt(loSat,1)+'° sat'],
+      ['High side', fmt(rd.highP)+' psig → '+fmt(hiSat,1)+'° sat'],
+      job.metering==='piston'
+        ? ['Superheat', fmt(rd.suctionLineTemp,1)+' − '+fmt(loSat,1)+' = '+fmt(rd.superheat,1)+' °F']
+        : ['Subcooling', fmt(hiSat,1)+' − '+fmt(rd.liquidLineTemp,1)+' = '+fmt(rd.subcool,1)+' °F'],
+      job.metering==='piston'
+        ? ['Target SH', '(3×'+job.indoorWB+'−80−'+job.outdoorDB+')/2 = '+fmt(e.target,1)+' °F']
+        : ['Target SC', 'nameplate '+fmt(e.target,1)+' °F'],
+      ['Result', fmt(e.actual,1)+' vs '+fmt(e.target,1)+' ± '+e.tol+' °F']
+    ];
+    $('rWork').innerHTML = steps.filter(Boolean).map(function(s){
+      return '<div class="step"><span>'+s[0]+'</span><span>'+s[1]+'</span></div>';
+    }).join('');
+
+    // session scoring + streak (a clean streak = in spec with zero misdiagnoses)
+    if (e.inSpec){
+      sessionScore += sc;
+      if (misdx === 0){ streak++; if (streak > best){ best = streak; localStorage.setItem('ss_best', best); } }
+      else { streak = 0; }
+    } else { streak = 0; }
+    updateStats();
+
+    lastShare = '🔧 Split System — '
+      + (origFault !== 'none' ? 'caught a ' + HVAC.FAULTS[origFault].label.toLowerCase() + ', then ' : '')
+      + (e.inSpec ? 'charged a ' : 'wrestled a ') + job.ref + ' '
+      + (job.metering==='piston'?'piston':'TXV') + ' to ' + fmt(e.actual,1) + '° ' + e.name.toLowerCase()
+      + ' (target ' + fmt(e.target,1) + '°)' + (e.inSpec ? ' — IN SPEC ✓' : '')
+      + '. Streak ' + streak + '🔥 Best ' + best + '. #HVAC #SplitSystem';
+    $('share').textContent = 'Share result';
+    $('scrim').classList.add('show');
+  }
+
+  function setMode(p){
+    pro = p;
+    $('mPro').classList.toggle('on', p);
+    $('mLearn').classList.toggle('on', !p);
+    render();
+  }
+
+  // wiring
+  document.querySelectorAll('.chargebar button').forEach(function(b){
+    b.addEventListener('click', function(){ nudge(+b.getAttribute('data-d')); });
+  });
+  $('verify').addEventListener('click', commission);
+  $('newjob').addEventListener('click', function(){ start(); });
+  $('again').addEventListener('click', function(){ start(); });
+  $('close').addEventListener('click', function(){ $('scrim').classList.remove('show'); });
+  $('share').addEventListener('click', function(){
+    var done = function(){ $('share').textContent = 'Copied ✓'; };
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(lastShare).then(done, function(){ window.prompt('Copy your result:', lastShare); });
+    else window.prompt('Copy your result:', lastShare);
+  });
+  $('mPro').addEventListener('click', function(){ setMode(true); });
+  $('mLearn').addEventListener('click', function(){ setMode(false); });
+
+  start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a0610">
+<title>Baduk Blitz</title>
+<style>
+  :root{
+    --bg:#0a0610; --bg2:#1a0a18; --felt:#3a0a14;
+    --gold:#ffcc33; --gold2:#ffe88a; --hot:#ff2a5c; --neon:#39ff9e;
+    --cream:#f5ecd6; --mute:#7a6a5a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, #4a0a24 0%, transparent 55%),
+      radial-gradient(ellipse at 50% 110%, #2a0628 0%, transparent 60%),
+      var(--bg);
+    color:var(--cream);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    display:flex; justify-content:center; overscroll-behavior:none; touch-action:manipulation;
+  }
+  #app{width:100%; max-width:520px; min-height:100%; display:flex; flex-direction:column;}
+
+  .hud{display:flex; align-items:center; gap:4px; padding:max(10px,env(safe-area-inset-top)) 10px 8px;
+       border-bottom:1px solid #2a0820;}
+  .hud .title{
+    font-size:clamp(13px, 4vw, 18px); font-weight:900; letter-spacing:1px;
+    flex:0 1 auto; min-width:0; text-transform:uppercase; white-space:nowrap;
+    background:linear-gradient(180deg,var(--gold2),var(--gold) 60%,#b88a1a);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 12px rgba(255,170,60,.35);
+  }
+  .stat{text-align:center; min-width:0; flex:1 1 auto;}
+  .stat .v{font-size:clamp(11px, 3.3vw, 15px); font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .stat .k{font-size:9px; letter-spacing:1.2px; text-transform:uppercase; opacity:.55; margin-top:2px;}
+  .stat .v.bank{color:var(--gold); text-shadow:0 0 10px rgba(255,204,51,.55);}
+  .stat .v.streak{color:var(--neon); text-shadow:0 0 8px rgba(57,255,158,.45);}
+  .stat .v.high{color:var(--cream);}
+  @keyframes pulse{0%,100%{opacity:.55;}50%{opacity:1;}}
+  .stat .k{animation:pulse 3s ease-in-out infinite;}
+
+  .prompt{text-align:center; padding:6px 14px 2px;}
+  .prompt .t{font-size:13px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase; color:var(--gold2);}
+  .prompt .s{font-size:11px; opacity:.65; margin-top:3px; letter-spacing:.4px; line-height:1.35;}
+
+  .boardwrap{flex:1; display:flex; align-items:center; justify-content:center; padding:4px 8px;
+             overflow:hidden; min-width:0;
+             filter:drop-shadow(0 0 22px rgba(255,170,60,.18));}
+  canvas{display:block; touch-action:none; border-radius:10px;
+         box-shadow:0 0 0 2px #5a3a10, 0 0 0 4px #2a1808, 0 14px 40px rgba(0,0,0,.6);}
+
+  .controls{padding:6px 14px max(12px,env(safe-area-inset-bottom));}
+  .stakerow{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px;}
+  .stakerow button{
+    width:38px; height:38px; border-radius:50%;
+    border:1px solid #5a2a3a; background:linear-gradient(180deg,#2a121e,#1a0612);
+    color:var(--gold); font-size:20px; font-weight:900; line-height:1; cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,200,80,.18), 0 2px 6px rgba(0,0,0,.5);
+    flex:0 0 auto;
+  }
+  .stakerow button:active{transform:scale(.94);}
+  .stakerow .amt{flex:1 1 auto; min-width:0; text-align:center; font-size:10px; letter-spacing:2px; opacity:.6; text-transform:uppercase;}
+  .stakerow .amt b{display:block; font-size:22px; font-weight:900; color:var(--gold); letter-spacing:1px;
+                    text-shadow:0 0 10px rgba(255,204,51,.5); opacity:1; font-variant-numeric:tabular-nums;}
+  .allin{
+    border:1px solid var(--hot)!important;
+    background:linear-gradient(180deg,#ff3a5e,#a01030)!important;
+    color:#fff!important; font-size:10px!important; font-weight:900!important;
+    letter-spacing:1.2px; width:auto!important; height:38px; padding:0 10px; border-radius:19px!important;
+    box-shadow:0 0 14px rgba(255,42,92,.55), inset 0 1px 0 rgba(255,255,255,.25)!important;
+  }
+
+  .betrow{display:flex; gap:10px;}
+  .betrow button{
+    flex:1; padding:16px 6px; border-radius:14px; font-size:14px; font-weight:900; font-family:inherit;
+    cursor:pointer; transition:transform .08s, box-shadow .15s, opacity .15s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    letter-spacing:2.5px; text-transform:uppercase;
+  }
+  .betrow button:active{transform:scale(.97);}
+  .betrow button:disabled{opacity:.28; box-shadow:none;}
+  .betrow .black{
+    background:radial-gradient(circle at 30% 25%,#3a342c,#0a0908 70%);
+    color:var(--gold2); border:2px solid var(--gold);
+    box-shadow:0 0 18px rgba(255,204,51,.35), inset 0 0 18px rgba(0,0,0,.6);
+  }
+  .betrow .white{
+    background:radial-gradient(circle at 30% 25%,#fff,#d8cbac 70%);
+    color:#1a0612; border:2px solid var(--gold);
+    box-shadow:0 0 18px rgba(255,204,51,.35), inset 0 0 18px rgba(180,150,80,.25);
+  }
+  .dot{width:18px; height:18px; border-radius:50%; display:inline-block;}
+  .dot.b{background:radial-gradient(circle at 35% 30%,#5a544c,#0c0b0a); box-shadow:0 0 6px rgba(0,0,0,.6);}
+  .dot.w{background:radial-gradient(circle at 35% 30%,#fff,#cabfa9); border:1px solid #b3a88f;}
+
+  .nextbtn{
+    width:100%; padding:18px; border-radius:14px; font-size:15px; font-weight:900;
+    font-family:inherit; letter-spacing:2.5px; text-transform:uppercase;
+    background:linear-gradient(180deg,var(--gold2),var(--gold) 50%,#b8861a);
+    color:#1a0612; border:none; cursor:pointer;
+    box-shadow:0 0 22px rgba(255,204,51,.5), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .nextbtn:active{transform:scale(.98);}
+  .hidden{display:none!important;}
+
+  .flash{
+    position:fixed; left:50%; top:14%; transform:translateX(-50%) scale(.9);
+    background:rgba(10,6,16,.92); backdrop-filter:blur(6px);
+    padding:14px 28px; border-radius:36px; border:1px solid #5a2a3a;
+    font-size:20px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
+    opacity:0; transition:opacity .2s, transform .25s; pointer-events:none; text-align:center;
+    font-variant-numeric:tabular-nums;
+  }
+  .flash.show{opacity:1; transform:translateX(-50%) scale(1);}
+  .flash.win{color:var(--neon); border-color:var(--neon); box-shadow:0 0 40px rgba(57,255,158,.5);}
+  .flash.lose{color:var(--hot); border-color:var(--hot); box-shadow:0 0 40px rgba(255,42,92,.5);}
+  @keyframes shake{0%,100%{transform:translateX(-50%) scale(1);}25%{transform:translateX(calc(-50% - 8px)) scale(1);}75%{transform:translateX(calc(-50% + 8px)) scale(1);}}
+  .flash.lose.show{animation:shake .3s ease-in-out;}
+
+  .muteBtn{background:none;border:none;color:var(--gold);font-size:18px;opacity:.6;cursor:pointer;}
+
+  .opponents{padding:4px 12px 0;}
+  .opponent{
+    background:linear-gradient(180deg, rgba(255,204,51,.06), rgba(0,0,0,.25));
+    border:1px solid #2a0820; border-radius:12px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .opponent.top{
+    display:flex; align-items:center; gap:10px; padding:7px 12px; min-height:48px;
+  }
+  .opp-av{
+    flex:0 0 36px; width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:15px; color:#fff;
+    border:2px solid rgba(255,255,255,.18);
+    box-shadow:inset 0 -3px 8px rgba(0,0,0,.4), 0 0 10px rgba(0,0,0,.35);
+    text-shadow:0 1px 2px rgba(0,0,0,.5);
+  }
+  .opp-body{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .opp-name{font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; opacity:.7;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .opp-bet{font-size:13px; font-weight:900; font-variant-numeric:tabular-nums;
+           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#f0ece2;}
+  .opp-bet.thinking{opacity:.4; font-style:italic; font-weight:600; font-size:11px;
+                    animation:thinkpulse 1.4s ease-in-out infinite;}
+  .opp-bet.win{color:var(--neon); text-shadow:0 0 8px rgba(57,255,158,.4);}
+  .opp-bet.lose{color:var(--hot); text-shadow:0 0 8px rgba(255,42,92,.4);}
+  .opp-dot{width:8px; height:8px; border-radius:50%; display:inline-block;
+           vertical-align:middle; margin-right:5px;}
+  .opp-dot.b{background:#0a0908; border:1px solid #555;}
+  .opp-dot.w{background:#fff; border:1px solid #aaa;}
+  @keyframes thinkpulse{0%,100%{opacity:.3;}50%{opacity:.6;}}
+  @keyframes lockpop{0%{transform:scale(.85);}60%{transform:scale(1.08);}100%{transform:scale(1);}}
+  .opp-bet.justlocked{animation:lockpop .35s ease-out;}
+
+  .board-row{display:flex; align-items:stretch; gap:5px; padding:6px 10px; flex:1; min-height:0;}
+  .opponent.side{
+    flex:0 0 52px; display:flex; flex-direction:column; align-items:center;
+    padding:6px 3px; gap:3px; text-align:center; overflow:hidden;
+  }
+  .opponent.side .opp-av{flex:0 0 28px; width:28px; height:28px; font-size:11px; border-width:1px;}
+  .opponent.side .opp-name{font-size:8px; letter-spacing:.4px; max-width:100%;}
+  .opponent.side .opp-bet{font-size:10px; max-width:100%; line-height:1.15;}
+  .opponent.side .opp-bet.thinking{font-size:9px;}
+  .opponent.side .opp-dot{width:6px; height:6px; margin-right:3px;}
+  .board-row .boardwrap{flex:1; min-width:0; padding:0;}
+
+  .confirmrow{display:flex; gap:10px;}
+  .confirmrow .cancel{
+    flex:0 0 80px; padding:16px 6px; border-radius:14px;
+    background:transparent; border:1px solid #5a2a3a; color:#a89a8a;
+    font-size:11px; font-weight:700; font-family:inherit; cursor:pointer;
+    letter-spacing:1.5px; text-transform:uppercase;
+  }
+  .confirmrow .cancel:active{transform:scale(.97);}
+  .confirmrow .confirm{
+    flex:1; padding:16px 6px; border-radius:14px; font-size:13px; font-weight:900;
+    font-family:inherit; letter-spacing:2px; text-transform:uppercase; cursor:pointer;
+    border:2px solid var(--gold); display:flex; align-items:center; justify-content:center; gap:8px;
+    animation:confirmpulse 1.1s ease-in-out infinite; min-width:0;
+  }
+  .confirmrow .confirm:active{transform:scale(.97);}
+  .confirmrow .confirm.black{
+    background:radial-gradient(circle at 30% 25%,#3a342c,#0a0908 70%);
+    color:var(--gold2);
+  }
+  .confirmrow .confirm.white{
+    background:radial-gradient(circle at 30% 25%,#fff,#d8cbac 70%);
+    color:#1a0612;
+  }
+  @keyframes confirmpulse{
+    0%,100%{box-shadow:0 0 16px rgba(255,204,51,.35), inset 0 0 18px rgba(0,0,0,.35);}
+    50%{box-shadow:0 0 34px rgba(255,204,51,.8), inset 0 0 18px rgba(0,0,0,.35);}
+  }
+
+  .line{display:flex; align-items:center; gap:8px; padding:4px 14px 6px;}
+  .odd{flex:0 0 auto; text-align:center; min-width:62px;}
+  .odd .x{font-size:17px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:.5px;}
+  .odd .x .m{font-size:11px; opacity:.7; margin-left:1px;}
+  .odd .lbl{font-size:9px; letter-spacing:1.5px; text-transform:uppercase; opacity:.55; margin-top:1px;}
+  .odd.b .x{color:#f0ece2;}
+  .odd.w .x{color:#f0ece2;}
+  .timer{flex:1; height:14px; background:rgba(255,255,255,.05); border-radius:7px;
+         position:relative; overflow:hidden; border:1px solid #2a0820;}
+  .timer .bar{height:100%; width:100%;
+              background:linear-gradient(90deg,var(--neon),var(--gold));
+              transition:width .12s linear;
+              box-shadow:0 0 12px rgba(57,255,158,.4);}
+  .timer .t{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+            font-size:10px; font-weight:900; letter-spacing:1.5px; color:var(--cream);
+            text-shadow:0 1px 2px rgba(0,0,0,.7);}
+  .timer.urgent .bar{background:linear-gradient(90deg,var(--hot),#ffaa00);
+                     box-shadow:0 0 14px rgba(255,42,92,.6);
+                     animation:urgentpulse .6s ease-in-out infinite;}
+  .timer.locked .bar{background:linear-gradient(90deg,var(--gold2),var(--gold));}
+  @keyframes urgentpulse{0%,100%{opacity:1;}50%{opacity:.7;}}
+
+  .locked{
+    padding:14px 12px; border-radius:14px;
+    background:linear-gradient(180deg,rgba(255,204,51,.12),rgba(255,204,51,.04));
+    border:1px solid rgba(255,204,51,.4);
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    font-size:13px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--gold2); text-align:center;
+  }
+  .locked .lk-amt{color:var(--gold); font-variant-numeric:tabular-nums;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hud">
+    <div class="title">Baduk Blitz</div>
+    <div class="stat"><div class="v bank" id="bank">$10,000</div><div class="k">Bank</div></div>
+    <div class="stat"><div class="v streak" id="level">1</div><div class="k">Streak</div></div>
+    <div class="stat"><div class="v high" id="best">$10,000</div><div class="k">High</div></div>
+    <button class="muteBtn" id="muteBtn">♪</button>
+  </div>
+
+  <div class="prompt">
+    <div class="t" id="pTitle">Place your bet</div>
+    <div class="s" id="pSub">White spots 0.5 komi. Read the room, lock in before time runs out.</div>
+  </div>
+
+  <div class="line">
+    <div class="odd b"><div class="x"><span id="oddB">1.00</span><span class="m">×</span></div><div class="lbl">Black</div></div>
+    <div class="timer" id="timer"><div class="bar" id="timerBar"></div><div class="t" id="timerText">30s</div></div>
+    <div class="odd w"><div class="x"><span id="oddW">1.00</span><span class="m">×</span></div><div class="lbl">White</div></div>
+  </div>
+
+  <div class="opponents">
+    <div class="opponent top" id="opp_whale">
+      <div class="opp-av"></div>
+      <div class="opp-body">
+        <div class="opp-name"></div>
+        <div class="opp-bet thinking">thinking…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="board-row">
+    <div class="opponent side" id="opp_jane">
+      <div class="opp-av"></div>
+      <div class="opp-name"></div>
+      <div class="opp-bet thinking">…</div>
+    </div>
+    <div class="boardwrap"><canvas id="board"></canvas></div>
+    <div class="opponent side" id="opp_tako">
+      <div class="opp-av"></div>
+      <div class="opp-name"></div>
+      <div class="opp-bet thinking">…</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div id="betPanel">
+      <div class="stakerow">
+        <button id="stakeDown">−</button>
+        <div class="amt">Stake <b id="stakeVal">$1,000</b></div>
+        <button id="stakeUp">+</button>
+        <button id="allIn" class="allin">All In</button>
+      </div>
+      <div class="betrow" id="betChoice">
+        <button class="black" id="betBlack"><span class="dot b"></span> Black</button>
+        <button class="white" id="betWhite"><span class="dot w"></span> White</button>
+      </div>
+      <div class="confirmrow hidden" id="confirmRow">
+        <button class="cancel" id="cancelBet">Cancel</button>
+        <button class="confirm black" id="confirmBet"><span class="dot b"></span> Lock in</button>
+      </div>
+    </div>
+    <div class="locked hidden" id="lockedPanel">
+      <span id="lockedText">Locked</span>
+    </div>
+    <button class="nextbtn hidden" id="nextBtn">Deal next hand ›</button>
+  </div>
+</div>
+<div class="flash" id="flash"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Baduk Blitz — v0.3 (high-stakes vibe)
+   Bet which side wins a randomly generated Go board; the board
+   auto-plays itself and the territory is counted to decide.
+   ============================================================ */
+
+const EMPTY=0, BLACK=1, WHITE=2;
+const N=9;
+const KOMI=0.5;
+const opp=c=>c===BLACK?WHITE:BLACK;
+
+/* ---------- Go rules engine ---------- */
+const inb=(c,r)=>r>=0&&r<N&&c>=0&&c<N;
+const nbrs=(c,r)=>[[c+1,r],[c-1,r],[c,r+1],[c,r-1]];
+function clone(b){return b.map(row=>row.slice());}
+function emptyBoard(){return Array.from({length:N},()=>new Array(N).fill(EMPTY));}
+function group(b,c,r){
+  const col=b[r][c], seen=new Set([c+","+r]), stones=[[c,r]], libs=new Set(), st=[[c,r]];
+  while(st.length){ const [x,y]=st.pop();
+    for(const [nx,ny] of nbrs(x,y)){ if(!inb(nx,ny)) continue; const v=b[ny][nx];
+      if(v===EMPTY) libs.add(nx+","+ny);
+      else if(v===col && !seen.has(nx+","+ny)){ seen.add(nx+","+ny); stones.push([nx,ny]); st.push([nx,ny]); } } }
+  return {stones, libs};
+}
+function boardKey(b){return b.map(r=>r.join("")).join("");}
+function tryPlay(b,c,r,colour,koKey){
+  if(!inb(c,r)||b[r][c]!==EMPTY) return {ok:false};
+  const nb=clone(b); nb[r][c]=colour; const o=opp(colour); let captured=[];
+  for(const [nx,ny] of nbrs(c,r)){ if(inb(nx,ny)&&nb[ny][nx]===o){ const g=group(nb,nx,ny);
+    if(g.libs.size===0){ g.stones.forEach(([x,y])=>{nb[y][x]=EMPTY;captured.push([x,y]);}); } } }
+  if(captured.length===0 && group(nb,c,r).libs.size===0) return {ok:false};
+  if(koKey && boardKey(nb)===koKey) return {ok:false};
+  return {ok:true, board:nb, captured};
+}
+
+/* ---------- Auto-play bot ---------- */
+function isEyeish(b,c,r,colour){
+  for(const [nx,ny] of nbrs(c,r)){ if(inb(nx,ny) && b[ny][nx]!==colour) return false; }
+  return true;
+}
+function legalMoves(b,colour,koKey){
+  const out=[];
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    if(b[r][c]!==EMPTY) continue;
+    if(isEyeish(b,c,r,colour)) continue;
+    if(tryPlay(b,c,r,colour,koKey).ok) out.push([c,r]);
+  }
+  return out;
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function playOut(start, sideToMove, koKey){
+  let b=clone(start), side=sideToMove, ko=koKey||null;
+  const steps=[{b:clone(b), move:null, cap:0}];
+  let passes=0; const cap=N*N*2;
+  for(let i=0;i<cap && passes<2;i++){
+    const moves=shuffle(legalMoves(b,side,ko));
+    if(moves.length===0){ passes++; side=opp(side); continue; }
+    passes=0;
+    const [c,r]=moves[0];
+    const prevKey=boardKey(b);
+    const res=tryPlay(b,c,r,side,ko);
+    b=res.board; ko=res.captured.length===1?prevKey:null;
+    steps.push({b:clone(b), move:[c,r,side], cap:res.captured.length});
+    side=opp(side);
+  }
+  return steps;
+}
+
+/* ---------- Area scoring ---------- */
+function score(b){
+  let bl=0, wh=0; const owner=emptyBoard().map(r=>r.map(()=>-1));
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){ if(b[r][c]===BLACK) bl++; else if(b[r][c]===WHITE) wh++; }
+  const seen=new Set();
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    if(b[r][c]!==EMPTY || seen.has(c+","+r)) continue;
+    const region=[], st=[[c,r]]; seen.add(c+","+r); const borders=new Set();
+    while(st.length){ const [x,y]=st.pop(); region.push([x,y]);
+      for(const [nx,ny] of nbrs(x,y)){ if(!inb(nx,ny)) continue; const v=b[ny][nx];
+        if(v===EMPTY){ if(!seen.has(nx+","+ny)){ seen.add(nx+","+ny); st.push([nx,ny]); } }
+        else borders.add(v); } }
+    let own=0; if(borders.size===1) own=[...borders][0];
+    if(own===BLACK) bl+=region.length; else if(own===WHITE) wh+=region.length;
+    region.forEach(([x,y])=>owner[y][x]=own);
+  }
+  return {bl, wh:wh, blackTotal:bl, whiteTotal:wh+KOMI, owner};
+}
+
+/* ---------- Round generation ---------- */
+const HANDI_PTS=[[2,2],[6,6],[2,6],[6,2],[4,4],[4,2],[4,6],[2,4],[6,4]];
+function handicapFor(level){ return Math.max(1, 8-(level-1)); }
+
+function genRound(level){
+  const handi=handicapFor(level);
+  const fav = Math.random()<0.5?BLACK:WHITE;
+  let b=emptyBoard();
+  shuffle(HANDI_PTS.slice()).slice(0,handi).forEach(([c,r])=>{ b[r][c]=fav; });
+  const steps=playOut(b, opp(fav), null);
+  const finalB=steps[steps.length-1].b;
+  const sc=score(finalB);
+  const winner = sc.blackTotal>sc.whiteTotal?BLACK:WHITE;
+  const target=Math.floor(0.60*N*N);
+  let idx=1; while(idx<steps.length-1 && filled(steps[idx].b)<target) idx++;
+  if(steps.length-1-idx<8) idx=Math.max(1, steps.length-1-12);
+  return {steps, revealIdx:idx, winner, sc, fav, handi, level};
+}
+function filled(b){ let n=0; for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(b[r][c]!==EMPTY) n++; return n; }
+
+/* ---------- Audio ---------- */
+let actx=null, muted=false;
+function ac(){ if(!actx){ try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return actx; }
+function tone(f,t0,dur,type="sine",g=.16){ const a=ac(); if(!a||muted) return;
+  const o=a.createOscillator(), gn=a.createGain(); o.type=type; o.frequency.value=f;
+  gn.gain.setValueAtTime(0,t0); gn.gain.linearRampToValueAtTime(g,t0+.01);
+  gn.gain.exponentialRampToValueAtTime(.0001,t0+dur); o.connect(gn).connect(a.destination); o.start(t0); o.stop(t0+dur+.02); }
+const sndClack =()=>{ const a=ac(); if(a) tone(180,a.currentTime,.05,"triangle",.10); };
+const sndCap   =()=>{ const a=ac(); if(a){ tone(150,a.currentTime,.16,"sine",.16); tone(75,a.currentTime+.02,.2,"triangle",.1);} };
+const sndWin   =()=>{ const a=ac(); if(a){
+  [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>tone(f,a.currentTime+i*.07,.4,"triangle",.18));
+  tone(2093,a.currentTime+.35,.5,"sine",.12);
+}};
+const sndLose  =()=>{ const a=ac(); if(a){ tone(330,a.currentTime,.2,"sawtooth",.14); tone(220,a.currentTime+.12,.32,"sawtooth",.13); tone(110,a.currentTime+.28,.4,"triangle",.12);} };
+const sndChip  =()=>{ const a=ac(); if(a) tone(900,a.currentTime,.04,"square",.08); };
+
+/* ---------- State ---------- */
+const cv=document.getElementById("board"), ctx=cv.getContext("2d");
+const START_BANK=10000, MIN_STAKE=1000;
+function stepFor(b){
+  if(b>=200000) return 25000;
+  if(b>=50000)  return 10000;
+  if(b>=10000)  return 2500;
+  return 1000;
+}
+let bank=+(localStorage.getItem("bb3_bank")||START_BANK);
+let level=+(localStorage.getItem("bb3_level")||1);
+let best=+(localStorage.getItem("bb3_best")||START_BANK);
+let stake=Math.min(1000, bank);
+let round=null, board=null, showOwner=null, lastMove=null, phase="bet";
+let pendingSide=null;
+let geom={pad:0,cell:0,size:0};
+
+/* ---------- The three opponents (persistent hidden skill) ---------- */
+const REGULARS=[
+  {id:"whale", name:"Whale_88",    fin:"high", color:"#3a5cd8", initial:"W"},
+  {id:"jane",  name:"Velvet Jane", fin:"mid",  color:"#c0386a", initial:"J"},
+  {id:"tako",  name:"Tako",        fin:"low",  color:"#2fa382", initial:"T"},
+];
+const SKILL_ACC={sharp:0.75, mid:0.55, fish:0.40};
+function loadOpponents(){
+  let savedMap={};
+  try{
+    const saved=JSON.parse(localStorage.getItem("bb3_opps")||"null");
+    if(Array.isArray(saved)) saved.forEach(s=>savedMap[s.id]=s.skill);
+  }catch(e){}
+  const out=REGULARS.map(r=>{
+    let skill=savedMap[r.id];
+    if(!skill){
+      const x=Math.random();
+      skill = x<0.20?"sharp" : x<0.70?"mid" : "fish";
+    }
+    return {...r, skill, bet:null, decideAt:0};
+  });
+  localStorage.setItem("bb3_opps", JSON.stringify(out.map(o=>({id:o.id, skill:o.skill}))));
+  return out;
+}
+const OPPONENTS=loadOpponents();
+function pick(a){ return a[(Math.random()*a.length)|0]; }
+function rngStake(fin){
+  if(fin==="high") return pick([2500,5000,10000,15000,25000,40000]);
+  if(fin==="mid")  return pick([500,800,1500,2500,4000]);
+  return pick([100,200,300,500,800]);
+}
+
+/* ---------- Pool & odds ---------- */
+const SEED=5000, RAKE=0.95;
+let pool={black:SEED, white:SEED};
+let playerLock=null;       // {side, stake, odds, payout}
+function oddsFor(side){
+  const total=pool.black+pool.white;
+  const on = side===BLACK ? pool.black : pool.white;
+  return RAKE * total / on;
+}
+function updateOdds(){
+  document.getElementById("oddB").textContent=oddsFor(BLACK).toFixed(2);
+  document.getElementById("oddW").textContent=oddsFor(WHITE).toFixed(2);
+  refreshConfirmLabel();
+}
+
+/* ---------- Opponent UI & decisions ---------- */
+function initOpponentPanels(){
+  OPPONENTS.forEach(o=>{
+    const el=document.getElementById("opp_"+o.id);
+    const av=el.querySelector(".opp-av");
+    av.style.background=`radial-gradient(circle at 35% 30%, ${o.color}dd, ${o.color}66)`;
+    av.textContent=o.initial;
+    el.querySelector(".opp-name").textContent=o.name;
+  });
+}
+function updateOpponentUI(o){
+  const el=document.getElementById("opp_"+o.id);
+  const betEl=el.querySelector(".opp-bet");
+  if(phase==="done" && o.bet){
+    const won = o.bet.side===round.winner;
+    betEl.className = "opp-bet "+(won?"win":"lose");
+    betEl.textContent = (won?"+":"−") + fmt(o.bet.stake);
+  } else if(o.bet){
+    betEl.className="opp-bet justlocked";
+    betEl.innerHTML = `<span class="opp-dot ${o.bet.side===BLACK?"b":"w"}"></span>${fmt(o.bet.stake)}`;
+    setTimeout(()=>betEl.classList.remove("justlocked"), 400);
+  } else {
+    betEl.className="opp-bet thinking";
+    betEl.textContent="thinking…";
+  }
+}
+function opponentBets(o){
+  if(o.bet || !round) return;
+  const correct=Math.random() < SKILL_ACC[o.skill];
+  const side = correct ? round.winner : opp(round.winner);
+  const stake = rngStake(o.fin);
+  pool[side===BLACK?"black":"white"] += stake;
+  o.bet={side, stake};
+  updateOdds();
+  updateOpponentUI(o);
+  sndChip();
+}
+function scheduleOpponents(){
+  OPPONENTS.forEach(o=>{
+    o.bet=null;
+    o.decideAt = Date.now() + 4000 + Math.random()*21000;  // 4-25s into the window
+  });
+}
+function fastForwardOpponents(done){
+  const pending=OPPONENTS.filter(o=>!o.bet);
+  if(pending.length===0){ setTimeout(done, 300); return; }
+  let i=0;
+  const tick=()=>{
+    if(i>=pending.length){ setTimeout(done, 350); return; }
+    opponentBets(pending[i++]);
+    setTimeout(tick, 380);
+  };
+  setTimeout(tick, 200);
+}
+
+/* ---------- Timer ---------- */
+const TIMER_MS=30000;
+let timerEnds=0, timerTimer=null;
+function startTimer(){
+  stopTimer();
+  timerEnds=Date.now()+TIMER_MS;
+  const el=document.getElementById("timer");
+  el.classList.remove("urgent","locked");
+  const tick=()=>{
+    if(phase!=="bet"){ return; }
+    const now=Date.now();
+    const ms=Math.max(0, timerEnds-now);
+    const pct=ms/TIMER_MS*100;
+    document.getElementById("timerBar").style.width=pct+"%";
+    document.getElementById("timerText").textContent=Math.ceil(ms/1000)+"s";
+    if(ms<=5000) el.classList.add("urgent");
+    // opponent decisions
+    OPPONENTS.forEach(o=>{ if(!o.bet && now>=o.decideAt) opponentBets(o); });
+    if(ms<=0){ timerExpired(); return; }
+    timerTimer=setTimeout(tick, 100);
+  };
+  tick();
+}
+function stopTimer(){ if(timerTimer){ clearTimeout(timerTimer); timerTimer=null; } }
+function timerExpired(){
+  if(playerLock) return;
+  startPlayout(null);
+}
+
+const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+
+function save(){ localStorage.setItem("bb3_bank",bank); localStorage.setItem("bb3_level",level); localStorage.setItem("bb3_best",best); }
+function syncHud(){
+  document.getElementById("bank").textContent=fmt(bank);
+  document.getElementById("level").textContent=level;
+  document.getElementById("best").textContent=fmt(best);
+  document.getElementById("stakeVal").textContent=fmt(stake);
+}
+
+/* ---------- Geometry & render ---------- */
+function resize(){
+  const wrap=cv.parentElement, avail=Math.min(wrap.clientWidth, window.innerHeight*0.4);
+  const dpr=Math.min(window.devicePixelRatio||1,3), size=Math.max(160,Math.floor(avail));
+  cv.style.width=size+"px"; cv.style.height=size+"px"; cv.width=size*dpr|0; cv.height=size*dpr|0;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const pad=size*0.06, cell=(size-2*pad)/(N-1); geom={pad,cell,size}; draw();
+}
+const xy=(c,r)=>[geom.pad+c*geom.cell, geom.pad+r*geom.cell];
+function draw(){
+  const {pad,cell,size}=geom; if(!size) return;
+  const g=ctx.createLinearGradient(0,0,size,size);
+  g.addColorStop(0,"#e6c078"); g.addColorStop(1,"#b88636"); ctx.fillStyle=g; ctx.fillRect(0,0,size,size);
+  if(showOwner){ for(let r=0;r<N;r++) for(let c=0;c<N;c++){ const o=showOwner[r][c];
+    if(o===BLACK||o===WHITE){ const [x,y]=xy(c,r); ctx.fillStyle = o===BLACK?"rgba(20,18,14,.34)":"rgba(250,247,238,.44)";
+      ctx.fillRect(x-cell/2,y-cell/2,cell,cell); } } }
+  ctx.strokeStyle="rgba(60,42,12,.9)"; ctx.lineWidth=Math.max(1,cell*0.03);
+  for(let i=0;i<N;i++){ let [x0,y0]=xy(i,0),[x1,y1]=xy(i,N-1); ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+    let [a0,b0]=xy(0,i),[a1,b1]=xy(N-1,i); ctx.beginPath();ctx.moveTo(a0,b0);ctx.lineTo(a1,b1);ctx.stroke(); }
+  for(const [c,r] of [[2,2],[6,6],[2,6],[6,2],[4,4]]){ const [sx,sy]=xy(c,r);
+    ctx.fillStyle="rgba(60,42,12,.85)"; ctx.beginPath(); ctx.arc(sx,sy,Math.max(2,cell*0.05),0,7); ctx.fill(); }
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(board[r][c]!==EMPTY) stone(c,r,board[r][c]);
+  if(lastMove){ const [mx,my]=xy(lastMove[0],lastMove[1]);
+    ctx.strokeStyle=board[lastMove[1]][lastMove[0]]===BLACK?"rgba(255,204,51,.95)":"rgba(255,42,92,.9)";
+    ctx.lineWidth=cell*0.06; ctx.beginPath(); ctx.arc(mx,my,cell*0.17,0,7); ctx.stroke(); }
+}
+function stone(c,r,colour){ const {cell}=geom,[x,y]=xy(c,r),rad=cell*0.46;
+  ctx.beginPath(); ctx.arc(x+rad*0.15,y+rad*0.2,rad,0,7); ctx.fillStyle="rgba(0,0,0,.22)"; ctx.fill();
+  const gr=ctx.createRadialGradient(x-rad*0.35,y-rad*0.4,rad*0.1,x,y,rad);
+  if(colour===BLACK){ gr.addColorStop(0,"#56504a"); gr.addColorStop(.45,"#26231f"); gr.addColorStop(1,"#0c0b0a"); }
+  else { gr.addColorStop(0,"#fff"); gr.addColorStop(.5,"#f1ece0"); gr.addColorStop(1,"#cabfa9"); }
+  ctx.beginPath(); ctx.arc(x,y,rad,0,7); ctx.fillStyle=gr; ctx.fill();
+}
+
+/* ---------- Flow ---------- */
+function clampStake(){
+  const max=Math.max(MIN_STAKE, bank);
+  stake = Math.min(max, Math.max(MIN_STAKE, stake));
+  if(stake>bank) stake=bank;
+}
+function showChoice(){
+  document.getElementById("betChoice").classList.remove("hidden");
+  document.getElementById("confirmRow").classList.add("hidden");
+  pendingSide=null;
+}
+function refreshConfirmLabel(){
+  if(pendingSide===null) return;
+  const btn=document.getElementById("confirmBet");
+  const o=oddsFor(pendingSide), payout=Math.round(stake*o);
+  btn.innerHTML=`<span class="dot ${pendingSide===BLACK?"b":"w"}"></span> Lock in ${fmt(stake)} @ ${o.toFixed(2)}× → ${fmt(payout)}`;
+}
+function newRound(){
+  round=genRound(level);
+  board=clone(round.steps[round.revealIdx].b);
+  showOwner=null; lastMove=null; phase="bet";
+  pool={black:SEED, white:SEED};
+  playerLock=null;
+  scheduleOpponents();
+  OPPONENTS.forEach(updateOpponentUI);
+  document.getElementById("pTitle").textContent="Place your bet";
+  document.getElementById("pSub").textContent="Read the room. Line shifts as opponents lock in.";
+  document.getElementById("betPanel").classList.remove("hidden");
+  document.getElementById("lockedPanel").classList.add("hidden");
+  document.getElementById("nextBtn").classList.add("hidden");
+  showChoice(); setBet(true); clampStake(); syncHud(); resize();
+  updateOdds(); startTimer();
+}
+function setBet(on){
+  document.getElementById("betBlack").disabled=!on;
+  document.getElementById("betWhite").disabled=!on;
+  document.getElementById("stakeUp").disabled=!on;
+  document.getElementById("stakeDown").disabled=!on;
+  document.getElementById("allIn").disabled=!on;
+  document.getElementById("confirmBet").disabled=!on;
+  document.getElementById("cancelBet").disabled=!on;
+}
+
+function chooseBet(side){
+  if(phase!=="bet") return; ac();
+  pendingSide=side;
+  document.getElementById("betChoice").classList.add("hidden");
+  document.getElementById("confirmRow").classList.remove("hidden");
+  document.getElementById("confirmBet").className="confirm "+(side===BLACK?"black":"white");
+  refreshConfirmLabel();
+  sndChip();
+}
+function cancelBet(){ if(phase!=="bet") return; showChoice(); sndChip(); }
+function confirmBet(){
+  if(phase!=="bet" || pendingSide===null) return;
+  lockInBet(pendingSide);
+}
+
+function lockInBet(side){
+  ac(); stopTimer();
+  pendingSide=null;
+  const odds=oddsFor(side);
+  const payout=Math.round(stake*odds);
+  playerLock={side, stake, odds, payout};
+  pool[side===BLACK?"black":"white"] += stake;
+  updateOdds();
+  // swap controls
+  document.getElementById("betPanel").classList.add("hidden");
+  const lp=document.getElementById("lockedPanel"); lp.classList.remove("hidden");
+  document.getElementById("lockedText").innerHTML=
+    `Locked <span class="lk-amt">${fmt(stake)}</span> on ${side===BLACK?"Black":"White"} @ ${odds.toFixed(2)}× → <span class="lk-amt">${fmt(payout)}</span>`;
+  document.getElementById("pTitle").textContent="Locked in";
+  document.getElementById("pSub").textContent="Watching the rest of the room…";
+  const tEl=document.getElementById("timer");
+  tEl.classList.remove("urgent"); tEl.classList.add("locked");
+  // any opponents who haven't bet yet, lock them in now
+  fastForwardOpponents(()=>startPlayout(side));
+}
+
+function startPlayout(side){
+  phase="playing"; setBet(false); stopTimer();
+  document.getElementById("pTitle").textContent="Rolling…";
+  document.getElementById("pSub").textContent= side===null
+    ? "Sat this one out. Watching the result."
+    : "Dealer's playing it out.";
+  document.getElementById("timerBar").style.width="0%";
+  document.getElementById("timerText").textContent="";
+  const steps=round.steps; let i=round.revealIdx;
+  const tick=()=>{
+    i++;
+    if(i>=steps.length){ reveal(side); return; }
+    board=steps[i].b; lastMove=steps[i].move; draw();
+    if(steps[i].cap>0) sndCap(); else if(i%3===0) sndClack();
+    setTimeout(tick, 55);
+  };
+  setTimeout(tick, 250);
+}
+
+function reveal(side){
+  phase="done"; const sc=round.sc; board=round.steps[round.steps.length-1].b;
+  showOwner=sc.owner; lastMove=null; draw();
+  const wName=round.winner===BLACK?"Black":"White";
+  const bt=sc.blackTotal, wt=sc.whiteTotal, margin=Math.abs(bt-wt);
+  document.getElementById("pTitle").textContent=wName+" takes it by "+margin.toFixed(1);
+  document.getElementById("pSub").textContent="Black "+bt+"  ·  White "+wt.toFixed(1)+"  (incl. "+KOMI+" komi)";
+  if(playerLock){
+    const win=playerLock.side===round.winner;
+    if(win){ bank+=playerLock.payout; sndWin(); flash("Jackpot  +"+fmt(playerLock.payout),"win"); }
+    else   { bank-=playerLock.stake;  sndLose(); flash("Busted  −"+fmt(playerLock.stake),"lose"); }
+  } else {
+    flash("Sat it out","lose");
+  }
+  level++; best=Math.max(best,bank); save(); syncHud();
+  OPPONENTS.forEach(updateOpponentUI);
+  const nb=document.getElementById("nextBtn");
+  document.getElementById("betPanel").classList.add("hidden");
+  document.getElementById("lockedPanel").classList.add("hidden");
+  nb.classList.remove("hidden");
+  if(bank<MIN_STAKE){ nb.textContent="Tapped out — buy in again"; }
+  else { nb.textContent="Deal next hand ›"; }
+}
+function nextBoard(){
+  if(bank<MIN_STAKE){ bank=START_BANK; level=1; best=Math.max(best,bank); save(); }
+  newRound();
+}
+
+/* ---------- Wire up ---------- */
+document.getElementById("betBlack").onclick=()=>chooseBet(BLACK);
+document.getElementById("betWhite").onclick=()=>chooseBet(WHITE);
+document.getElementById("cancelBet").onclick=cancelBet;
+document.getElementById("confirmBet").onclick=confirmBet;
+document.getElementById("nextBtn").onclick=nextBoard;
+function bumpStake(dir){
+  const step=stepFor(bank);
+  if(dir>0) stake=Math.min(bank, Math.floor(stake/step)*step + step);
+  else      stake=Math.max(MIN_STAKE, Math.ceil(stake/step)*step - step);
+  sndChip(); syncHud(); refreshConfirmLabel();
+}
+document.getElementById("stakeUp").onclick=()=>bumpStake(1);
+document.getElementById("stakeDown").onclick=()=>bumpStake(-1);
+document.getElementById("allIn").onclick=()=>{
+  stake=Math.max(MIN_STAKE, bank); sndChip(); syncHud(); refreshConfirmLabel();
+};
+document.getElementById("muteBtn").onclick=e=>{ muted=!muted; e.target.style.opacity=muted?.25:.6; e.target.textContent=muted?"♪̸":"♪"; if(!muted) ac(); };
+let flashT=null;
+function flash(msg,kind){ const f=document.getElementById("flash"); f.textContent=msg; f.className="flash show "+(kind||"");
+  clearTimeout(flashT); flashT=setTimeout(()=>f.classList.remove("show"),1600); }
+window.addEventListener("resize",resize);
+
+initOpponentPanels(); syncHud(); newRound();
+</script>
+</body>
+</html>

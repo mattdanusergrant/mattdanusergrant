@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Rolls Per Groove</title>
+<meta name="description" content="A rhythm RPG — every lane is a class, every note is an attack. Fight short, intense songs, then level your party between battles.">
+<style>
+  :root{
+    --bg:#07070d; --panel:#11121b; --ink:#e9e9f2; --muted:#9aa0b5;
+    --line:#23263a; --accent:#7c5cff; --accent2:#36d1c4;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:radial-gradient(120% 80% at 50% -10%,#16172a,#07070d 70%);
+    color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;min-height:100%;touch-action:manipulation;
+    user-select:none;-webkit-user-select:none}
+  #wrap{position:relative}
+  canvas{display:block;border:1px solid var(--line);border-radius:16px;
+    box-shadow:0 24px 60px -20px #000, inset 0 0 0 1px #ffffff08;background:#0a0b14}
+  #overlay{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;padding:1.6rem;
+    background:radial-gradient(120% 80% at 50% 30%,#16172af2,#07070dfa);
+    border-radius:16px;backdrop-filter:blur(2px);overflow:auto}
+  #overlay.hidden{display:none}
+  .title{font-weight:800;letter-spacing:.12em;font-size:2rem;margin:0 0 .2rem;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--muted);margin:.2rem 0 1.1rem;font-size:.95rem;max-width:24rem}
+  .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.4rem 0 1.2rem;
+    width:100%;max-width:22rem}
+  .keycap{border:1px solid var(--line);border-radius:10px;padding:.55rem .2rem;
+    background:linear-gradient(180deg,#171826,#11121b)}
+  .keycap b{display:block;font-size:1.1rem}
+  .keycap span{font-size:.72rem;color:var(--muted)}
+  button{font:inherit;font-weight:700;color:#0a0b14;border:0;cursor:pointer;
+    padding:.8rem 1.6rem;border-radius:999px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    box-shadow:0 10px 24px -8px var(--accent)}
+  button:active{transform:translateY(1px)}
+  button:disabled{filter:grayscale(.7) brightness(.6);cursor:default;box-shadow:none}
+  .hint{color:var(--muted);font-size:.78rem;margin-top:1rem;max-width:24rem}
+  a{color:var(--accent2)}
+
+  /* ---- Party management screen ---- */
+  .mtitle{font-weight:800;letter-spacing:.04em;font-size:1.4rem;margin:.2rem 0 .1rem}
+  .pool{color:var(--muted);font-size:.9rem;margin:.1rem 0 1rem}
+  .pool b{color:var(--accent2);font-size:1.15rem}
+  .mgmt{display:flex;flex-direction:column;gap:.45rem;width:100%;max-width:23rem;margin-bottom:1rem}
+  .crow{display:grid;grid-template-columns:1.6rem 1fr auto auto;align-items:center;gap:.55rem;
+    border:1px solid var(--line);border-radius:12px;padding:.5rem .65rem;
+    background:linear-gradient(180deg,#13141f,#0e0f18);text-align:left}
+  .cemoji{font-size:1.25rem;text-align:center}
+  .cname{font-weight:700;font-size:.92rem;line-height:1.1}
+  .cname small{display:block;color:var(--muted);font-weight:600;font-size:.66rem;letter-spacing:.08em}
+  .clvl{text-align:right;font-weight:800;font-size:.92rem;color:var(--accent2);line-height:1.1}
+  .clvl small{display:block;color:var(--muted);font-weight:600;font-size:.66rem}
+  .lvlbtn{padding:.42rem .6rem;border-radius:9px;font-size:.74rem;line-height:1.05;text-align:center}
+  .lvlbtn small{display:block;font-size:.62rem;font-weight:700;opacity:.85}
+  .enc{width:100%;max-width:23rem;border:1px solid var(--line);border-radius:12px;
+    padding:.7rem .8rem;margin-bottom:1.1rem;background:#0d0e18;text-align:left}
+  .enchead{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+  .encbody{display:flex;flex-wrap:wrap;gap:.5rem .9rem;align-items:baseline;font-size:.82rem;color:var(--muted)}
+  .efoe{font-weight:800;color:var(--ink);font-size:.95rem}
+  .dots{letter-spacing:.12em;color:var(--accent)}
+  .banner{width:100%;max-width:23rem;border:1px solid var(--line);border-radius:12px;
+    padding:.6rem .8rem;margin-bottom:1rem;font-size:.86rem;background:#0d0e18}
+  .banner .win{color:#7CFFA0;letter-spacing:.06em}
+  .banner .lose{color:#ff5d6c;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="440" height="780"></canvas>
+  <div id="overlay">
+    <h1 class="title">ROLLS&nbsp;·&nbsp;PER&nbsp;·&nbsp;GROOVE</h1>
+    <p class="sub" style="margin:.1rem 0 .9rem;letter-spacing:.18em;text-transform:uppercase;font-size:.72rem;font-weight:700">Rhythm · Power · Grind</p>
+    <p class="sub">A rhythm RPG in two beats: <b>fight</b> a short, intense song —
+      every note you nail is an attack — then <b>manage</b> your party between
+      battles, banking Groove XP to level your classes. Levels lock in when the
+      song starts.</p>
+    <div class="keys">
+      <div class="keycap"><b>A</b><span>⚔️ Warrior</span></div>
+      <div class="keycap"><b>S</b><span>🔮 Mage</span></div>
+      <div class="keycap"><b>D</b><span>🗡️ Rogue</span></div>
+      <div class="keycap"><b>L</b><span>🏹 Archer</span></div>
+      <div class="keycap"><b>;</b><span>✨ Healer</span></div>
+      <div class="keycap"><b>'</b><span>🎶 Bard</span></div>
+    </div>
+    <button id="startBtn">Enter the green room ▸</button>
+    <p class="hint">Keyboard <b>A S D</b> · <b>L ; '</b> — or tap the lanes on touch.</p>
+  </div>
+</div>
+<script>
+(() => {
+  "use strict";
+  const cv = document.getElementById("c");
+  const ctx = cv.getContext("2d");
+  const W = cv.width, H = cv.height;
+  const overlay = document.getElementById("overlay");
+
+  // ---- Layout ----------------------------------------------------------
+  const LANES = 6;
+  const LANE_W = W / LANES;
+  const BATTLE_H = 250;                 // top battle scene
+  const FIELD_TOP = BATTLE_H;           // note field begins
+  const HIT_Y = H - 96;                 // judgement line
+  const HERO_Y = BATTLE_H - 46;         // heroes sit at the foot of the scene
+  const PERFECT = 24, GOOD = 50, MISS_PASS = 66; // px windows around HIT_Y
+
+  // ---- Classes (lanes) -------------------------------------------------
+  // left cluster A S D, right cluster L ; ' — shifted ; ' (: ") map to the same lanes
+  const CLASSES = [
+    { name:"Warrior", key:"A", emoji:"⚔️", color:"#ff5d6c", atk:9, freq:196.0, heal:0 },
+    { name:"Mage",    key:"S", emoji:"🔮", color:"#9b6cff", atk:7, freq:261.6, heal:0, crit:0.25 },
+    { name:"Rogue",   key:"D", emoji:"🗡️", color:"#ff8f3f", atk:6, freq:329.6, heal:0, crit:0.40 },
+    { name:"Archer",  key:"L", emoji:"🏹", color:"#36d1c4", atk:6, freq:392.0, heal:0 },
+    { name:"Healer",  key:";", emoji:"✨", color:"#ffd166", atk:4, freq:493.9, heal:5 },
+    { name:"Bard",    key:"'", emoji:"🎶", color:"#5cc8ff", atk:5, freq:587.3, heal:2 },
+  ];
+  const KEY_TO_LANE = { a:0, s:1, d:2, l:3, ";":4, "'":5, ":":4, '"':5 };
+
+  // ---- Enemy roster ----------------------------------------------------
+  const FOES = [
+    { name:"Slime",    emoji:"🟢" }, { name:"Bat",      emoji:"🦇" },
+    { name:"Skeleton", emoji:"💀" }, { name:"Ogre",     emoji:"👹" },
+    { name:"Wraith",   emoji:"👻" }, { name:"Dragon",   emoji:"🐉" },
+  ];
+
+  // ---- Persistent meta (survives between encounters) -------------------
+  const meta = {
+    pool: 0,                              // banked, unspent Groove XP
+    idx: 0,                               // which encounter (song) we're on
+    roster: CLASSES.map((c) => ({ ...c, level: 1 })),
+  };
+  const computeAtk = (c) => c.atk * (1 + (c.level - 1) * 0.55);
+  const levelCost = (level) => 6 + level * 6;   // XP to go from `level` → level+1
+
+  // ---- Combat runtime (rebuilt per encounter) -------------------------
+  let phase = "title";                    // "title" | "manage" | "combat"
+  let cur, enemy, party, notes, floaters, particles, slashes, shake;
+  let chart, chartI, songTime, songDur, speed, travel, stats, ended;
+  let beatClock, beatLen, running = false, lastT = 0;
+
+  // ---- Audio (WebAudio, no assets) ------------------------------------
+  let actx = null;
+  function audio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+  function tone(freq, dur, type = "triangle", gain = 0.18) {
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+  }
+  function chord(freqs, dur) { freqs.forEach((f, i) => setTimeout(() => tone(f, dur, "sine", 0.14), i * 60)); }
+
+  // ---- Helpers ---------------------------------------------------------
+  const laneX = (i) => i * LANE_W + LANE_W / 2;
+  function fl(x, y, text, color, size = 18) { return { x, y, text, color, size, life:1 }; }
+  function burst(x, y, color, n = 12) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * 6.28, sp = 40 + Math.random() * 120;
+      particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, color, life:1 });
+    }
+  }
+
+  // ---- Encounter / chart generation -----------------------------------
+  // Each encounter is a short, finite, intensifying song.
+  function buildChart(idx, intensity, duration) {
+    const bpm = 128 + idx * 5;
+    const beat = 60 / bpm;
+    const ev = [];
+    let t = 2.0;                               // lead-in before the first hit
+    while (t < duration) {
+      const prog = t / duration;
+      const prob = Math.min(0.97, 0.5 + prog * 0.4 + intensity * 0.15); // density ramps up
+      if (Math.random() < prob) {
+        const lane = (Math.random() * LANES) | 0;
+        ev.push({ time: t, lane });
+        // doubles arrive in the back half / at higher intensity
+        if (prog > 0.55 && Math.random() < intensity * 0.35 + (prog - 0.55) * 0.5) {
+          ev.push({ time: t, lane: (lane + 1 + ((Math.random() * (LANES - 1)) | 0)) % LANES });
+        }
+      }
+      // half-beat flurries late in the song
+      t += (prog > 0.5 && Math.random() < 0.2 + intensity * 0.4) ? beat / 2 : beat;
+    }
+    return { events: ev.sort((a, b) => a.time - b.time), bpm };
+  }
+
+  function encounterFor(idx) {
+    const foe = FOES[idx % FOES.length];
+    const boss = (idx + 1) % 6 === 0;
+    const intensity = Math.min(1, 0.25 + idx * 0.12);
+    const duration = 26 + idx * 2;                    // short — seconds of hit-time
+    const { events, bpm } = buildChart(idx, intensity, duration);
+    const hp = Math.round(events.length * 6.5 * (boss ? 1.7 : 1) * (1 + idx * 0.18));
+    return { idx, foe, boss, intensity, duration, bpm, chart: events,
+             noteCount: events.length, hp, power: 6 + idx * 2, speed: 250 + idx * 12 };
+  }
+
+  // ---- Combat ----------------------------------------------------------
+  function startEncounter(enc) {
+    cur = enc; phase = "combat";
+    enemy = { name:(enc.boss ? "BOSS " : "") + enc.foe.name, emoji:enc.foe.emoji,
+              hp:enc.hp, maxHp:enc.hp, boss:enc.boss, hurt:0, bob:0, power:enc.power };
+    party = { hp:100, maxHp:100, score:0, combo:0, bestCombo:0 };
+    notes = []; floaters = []; particles = []; slashes = []; shake = 0;
+    stats = { hits:0, misses:0, perfects:0 };
+    chart = enc.chart; chartI = 0; songTime = 0; songDur = enc.duration; ended = false;
+    speed = enc.speed; travel = (HIT_Y - (FIELD_TOP - 30)) / speed;
+    beatLen = 60 / enc.bpm; beatClock = 0;
+    overlay.classList.add("hidden");
+    audio();
+    if (!running) { running = true; lastT = performance.now(); requestAnimationFrame(frame); }
+  }
+
+  function press(lane) {
+    if (phase !== "combat" || ended) return;
+    const l = meta.roster[lane];
+    let best = null, bestD = Infinity;
+    for (const n of notes) {
+      if (n.lane !== lane || n.hit) continue;
+      const d = Math.abs(n.y - HIT_Y);
+      if (d < bestD) { bestD = d; best = n; }
+    }
+    l.lunge = 1;
+    if (!best || bestD > GOOD) { party.combo = 0; tone(110, 0.08, "sawtooth", 0.08); return; }
+    best.hit = true;
+    const perfect = bestD <= PERFECT;
+    stats.hits++; if (perfect) stats.perfects++;
+    party.combo++; party.bestCombo = Math.max(party.bestCombo, party.combo);
+    const comboMult = 1 + Math.min(party.combo, 50) * 0.04;
+    const timing = perfect ? 1.8 : 1.0;
+    const crit = l.crit && Math.random() < l.crit;
+    const dmg = Math.round(computeAtk(l) * timing * comboMult * (crit ? 2 : 1));
+    dealDamage(dmg, lane, perfect, crit);
+    if (l.heal) { party.hp = Math.min(party.maxHp, party.hp + l.heal);
+      floaters.push(fl(60, 36, "+" + l.heal, "#7CFFA0", 14)); }
+    tone(l.freq * (perfect ? 2 : 1), perfect ? 0.16 : 0.1, "triangle", 0.2);
+  }
+
+  function dealDamage(dmg, lane, perfect, crit) {
+    enemy.hp -= dmg; enemy.hurt = 1; shake = Math.min(14, shake + (crit ? 9 : 5));
+    slashes.push({ lane, t:1, color:meta.roster[lane].color });
+    floaters.push(fl(W / 2 + (Math.random() * 40 - 20), 90, (crit ? "CRIT " : "") + dmg,
+      crit ? "#ffd166" : "#ffffff", crit ? 24 : 18 + (perfect ? 4 : 0)));
+    burst(W / 2, 96, meta.roster[lane].color, crit ? 18 : 10);
+    party.score += dmg;
+    if (enemy.hp <= 0) { burst(W / 2, 96, "#ffd166", 30); endEncounter(true, "clear"); }
+  }
+
+  function missNote(n) {
+    stats.misses++; party.combo = 0; party.hp -= enemy.power;
+    shake = Math.min(16, shake + 6);
+    floaters.push(fl(laneX(n.lane), HIT_Y, "MISS", "#ff5d6c", 16));
+    floaters.push(fl(60, 36, "-" + enemy.power, "#ff5d6c", 14));
+    tone(80, 0.18, "sawtooth", 0.12);
+    if (party.hp <= 0) { party.hp = 0; endEncounter(false, "wipe"); }
+  }
+
+  function endEncounter(won, reason) {
+    if (ended) return;
+    ended = true; running = false;
+    let banner;
+    if (won) {
+      const swung = stats.hits + stats.misses;
+      const acc = swung ? stats.hits / swung : 1;
+      const reward = Math.round(40 + cur.idx * 18 + acc * 30 + (stats.misses === 0 ? 20 : 0));
+      meta.pool += reward;
+      const cleared = enemy.name;
+      meta.idx++;
+      chord([523, 659, 784, 1046], 0.25);
+      banner = `<b class="win">VICTORY</b> — ${cleared} down! <b>+${reward}</b> Groove XP · ${Math.round(acc * 100)}% accuracy`;
+    } else {
+      chord([330, 247, 196, 147], 0.4);
+      banner = reason === "wipe"
+        ? `<b class="lose">PARTY WIPED</b> — ${enemy.name} overwhelmed you. Try the song again.`
+        : `<b class="lose">SONG ENDED</b> — ${enemy.name} survived with <b>${Math.max(0, enemy.hp)}</b> HP. Try again.`;
+    }
+    showManage(banner);
+  }
+
+  // ---- Update ----------------------------------------------------------
+  function update(dt) {
+    if (!ended) {
+      songTime += dt;
+      beatClock -= dt;                                    // soft metronome → "song" feel
+      if (beatClock <= 0) { beatClock += beatLen; tone(70, 0.07, "sine", 0.05); }
+      while (chartI < chart.length && chart[chartI].time - travel <= songTime) {
+        notes.push({ lane: chart[chartI].lane, y: FIELD_TOP - 30, hit:false }); chartI++;
+      }
+      for (const n of notes) if (!n.hit) {
+        n.y += speed * dt;
+        if (n.y > HIT_Y + MISS_PASS) { n.hit = true; n.missed = true; missNote(n); }
+      }
+      notes = notes.filter((n) => !n.hit || (n.hitT = (n.hitT || 0) + dt) < 0.18);
+      // song is over once every charted note has resolved
+      if (!ended && chartI >= chart.length && notes.every((n) => n.hit) && songTime > 2)
+        endEncounter(enemy.hp <= 0, enemy.hp <= 0 ? "clear" : "timeout");
+    }
+    enemy.hurt = Math.max(0, enemy.hurt - dt * 4); enemy.bob += dt * 2;
+    shake *= Math.pow(0.0001, dt);
+    for (const l of meta.roster) { l.lunge = Math.max(0, (l.lunge || 0) - dt * 4); l.flash = Math.max(0, (l.flash || 0) - dt * 2); }
+    for (const f of floaters) { f.y -= 30 * dt; f.life -= dt * 1.1; }
+    floaters = floaters.filter((f) => f.life > 0);
+    for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 220 * dt; p.life -= dt * 1.6; }
+    particles = particles.filter((p) => p.life > 0);
+    for (const s of slashes) s.t -= dt * 4;
+    slashes = slashes.filter((s) => s.t > 0);
+  }
+
+  // ---- Render ----------------------------------------------------------
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function bar(x, y, w, h, pct, color, bg = "#000000aa") {
+    roundRect(x, y, w, h, h / 2); ctx.fillStyle = bg; ctx.fill();
+    if (pct > 0) { roundRect(x, y, w * Math.max(0, Math.min(1, pct)), h, h / 2); ctx.fillStyle = color; ctx.fill(); }
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (shake > 0.3) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+    // note field + lanes
+    for (let i = 0; i < LANES; i++) {
+      ctx.fillStyle = i % 2 ? "#0c0d18" : "#0a0b14";
+      ctx.fillRect(i * LANE_W, FIELD_TOP, LANE_W, H - FIELD_TOP);
+      ctx.strokeStyle = "#ffffff0a"; ctx.beginPath();
+      ctx.moveTo(i * LANE_W, FIELD_TOP); ctx.lineTo(i * LANE_W, H); ctx.stroke();
+    }
+    ctx.strokeStyle = "#ffffff33"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, HIT_Y); ctx.lineTo(W, HIT_Y); ctx.stroke();
+    for (let i = 0; i < LANES; i++) {
+      const x = laneX(i), pulse = meta.roster[i].lunge || 0;
+      ctx.globalAlpha = 0.5 + pulse * 0.5;
+      ctx.fillStyle = meta.roster[i].color; roundRect(x - 24, HIT_Y - 13, 48, 26, 13); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#0a0b14"; ctx.font = "700 15px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(meta.roster[i].key, x, HIT_Y);
+    }
+
+    // notes
+    for (const n of notes) {
+      if (n.hit && !n.missed) {
+        const t = (n.hitT || 0) / 0.18, x = laneX(n.lane);
+        ctx.globalAlpha = 1 - t; ctx.strokeStyle = meta.roster[n.lane].color; ctx.lineWidth = 3;
+        roundRect(x - 22 - t * 16, HIT_Y - 12 - t * 16, 44 + t * 32, 24 + t * 32, 12); ctx.stroke();
+        ctx.globalAlpha = 1; continue;
+      }
+      if (n.missed) continue;
+      const x = laneX(n.lane), c = meta.roster[n.lane];
+      ctx.fillStyle = c.color; roundRect(x - 22, n.y - 13, 44, 26, 9); ctx.fill();
+      ctx.fillStyle = "#0a0b1499"; roundRect(x - 22, n.y - 13, 44, 9, 9); ctx.fill();
+      ctx.font = "16px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(c.emoji, x, n.y);
+    }
+
+    // battle scene backdrop
+    ctx.fillStyle = "#0e0f1c"; ctx.fillRect(0, 0, W, BATTLE_H);
+    ctx.strokeStyle = "#ffffff12"; ctx.beginPath(); ctx.moveTo(0, BATTLE_H); ctx.lineTo(W, BATTLE_H); ctx.stroke();
+
+    // enemy
+    const ex = W / 2, ey = 96 + Math.sin(enemy.bob) * 5;
+    ctx.save(); ctx.translate(ex, ey);
+    ctx.scale((enemy.boss ? 1.5 : 1) * (1 + enemy.hurt * 0.12), (enemy.boss ? 1.5 : 1) * (1 + enemy.hurt * 0.12));
+    if (enemy.hurt > 0.5) ctx.globalAlpha = 0.4 + Math.random() * 0.6;
+    ctx.font = "64px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(enemy.emoji, 0, 0); ctx.restore();
+    ctx.fillStyle = "#e9e9f2"; ctx.font = "700 13px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillText(enemy.name + "  ·  " + Math.max(0, enemy.hp) + "/" + enemy.maxHp, ex, 150);
+    bar(W / 2 - 130, 158, 260, 10, enemy.hp / enemy.maxHp, enemy.boss ? "#ffd166" : "#ff5d6c");
+
+    // slashes
+    for (const s of slashes) {
+      const sx = laneX(s.lane), sy = HERO_Y, t = 1 - s.t;
+      const px = sx + (ex - sx) * t, py = sy + (ey - sy) * t;
+      ctx.globalAlpha = s.t; ctx.strokeStyle = s.color; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px - (ex - sx) * 0.08, py - (ey - sy) * 0.08); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // heroes — level is locked during the song, so just show it
+    for (let i = 0; i < LANES; i++) {
+      const l = meta.roster[i], x = laneX(i), y = HERO_Y - (l.lunge || 0) * 18;
+      if (l.flash > 0) { ctx.globalAlpha = l.flash; ctx.fillStyle = l.color;
+        ctx.beginPath(); ctx.arc(x, y - 6, 24, 0, 6.3); ctx.fill(); ctx.globalAlpha = 1; }
+      ctx.font = "28px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(l.emoji, x, y - 6);
+      ctx.fillStyle = l.color; ctx.font = "700 11px system-ui"; ctx.fillText("Lv " + l.level, x, y + 16);
+    }
+
+    // HUD: song progress (top), party HP, score, combo
+    bar(14, 10, W - 28, 6, Math.min(1, songTime / songDur), "#7c5cff", "#ffffff14");
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#9aa0b5"; ctx.font = "700 11px system-ui"; ctx.fillText("PARTY", 16, 34);
+    bar(16, 40, 130, 10, party.hp / party.maxHp, "#7CFFA0");
+    ctx.fillStyle = "#e9e9f2"; ctx.font = "700 11px system-ui"; ctx.fillText(Math.ceil(party.hp) + "/" + party.maxHp, 16, 64);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#9aa0b5"; ctx.fillText("DAMAGE", W - 16, 34);
+    ctx.fillStyle = "#e9e9f2"; ctx.font = "800 18px system-ui"; ctx.fillText(party.score.toLocaleString(), W - 16, 54);
+    if (party.combo > 1) { ctx.fillStyle = "#ffd166"; ctx.font = "800 16px system-ui"; ctx.fillText(party.combo + "× combo", W - 16, 74); }
+
+    for (const f of floaters) {
+      ctx.globalAlpha = Math.max(0, Math.min(1, f.life * 1.5));
+      ctx.fillStyle = f.color; ctx.font = "800 " + f.size + "px system-ui";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.globalAlpha = 1;
+    for (const p of particles) { ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // ---- Loop ------------------------------------------------------------
+  function frame(t) {
+    if (!running) return;
+    const dt = Math.min(0.05, (t - lastT) / 1000 || 0); lastT = t;
+    if (phase === "combat") { update(dt); render(); }
+    requestAnimationFrame(frame);
+  }
+
+  // ---- Party management screen (DOM) ----------------------------------
+  const keyLabel = (k) => "key " + k;
+  function showManage(banner) {
+    phase = "manage"; running = false;
+    // build the encounter once per index — stable preview, and the same song on retry
+    if (!cur || cur.idx !== meta.idx) cur = encounterFor(meta.idx);
+    const rows = meta.roster.map((c, i) => {
+      const cost = levelCost(c.level), can = meta.pool >= cost;
+      return `<div class="crow">
+        <span class="cemoji">${c.emoji}</span>
+        <span class="cname">${c.name}<small>${keyLabel(c.key)}</small></span>
+        <span class="clvl">Lv ${c.level}<small>ATK ${Math.round(computeAtk(c))}</small></span>
+        <button class="lvlbtn" data-i="${i}" ${can ? "" : "disabled"}>Level&nbsp;Up<small>${cost} XP</small></button>
+      </div>`;
+    }).join("");
+    const dots = "●".repeat(Math.round(cur.intensity * 5)).padEnd(5, "○");
+    overlay.innerHTML =
+      (banner ? `<div class="banner">${banner}</div>` : "") +
+      `<h2 class="mtitle">Party Management</h2>
+       <div class="pool">Groove XP <b>${meta.pool}</b></div>
+       <div class="mgmt">${rows}</div>
+       <div class="enc">
+         <div class="enchead">Up next — Encounter ${meta.idx + 1}</div>
+         <div class="encbody">
+           <span class="efoe">${cur.boss ? "★ " : ""}${cur.foe.emoji} ${cur.foe.name}${cur.boss ? " — BOSS" : ""}</span>
+           <span>HP ${cur.hp}</span><span>${cur.noteCount} notes</span>
+           <span class="dots">${dots}</span><span>${cur.duration}s</span>
+         </div>
+       </div>
+       <button id="startBtn">Start Encounter ▸</button>
+       <p class="hint">Spend Groove XP to level your classes. Levels <b>lock in</b> once the song starts.</p>`;
+    overlay.classList.remove("hidden");
+    overlay.querySelectorAll(".lvlbtn").forEach((b) => b.addEventListener("click", () => {
+      const i = +b.dataset.i, c = meta.roster[i], cost = levelCost(c.level);
+      if (meta.pool >= cost) { meta.pool -= cost; c.level++; chord([c.freq, c.freq * 1.25, c.freq * 1.5], 0.18); showManage(banner); }
+    }));
+    overlay.querySelector("#startBtn").addEventListener("click", () => { audio(); startEncounter(cur); });
+  }
+
+  // ---- Controls --------------------------------------------------------
+  window.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (phase === "combat" && k in KEY_TO_LANE) { e.preventDefault(); press(KEY_TO_LANE[k]); }
+    else if ((k === "enter" || k === " ") && phase !== "combat") {
+      const b = overlay.querySelector("#startBtn"); if (b) { e.preventDefault(); b.click(); }
+    }
+  });
+  function pointerLane(clientX) {
+    const r = cv.getBoundingClientRect();
+    return Math.max(0, Math.min(LANES - 1, Math.floor((clientX - r.left) * (W / r.width) / LANE_W)));
+  }
+  cv.addEventListener("pointerdown", (e) => { if (phase === "combat") { e.preventDefault(); press(pointerLane(e.clientX)); } });
+
+  // ---- Responsive sizing & boot ---------------------------------------
+  function fit() {
+    const pad = 24, scale = Math.min((window.innerWidth - pad) / W, (window.innerHeight - pad) / H, 1);
+    cv.style.width = (W * scale) + "px"; cv.style.height = (H * scale) + "px";
+  }
+  window.addEventListener("resize", fit); fit();
+  document.getElementById("startBtn").addEventListener("click", () => { audio(); showManage(); });
+})();
+</script>
+</body>
+</html>

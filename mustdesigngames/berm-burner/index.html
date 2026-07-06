@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#cdd6c0">
+<title>Berm Burner — Trail</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; background:#10140e; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+         touch-action:none; user-select:none; -webkit-user-select:none; }
+  #game { position:fixed; inset:0; display:block; }
+
+  .overlay { position:fixed; inset:0; z-index:10; display:flex; flex-direction:column;
+             align-items:center; justify-content:center; gap:12px; text-align:center;
+             color:#f2efe4; padding:26px;
+             background:radial-gradient(120% 120% at 50% 28%, rgba(40,46,34,.55), rgba(14,18,12,.93)); }
+  .overlay.hide { display:none; }
+  h1 { font-size:clamp(36px,11vw,54px); font-weight:900; letter-spacing:.01em; line-height:.95;
+       color:#f3ead4; text-shadow:0 3px 0 #5a4a2a, 0 6px 16px rgba(0,0,0,.5); }
+  h1 small { display:block; font-size:.4em; letter-spacing:.42em; font-weight:800; color:#b6cf86; margin-top:.5em; }
+  .tag { font-size:13.5px; opacity:.82; max-width:320px; line-height:1.5; }
+  .big { font-size:34px; font-weight:900; color:#b6cf86; }
+  .stat { font-size:16px; opacity:.92; } .stat b { color:#e7d7a6; }
+  .courses { display:flex; flex-direction:column; gap:10px; width:min(360px,86vw); margin-top:6px; }
+  .course { display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer;
+            text-align:left; border:0; border-radius:14px; padding:13px 16px; color:#1c2417; font:inherit;
+            background:#cfe0a6; box-shadow:0 4px 0 rgba(0,0,0,.25); }
+  .course:active { transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,.25); }
+  .course .nm { font-weight:800; font-size:17px; }
+  .course .ds { font-size:11.5px; opacity:.7; }
+  .course .bt { font-size:11.5px; font-weight:800; opacity:.8; text-align:right; white-space:nowrap; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  button.btn { margin-top:6px; font:inherit; font-weight:800; font-size:17px; color:#1c2417;
+       background:#b6cf86; border:0; border-radius:13px; padding:13px 28px; cursor:pointer; box-shadow:0 5px 0 #6f8a48; }
+  button.btn.alt { background:#cfd6c4; box-shadow:0 5px 0 #8a907e; }
+  button.btn:active { transform:translateY(3px); box-shadow:0 2px 0 #6f8a48; }
+  .hint { font-size:12px; opacity:.7; line-height:1.6; max-width:320px; } .hint b{color:#e7d7a6;}
+
+  #hud { position:fixed; top:0; left:0; right:0; z-index:6; pointer-events:none;
+         display:flex; justify-content:space-between; align-items:flex-start;
+         padding:max(12px,env(safe-area-inset-top)) 16px 0; color:#2a3320;
+         text-shadow:0 1px 3px rgba(255,255,255,.4); }
+  #time { font-size:28px; font-weight:900; } #cn{font-size:12px;font-weight:800;opacity:.8;}
+  #right { text-align:right; } #prog{font-size:13px;font-weight:800;opacity:.85;}
+  #mute { pointer-events:auto; cursor:pointer; font-size:19px; opacity:.8;
+          background:rgba(255,255,255,.35); border-radius:9px; padding:3px 8px; margin-top:5px; display:inline-block; }
+  .toast { position:fixed; top:24%; left:50%; transform:translateX(-50%); z-index:7;
+           font-size:28px; font-weight:900; color:#e7d7a6; pointer-events:none;
+           text-shadow:0 2px 0 #5a4a2a,0 4px 12px rgba(0,0,0,.6); opacity:0; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div><div id="time">0.0</div><div id="cn">—</div></div>
+  <div id="right"><div id="prog">0%</div><div id="mute">🔊</div></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="menu">
+  <h1>BERM BURNER<small>TRAIL</small></h1>
+  <div class="tag">First-person singletrack on a topo map. Pick a line at the splits, dodge the deadfall, ride it clean.</div>
+  <div class="courses" id="courseList"></div>
+  <div class="hint">One thumb: <b>left/right</b> steer · <b>up</b> pedal · <b>down</b> brake.</div>
+</div>
+
+<div class="overlay hide" id="crash">
+  <div class="big">💥 WIPEOUT</div>
+  <div class="stat" id="cMsg"></div>
+  <div class="tag">Try again?</div>
+  <div class="row"><button class="btn" id="cRetry">TRY AGAIN</button><button class="btn alt" id="cMenu">COURSES</button></div>
+</div>
+
+<div class="overlay hide" id="finish">
+  <div class="big">🏁 FINISH</div>
+  <div class="stat">time <b id="fTime">0.0</b>s</div>
+  <div class="stat" id="fBest"></div>
+  <div class="row"><button class="btn" id="fRetry">RIDE AGAIN</button><button class="btn alt" id="fMenu">COURSES</button></div>
+</div>
+
+<script>
+"use strict";
+(() => {
+const cv=document.getElementById('game'), ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1;
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight; cv.width=W*DPR; cv.height=H*DPR;
+  cv.style.width=W+'px'; cv.style.height=H+'px'; ctx.setTransform(DPR,0,0,DPR,0,0); }
+window.addEventListener('resize',resize); resize();
+
+// ---------- tuning ----------
+const SEG=200, RW=1000, DRAW=150, CAM_H=1150;
+const FOV=108, CAM_DEPTH=1/Math.tan((FOV/2)*Math.PI/180);
+const MAXSPD=2700, ACCEL=1500, BRAKE=4200, ROLL=520;
+const OFF_MAX=1400, OFF_DECEL=3000, STEER=2.4, CENT=0.00055;
+const DIST_M=200, STICK_R=72, CONTOUR=850;
+
+// ---------- courses (bespoke) ----------
+function rnd(n){ const x=Math.sin(n*127.1+31.7)*43758.5453; return x-Math.floor(x); }
+// section types: straight/curve/hill (n,c,dy), split (n,gap,left[],right[]); obstacles {at:0..1, off, type}
+function mkObs(off,type){ return {off,type,bad:type!=='cone', w:type==='log'?0.5:0.18}; }
+function build(def){
+  const S=[]; let y=0;
+  const seg=(curve,lanes,obs)=>S.push({curve,y,lanes:lanes||[{cx:0,hw:1}],obs:obs||[]});
+  for(const sec of def.script){
+    const n=sec.n||24, c=sec.c||0, dy=(sec.dy||0)/(sec.n||24);
+    if(sec.t==='split'){
+      const gap=sec.gap||1.1, mid=Math.floor(n*0.5);
+      for(let k=0;k<n;k++){ y+=dy;
+        const r=Math.max(0,Math.min(1, Math.min(k,n-1-k)/(n*0.3)));
+        const cx=gap*r; let lanes, obs=[];
+        if(cx<0.3){ lanes=[{cx:0,hw:1}]; }
+        else { lanes=[{cx:-cx,hw:0.62},{cx:cx,hw:0.62}];
+          if(k===mid) obs.push(mkObs(0,'rock'));     // island blocker — forces a left/right choice
+          for(const o of (sec.left||[]))  if(Math.floor(o.at*n)===k) obs.push(mkObs(-cx+(o.off||0),o.type));
+          for(const o of (sec.right||[])) if(Math.floor(o.at*n)===k) obs.push(mkObs( cx+(o.off||0),o.type));
+        }
+        seg(c,lanes,obs);
+      }
+    } else {
+      for(let k=0;k<n;k++){ y+=dy; let obs=[];
+        if(sec.obs) for(const o of sec.obs) if(Math.floor(o.at*n)===k) obs.push(mkObs(o.off||0,o.type));
+        seg(c,null,obs);
+      }
+    }
+  }
+  for(let k=0;k<8;k++) S.push({curve:0,y,lanes:[{cx:0,hw:1.15}],obs:[],finish:k===0});
+  // elevation range for hypsometric tint
+  let lo=1e9,hi=-1e9; for(const s of S){ if(s.y<lo)lo=s.y; if(s.y>hi)hi=s.y; }
+  S.lo=lo; S.hi=hi||1;
+  return S;
+}
+const COURSES=[   // every fork has one clean branch; the island rock forces the choice
+  { id:'meadow', name:'Meadow Loop', desc:'gentle · wide · a few forks',
+    pal:{ lo:[122,150,86], hi:[196,206,150], trail:[206,196,150], rail:[150,128,86], contour:[96,116,70], sky:[206,222,196], tree:[74,110,64] },
+    script:[ {t:'straight',n:26},
+      {t:'curve',n:40,c:2.2,dy:600}, {t:'straight',n:14},
+      {t:'split',n:46,gap:1.15, left:[{at:0.5,type:'log'}], right:[]},
+      {t:'curve',n:40,c:-2.4,dy:400}, {t:'straight',n:14,obs:[{at:0.5,type:'rock',off:0.4}]},
+      {t:'split',n:44,gap:1.15, left:[], right:[{at:0.5,type:'rock'}]},
+      {t:'curve',n:34,c:2.0,dy:-500}, {t:'straight',n:18} ] },
+  { id:'switchback', name:'Switchback Ridge', desc:'climby · twisty · many forks',
+    pal:{ lo:[150,128,84], hi:[224,212,180], trail:[212,190,140], rail:[150,116,72], contour:[120,96,60], sky:[214,224,222], tree:[80,104,70] },
+    script:[ {t:'straight',n:18},
+      {t:'curve',n:34,c:3.0,dy:900}, {t:'curve',n:34,c:-3.0,dy:900},
+      {t:'split',n:42,gap:1.2, left:[{at:0.5,type:'log'}], right:[]},
+      {t:'curve',n:30,c:2.8,dy:700}, {t:'straight',n:10},
+      {t:'split',n:40,gap:1.2, left:[], right:[{at:0.45,type:'rock'}]},
+      {t:'curve',n:34,c:-3.0,dy:-800},
+      {t:'split',n:42,gap:1.2, left:[{at:0.5,type:'rock'}], right:[]},
+      {t:'curve',n:30,c:2.2,dy:-600}, {t:'straight',n:14} ] },
+  { id:'burnt', name:'Burnt Ridge', desc:'charred · tight · stay sharp',
+    pal:{ lo:[78,80,66], hi:[150,140,124], trail:[150,128,98], rail:[86,66,48], contour:[52,48,42], sky:[180,176,170], tree:[40,44,36] },
+    script:[ {t:'straight',n:14},
+      {t:'split',n:36,gap:1.2, left:[{at:0.5,type:'log'}], right:[]},
+      {t:'curve',n:30,c:3.2,dy:700}, {t:'straight',n:10,obs:[{at:0.5,type:'rock',off:0.45}]},
+      {t:'split',n:34,gap:1.25, left:[], right:[{at:0.5,type:'log'}]},
+      {t:'curve',n:28,c:-3.2,dy:600},
+      {t:'split',n:34,gap:1.25, left:[{at:0.46,type:'rock'},{at:0.62,type:'rock'}], right:[]},
+      {t:'curve',n:30,c:3.0,dy:-700}, {t:'straight',n:12} ] },
+];
+let course=null, S=[];
+
+// ---------- state ----------
+let state='menu', courseIx=0, pos=0, playerX=0, speed=0, raceT=0, lastSeg=0, crashTimer=0, shake=0, bob=0, shakeY=0, flipText='', flipTextT=0;
+function bestKey(id){ return 'bermtrail_'+id; }
+function fmt(t){ return t.toFixed(1); }
+function startRun(ix){ courseIx=(ix==null?courseIx:ix); course=COURSES[courseIx]; S=course._S||(course._S=build(course));
+  pos=0; playerX=0; speed=0; raceT=0; lastSeg=0; crashTimer=0; shake=0; bob=0; flipTextT=0;
+  state='play'; touching=false; inSteer=0; inDrive=0;
+  document.getElementById('cn').textContent=course.name;
+  for(const id of ['menu','crash','finish']) document.getElementById(id).classList.add('hide');
+  audioStart(); }
+function toMenu(){ state='menu'; for(const id of ['crash','finish']) document.getElementById(id).classList.add('hide');
+  document.getElementById('menu').classList.remove('hide'); buildMenu(); }
+function startCrash(reason){ if(state!=='play') return; state='crashing'; crashTimer=0; shake=1; inSteer=0; inDrive=0; touching=false;
+  flipText=reason||'WIPEOUT!'; flipTextT=1.6; noise(0.5,0.4); sweep(300,70,0.5,0.25); }
+function endCrash(){ state='crashed';
+  document.getElementById('cMsg').textContent='you rode '+Math.round(pos/DIST_M)+' m of '+course.name;
+  document.getElementById('crash').classList.remove('hide'); }
+function finish(){ if(state!=='play') return; state='finished';
+  blip(523,0.13,'triangle',0.2); blip(659,0.15,'triangle',0.2); setTimeout(()=>blip(784,0.3,'triangle',0.2),130);
+  const prev=+(localStorage.getItem(bestKey(course.id))||0); let rec='';
+  if(prev===0||raceT<prev){ localStorage.setItem(bestKey(course.id),raceT.toFixed(1)); rec='⭐ new best!'; }
+  else rec='best '+fmt(prev)+'s';
+  document.getElementById('fTime').textContent=fmt(raceT);
+  document.getElementById('fBest').textContent=rec;
+  document.getElementById('finish').classList.remove('hide'); }
+document.getElementById('cRetry').addEventListener('click',()=>startRun());
+document.getElementById('fRetry').addEventListener('click',()=>startRun());
+document.getElementById('cMenu').addEventListener('click',toMenu);
+document.getElementById('fMenu').addEventListener('click',toMenu);
+function buildMenu(){ const el=document.getElementById('courseList'); el.innerHTML='';
+  COURSES.forEach((c,ix)=>{ const b=document.createElement('button'); b.className='course';
+    const bt=localStorage.getItem(bestKey(c.id));
+    b.innerHTML='<span><span class="nm">'+c.name+'</span><br><span class="ds">'+c.desc+'</span></span>'+
+      '<span class="bt">'+(bt?('best<br>'+bt+'s'):'—')+'</span>';
+    b.addEventListener('click',()=>startRun(ix)); el.appendChild(b); }); }
+buildMenu();
+
+// ---------- audio ----------
+let AC=null, muted=false, hum=null, humGain=null;
+function audioStart(){ if(muted) return;
+  if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)();
+    hum=AC.createOscillator(); hum.type='triangle'; hum.frequency.value=55;
+    const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=420;
+    humGain=AC.createGain(); humGain.gain.value=0; hum.connect(lp); lp.connect(humGain); humGain.connect(AC.destination); hum.start();
+  }catch(e){ AC=null; } } if(AC&&AC.state==='suspended') AC.resume(); }
+function blip(f,d,t,v){ if(!AC||muted) return; const o=AC.createOscillator(),g=AC.createGain();
+  o.type=t||'square'; o.frequency.value=f; g.gain.value=v||0.18; o.connect(g); g.connect(AC.destination);
+  const T=AC.currentTime; g.gain.exponentialRampToValueAtTime(0.0001,T+d); o.start(T); o.stop(T+d); }
+function sweep(f0,f1,d,v){ if(!AC||muted) return; const o=AC.createOscillator(),g=AC.createGain();
+  o.type='sawtooth'; o.connect(g); g.connect(AC.destination); const t=AC.currentTime;
+  o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+d);
+  g.gain.setValueAtTime(v||0.2,t); g.gain.exponentialRampToValueAtTime(0.0001,t+d); o.start(t); o.stop(t+d); }
+function noise(d,v){ if(!AC||muted) return; const n=AC.createBufferSource();
+  const buf=AC.createBuffer(1,AC.sampleRate*d,AC.sampleRate); const a=buf.getChannelData(0);
+  for(let i=0;i<a.length;i++) a[i]=(Math.random()*2-1)*(1-i/a.length);
+  n.buffer=buf; const g=AC.createGain(); g.gain.value=v||0.3; n.connect(g); g.connect(AC.destination); n.start(); n.stop(AC.currentTime+d); }
+document.getElementById('mute').addEventListener('click',()=>{ muted=!muted;
+  document.getElementById('mute').textContent=muted?'🔇':'🔊'; if(humGain) humGain.gain.value=0; });
+
+// ---------- one-thumb stick ----------
+let touching=false, oX=0,oY=0,kX=0,kY=0, inSteer=0, inDrive=0;
+function pt(e){ const t=e.touches&&e.touches[0]?e.touches[0]:e; return {x:t.clientX,y:t.clientY}; }
+function applyStick(){ inSteer=Math.max(-1,Math.min(1,(kX-oX)/STICK_R)); inDrive=Math.max(-1,Math.min(1,(oY-kY)/STICK_R)); }
+function onDown(e){ e.preventDefault(); audioStart(); if(state!=='play') return; const p=pt(e); touching=true; oX=kX=p.x; oY=kY=p.y; applyStick(); }
+function onMove(e){ if(!touching) return; e.preventDefault(); const p=pt(e); kX=p.x; kY=p.y; applyStick(); }
+function onUp(e){ if(!touching) return; if(e&&e.preventDefault) e.preventDefault(); touching=false; inSteer=0; inDrive=0; }
+cv.addEventListener('touchstart',onDown,{passive:false}); cv.addEventListener('touchmove',onMove,{passive:false});
+cv.addEventListener('touchend',onUp,{passive:false}); cv.addEventListener('touchcancel',onUp,{passive:false});
+cv.addEventListener('mousedown',onDown); window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+
+// ---------- helpers ----------
+function laneDist(seg){ // signed distance outside the nearest lane (<=0 on trail)
+  let best=1e9; for(const ln of seg.lanes){ const d=Math.abs(playerX-ln.cx)-ln.hw; if(d<best) best=d; } return best; }
+
+// ---------- update ----------
+function update(dt){
+  if(state==='crashing'){ crashTimer+=dt; speed*=0.86; pos+=speed*dt; if(crashTimer>1.1) endCrash(); return; }
+  if(state!=='play') return;
+  raceT+=dt;
+  const si=Math.max(0,Math.min(S.length-1,Math.floor(pos/SEG))); const seg=S[si];
+  if(inDrive>0) speed+=ACCEL*inDrive*dt; else if(inDrive<0) speed+=BRAKE*inDrive*dt; else speed-=ROLL*dt;
+  const ld=laneDist(seg);
+  if(ld>0.04){ if(speed>OFF_MAX) speed-=OFF_DECEL*dt; shake=Math.max(shake,0.22); }
+  speed=Math.max(0,Math.min(MAXSPD,speed));
+  const sf=0.35+0.65*(speed/MAXSPD);
+  playerX+=inSteer*STEER*sf*dt;
+  playerX-=seg.curve*(speed/MAXSPD)*CENT*SEG*dt;
+  playerX=Math.max(-2.6,Math.min(2.6,playerX));
+  pos+=speed*dt; bob+=speed*dt*0.0011;
+  const cur=Math.floor(pos/SEG);
+  for(let s=lastSeg+1;s<=cur && s<S.length;s++){ const sg=S[s];
+    for(const ob of sg.obs) if(ob.bad && Math.abs(playerX-ob.off)<(ob.w*0.5+0.12)){ startCrash('WIPEOUT!'); break; }
+    if(state!=='play') break;
+  }
+  lastSeg=cur;
+  if(ld>0.9) startCrash('OFF THE TRAIL!');
+  if(cur>=S.length-1){ pos=(S.length-1)*SEG; finish(); }
+  if(shake>0) shake=Math.max(0,shake-dt*1.6);
+  if(hum&&!muted){ const sp=speed/MAXSPD; hum.frequency.value=70+sp*150; humGain.gain.value+=((state==='play'?0.045+sp*0.06:0)-humGain.gain.value)*0.2; }
+}
+
+// ---------- render ----------
+function project(p,camX,camY,camZ){ const cz=Math.max(1,p.z-camZ), scale=CAM_DEPTH/cz;
+  p.scale=scale; p.cz=cz; p.sx=W/2+scale*(p.wx-camX)*W/2; p.sy=H/2-scale*(p.wy-camY)*H/2+shakeY; p.sw=scale*RW*W/2; }
+function lerpC(a,b,t){ return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+function rgb(c){ return 'rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')'; }
+function poly(x1,y1,x2,y2,x3,y3,x4,y4,f){ ctx.fillStyle=f; ctx.beginPath();
+  ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3); ctx.lineTo(x4,y4); ctx.closePath(); ctx.fill(); }
+function elevT(y){ return Math.max(0,Math.min(1,(y-S.lo)/((S.hi-S.lo)||1))); }
+function tint(y,pal,fog){ return rgb(lerpC(lerpC(pal.lo,pal.hi,elevT(y)), [232,236,228], fog*0.7)); }
+
+function drawTree(cx,baseY,scale,pal){ const h=Math.max(6,scale*(H*0.5)*1700); if(cx<-h||cx>W+h) return;
+  ctx.fillStyle='#6b5436'; ctx.fillRect(cx-h*0.03,baseY-h*0.28,h*0.06,h*0.28);
+  ctx.fillStyle=rgb(pal.tree); for(let k=0;k<2;k++){ const ty=baseY-h*0.22-k*h*0.30, w=h*(0.20-k*0.06);
+    ctx.beginPath(); ctx.moveTo(cx,ty-h*0.34); ctx.lineTo(cx-w,ty); ctx.lineTo(cx+w,ty); ctx.closePath(); ctx.fill(); } }
+function drawObstacle(ob,cx,baseY,scale){
+  if(ob.type==='log'){ const w=Math.max(8,scale*RW*W/2*0.5), h=Math.max(6,scale*(H*0.5)*560);
+    ctx.fillStyle='#7a5c3a'; ctx.fillRect(cx-w/2,baseY-h,w,h);
+    ctx.fillStyle='#caa86a'; ctx.beginPath(); ctx.ellipse(cx-w/2,baseY-h/2,h*0.55,h/2,0,0,7); ctx.fill(); }
+  else if(ob.type==='rock'){ const r=Math.max(4,scale*(H*0.5)*820);
+    ctx.fillStyle='#8d8a84'; ctx.beginPath(); ctx.ellipse(cx,baseY-r*0.7,r,r*0.8,0,0,7); ctx.fill();
+    ctx.fillStyle='#6f6c66'; ctx.beginPath(); ctx.ellipse(cx-r*0.3,baseY-r*0.5,r*0.5,r*0.4,0,0,7); ctx.fill(); }
+}
+
+function render(){
+  shakeY = shake>0 ? Math.sin(bob*90)*shake*9 : 0;
+  const pal = course?course.pal:COURSES[0].pal;
+  // sky (flat, map-paper)
+  const g=ctx.createLinearGradient(0,0,0,H*0.6); g.addColorStop(0,rgb(lerpC(pal.sky,[255,255,255],0.25))); g.addColorStop(1,rgb(pal.sky));
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  if(!S.length){ drawBike(); drawControl(); return; }
+  const base=Math.floor(pos/SEG);
+  const yAt=z=>{ const i=z/SEG,a=Math.max(0,Math.min(S.length-1,Math.floor(i))),t=i-a,b=Math.min(S.length-1,a+1); return S[a].y*(1-t)+S[b].y*t; };
+  const playerY=yAt(pos)+CAM_H, camX=playerX*RW;
+  let x=0,dx=0,maxy=H; const sprites=[];
+  for(let n=0;n<DRAW;n++){ const i=base+n; if(i>=S.length-1) break; const sg=S[i], nx=S[i+1];
+    const p1={wx:0,wy:sg.y,z:i*SEG}, p2={wx:0,wy:nx.y,z:(i+1)*SEG};
+    project(p1,camX-x,playerY,pos); project(p2,camX-x-dx,playerY,pos);
+    x+=dx; dx+=sg.curve;
+    if(!(p1.cz<CAM_DEPTH||p2.sy>=p1.sy||p1.sy>maxy)){
+      const fog=Math.min(1,n/DRAW*1.1);
+      // topo ground band
+      ctx.fillStyle=tint(sg.y,pal,fog); ctx.fillRect(0,p2.sy,W,p1.sy-p2.sy+1);
+      // contour line where elevation crosses a step
+      if(Math.floor(sg.y/CONTOUR)!==Math.floor(nx.y/CONTOUR)){
+        ctx.strokeStyle=rgb(lerpC(pal.contour,[232,236,228],fog*0.7)); ctx.lineWidth=Math.max(1,2-fog);
+        ctx.beginPath(); ctx.moveTo(0,p1.sy); ctx.lineTo(W,p1.sy); ctx.stroke();
+      }
+      // finish band
+      if(sg.finish){ ctx.fillStyle='rgba(20,20,20,.85)'; ctx.fillRect(0,p2.sy,W,p1.sy-p2.sy+1);
+        ctx.fillStyle='#fff'; for(let q=0;q<W;q+=40) ctx.fillRect(q,p2.sy,20,p1.sy-p2.sy+1); }
+      // lanes (trail ribbons) + dashed route line
+      const far = (nx.lanes.length===sg.lanes.length)?nx.lanes:sg.lanes;
+      const tcol=rgb(lerpC(pal.trail,[232,236,228],fog*0.7)), rcol=rgb(lerpC(pal.rail,[232,236,228],fog*0.7));
+      for(let li=0; li<sg.lanes.length; li++){ const lnN=sg.lanes[li], lnF=far[li]||lnN;
+        const nCx=p1.sx+p1.sw*lnN.cx, nHw=p1.sw*lnN.hw, fCx=p2.sx+p2.sw*lnF.cx, fHw=p2.sw*lnF.hw;
+        poly(nCx-nHw,p1.sy,nCx+nHw,p1.sy,fCx+fHw,p2.sy,fCx-fHw,p2.sy,tcol);
+        poly(nCx-nHw,p1.sy,nCx-nHw+p1.sw*0.06,p1.sy,fCx-fHw+p2.sw*0.06,p2.sy,fCx-fHw,p2.sy,rcol);
+        poly(nCx+nHw-p1.sw*0.06,p1.sy,nCx+nHw,p1.sy,fCx+fHw,p2.sy,fCx+fHw-p2.sw*0.06,p2.sy,rcol);
+        if(!sg.finish && (i%8)<4){ poly(nCx-p1.sw*0.04,p1.sy,nCx+p1.sw*0.04,p1.sy,fCx+p2.sw*0.04,p2.sy,fCx-p2.sw*0.04,p2.sy,'rgba(250,245,230,.6)'); }
+      }
+      maxy=p2.sy;
+    }
+    // sprites
+    if((i%9===0)){ const sd=rnd(i*2.1); if(sd<0.5){ const side=sd<0.25?-1:1, off=side*(1.45+rnd(i*4.3)*1.2);
+      sprites.push({n,sx:p1.sx+p1.sw*off,sy:p1.sy,scale:p1.scale,tree:true}); } }
+    for(const ob of sg.obs){ sprites.push({n,sx:p1.sx+p1.sw*ob.off,sy:p1.sy,scale:p1.scale,ob}); }
+  }
+  sprites.sort((a,b)=>b.n-a.n);
+  for(const s of sprites){ if(s.ob) drawObstacle(s.ob,s.sx,s.sy,s.scale); else drawTree(s.sx,s.sy,s.scale,pal); }
+  drawBike();
+  if(state==='crashing'){ ctx.fillStyle='rgba(120,20,10,'+(0.45*(1-crashTimer/1.1))+')'; ctx.fillRect(0,0,W,H); }
+  drawControl();
+}
+function drawBike(){ const sway=inSteer*22+Math.sin(bob*40)*4*(speed/MAXSPD), by=H-8+shakeY*0.5;
+  ctx.save(); ctx.translate(W/2+sway,by);
+  ctx.fillStyle='#1c1c1e'; ctx.beginPath(); ctx.ellipse(0,18,46,30,0,Math.PI,2*Math.PI); ctx.fill();
+  ctx.fillStyle='#2c2c30'; ctx.beginPath(); ctx.ellipse(0,18,30,18,0,Math.PI,2*Math.PI); ctx.fill();
+  ctx.strokeStyle='#222'; ctx.lineWidth=10; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(-150,-26); ctx.quadraticCurveTo(0,-52,150,-26); ctx.stroke();
+  ctx.strokeStyle='#6e4a2e'; ctx.lineWidth=14; ctx.beginPath(); ctx.moveTo(-150,-26); ctx.lineTo(-118,-31); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(150,-26); ctx.lineTo(118,-31); ctx.stroke();
+  ctx.fillStyle='#b6cf86'; ctx.fillRect(-10,-44,20,16); ctx.restore(); }
+function drawControl(){ if(!touching) return;
+  ctx.lineWidth=3; ctx.strokeStyle='rgba(40,50,30,.35)'; ctx.beginPath(); ctx.arc(oX,oY,STICK_R,0,7); ctx.stroke();
+  ctx.fillStyle='rgba(40,50,30,.5)'; ctx.font='600 11px system-ui'; ctx.textAlign='center';
+  ctx.fillText('PEDAL ▲',oX,oY-STICK_R-10); ctx.fillText('▼ BRAKE',oX,oY+STICK_R+18);
+  ctx.fillText('◀',oX-STICK_R-14,oY+4); ctx.fillText('▶',oX+STICK_R+14,oY+4);
+  const dx=kX-oX,dy=kY-oY,d=Math.hypot(dx,dy)||1,cl=Math.min(d,STICK_R), nx=oX+dx/d*cl,ny=oY+dy/d*cl;
+  ctx.strokeStyle='rgba(110,138,72,.9)'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(oX,oY); ctx.lineTo(nx,ny); ctx.stroke();
+  ctx.fillStyle=inDrive>0.05?'#7ed957':inDrive<-0.05?'#e0594a':'#e7d7a6'; ctx.beginPath(); ctx.arc(nx,ny,18,0,7); ctx.fill(); }
+function setToast(){ const el=document.getElementById('toast');
+  if(flipTextT>0){ el.textContent=flipText; el.style.opacity=Math.min(1,flipTextT); } else el.style.opacity=0; }
+
+// ---------- loop ----------
+let last=performance.now(), acc=0;
+function frame(now){ let dt=(now-last)/1000; last=now; if(dt>0.05) dt=0.05;
+  if(state==='play'||state==='crashing'){ acc+=dt; const stp=1/120; while(acc>=stp){ update(stp); acc-=stp; if(state==='crashed'||state==='finished') break; } }
+  if(flipTextT>0) flipTextT-=dt;
+  render();
+  document.getElementById('time').textContent=(state==='menu')?'0.0':fmt(raceT);
+  document.getElementById('prog').textContent=(S.length?Math.min(100,Math.round(pos/((S.length-1)*SEG)*100)):0)+'%';
+  setToast();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// debug hook — inert without ?dbg
+if(/[?&]dbg/.test(location.search)){
+  window.BB={ start:startRun, courses:COURSES.length, toMenu,
+    get state(){return state}, get pos(){return pos}, get progress(){return S.length?pos/((S.length-1)*SEG):0},
+    get playerX(){return playerX}, get seg(){return S[Math.max(0,Math.min(S.length-1,Math.floor(pos/SEG)))]},
+    lanesAt(z){ const i=Math.max(0,Math.min(S.length-1,Math.floor(z/SEG))); return S[i].lanes; },
+    obsAt(z){ const i=Math.max(0,Math.min(S.length-1,Math.floor(z/SEG))); return S[i].obs; },
+    setInput(steer,drive){ inSteer=Math.max(-1,Math.min(1,steer)); inDrive=Math.max(-1,Math.min(1,drive)); } };
+}
+})();
+</script>
+</body>
+</html>

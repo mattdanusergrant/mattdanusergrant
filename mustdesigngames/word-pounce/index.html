@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Word Pounce</title>
+<style>
+  :root {
+    --bg: #11131a; --panel: #1b1f2b; --panel2: #232838; --ink: #eef1f7;
+    --muted: #8b93a7; --accent: #ffcc3f; --line: #313748; --ok: #4ade80;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100%; padding: env(safe-area-inset-top) 10px env(safe-area-inset-bottom);
+    overflow-x: hidden; user-select: none; -webkit-user-select: none;
+  }
+  .wrap { width: 100%; max-width: 460px; display: flex; flex-direction: column; flex: 1; }
+  h1 { font-size: 28px; margin: 14px 0 2px; letter-spacing: .5px; text-align: center; }
+  h1 span { color: var(--accent); }
+  .tag { color: var(--muted); text-align: center; font-size: 13px; margin-bottom: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 5px; text-transform: uppercase; letter-spacing: .6px; }
+  input, select, textarea {
+    width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 10px; padding: 13px; font-size: 16px; margin-bottom: 12px; font-family: inherit;
+  }
+  input.code { text-transform: uppercase; letter-spacing: 6px; font-weight: 700; text-align: center; font-size: 24px; }
+  button {
+    width: 100%; background: var(--accent); color: #1a1300; border: 0; border-radius: 10px;
+    padding: 14px; font-size: 17px; font-weight: 700; cursor: pointer; margin-bottom: 8px;
+  }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button:disabled { opacity: .45; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .hidden { display: none !important; }
+  .err { color: #ff7a7a; font-size: 13px; min-height: 16px; text-align: center; }
+  .note { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .note code { background: var(--panel2); padding: 1px 5px; border-radius: 5px; }
+
+  /* Lobby */
+  .roomcode { text-align: center; font-size: 44px; font-weight: 800; letter-spacing: 10px; color: var(--accent); margin: 6px 0; }
+  .players { list-style: none; padding: 0; margin: 6px 0 0; }
+  .players li { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: 16px; }
+  .players li:last-child { border-bottom: 0; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .me { color: var(--accent); }
+  .countdown { text-align: center; font-size: 34px; font-weight: 800; color: var(--accent); margin: 4px 0 10px; }
+  .countdown small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .3px; margin-top: 2px; }
+
+  /* Game */
+  #game { flex: 1; display: flex; flex-direction: column; }
+  .hud { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 8px; }
+  .scoreboard { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .pill { display: flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line);
+          border-radius: 20px; padding: 5px 11px; font-size: 14px; font-weight: 600; }
+  .pill.low { color: #ff7a7a; border-color: #ff7a7a; }
+  #gridwrap { display: flex; justify-content: center; }
+  #grid { display: grid; gap: 3px; touch-action: none; margin: 2px auto 10px; }
+  .cell {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--panel2); border-radius: 6px; font-weight: 700;
+    aspect-ratio: 1; user-select: none;
+  }
+  .cell.sel { background: var(--accent); color: #1a1300; }
+  .rack { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 6px 0 12px; }
+  .tile { width: 40px; height: 48px; display: flex; align-items: center; justify-content: center;
+          background: var(--accent); color: #1a1300; border-radius: 8px; font-weight: 800; font-size: 22px; }
+  #anaInput { text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-bottom: 0; }
+  /* Wordle */
+  .wboard { display: grid; grid-template-rows: repeat(6, 1fr); gap: 5px; justify-content: center; margin: 6px 0 10px; }
+  .wrow { display: flex; gap: 5px; justify-content: center; }
+  .wtile { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
+           border: 2px solid var(--line); border-radius: 6px; font-weight: 800; font-size: 22px; }
+  .wtile.g { background: #4ade80; border-color: #4ade80; color: #0b1411; }
+  .wtile.y { background: #ffd43b; border-color: #ffd43b; color: #1a1300; }
+  .wtile.x { background: #33384a; border-color: #33384a; color: #cfd3df; }
+  #wInput { text-transform: uppercase; letter-spacing: 6px; font-weight: 800; text-align: center; margin-bottom: 0; }
+  /* Hangman */
+  .hmword { text-align: center; font-size: 30px; font-weight: 800; letter-spacing: 8px; margin: 10px 0; min-height: 38px; }
+  .kbd { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+  .key { width: 32px; height: 40px; padding: 0; margin: 0; font-size: 16px; font-weight: 700; flex: 0 0 auto; }
+  .key.ok { background: #4ade80; color: #0b1411; } .key.no { background: #33384a; color: #777f95; }
+  .wordlist { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding-bottom: 12px; }
+  .word { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+          font-size: 14px; font-weight: 600; letter-spacing: .5px; }
+  .word.clue { font-weight: 500; font-style: italic; color: var(--muted); letter-spacing: 0; }
+  .word.done { text-decoration: line-through; color: #1a1300; font-style: normal; }
+
+  /* Overlay */
+  .overlay { position: fixed; inset: 0; background: rgba(8,9,13,.92); display: flex; align-items: center;
+             justify-content: center; padding: 20px; z-index: 50; }
+  .overlay .card { width: 100%; max-width: 380px; }
+  .standings { list-style: none; padding: 0; margin: 4px 0 14px; }
+  .standings li { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--line); font-size: 17px; }
+  .rank { font-weight: 800; width: 26px; color: var(--muted); }
+  .flash { text-align: center; font-weight: 700; min-height: 20px; color: var(--ok); margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Word <span>Pounce</span></h1>
+  <div class="tag">Same grid. Solve the clue, trace the word, claim it.</div>
+
+  <!-- SETUP (only if no Firebase config baked in) -->
+  <div id="setup" class="card hidden">
+    <label>Firebase config</label>
+    <textarea id="cfgInput" rows="7" placeholder="Paste the firebaseConfig object from your Firebase project"></textarea>
+    <button id="cfgSave">Save & continue</button>
+    <p class="note">One-time per device. Create a free project at <code>console.firebase.google.com</code>, add a Web app, enable <b>Realtime Database</b> (test mode), and paste the <code>firebaseConfig</code> here. See <code>DEPLOY.md</code> to bake it into the file so the family doesn't each paste it.</p>
+  </div>
+
+  <!-- HOME -->
+  <div id="home" class="card hidden">
+    <label>Your name</label>
+    <input id="name" maxlength="12" placeholder="e.g. Mum" />
+    <button id="createBtn">Create a room</button>
+    <div class="row">
+      <input id="joinCode" class="code" maxlength="4" placeholder="CODE" />
+    </div>
+    <button id="joinBtn" class="ghost">Join room</button>
+    <div id="homeErr" class="err"></div>
+  </div>
+
+  <!-- LOBBY -->
+  <div id="lobby" class="card hidden">
+    <label>Room code — share it with the family</label>
+    <div id="lobbyCode" class="roomcode">----</div>
+    <label>Game</label>
+    <select id="gameSel">
+      <option value="search">Word Search</option>
+      <option value="boggle">Boggle</option>
+      <option value="anagram">Anagrams</option>
+      <option value="wordle">Wordle</option>
+      <option value="hangman">Hangman (team)</option>
+    </select>
+    <div id="themeRow">
+      <label>Theme</label>
+      <select id="theme"></select>
+    </div>
+    <ul id="lobbyPlayers" class="players"></ul>
+    <div id="countdown" class="countdown hidden"></div>
+    <button id="startBtn">Start round</button>
+    <button id="leaveBtn" class="ghost">Leave</button>
+    <div id="lobbyHint" class="note" style="text-align:center"></div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="hidden">
+    <div class="hud">
+      <div class="pill">Room <b id="gameCode" style="margin-left:4px">----</b></div>
+      <div class="pill" id="timerPill">⏱ <b id="timer">—</b></div>
+      <div class="pill"><b id="found">0</b>/<b id="total">0</b> found</div>
+    </div>
+    <div id="scoreboard" class="scoreboard"></div>
+    <div id="flash" class="flash"></div>
+    <div id="gridwrap"><div id="grid"></div></div>
+    <div id="anagram" class="hidden">
+      <div id="rack" class="rack"></div>
+      <div class="row">
+        <input id="anaInput" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="type a word" />
+        <button id="anaSubmit" style="flex:0 0 96px">Enter</button>
+      </div>
+    </div>
+    <div id="wordle" class="hidden">
+      <div id="wboard" class="wboard"></div>
+      <div class="row">
+        <input id="wInput" maxlength="5" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="guess" />
+        <button id="wSubmit" style="flex:0 0 96px">Guess</button>
+      </div>
+      <div id="wmsg" class="note" style="text-align:center"></div>
+    </div>
+    <div id="hangman" class="hidden">
+      <div id="hmword" class="hmword"></div>
+      <div id="hmstatus" class="note" style="text-align:center;margin-bottom:8px"></div>
+      <div id="kbd" class="kbd"></div>
+    </div>
+    <div id="wordlist" class="wordlist"></div>
+  </div>
+</div>
+
+<!-- DONE OVERLAY -->
+<div id="done" class="overlay hidden">
+  <div class="card">
+    <h2 style="margin:0 0 4px">Round over</h2>
+    <div id="doneCode" class="note" style="text-align:center;margin:0 0 8px"></div>
+    <ul id="standings" class="standings"></ul>
+    <button id="againBtn">Play again</button>
+    <button id="doneLeaveBtn" class="ghost">Back to home</button>
+    <div id="doneHint" class="note" style="text-align:center"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+"use strict";
+
+/* ============================================================
+   1. FIREBASE CONFIG
+   Paste your project's config object here before deploying so
+   the whole family shares it. Leave the placeholder to be
+   prompted in-app (saved per-device in localStorage).
+   ============================================================ */
+const BAKED_CONFIG = {
+  apiKey: "AIzaSyB23amgbl5FHYzd35G7ImC8TKOY6B0vWjw",
+  authDomain: "word-pounce.firebaseapp.com",
+  databaseURL: "https://word-pounce-default-rtdb.firebaseio.com",
+  projectId: "word-pounce",
+  storageBucket: "word-pounce.firebasestorage.app",
+  messagingSenderId: "508919448966",
+  appId: "1:508919448966:web:3a88a0fda7883d5165d807",
+  measurementId: "G-XX0FVR7ZXV"
+};
+
+/* ---------- word banks ---------- */
+const BANKS = {
+  Mixed:   ["RIVER","PLANET","GARDEN","BRIDGE","CANDLE","MARKET","WINTER","JACKET","ROCKET","SILVER","TIGER","MELON","BREEZE","FOREST","PEPPER","ISLAND","PENCIL","GUITAR","CAMERA","PUZZLE","BUTTON","POCKET","PURPLE","WIZARD","DRAGON","CASTLE","COPPER","LANTERN","JOURNEY","BALLOON"],
+  Animals: ["TIGER","PANDA","OTTER","FALCON","DONKEY","RABBIT","WALRUS","BEAVER","JAGUAR","TURTLE","MONKEY","BADGER","LIZARD","FERRET","PARROT","ZEBRA","KOALA","CAMEL","MOOSE","COBRA","IGUANA","PENGUIN","DOLPHIN","GIRAFFE","LEOPARD","HAMSTER","OSTRICH","PIGEON"],
+  Food:    ["MANGO","PEPPER","CHEESE","WAFFLE","TOMATO","PICKLE","COOKIE","NOODLE","PEANUT","BUTTER","HONEY","BAGEL","MUFFIN","SALMON","CARROT","APPLE","GRAPE","LEMON","ONION","POTATO","BANANA","YOGURT","PASTA","PRETZEL","BISCUIT","CUPCAKE","POPCORN","PANCAKE"],
+  Space:   ["PLANET","COMET","GALAXY","NEBULA","ROCKET","ORBIT","METEOR","COSMOS","SATURN","SOLAR","LAUNCH","CRATER","GRAVITY","STELLAR","ECLIPSE","VENUS","PLUTO","URANUS","JUPITER","MERCURY","QUASAR","PULSAR","SUNSPOT","LUNAR","APOLLO","STARDUST"],
+  Nature:  ["RIVER","FOREST","CANYON","MEADOW","BREEZE","PEBBLE","BLOSSOM","THUNDER","GLACIER","SUMMIT","HARBOR","WILLOW","CAVERN","PRAIRIE","ORCHID","VALLEY","DESERT","JUNGLE","STREAM","LAGOON","ICEBERG","VOLCANO","RAINBOW","TORNADO","CACTUS","MAPLE","SUNSET","SWAMP"],
+  Home:    ["KETTLE","PILLOW","WINDOW","GARDEN","CARPET","CANDLE","LADDER","BLANKET","MIRROR","KITCHEN","DRAWER","CUSHION","TEAPOT","SHELF","HALLWAY","TABLE","CLOSET","PANTRY","BASKET","SAUCER","FAUCET","BLENDER","TOASTER","HANGER","FRIDGE","DOORMAT","BATHTUB","CURTAIN"],
+  Sports:  ["SOCCER","TENNIS","HOCKEY","BOXING","SKIING","RUGBY","KARATE","ROWING","SURFING","CYCLING","BOWLING","FENCING","CRICKET","NETBALL","BASEBALL","FOOTBALL","SOFTBALL","HANDBALL","SPRINT","HURDLES","JAVELIN","DISCUS","ARCHERY","DIVING","SAILING","CURLING","SKATING","CLIMBING"],
+  Music:   ["PIANO","VIOLIN","DRUMS","FLUTE","TRUMPET","GUITAR","CELLO","BANJO","HARP","TUBA","OBOE","MELODY","RHYTHM","TEMPO","CHORUS","LYRICS","SINGER","CONCERT","ALBUM","RECORD","STEREO","ENCORE","OCTAVE","BALLAD","ANTHEM","SYMPHONY","KEYBOARD","ACOUSTIC"],
+  Zodiac:  ["ARIES","TAURUS","GEMINI","CANCER","LEO","VIRGO","LIBRA","SCORPIO","PISCES","AQUARIUS","ZODIAC","COSMIC","RISING","CHART","HOUSES","CRYSTAL","DESTINY","FORTUNE","PSYCHIC","TAROT","CUSP","ORACLE","STARS","MOON","MERCURY","ECLIPSE"],
+  Beauty:  ["MASCARA","BLUSH","LIPSTICK","SERUM","BRONZER","PRIMER","POWDER","PALETTE","LASHES","CONTOUR","EYELINER","GLOSS","TONER","MOISTURE","CLEANSER","PERFUME","POLISH","MANICURE","TWEEZERS","COMPACT","SHIMMER","MATTE","BRUSH","SPONGE","GLITTER","BALM","ROUGE","DEWY"],
+  Coffee:  ["LATTE","MOCHA","MATCHA","ESPRESSO","BARISTA","CARAMEL","SCONE","OATMILK","FOAM","CORTADO","FRAPPE","ARABICA","ROAST","BEANS","CREAM","SUGAR","DECAF","BREW","CHAI","COCOA","STEAM","CREMA","THERMOS","VANILLA","MUG","MUFFIN","BAGEL","KETTLE"],
+  Brunch:  ["MIMOSA","WAFFLES","AVOCADO","OMELET","GRANOLA","BACON","SYRUP","TOAST","EGGS","BENEDICT","SAUSAGE","QUICHE","CREPE","FRITTATA","HASH","BERRIES","PASTRY","BRIOCHE","JAM","JUICE","SMOOTHIE","OATMEAL","SPINACH","COFFEE","PANCAKE","YOGURT","HONEY","BUTTER"],
+  "Pop Icons": ["TAYLOR","BEYONCE","RIHANNA","ARIANA","ADELE","BILLIE","SELENA","LORDE","GAGA","SZA","CARDI","DUALIPA","KATY","PINK","SIA","HALSEY","LIZZO","SHAKIRA","MADONNA","BRITNEY","CHER","DOJA","CAMILA","DEMI","KESHA","CIARA"],
+  Cocktails: ["MARTINI","MOJITO","SPRITZ","NEGRONI","TEQUILA","PROSECCO","SANGRIA","COSMO","DAIQUIRI","BELLINI","PALOMA","VODKA","WHISKEY","RUM","GIN","TONIC","APEROL","CAMPARI","BOURBON","SHANDY","PUNCH","OLIVE","SHAKER","TWIST","CHERRY","MIMOSA"],
+  Disney:  ["ARIEL","BELLE","MULAN","MOANA","ELSA","AURORA","JASMINE","TIANA","GENIE","SIMBA","ANNA","OLAF","NEMO","DORY","STITCH","MICKEY","MINNIE","GOOFY","DONALD","BAMBI","DUMBO","RAPUNZEL","MERIDA","WOODY","BUZZ","PLUTO"],
+  "Self-Care": ["YOGA","FACIAL","JOURNAL","PILATES","SKINCARE","MASSAGE","RETREAT","BUBBLE","MEDITATE","BREATHE","STRETCH","PEDICURE","SAUNA","FACEMASK","BATH","RELAX","UNPLUG","INCENSE","AFFIRM","PAMPER","DETOX","WELLNESS","MINDFUL","CANDLE","MANICURE","CRYSTAL"],
+  Fashion: ["DENIM","BLAZER","HEELS","CLUTCH","SNEAKER","SCARF","JEWELRY","BOOTS","DRESS","SKIRT","TROUSER","SWEATER","HOODIE","LEGGINGS","SANDALS","HANDBAG","EARRING","NECKLACE","BRACELET","BERET","GLOVES","KNITWEAR","LINEN","SEQUIN","BLOUSE","VELVET"],
+  Travel:  ["PARIS","TOKYO","ROME","BALI","LONDON","HAWAII","LISBON","GREECE","MIAMI","CANCUN","SYDNEY","DUBLIN","BERLIN","MADRID","VENICE","VIENNA","PRAGUE","CAIRO","SEOUL","DUBAI","NAPLES","ICELAND","MOROCCO","JAMAICA","THAILAND","MALDIVES"],
+  "Plant Mom": ["POTHOS","CACTUS","FERN","ALOE","BASIL","PALM","IVY","MONSTERA","BAMBOO","CALATHEA","DAISY","TULIP","ROSE","LILY","PEONY","MOSS","SEEDS","SPROUT","REPOT","TRELLIS","SUNLIGHT","PLANTER","COMPOST","PRUNE","BLOOM","ORCHID"]
+};
+/* clue shown until a word is claimed; claiming reveals the word */
+const HINTS = {
+  RIVER:"Water flowing to the sea", PLANET:"Earth is one", GARDEN:"Where flowers grow",
+  BRIDGE:"Crosses a river", CANDLE:"Wax with a wick", MARKET:"Where you buy and sell",
+  WINTER:"Coldest season", JACKET:"Wear it when it's chilly", ROCKET:"Blasts into space",
+  SILVER:"Second-place metal", TIGER:"Big striped cat", MELON:"Juicy summer fruit",
+  BREEZE:"Gentle wind", FOREST:"Lots of trees", PEPPER:"Salt's partner", ISLAND:"Land surrounded by water",
+  PANDA:"Black-and-white bamboo eater", OTTER:"Playful river swimmer", FALCON:"Fast hunting bird",
+  DONKEY:"Stubborn farm animal", RABBIT:"Hops, long ears", WALRUS:"Tusked sea mammal",
+  BEAVER:"Builds dams", JAGUAR:"Spotted jungle cat", TURTLE:"Shelled and slow",
+  MONKEY:"Swings in trees", BADGER:"Burrowing striped digger", LIZARD:"Scaly little reptile",
+  FERRET:"Long, sneaky pet", PARROT:"Talking colourful bird",
+  MANGO:"Tropical orange fruit", CHEESE:"Say it for photos", WAFFLE:"Breakfast with squares",
+  TOMATO:"Red salad fruit", PICKLE:"Sour cucumber", COOKIE:"Sweet baked treat",
+  NOODLE:"Long and slurpy", PEANUT:"Goes with butter", BUTTER:"Spread on toast",
+  HONEY:"Bees make it", BAGEL:"Bread with a hole", MUFFIN:"Cupcake's plain cousin",
+  SALMON:"Pink swimming fish", CARROT:"Orange and crunchy",
+  COMET:"Icy ball with a tail", GALAXY:"Billions of stars", NEBULA:"Cloud of space gas",
+  ORBIT:"Path around a planet", METEOR:"Shooting star", COSMOS:"The whole universe",
+  SATURN:"The ringed planet", SOLAR:"Of the sun", LAUNCH:"Send a rocket up",
+  CRATER:"Hole from an impact", GRAVITY:"Pulls you down", STELLAR:"Star-related, or excellent",
+  ECLIPSE:"When the sun goes dark",
+  CANYON:"Deep rocky gorge", MEADOW:"Grassy field", PEBBLE:"Small smooth stone",
+  BLOSSOM:"Spring flower bloom", THUNDER:"A storm's loud boom", GLACIER:"Slow river of ice",
+  SUMMIT:"Top of a mountain", HARBOR:"Where boats dock", WILLOW:"Weeping tree",
+  CAVERN:"Big underground cave", PRAIRIE:"Open grassland", ORCHID:"Fancy houseplant flower",
+  KETTLE:"Boils water for tea", PILLOW:"Rest your head", WINDOW:"Glass you see through",
+  CARPET:"Soft floor covering", LADDER:"Climb it to reach high", BLANKET:"Keeps you warm in bed",
+  MIRROR:"Shows your reflection", KITCHEN:"Where you cook", DRAWER:"Slides out to store things",
+  CUSHION:"Soft seat pad", TEAPOT:"Pours your brew", SHELF:"Holds your books", HALLWAY:"Passage between rooms",
+  PENCIL:"Write, then erase", GUITAR:"Six strings to strum", CAMERA:"Snaps photos",
+  PUZZLE:"Pieces that fit together", BUTTON:"Push it, or it holds your shirt", POCKET:"Trouser pouch for keys",
+  PURPLE:"Red and blue mixed", WIZARD:"Spell-casting old man", DRAGON:"Fire-breathing beast",
+  CASTLE:"Where a king lives", COPPER:"Reddish metal in pennies", LANTERN:"A carry-along light",
+  JOURNEY:"A long trip", BALLOON:"Fill it with air or helium",
+  ZEBRA:"Striped like a barcode horse", KOALA:"Sleepy eucalyptus hugger", CAMEL:"Desert ride with humps",
+  MOOSE:"Huge antlered forest deer", COBRA:"Hooded venomous snake", IGUANA:"Big spiny lizard",
+  PENGUIN:"Tuxedo bird that can't fly", DOLPHIN:"Smart leaping sea swimmer", GIRAFFE:"Tallest animal, long neck",
+  LEOPARD:"Spotted big cat", HAMSTER:"Pocket pet on a wheel", OSTRICH:"Biggest bird, runs fast", PIGEON:"Common city bird",
+  APPLE:"Keeps the doctor away", GRAPE:"Small fruit in bunches", LEMON:"Sour yellow citrus",
+  ONION:"Makes you cry to chop", POTATO:"Mash it or fry it", BANANA:"Peel this yellow fruit",
+  YOGURT:"Creamy cultured snack", PASTA:"Spaghetti and friends", PRETZEL:"Twisted salty snack",
+  BISCUIT:"Crumbly tea-time bake", CUPCAKE:"Tiny frosted cake", POPCORN:"Movie-night puffs", PANCAKE:"Flat breakfast stack",
+  VENUS:"Hottest planet, our neighbour", PLUTO:"Demoted dwarf planet", URANUS:"Tilted blue-green planet",
+  JUPITER:"Biggest planet, great red spot", MERCURY:"Closest planet to the sun", QUASAR:"Blazing distant galaxy core",
+  PULSAR:"Spinning star that pulses", SUNSPOT:"Dark patch on the sun", LUNAR:"Of the moon",
+  APOLLO:"Mission that reached the moon", STARDUST:"Cosmic specks between stars",
+  VALLEY:"Low land between hills", DESERT:"Dry sandy place", JUNGLE:"Dense tropical forest",
+  STREAM:"A little flowing brook", LAGOON:"Shallow sheltered water", ICEBERG:"Floating chunk of ice",
+  VOLCANO:"Mountain that erupts", RAINBOW:"Arc of colours after rain", TORNADO:"Spinning funnel storm",
+  CACTUS:"Prickly desert plant", MAPLE:"Tree with the syrup", SUNSET:"Sky show at dusk", SWAMP:"Soggy muddy wetland",
+  TABLE:"Eat your dinner on it", CLOSET:"Where clothes hang", PANTRY:"Food storage cupboard",
+  BASKET:"Carry or store things in it", SAUCER:"Little plate under a cup", FAUCET:"Tap that runs water",
+  BLENDER:"Whirs up a smoothie", TOASTER:"Browns your bread", HANGER:"Holds a shirt in the closet",
+  FRIDGE:"Keeps food cold", DOORMAT:"Wipe your feet here", BATHTUB:"Soak in a bath here", CURTAIN:"Covers the window",
+  SOCCER:"Kick the ball into the goal", TENNIS:"Rackets, a net, and 'love' for zero", HOCKEY:"Sticks and a puck on ice",
+  BOXING:"Two in a ring with gloves", SKIING:"Slide downhill on snow", RUGBY:"Like football, oval ball, no pads",
+  KARATE:"Martial art of chops and kicks", ROWING:"Pull oars through the water", SURFING:"Ride waves on a board",
+  CYCLING:"Race on two wheels", BOWLING:"Roll to knock down ten pins", FENCING:"A duel with thin swords",
+  CRICKET:"Bats, wickets, and overs", NETBALL:"Pass and shoot, no dribbling", BASEBALL:"Bat, then run the bases",
+  FOOTBALL:"Touchdowns and helmets", SOFTBALL:"Like baseball, bigger ball", HANDBALL:"Throw it into the goal by hand",
+  SPRINT:"A short, fast race", HURDLES:"Race jumping over barriers", JAVELIN:"Throw the long spear",
+  DISCUS:"Hurl the heavy disc", ARCHERY:"Bow and arrow at a target", DIVING:"Leap off a board into the pool",
+  SAILING:"Wind-powered boat sport", CURLING:"Sweep stones across the ice", SKATING:"Glide on blades or wheels",
+  CLIMBING:"Scale a rock wall",
+  PIANO:"88 black-and-white keys", VIOLIN:"String instrument under the chin", DRUMS:"Hit them to keep the beat",
+  FLUTE:"Side-blown silver pipe", TRUMPET:"Brass with three valves", CELLO:"Big violin played sitting down",
+  BANJO:"Twangy bluegrass strings", HARP:"Tall strings you pluck", TUBA:"Biggest, lowest brass",
+  OBOE:"Double-reed woodwind", MELODY:"The tune you hum", RHYTHM:"The beat and timing",
+  TEMPO:"How fast the music goes", CHORUS:"The repeated part of a song", LYRICS:"The words to a song",
+  SINGER:"Person who uses their voice", CONCERT:"A live music show", ALBUM:"A collection of songs",
+  RECORD:"Spinning vinyl disc", STEREO:"Plays your tunes out loud", ENCORE:"One more song after the show",
+  OCTAVE:"Eight notes apart", BALLAD:"A slow love song", ANTHEM:"A song for a nation or team",
+  SYMPHONY:"Big orchestra piece", KEYBOARD:"An electronic piano", ACOUSTIC:"Unplugged, no amp",
+  ARIES:"The ram (Mar–Apr)", TAURUS:"The bull (Apr–May)", GEMINI:"The twins (May–Jun)",
+  CANCER:"The crab (Jun–Jul)", LEO:"The lion (Jul–Aug)", VIRGO:"The maiden (Aug–Sep)",
+  LIBRA:"The scales (Sep–Oct)", SCORPIO:"The scorpion (Oct–Nov)", PISCES:"The fish (Feb–Mar)",
+  AQUARIUS:"The water bearer", ZODIAC:"The wheel of 12 signs", COSMIC:"Of the wider universe",
+  RISING:"Your ___ sign (ascendant)", CHART:"Your birth ___ of planets", HOUSES:"The 12 zones of a birth chart",
+  CRYSTAL:"Healing gemstone on your shelf", DESTINY:"The future the stars hold", FORTUNE:"What a teller predicts",
+  PSYCHIC:"Reads minds and futures", TAROT:"Deck of fortune-telling cards", CUSP:"Born between two signs",
+  ORACLE:"One who foretells the future", STARS:"What you're written in", MOON:"It rules emotions and the tides",
+  MASCARA:"Coats your lashes", BLUSH:"Pink for the cheeks", LIPSTICK:"Colour for your lips",
+  SERUM:"Skincare drops before moisturiser", BRONZER:"Sun-kissed warmth, no sun", PRIMER:"Goes on before makeup",
+  POWDER:"Sets your look, kills shine", PALETTE:"Tray of eyeshadow colours", LASHES:"Mascara coats these",
+  CONTOUR:"Shade to sculpt the face", EYELINER:"Defines the lash line", GLOSS:"Shiny, sticky lip shine",
+  TONER:"Swipe on after cleansing", MOISTURE:"What dry skin is craving", CLEANSER:"Washes the day off your face",
+  PERFUME:"A spritz of scent", POLISH:"Paint for your nails", MANICURE:"A salon nail treatment",
+  TWEEZERS:"Pluck stray brow hairs", COMPACT:"Powder with a little mirror", SHIMMER:"Subtle sparkle finish",
+  MATTE:"No shine, flat finish", BRUSH:"Tool to blend your makeup", SPONGE:"Egg-shaped makeup blender",
+  GLITTER:"Sparkly festival makeup", BALM:"Soothing lip salve", ROUGE:"French word for blush", DEWY:"Glowy, fresh-skin finish",
+  LATTE:"Espresso with steamed milk", MOCHA:"Coffee meets chocolate", MATCHA:"Whisked green tea powder",
+  ESPRESSO:"A small, strong shot", BARISTA:"Makes your coffee", CARAMEL:"Sweet golden syrup flavour",
+  SCONE:"Crumbly cake with jam and cream", OATMILK:"Dairy-free barista favourite", FOAM:"Frothy milk on top",
+  CORTADO:"Espresso cut with warm milk", FRAPPE:"Iced, blended coffee", ARABICA:"The classic coffee bean",
+  ROAST:"Light, medium, or dark bean", BEANS:"Ground up for your brew", CREAM:"Pour it in to soften the coffee",
+  SUGAR:"One lump or two?", DECAF:"Coffee without the buzz", BREW:"To make a pot of coffee",
+  CHAI:"Spiced tea latte", COCOA:"Hot chocolate's main ingredient", STEAM:"The wand froths milk with it",
+  CREMA:"Golden layer atop espresso", THERMOS:"Keeps your drink hot to go", VANILLA:"Classic sweet syrup flavour",
+  MUG:"Cup for your coffee",
+  MIMOSA:"Champagne and orange juice", WAFFLES:"Grid-pattern breakfast cakes", AVOCADO:"Smashed on toast",
+  OMELET:"Folded, filled eggs", GRANOLA:"Crunchy oat-and-nut topping", BACON:"Crispy breakfast strips",
+  SYRUP:"Maple drizzle for pancakes", TOAST:"Browned bread", EGGS:"Scrambled, fried, or poached",
+  BENEDICT:"Eggs with hollandaise", SAUSAGE:"A breakfast link", QUICHE:"Savoury egg tart",
+  CREPE:"Thin French pancake", FRITTATA:"Open-faced baked omelette", HASH:"___ browns",
+  BERRIES:"Top your pancakes with them", PASTRY:"Flaky bakery treat", BRIOCHE:"Soft buttery bread",
+  JAM:"Fruity spread for toast", JUICE:"Fresh-squeezed orange", SMOOTHIE:"Blended fruit drink",
+  OATMEAL:"Warm bowl of oats", SPINACH:"Green leaf in your omelette", COFFEE:"The morning essential",
+  TAYLOR:"___ Swift, Eras Tour", BEYONCE:"Queen Bey", RIHANNA:"Fenty founder, 'Umbrella'",
+  ARIANA:"___ Grande, ponytail & whistle notes", ADELE:"'Hello' powerhouse from London", BILLIE:"___ Eilish, 'Bad Guy'",
+  SELENA:"___ Gomez, Rare Beauty", LORDE:"'Royals' singer from NZ", GAGA:"Lady ___, 'Bad Romance'",
+  SZA:"'Kill Bill' R&B star", CARDI:"___ B, 'WAP'", DUALIPA:"'Levitating' pop star",
+  KATY:"___ Perry, 'Firework'", PINK:"Acrobatic 'So What' singer", SIA:"Wig-hiding 'Chandelier' singer",
+  HALSEY:"'Without Me' singer", LIZZO:"Flute-playing 'Good as Hell' star", SHAKIRA:"Hips don't lie",
+  MADONNA:"The original Material Girl", BRITNEY:"Princess of Pop", CHER:"'Believe', one name only",
+  DOJA:"___ Cat, 'Say So'", CAMILA:"___ Cabello, 'Havana'", DEMI:"___ Lovato, 'Sorry Not Sorry'",
+  KESHA:"'Tik Tok' party-pop star", CIARA:"'Goodies' R&B singer",
+  MARTINI:"Shaken, not stirred", MOJITO:"Rum, lime, and mint", SPRITZ:"Aperol, prosecco, soda",
+  NEGRONI:"Gin, Campari, vermouth", TEQUILA:"Agave spirit for margaritas", PROSECCO:"Italian sparkling wine",
+  SANGRIA:"Wine with chopped fruit", COSMO:"Pink 'Sex and the City' drink", DAIQUIRI:"Rum, lime, sugar — often frozen",
+  BELLINI:"Prosecco and peach", PALOMA:"Tequila and grapefruit", VODKA:"Clear spirit for a cosmo",
+  WHISKEY:"Aged amber spirit", RUM:"Caribbean spirit in a mojito", GIN:"Botanical spirit with tonic",
+  TONIC:"Bubbly mixer for gin", APEROL:"Orange bitter for a spritz", CAMPARI:"Bitter red in a negroni",
+  BOURBON:"American oak-aged whiskey", SHANDY:"Beer cut with lemonade", PUNCH:"Big bowl of party drink",
+  OLIVE:"Garnish on a martini", SHAKER:"Metal tin to mix a cocktail", TWIST:"Curl of citrus peel garnish",
+  CHERRY:"Sweet garnish on top",
+  ARIEL:"The Little Mermaid", BELLE:"Beauty who loves the Beast", MULAN:"Disguised as a soldier for China",
+  MOANA:"Sails the Pacific with Maui", ELSA:"Frozen's ice queen", AURORA:"Sleeping Beauty princess",
+  JASMINE:"Aladdin's princess of Agrabah", TIANA:"Princess who becomes a frog", GENIE:"Grants three wishes",
+  SIMBA:"Lion King cub who becomes king", ANNA:"Elsa's brave little sister", OLAF:"Snowman who loves warm hugs",
+  NEMO:"Lost clownfish", DORY:"Forgetful blue fish", STITCH:"Alien experiment 626",
+  MICKEY:"The mouse who started it all", MINNIE:"Mickey's bow-wearing sweetheart", GOOFY:"Clumsy dog in a hat",
+  DONALD:"Disney's grumpy duck", BAMBI:"Young deer in the forest", DUMBO:"Elephant who flies with his ears",
+  RAPUNZEL:"Tangled's long-haired princess", MERIDA:"Brave's red-haired archer", WOODY:"Toy Story's cowboy",
+  BUZZ:"___ Lightyear, to infinity!",
+  YOGA:"Stretchy mat-and-poses practice", FACIAL:"A pampering face treatment", JOURNAL:"Write your feelings here",
+  PILATES:"Core workout, reformer optional", SKINCARE:"Your cleanse-and-moisturise routine", MASSAGE:"Knead away the tension",
+  RETREAT:"A getaway to recharge", BUBBLE:"___ bath with candles", MEDITATE:"Sit, breathe, clear your mind",
+  BREATHE:"Deep in, slow out", STRETCH:"Loosen up tight muscles", PEDICURE:"Salon treatment for toes",
+  SAUNA:"Hot, steamy wooden room", FACEMASK:"Slather on for glowy skin", BATH:"Long soak in the tub",
+  RELAX:"What self-care is all about", UNPLUG:"Put the phone away", INCENSE:"Burning fragrant sticks",
+  AFFIRM:"Repeat a positive ___ation", PAMPER:"Treat yourself", DETOX:"A cleansing reset",
+  WELLNESS:"Looking after body and mind", MINDFUL:"Present and aware",
+  DENIM:"Jeans fabric", BLAZER:"Smart tailored jacket", HEELS:"Tall, elegant shoes",
+  CLUTCH:"Small strapless evening bag", SNEAKER:"A casual trainer", SCARF:"Wrap for a chilly neck",
+  JEWELRY:"Rings, necklaces, and more", BOOTS:"Footwear for autumn", DRESS:"One-piece outfit",
+  SKIRT:"Worn below the waist", TROUSER:"A leg of your pants", SWEATER:"Cosy knitted top",
+  HOODIE:"Sweatshirt with a hood", LEGGINGS:"Stretchy fitted bottoms", SANDALS:"Open summer shoes",
+  HANDBAG:"Carry-all on your arm", EARRING:"Jewellery for your lobe", NECKLACE:"Worn around the neck",
+  BRACELET:"Wrist jewellery", BERET:"Flat French cap", GLOVES:"Keep your hands warm",
+  KNITWEAR:"Woolly winter clothing", LINEN:"Breezy summer fabric", SEQUIN:"Sparkly disc on party wear",
+  BLOUSE:"A woman's dressy shirt", VELVET:"Plush, soft fabric",
+  PARIS:"City of Light, Eiffel Tower", TOKYO:"Japan's neon capital", ROME:"Colosseum and pasta",
+  BALI:"Indonesian island getaway", LONDON:"Big Ben and red buses", HAWAII:"US island paradise",
+  LISBON:"Portugal's hilly capital", GREECE:"Islands, ruins, and feta", MIAMI:"Florida beaches and nightlife",
+  CANCUN:"Mexican resort coast", SYDNEY:"Opera House and harbour", DUBLIN:"Ireland's pub-filled capital",
+  BERLIN:"Germany's historic capital", MADRID:"Spain's central capital", VENICE:"City of canals",
+  VIENNA:"Austria's grand capital", PRAGUE:"Czech city of spires", CAIRO:"By the pyramids of Egypt",
+  SEOUL:"South Korea's K-pop capital", DUBAI:"Desert city of skyscrapers", NAPLES:"Italian home of pizza",
+  ICELAND:"Land of geysers and aurora", MOROCCO:"Marrakech and the Sahara", JAMAICA:"Caribbean reggae island",
+  THAILAND:"Beaches, temples, pad thai", MALDIVES:"Overwater-bungalow islands",
+  POTHOS:"Trailing 'devil's ivy' houseplant", FERN:"Leafy, frond-y shade plant", ALOE:"Spiky plant for soothing burns",
+  BASIL:"Herb for pesto on your sill", PALM:"Tropical indoor tree", IVY:"Climbing, trailing vine",
+  MONSTERA:"Swiss cheese plant", BAMBOO:"Fast-growing lucky stalks", CALATHEA:"Prayer plant that moves at night",
+  DAISY:"White petals, yellow centre", TULIP:"Cup-shaped spring bulb", ROSE:"Thorny romantic bloom",
+  LILY:"Elegant trumpet flower", PEONY:"Big, ruffled spring bloom", MOSS:"Soft green carpet plant",
+  SEEDS:"Plant these to grow", SPROUT:"A baby shoot breaking through", REPOT:"Move a plant to a bigger pot",
+  TRELLIS:"Frame for a climbing plant", SUNLIGHT:"What a plant needs to grow", PLANTER:"A decorative pot",
+  COMPOST:"Nutrient-rich soil food", PRUNE:"Trim back the dead leaves", BLOOM:"When a flower opens"
+};
+const COLORS = ["#ff6b6b","#4dabff","#4ade80","#c084fc","#ffd43b","#ff9f43","#2dd4bf","#f472b6"];
+const EMOJIS = ["🦊","🐼","🦁","🐸","🐙","🦄","🐯","🐵","🦉","🐧","🦖","🐝"];
+const SIZE = 8, WORDS_PER_ROUND = 8, ROUND_SECONDS = 180, LOBBY_SECONDS = 60, BOGGLE_SIZE = 5;
+const DIRS = [[0,1],[1,0],[1,1],[1,-1],[0,-1],[-1,0],[-1,-1],[-1,1]];
+const pts = w => w.length; // longer words are worth more
+
+/* dictionary of common words for Boggle / Anagrams (DICT_WORDS replaced at build) */
+const DICT_WORDS = "ABILITY ABLE ABORTION ABOUT ABOVE ABROAD ABS ABSENCE ABSENT ABSOLUTE ABSTRACT ABUSE ACADEMIC ACADEMY ACCENT ACCEPT ACCEPTED ACCEPTS ACCESS ACCESSED ACCIDENT ACCOUNT ACCOUNTS ACCURACY ACCURATE ACCUSED ACE ACHIEVE ACHIEVED ACID ACIDS ACNE ACOUSTIC ACQUIRE ACQUIRED ACRE ACRES ACROBAT ACROSS ACRYLIC ACT ACTING ACTION ACTIONS ACTIVE ACTIVELY ACTIVITY ACTOR ACTORS ACTRESS ACTS ACTUAL ACTUALLY ACUTE ADAPTED ADAPTER ADAPTERS ADAPTIVE ADAPTOR ADD ADDED ADDING ADDITION ADDRESS ADDS ADEQUATE ADJACENT ADJUST ADJUSTED ADMIT ADMITTED ADOBE ADOPT ADOPTED ADOPTION ADS ADULT ADULTS ADVANCE ADVANCED ADVANCES ADVERSE ADVERT ADVICE ADVISE ADVISED ADVISOR ADVISORS ADVISORY ADVOCACY ADVOCATE AERIAL AFFAIR AFFAIRS AFFECT AFFECTED AFFECTS AFFORD AFRAID AFTER AGAIN AGAINST AGE AGED AGENCIES AGENCY AGENDA AGENT AGENTS AGES AGING AGO AGREE AGREED AGREES AHEAD AID AIDS AIM AIMED AIMS AIR AIRCRAFT AIRFARE AIRLINE AIRLINES AIRPLANE AIRPORT AIRPORTS ALA ALAN ALARM ALASKA ALBUM ALBUMS ALCOHOL ALERT ALERTS ALGEBRA ALIAS ALIEN ALIGN ALIKE ALIVE ALL ALLEGED ALLERGY ALLIANCE ALLIED ALLOW ALLOWED ALLOWING ALLOWS ALLOY ALMOST ALONE ALONG ALPHA ALPINE ALREADY ALSO ALT ALTER ALTERED ALTHOUGH ALTO ALUMINUM ALUMNI ALWAYS AMATEUR AMAZING AMAZON AMBER AMBIENT AMEND AMENDED AMINO AMONG AMONGST AMOUNT AMOUNTS AMP ANA ANALOG ANALYSIS ANALYST ANALYSTS ANALYZE ANALYZED ANALYZES ANATOMY ANCHOR ANCIENT AND ANGEL ANGELS ANGER ANGLE ANGRY ANIMAL ANIMALS ANIMATED ANIME ANNA ANNEX ANNOUNCE ANNOYING ANNUAL ANNUALLY ANOTHER ANSWER ANSWERED ANSWERS ANT ANTENNA ANTI ANTIBODY ANTIQUE ANTIQUES ANXIETY ANY ANYBODY ANYMORE ANYONE ANYTHING ANYTIME ANYWAY ANYWHERE APACHE APART APOLLO APPAREL APPARENT APPEAL APPEALS APPEAR APPEARED APPEARS APPENDIX APPLE APPLIED APPLIES APPLY APPLYING APPROACH APPROVAL APPROVE APPROVED APT AQUA AQUARIUM AQUATIC ARABIC ARBOR ARC ARCADE ARCH ARCHIVE ARCHIVED ARCHIVES ARCTIC ARE AREA AREAS ARENA ARGUE ARGUED ARGUMENT ARISE ARISING ARM ARMED ARMOR ARMS ARMY AROUND ARRANGE ARRANGED ARRAY ARREST ARRESTED ARRIVAL ARRIVALS ARRIVE ARRIVED ARRIVES ARROW ART ARTICLE ARTICLES ARTIST ARTISTIC ARTISTS ARTS ARTWORK ASBESTOS ASH ASIDE ASK ASKED ASKING ASKS ASP ASPECT ASPECTS ASSAULT ASSEMBLY ASSESS ASSESSED ASSET ASSETS ASSIGN ASSIGNED ASSIST ASSISTED ASSISTS ASSUME ASSUMED ASSUMES ASSUMING ASSURE ASSURED ASTHMA ASYLUM ATE ATHLETES ATHLETIC ATLAS ATOM ATOMIC ATTACH ATTACHED ATTACK ATTACKED ATTACKS ATTEMPT ATTEMPTS ATTEND ATTENDED ATTITUDE ATTORNEY ATTRACT AUBURN AUCTION AUCTIONS AUDIENCE AUDIO AUDIT AUDITOR AUGUST AURORA AUTHOR AUTHORS AUTO AUTOS AUTUMN AVATAR AVE AVENUE AVERAGE AVIATION AVOID AVOIDING AWARD AWARDED AWARDS AWARE AWAY AWESOME AWFUL AXIS AYE BABE BABES BABIES BABY BACHELOR BACK BACKED BACKING BACKUP BACON BACTERIA BAD BADGE BADLY BAG BAGS BAILEY BAKER BAKING BALANCE BALANCED BALD BALL BALLET BALLOON BALLOT BAN BANANA BAND BANDS BANG BANGKOK BANK BANKING BANKS BANNED BANNER BANNERS BAPTIST BAR BARE BARELY BARGAIN BARGAINS BARN BARREL BARRIER BARRIERS BARS BASE BASEBALL BASED BASELINE BASEMENT BASES BASIC BASICS BASIN BASIS BASKET BASKETS BASS BAT BATCH BATH BATHROOM BATHS BATMAN BATTERY BATTLE BAY BEACH BEACHES BEADS BEAM BEAN BEANS BEAR BEARING BEARS BEAST BEAT BEATS BEAUTY BEAVER BECAME BECAUSE BECOME BECOMES BECOMING BED BEDDING BEDROOM BEDROOMS BEDS BEE BEEF BEEN BEER BEFORE BEGAN BEGIN BEGINNER BEGINS BEGUN BEHALF BEHAVIOR BEHIND BEING BEINGS BELIEF BELIEFS BELIEVE BELIEVED BELIEVES BELL BELLE BELLY BELONG BELONGS BELOW BELT BELTS BEN BENCH BEND BENEATH BENEFIT BENEFITS BENJAMIN BENT BERLIN BERRY BESIDE BESIDES BEST BET BETA BETH BETTER BETTING BETWEEN BEVERAGE BEYOND BIAS BIBLE BIBLICAL BICYCLE BID BIDDER BIDDING BIDS BIG BIGGER BIGGEST BIKE BIKES BIKINI BILL BILLING BILLION BILLS BILLY BIN BINARY BIND BINDING BINGO BIO BIOLOGY BIOS BIRD BIRDS BIRTH BIRTHDAY BISHOP BIT BITE BITS BIZ BIZARRE BLACK BLACKS BLADE BLADES BLAH BLAME BLANK BLANKET BLAST BLEEDING BLEND BLESS BLESSED BLIND BLINK BLOCK BLOCKED BLOCKING BLOCKS BLOND BLONDE BLOOD BLOOM BLOW BLOWING BLUE BLUES BOARD BOARDS BOAT BOATING BOATS BOB BOBBY BODIES BODY BOLD BOLIVIA BOLT BOMB BOND BONDS BONE BONES BONUS BOOK BOOKING BOOKINGS BOOKMARK BOOKS BOOM BOOST BOOT BOOTH BOOTS BOOTY BORDER BORDERS BORED BORING BORN BOROUGH BOSS BOSTON BOTH BOTHER BOTTLE BOTTLES BOTTOM BOUGHT BOULDER BOUND BOUNDARY BOUQUET BOUTIQUE BOW BOWL BOWLING BOX BOXED BOXES BOXING BOY BOYS BRA BRACELET BRACKET BRAD BRAIN BRAKE BRAKES BRANCH BRANCHES BRAND BRANDS BRAS BRASS BRAVE BRAZIL BREACH BREAD BREAK BREAKING BREAKS BREAST BREATH BREED BREEDING BREEDS BRICK BRIDAL BRIDE BRIDGE BRIDGES BRIEF BRIEFING BRIEFLY BRIEFS BRIGHT BRING BRINGING BRINGS BRISTOL BROAD BROADER BROCHURE BROKE BROKEN BROKER BROKERS BRONZE BROOK BROOKS BROTHER BROTHERS BROUGHT BROWN BROWSE BROWSER BROWSERS BROWSING BRUNETTE BRUSH BRUTAL BUBBLE BUCK BUCKS BUDDY BUDGET BUDGETS BUFFALO BUFFER BUG BUGS BUILD BUILDER BUILDERS BUILDING BUILDS BUILT BULK BULL BULLET BULLETIN BUMPER BUNCH BUNDLE BUNNY BURDEN BUREAU BURIED BURKE BURN BURNER BURNING BURNS BURST BURTON BUS BUSES BUSH BUSINESS BUSY BUT BUTLER BUTTER BUTTON BUTTONS BUTTS BUY BUYER BUYERS BUYING BUYS BUZZ BYE BYTE BYTES CAB CABIN CABINET CABINETS CABLE CABLES CACHE CACHED CAD CAFE CAGE CAKE CAKES CALCIUM CALENDAR CALL CALLED CALLING CALLS CALM CAM CAME CAMEL CAMERA CAMERAS CAMP CAMPAIGN CAMPING CAMPS CAMPUS CAMS CAN CANAL CANCEL CANCER CANDLE CANDLES CANDY CANNON CANON CANT CANVAS CANYON CAP CAPABLE CAPACITY CAPE CAPITAL CAPITOL CAPS CAPTAIN CAPTURE CAPTURED CAR CARB CARBON CARD CARDIAC CARDS CARE CAREER CAREERS CAREFUL CARGO CARING CARL CARMEN CARNIVAL CAROL CARPET CARRIED CARRIER CARRIERS CARRIES CARRY CARRYING CARS CART CARTER CARTOON CARTOONS CASA CASE CASES CASH CASHIERS CASINO CASINOS CASSETTE CAST CASTING CASTLE CASUAL CAT CATALOG CATALOGS CATALYST CATCH CATEGORY CATERING CATHOLIC CATS CATTLE CAUGHT CAUSE CAUSED CAUSES CAUSING CAUTION CAVE CAYMAN CEDAR CEILING CELEBS CELL CELLS CELLULAR CEMENT CEMETERY CENSUS CENT CENTER CENTERED CENTERS CENTRAL CENTRE CENTRES CENTS CENTURY CERAMIC CEREMONY CERTAIN CHAD CHAIN CHAINS CHAIR CHAIRMAN CHAIRS CHAMBER CHAMBERS CHAMPION CHANCE CHANCES CHANGE CHANGED CHANGES CHANGING CHANNEL CHANNELS CHAOS CHAPEL CHAPTER CHAPTERS CHAR CHARGE CHARGED CHARGER CHARGERS CHARGES CHARGING CHARITY CHARLIE CHARM CHARMING CHARMS CHART CHARTER CHARTS CHASE CHASSIS CHAT CHEAP CHEAPER CHEAPEST CHEAT CHEATS CHECK CHECKED CHECKING CHECKOUT CHECKS CHEERS CHEESE CHEF CHEMICAL CHEQUE CHERRY CHESS CHEST CHEVY CHI CHICK CHICKEN CHICKS CHIEF CHILD CHILDREN CHILE CHINA CHIP CHIPS CHOICE CHOICES CHOIR CHOOSE CHOOSING CHORUS CHOSE CHOSEN CHROME CHRONIC CHUBBY CHUCK CHURCH CHURCHES CIAO CINEMA CIRCLE CIRCLES CIRCUIT CIRCUITS CIRCULAR CIRCUS CISCO CITATION CITE CITED CITIES CITIZEN CITIZENS CITY CIVIC CIVIL CIVILIAN CLAIM CLAIMED CLAIMS CLAN CLARITY CLASS CLASSES CLASSIC CLASSICS CLAUSE CLAY CLEAN CLEANER CLEANERS CLEANING CLEANUP CLEAR CLEARED CLEARING CLEARLY CLERK CLICK CLICKING CLICKS CLIENT CLIENTS CLIFF CLIMATE CLIMB CLIMBING CLINIC CLINICAL CLINICS CLIP CLIPS CLOCK CLOCKS CLONE CLOSE CLOSED CLOSELY CLOSER CLOSES CLOSEST CLOSING CLOSURE CLOTH CLOTHES CLOTHING CLOUD CLOUDS CLOUDY CLUB CLUBS CLUSTER CLUSTERS COACH COACHES COACHING COAL COAST COASTAL COAT COATED COATING COCKTAIL COD CODE CODES CODING COFFEE COIN COINS COL COLD COLE COLIN COLLAPSE COLLAR COLLECT COLLEGE COLLEGES COLLINS COLOGNE COLON COLONIAL COLONY COLOR COLORADO COLORED COLORS COLUMN COLUMNS COMBAT COMBINE COMBINED COMBINES COMBO COME COMEDY COMES COMFORT COMIC COMICS COMING COMMAND COMMANDS COMMENT COMMENTS COMMERCE COMMIT COMMON COMMONLY COMMONS COMP COMPACT COMPANY COMPARE COMPARED COMPETE COMPILE COMPILED COMPILER COMPLETE COMPLEX COMPLY COMPOSED COMPOSER COMPOUND COMPUTE COMPUTED COMPUTER CON CONCEPT CONCEPTS CONCERN CONCERNS CONCERT CONCERTS CONCLUDE CONCORD CONCRETE CONDO CONDOS CONDUCT CONFIRM CONFLICT CONFUSED CONGO CONGRESS CONNECT CONS CONSENT CONSIDER CONSIST CONSISTS CONSOLE CONSOLES CONSTANT CONSULT CONSUMER CONTACT CONTACTS CONTAIN CONTAINS CONTENT CONTENTS CONTEST CONTESTS CONTEXT CONTINUE CONTRACT CONTRARY CONTRAST CONTROL CONTROLS CONVERT COOK COOKBOOK COOKED COOKIE COOKIES COOKING COOL COOLER COOLING COOPER COP COPE COPIED COPIES COPPER COPY COPYING CORAL CORD CORDLESS CORE CORK CORN CORNER CORNERS CORPS CORPUS CORRECT COS COSMETIC COST COSTA COSTS COSTUME COSTUMES COTTAGE COTTAGES COTTON COULD COUNCIL COUNCILS COUNSEL COUNT COUNTED COUNTER COUNTERS COUNTIES COUNTING COUNTRY COUNTS COUNTY COUPLE COUPLED COUPLES COUPON COUPONS COURAGE COURIER COURSE COURSES COURT COURTESY COURTS COVE COVER COVERAGE COVERED COVERING COVERS COW COWBOY CRACK CRADLE CRAFT CRAFTS CRAPS CRASH CRAZY CREAM CREATE CREATED CREATES CREATING CREATION CREATIVE CREATOR CREATURE CREDIT CREDITS CREEK CREST CREW CRICKET CRIME CRIMES CRIMINAL CRISIS CRITERIA CRITICAL CRITICS CROP CROPS CROSS CROSSING CROWD CROWN CRUCIAL CRUDE CRUISE CRUISES CRY CRYSTAL CUBE CUBIC CUISINE CULT CULTURAL CULTURE CULTURES CUP CUPS CURE CURIOUS CURRENCY CURRENT CURSOR CURVE CURVES CUSTODY CUSTOM CUSTOMER CUSTOMS CUT CUTE CUTS CUTTING CYCLE CYCLES CYCLING CYLINDER CYPRUS DAD DADDY DAILY DAIRY DAISY DALE DAM DAMAGE DAMAGED DAMAGES DAME DANCE DANCING DANGER DANISH DARE DARK DARKNESS DASH DATA DATABASE DATE DATED DATES DATING DAUGHTER DAWN DAY DAYS DEAD DEADLINE DEADLY DEAF DEAL DEALER DEALERS DEALING DEALS DEALT DEAN DEAR DEATH DEATHS DEBATE DEBT DEBUG DEBUT DECADE DECADES DECENT DECIDE DECIDED DECIMAL DECISION DECK DECLARE DECLARED DECLINE DECLINED DECOR DECREASE DEE DEEMED DEEP DEEPER DEEPLY DEER DEFAULT DEFEAT DEFECTS DEFENCE DEFEND DEFENSE DEFERRED DEFICIT DEFINE DEFINED DEFINES DEFINING DEGREE DEGREES DEL DELAY DELAYED DELAYS DELETE DELETED DELIGHT DELIVER DELIVERS DELIVERY DELL DELTA DELUXE DEMAND DEMANDS DEMO DEMOCRAT DEN DENIAL DENIED DENSE DENSITY DENTAL DENTISTS DENY DEPEND DEPENDS DEPOSIT DEPOSITS DEPOT DEPTH DEPUTY DERBY DERIVED DESCRIBE DESERT DESERVE DESIGN DESIGNED DESIGNER DESIGNS DESIRE DESIRED DESK DESKTOP DESKTOPS DESPITE DESTINY DESTROY DETAIL DETAILED DETAILS DETECT DETECTED DETECTOR DEV DEVEL DEVELOP DEVELOPS DEVIANT DEVICE DEVICES DEVIL DEVON DEVOTED DIABETES DIAGRAM DIAL DIALOG DIALOGUE DIAMETER DIAMOND DIAMONDS DIARY DICE DID DIE DIED DIES DIESEL DIET DIETARY DIFFER DIG DIGEST DIGIT DIGITAL DIM DINING DINNER DIP DIPLOMA DIRECT DIRECTED DIRECTLY DIRECTOR DIRT DIRTY DIS DISABLE DISABLED DISAGREE DISASTER DISC DISCLOSE DISCO DISCOUNT DISCOVER DISCRETE DISCS DISCUSS DISEASE DISEASES DISH DISHES DISK DISKS DISORDER DISPATCH DISPLAY DISPLAYS DISPOSAL DISPUTE DISPUTES DISTANCE DISTANT DISTINCT DISTRICT DIVE DIVERSE DIVIDE DIVIDED DIVIDEND DIVINE DIVING DIVISION DIVORCE DOC DOCK DOCS DOCTOR DOCTORS DOCTRINE DOCUMENT DODGE DOE DOES DOG DOGS DOING DOLL DOLLAR DOLLARS DOLLS DOM DOMAIN DOMAINS DOME DOMESTIC DOMINANT DON DONATE DONATED DONATION DONE DONNA DONOR DONORS DOOM DOOR DOORS DOS DOSAGE DOSE DOT DOUBLE DOUBT DOW DOWN DOWNLOAD DOWNTOWN DOZEN DOZENS DRAFT DRAG DRAGON DRAIN DRAINAGE DRAMA DRAMATIC DRAW DRAWING DRAWINGS DRAWN DRAWS DREAM DREAMS DRESS DRESSED DRESSES DRESSING DREW DRIED DRILL DRILLING DRINK DRINKING DRINKS DRIVE DRIVEN DRIVER DRIVERS DRIVES DRIVING DROP DROPPED DROPS DROVE DRUG DRUGS DRUM DRUMS DRUNK DRY DRYER DUAL DUCK DUDE DUE DUI DUKE DUMB DUMP DUO DURABLE DURATION DURING DUST DUTCH DUTIES DUTY DYING DYNAMIC DYNAMICS EACH EAGLE EAGLES EAR EARL EARLIER EARLIEST EARLY EARN EARNED EARNING EARNINGS EARRINGS EARS EARTH EASE EASIER EASILY EAST EASTER EASTERN EASY EAT EATING EAU EBONY ECHO ECLIPSE ECOLOGY ECONOMIC ECONOMY EDGE EDGES EDIT EDITED EDITING EDITION EDITIONS EDITOR EDITORS EDUCATED EFFECT EFFECTS EFFORT EFFORTS EGG EGGS EGYPTIAN EIGHT EITHER ELDER ELDERLY ELECT ELECTED ELECTION ELECTRIC ELECTRO ELECTRON ELEGANT ELEMENT ELEMENTS ELEPHANT ELEVEN ELIGIBLE ELITE ELSE EMBASSY EMBEDDED EMERALD EMERGING EMIRATES EMISSION EMOTIONS EMPEROR EMPHASIS EMPIRE EMPLOY EMPLOYED EMPLOYEE EMPLOYER EMPTY ENABLE ENABLED ENABLES ENABLING ENCLOSED ENCODING END ENDED ENDING ENDLESS ENDORSED ENDS ENEMIES ENEMY ENERGY ENG ENGAGE ENGAGED ENGAGING ENGINE ENGINEER ENGINES ENGLISH ENHANCE ENHANCED ENJOY ENJOYED ENJOYING ENLARGE ENORMOUS ENOUGH ENQUIRY ENROLLED ENSEMBLE ENSURE ENSURES ENSURING ENTER ENTERED ENTERING ENTERS ENTIRE ENTIRELY ENTITIES ENTITLED ENTITY ENTRANCE ENTRIES ENTRY ENVELOPE ENZYME EPIC EPISODE EPISODES EQUAL EQUALITY EQUALLY EQUATION EQUIPPED EQUITY ERA EROTICA ERROR ERRORS ESCAPE ESCORTS ESSAY ESSAYS ESSENCE ESTATE ESTATES ESTIMATE ETERNAL ETHICAL ETHICS ETHNIC EURO EUROS EVALUATE EVE EVEN EVENING EVENT EVENTS EVER EVERY EVERYDAY EVERYONE EVIDENCE EVIDENT EVIL EXACT EXACTLY EXAM EXAMINE EXAMINED EXAMINES EXAMPLE EXAMPLES EXAMS EXCEED EXCEL EXCEPT EXCERPT EXCESS EXCHANGE EXCITED EXCITING EXCLUDE EXCLUDED EXCUSE EXEC EXECUTE EXECUTED EXEMPT EXERCISE EXHAUST EXHIBIT EXHIBITS EXIST EXISTED EXISTING EXISTS EXIT EXOTIC EXPAND EXPANDED EXPECT EXPECTED EXPECTS EXPENSE EXPENSES EXPERT EXPERTS EXPIRED EXPIRES EXPLAIN EXPLAINS EXPLICIT EXPLORE EXPLORER EXPO EXPORT EXPORTS EXPOSED EXPOSURE EXPRESS EXTEND EXTENDED EXTENDS EXTENT EXTERIOR EXTERNAL EXTRA EXTRACT EXTRAS EXTREME EYE EYED EYES FABRIC FABRICS FABULOUS FACE FACED FACES FACIAL FACILITY FACING FACT FACTOR FACTORS FACTORY FACTS FACULTY FAIL FAILED FAILING FAILS FAILURE FAILURES FAIR FAIRLY FAIRY FAITH FAKE FALL FALLEN FALLING FALLS FALSE FAME FAMILIAR FAMILIES FAMILY FAMOUS FAN FANCY FANS FANTASY FAR FARE FARES FARM FARMER FARMERS FARMING FARMS FASHION FAST FASTER FASTEST FAT FATAL FATE FATHER FATHERS FATTY FAULT FAVOR FAVORITE FAVORS FAX FEAR FEARS FEAT FEATURE FEATURED FEATURES FED FEDERAL FEE FEED FEEDBACK FEEDING FEEDS FEEL FEELING FEELINGS FEELS FEES FEET FELL FELLOW FELT FEMALE FEMALES FENCE FERRY FESTIVAL FETISH FEVER FEW FEWER FIBER FIBRE FICTION FIELD FIELDS FIFTEEN FIFTH FIFTY FIG FIGHT FIGHTER FIGHTERS FIGHTING FIGURE FIGURED FIGURES FILE FILED FILES FILING FILL FILLED FILLING FILM FILMS FILTER FILTERS FIN FINAL FINALLY FINALS FINANCE FINANCES FIND FINDER FINDING FINDINGS FINDS FINE FINEST FINGER FINGERS FINISH FINISHED FINITE FIRE FIRED FIRES FIRM FIRMS FIRMWARE FIRST FISCAL FISH FISHER FISHING FIST FIT FITNESS FITS FITTED FITTING FIVE FIX FIXED FIXES FIXTURES FLAG FLAGS FLAME FLASH FLASHERS FLASHING FLAT FLAVOR FLEECE FLEET FLESH FLEX FLEXIBLE FLIGHT FLIGHTS FLIP FLOAT FLOATING FLOOD FLOOR FLOORING FLOORS FLOPPY FLORAL FLORENCE FLORIST FLORISTS FLOUR FLOW FLOWER FLOWERS FLOWS FLU FLUID FLUSH FLUX FLY FLYER FLYING FOAM FOCAL FOCUS FOCUSED FOCUSES FOCUSING FOG FOLD FOLDER FOLDERS FOLDING FOLK FOLKS FOLLOW FOLLOWED FOLLOWS FONT FONTS FOOD FOODS FOOL FOOT FOOTAGE FOOTBALL FOOTWEAR FOR FORCE FORCED FORCES FORD FORECAST FOREIGN FOREST FORESTRY FORESTS FOREVER FORGE FORGET FORGOT FORK FORM FORMAL FORMAT FORMATS FORMED FORMER FORMERLY FORMING FORMS FORMULA FORT FORTH FORTUNE FORTY FORUM FORUMS FORWARD FOSSIL FOSTER FOUGHT FOUL FOUND FOUNDED FOUNDER FOUNTAIN FOUR FOURTH FOX FRACTION FRAME FRAMED FRAMES FRAMING FRANK FRANKLIN FRAUD FREE FREEDOM FREELY FREEZE FREIGHT FRENCH FREQUENT FRESH FRIDGE FRIEND FRIENDLY FRIENDS FROG FROM FRONT FRONTIER FROST FROZEN FRUIT FRUITS FUEL FUJI FULL FULLY FUN FUNCTION FUND FUNDED FUNDING FUNDS FUNERAL FUNK FUNKY FUNNY FUR FURTHER FUSION FUTURE FUTURES FUZZY GADGETS GAGE GAIN GAINED GAINS GALAXY GALE GALLERY GAMBLING GAME GAMES GAMING GAMMA GANG GAP GAPS GARAGE GARBAGE GARDEN GARDENS GARLIC GAS GASOLINE GATE GATES GATEWAY GATHER GATHERED GAUGE GAVE GAY GAYS GAZETTE GEAR GEEK GEL GEM GEN GENDER GENE GENERAL GENERATE GENERIC GENEROUS GENES GENESIS GENETIC GENETICS GENEVA GENIUS GENOME GENRE GENRES GENTLE GENTLY GENUINE GEOLOGY GEOMETRY GERMAN GET GETS GETTING GHOST GIANT GIANTS GIBSON GIFT GIFTS GIG GILBERT GIRL GIRLS GIVE GIVEN GIVES GIVING GLAD GLANCE GLASS GLASSES GLEN GLOBAL GLOBE GLORY GLOSSARY GLOVES GLOW GLUCOSE GNOME GNU GOAL GOALS GOAT GODS GOES GOING GOLD GOLDEN GOLF GONE GOOD GOODS GORE GORGEOUS GOSPEL GOSSIP GOT GOTHIC GOTTEN GOURMET GOVERNOR GRAB GRACE GRAD GRADE GRADES GRADUATE GRAHAM GRAIN GRAMMAR GRAMS GRAND GRANNY GRANT GRANTED GRANTS GRAPH GRAPHIC GRAPHICS GRAPHS GRASS GRATEFUL GRATIS GRAVE GRAVITY GRAY GREAT GREATER GREATEST GREATLY GREEK GREEN GREETING GREW GREY GRID GRIFFIN GRILL GRIP GROCERY GROOVE GROSS GROUND GROUNDS GROUP GROUPS GROVE GROW GROWING GROWN GROWS GROWTH GUARD GUARDIAN GUARDS GUESS GUEST GUESTS GUIDANCE GUIDE GUIDED GUIDES GUILD GUILTY GUINEA GUITAR GUITARS GULF GUN GUNS GURU GUY GUYS GYM HABITAT HABITS HACK HACKER HAD HAIR HAIRY HALF HALL HALO HAM HAMBURG HAMMER HAND HANDBAGS HANDBOOK HANDED HANDHELD HANDLE HANDLED HANDLES HANDLING HANDMADE HANDS HANDY HANG HANGING HAPPEN HAPPENED HAPPENS HAPPY HARBOR HARD HARDER HARDLY HARDWARE HARDWOOD HARM HARMFUL HARMONY HARPER HARRY HART HARVEST HAS HASH HAT HATE HATS HAVE HAVEN HAVING HAWK HAY HAZARD HAZARDS HEAD HEADED HEADER HEADERS HEADING HEADLINE HEADS HEADSET HEALING HEALTH HEALTHY HEAR HEARD HEARING HEARINGS HEART HEARTS HEAT HEATED HEATER HEATH HEATHER HEATING HEAVEN HEAVILY HEAVY HEEL HEIGHT HEIGHTS HELD HELLO HELMET HELP HELPED HELPFUL HELPING HELPS HENCE HENRY HER HERALD HERB HERBAL HERBS HERE HEREBY HEREIN HERITAGE HERO HEROES HERSELF HEY HIDDEN HIDE HIGH HIGHER HIGHEST HIGHLAND HIGHLY HIGHS HIGHWAY HIGHWAYS HIKING HILL HILLS HIM HIMSELF HINT HINTS HIP HIRE HIRED HIRING HIS HIST HISTORIC HISTORY HIT HITS HITTING HOBBIES HOBBY HOCKEY HOLD HOLDER HOLDERS HOLDING HOLDINGS HOLDS HOLE HOLES HOLIDAY HOLIDAYS HOLLAND HOLLOW HOLLY HOLY HOME HOMELAND HOMELESS HOMES HOMETOWN HOMEWORK HON HONDA HONEST HONEY HONG HONOR HONORS HOOD HOOK HOP HOPE HOPED HOPES HOPING HORIZON HORMONE HORN HORRIBLE HORROR HORSE HORSES HOSE HOSPITAL HOST HOSTED HOSTEL HOSTELS HOSTING HOSTS HOT HOTEL HOTELS HOTTEST HOUR HOURLY HOURS HOUSE HOUSES HOUSING HOW HOWEVER HUB HUGE HULL HUMAN HUMANITY HUMANS HUMIDITY HUMOR HUNDRED HUNDREDS HUNG HUNGER HUNGRY HUNT HUNTER HUNTING HURT HUSBAND HYBRID HYDROGEN HYGIENE ICE ICON ICONS IDEA IDEAL IDEAS IDENTIFY IDENTITY IDLE IDOL IDS IGNORE IGNORED ILL ILLEGAL ILLNESS IMAGE IMAGES IMAGINE IMAGING IMMUNE IMPACT IMPACTS IMPAIRED IMPERIAL IMPLIED IMPLIES IMPORT IMPORTED IMPORTS IMPOSE IMPOSED IMPROVE IMPROVED INCH INCHES INCIDENT INCLUDE INCLUDED INCLUDES INCOME INCOMING INCREASE INCURRED INDEED INDEX INDEXED INDEXES INDICATE INDICES INDIE INDIRECT INDOOR INDUCED INDUSTRY INFANT INFANTS INFECTED INFINITE INFO INFORM INFORMAL INFORMED INFRARED INITIAL INJURED INJURIES INJURY INK INKJET INN INNER INNOCENT INNS INPUT INPUTS INQUIRE INQUIRY INS INSECTS INSERT INSERTED INSIDE INSIDER INSIGHT INSIGHTS INSPIRED INSTALL INSTANCE INSTANT INSTEAD INSULIN INSURED INTAKE INTEGER INTEGRAL INTEND INTENDED INTENSE INTENT INTER INTERACT INTEREST INTERIM INTERIOR INTERNAL INTERVAL INTIMATE INTO INTRO INVALID INVASION INVEST INVESTOR INVITE INVITED INVOICE INVOLVE INVOLVED INVOLVES ION IRON ISLAND ISLANDS ISLE ISOLATED ISSUE ISSUED ISSUES ITALIC ITEM ITEMS ITS ITSELF IVORY JACK JACKET JACKETS JADE JAGUAR JAIL JAKE JAM JANE JAPAN JAR JAVA JAY JAZZ JEAN JEANS JEEP JENNY JERRY JERSEY JESSE JET JETS JEWEL JEWELRY JEWS JILL JIMMY JOB JOBS JOE JOHN JOHNNY JOHNS JOIN JOINED JOINING JOINS JOINT JOKE JOKES JONES JORDAN JOSEPH JOSH JOURNAL JOURNALS JOURNEY JOY JUDGE JUDGES JUDGMENT JUDICIAL JUICE JUMP JUMPING JUN JUNCTION JUNGLE JUNIOR JUNK JURY JUST JUSTICE JUSTIFY JUVENILE KARAOKE KARMA KAY KEEN KEEP KEEPING KEEPS KELLY KEN KENO KENT KEPT KERNEL KERRY KEY KEYBOARD KEYS KEYWORD KEYWORDS KICK KID KIDNEY KIDS KILL KILLED KILLER KILLING KILLS KINASE KIND KINDS KING KINGDOM KINGS KIRK KISS KISSING KIT KITCHEN KITS KITTY KNEE KNEW KNIFE KNIGHT KNIGHTS KNIT KNITTING KNIVES KNOCK KNOW KNOWING KNOWN KNOWS LAB LABEL LABELED LABELS LABOR LABS LACE LACK LADDER LADEN LADIES LADY LAID LAKE LAKES LAMB LAMBDA LAMP LAMPS LANCE LAND LANDING LANDS LANE LANES LANG LANGUAGE LAP LAPTOP LAPTOPS LARGE LARGELY LARGER LARGEST LAS LASER LAST LASTING LAT LATE LATELY LATER LATEST LATEX LATINO LATITUDE LATTER LAUGH LAUGHING LAUNCH LAUNCHED LAUNCHES LAUNDRY LAURA LAW LAWN LAWS LAWSUIT LAWYER LAWYERS LAY LAYER LAYERS LAYOUT LAZY LEAD LEADER LEADERS LEADING LEADS LEAF LEAGUE LEAN LEARN LEARNED LEARNERS LEARNING LEASE LEASING LEAST LEATHER LEAVE LEAVES LEAVING LECTURE LECTURES LED LEE LEFT LEG LEGACY LEGAL LEGALLY LEGEND LEGENDS LEGS LEISURE LEMON LENDER LENDERS LENDING LENGTH LENS LENSES LEONE LESBIAN LESBIANS LESS LESSER LESSON LESSONS LET LETS LETTER LETTERS LETTING LEU LEVEL LEVELS LEVY LEWIS LIABLE LIB LIBERAL LIBERTY LIBRARY LIBS LICENCE LICENSE LICENSED LICENSES LICKING LID LIE LIES LIFE LIFETIME LIFT LIGHT LIGHTER LIGHTING LIGHTS LIKE LIKED LIKELY LIKES LIKEWISE LIME LIMIT LIMITED LIMITING LIMITS LINE LINEAR LINED LINES LINGERIE LINK LINKED LINKING LINKS LION LIONS LIP LIPS LIQUID LIST LISTED LISTEN LISTING LISTINGS LISTS LIT LITE LITERACY LITERARY LITTLE LIVE LIVED LIVER LIVES LIVING LOAD LOADED LOADING LOADS LOAN LOANS LOBBY LOCAL LOCALE LOCALLY LOCATE LOCATED LOCATION LOCATOR LOCK LOCKED LOCKING LOCKS LODGE LODGING LOG LOGAN LOGGED LOGGING LOGIC LOGICAL LOGO LOGOS LOGS LONE LONELY LONG LONGER LONGEST LOOK LOOKED LOOKING LOOKS LOOKUP LOOP LOOPS LOOSE LORD LOSE LOSING LOSS LOSSES LOST LOT LOTS LOTTERY LOTUS LOUD LOUIS LOUNGE LOVE LOVED LOVELY LOVER LOVERS LOVES LOVING LOW LOWER LOWEST LOWS LUCK LUCKY LUGGAGE LUNCH LUNG LUXURY LYING LYRIC LYRICS MAC MACHINE MACHINES MACRO MAD MADE MADNESS MADONNA MAE MAG MAGAZINE MAGIC MAGICAL MAGNET MAGNETIC MAIDEN MAIL MAILED MAILING MAILMAN MAILS MAIN MAINLAND MAINLY MAINTAIN MAJOR MAJORITY MAKE MAKER MAKERS MAKES MAKEUP MAKING MALE MALES MALL MAMBO MAN MANAGE MANAGED MANAGER MANAGERS MANAGING MANDATE MANNER MANOR MANUAL MANUALLY MANUALS MANY MAP MAPLE MAPPING MAPS MAR MARATHON MARBLE MARC MARCH MARGIN MARIA MARINA MARINE MARITIME MARK MARKED MARKER MARKERS MARKET MARKETS MARKING MARKS MARRIAGE MARRIED MARS MARSH MARSHALL MART MARTIAL MARTIN MARVEL MAS MASK MASON MASS MASSAGE MASSIVE MASTER MASTERS MAT MATCH MATCHED MATCHES MATCHING MATE MATERIAL MATH MATING MATRIX MATS MATT MATTER MATTERS MATTRESS MATURE MAX MAXIMIZE MAXIMUM MAY MAYBE MAYOR MEAL MEALS MEAN MEANING MEANS MEANT MEASURE MEASURED MEASURES MEAT MED MEDAL MEDIA MEDIAN MEDICAID MEDICAL MEDICARE MEDICINE MEDIEVAL MEDIUM MEET MEETING MEETINGS MEETS MEL MEM MEMBER MEMBERS MEMBRANE MEMO MEMORIAL MEMORIES MEMORY MEN MENTAL MENTION MENTOR MENU MENUS MERCHANT MERCURY MERCY MERE MERELY MERGE MERGER MERIT MERRY MESA MESH MESS MESSAGE MESSAGES MET META METAL METALLIC METALS METER METERS METHOD METHODS METRES METRIC METRO MICE MICRO MID MIDDLE MIDI MIDLANDS MIDNIGHT MIGHT MIGHTY MIKE MIL MILD MILE MILEAGE MILES MILITARY MILK MILL MILLER MILLION MILLIONS MILLS MIME MIND MINDS MINE MINERAL MINERALS MINES MINI MINIMAL MINIMIZE MINIMUM MINING MINISTER MINISTRY MINOR MINORITY MINT MINUS MINUTE MINUTES MIRACLE MIRROR MIRRORS MISS MISSED MISSILE MISSING MISSION MISSIONS MISTAKE MISTAKES MISTRESS MIX MIXED MIXER MIXING MIXTURE MOBILE MOBILES MOBILITY MOD MODE MODEL MODELING MODELS MODEM MODEMS MODERATE MODERN MODES MODIFIED MODIFY MODS MODULAR MODULE MODULES MOISTURE MOLD MOM MOMENT MOMENTS MOMENTUM MOMS MON MONETARY MONEY MONITOR MONITORS MONKEY MONO MONSTER MONSTERS MONTE MONTH MONTHLY MONTHS MOOD MOON MORAL MORE MOREOVER MORGAN MORNING MOROCCO MORRIS MORTGAGE MOSS MOST MOSTLY MOTEL MOTELS MOTHER MOTHERS MOTION MOTOR MOTORS MOUNT MOUNTAIN MOUNTED MOUNTING MOUNTS MOUSE MOUTH MOVE MOVED MOVEMENT MOVERS MOVES MOVIE MOVIES MOVING MUCH MUD MUG MULTIPLE MURDER MURPHY MUSCLE MUSCLES MUSEUM MUSEUMS MUSIC MUSICAL MUSICIAN MUST MUSTANG MUTUAL MYRTLE MYSELF MYSTERY MYTH NAIL NAILS NAKED NAM NAME NAMED NAMELY NAMES NANCY NARROW NASTY NATION NATIONAL NATIONS NATIVE NATURAL NATURALS NATURE NAUGHTY NAVAL NAVIGATE NAVY NEAR NEARBY NEAREST NEARLY NECK NECKLACE NEED NEEDED NEEDLE NEEDS NEGATIVE NEIGHBOR NEITHER NELSON NEON NERVE NERVOUS NEST NESTED NET NETWORK NETWORKS NEURAL NEUTRAL NEVER NEW NEWER NEWEST NEWLY NEWS NEWTON NEXT NICE NICK NICKEL NICKNAME NIGHT NIGHTS NIL NINE NIRVANA NITROGEN NOBLE NOBODY NODE NODES NOISE NONE NOON NOR NORM NORMAL NORMALLY NORTH NORTHERN NOSE NOT NOTE NOTEBOOK NOTED NOTES NOTHING NOTICE NOTICED NOTICES NOTIFIED NOTIFY NOTION NOVA NOVEL NOVELS NOVELTY NOW NOWHERE NUCLEAR NUDIST NUKE NULL NUMBER NUMBERS NUMERIC NUMEROUS NURSE NURSERY NURSES NURSING NUT NUTS NYLON OAK OAKS OASIS OBESITY OBJECT OBJECTS OBSERVE OBSERVED OBSERVER OBTAIN OBTAINED OBVIOUS OCCASION OCCUPIED OCCUR OCCURRED OCCURS OCEAN ODD ODDS OFF OFFENSE OFFER OFFERED OFFERING OFFERS OFFICE OFFICER OFFICERS OFFICES OFFICIAL OFFSET OFFSHORE OFTEN OIL OILS OKAY OLD OLDER OLDEST OLIVE OMEGA ONCE ONE ONES ONGOING ONION ONLY ONS ONTO OOPS OPEN OPENED OPENING OPENINGS OPENS OPERA OPERATE OPERATED OPERATES OPERATOR OPINION OPINIONS OPPONENT OPPOSED OPPOSITE OPT OPTICAL OPTICS OPTIMAL OPTIMIZE OPTIMUM OPTION OPTIONAL OPTIONS ORACLE ORAL ORANGE ORBIT ORDER ORDERED ORDERING ORDERS ORDINARY ORGAN ORGANIC ORGANIZE ORIENTAL ORIENTED ORIGIN ORIGINAL ORIGINS OTHER OTHERS OUGHT OUR OURS OUT OUTCOME OUTCOMES OUTDOOR OUTDOORS OUTER OUTLET OUTLETS OUTLINE OUTLINED OUTLOOK OUTPUT OUTPUTS OUTREACH OUTSIDE OVAL OVEN OVER OVERALL OVERCOME OVERHEAD OVERSEAS OVERVIEW OWN OWNED OWNER OWNERS OWNS OXFORD OXIDE OXYGEN OZONE PAC PACE PACIFIC PACK PACKAGE PACKAGES PACKED PACKET PACKETS PACKING PACKS PAD PADS PAGE PAGES PAID PAIN PAINFUL PAINT PAINTED PAINTING PAIR PAIRS PAL PALACE PALE PALM PALMER PAM PAN PANAMA PANEL PANELS PANIC PANTS PAPER PAPERS PAR PARA PARADE PARADISE PARALLEL PARCEL PARENT PARENTAL PARENTS PARIS PARISH PARK PARKER PARKING PARKS PART PARTIAL PARTICLE PARTIES PARTLY PARTNER PARTNERS PARTS PARTY PAS PASS PASSAGE PASSED PASSES PASSING PASSION PASSIVE PASSPORT PASSWORD PAST PASTA PASTE PASTOR PAT PATCH PATCHES PATENT PATENTS PATH PATHS PATIENT PATIENTS PATIO PATROL PATTERN PATTERNS PAVILION PAY PAYABLE PAYDAY PAYING PAYMENT PAYMENTS PAYROLL PAYS PEACE PEACEFUL PEAK PEARL PEAS PEE PEEING PEER PEERS PEN PENALTY PENCIL PENDANT PENDING PENGUIN PENNY PENS PENSION PENSIONS PEOPLE PEOPLES PEPPER PER PERCENT PERFECT PERFORM PERFORMS PERFUME PERHAPS PERIOD PERIODIC PERIODS PERMIT PERMITS PERRY PERSON PERSONAL PERSONS PEST PET PETER PETITE PETITION PETS PHANTOM PHARMACY PHASE PHASES PHI PHOENIX PHONE PHONES PHOTO PHOTOS PHRASE PHRASES PHYSICAL PHYSICS PIANO PIC PICK PICKED PICKING PICKS PICKUP PICNIC PICS PICTURE PICTURES PIE PIECE PIECES PIERCE PIG PIKE PILL PILLOW PILLS PILOT PIN PINE PING PINK PINS PIONEER PIPE PIPELINE PIPES PIRATES PIT PITCH PIX PIXEL PIXELS PIZZA PLACE PLACED PLACES PLACING PLAIN PLAINS PLAN PLANE PLANES PLANET PLANETS PLANNED PLANNER PLANNERS PLANNING PLANS PLANT PLANTS PLASMA PLASTIC PLASTICS PLATE PLATES PLATFORM PLATINUM PLAY PLAYBACK PLAYED PLAYER PLAYERS PLAYING PLAYLIST PLAYS PLAZA PLEASANT PLEASE PLEASED PLEASURE PLEDGE PLENTY PLOT PLOTS PLUG PLUMBING PLUS POCKET POCKETS POD POEM POEMS POET POETRY POINT POINTED POINTER POINTING POINTS POISON POKER POLAR POLE POLICE POLICIES POLICY POLISH POLISHED POLITICS POLL POLLS POLO POLY POLYMER POND POOL POOLS POOR POP POPE POPULAR PORK PORT PORTABLE PORTAL PORTER PORTION PORTIONS PORTRAIT PORTS POSE POSING POSITION POSITIVE POSSESS POSSIBLE POSSIBLY POST POSTAGE POSTAL POSTCARD POSTED POSTER POSTERS POSTING POSTINGS POSTS POT POTATO POTATOES POTTER POTTERY POULTRY POUND POUNDS POUR POVERTY POWDER POWER POWERED POWERFUL POWERS PRACTICE PRAIRIE PRAISE PRAY PRAYER PRAYERS PRECIOUS PRECISE PREDICT PREFER PREFERS PREFIX PREGNANT PREMIER PREMIERE PREMISES PREMIUM PREP PREPAID PREPARE PREPARED PRESENCE PRESENT PRESENTS PRESERVE PRESS PRESSED PRESSING PRESSURE PRETTY PREVENT PREVIEW PREVIEWS PREVIOUS PRICE PRICED PRICES PRICING PRIDE PRIEST PRIMARY PRIME PRINCE PRINCESS PRINT PRINTED PRINTER PRINTERS PRINTING PRINTS PRIOR PRIORITY PRISON PRISONER PRIVACY PRIVATE PRIZE PRIZES PRO PROBABLY PROBE PROBLEM PROBLEMS PROCEED PROCEEDS PROCESS PRODUCE PRODUCED PRODUCER PRODUCES PRODUCT PRODUCTS PROFILE PROFILES PROFIT PROFITS PROGRAM PROGRAMS PROGRESS PROJECT PROJECTS PROMISE PROMISED PROMISES PROMO PROMOTE PROMOTED PROMOTES PROMPT PROMPTLY PROOF PROPER PROPERLY PROPERTY PROPHET PROPOSAL PROPOSE PROPOSED PROS PROSPECT PROSTATE PROTECT PROTEIN PROTEINS PROTEST PROTOCOL PROUD PROUDLY PROVE PROVED PROVEN PROVIDE PROVIDED PROVIDER PROVIDES PROVINCE PROXY PSI PUB PUBLIC PUBLICLY PUBLISH PUBS PULL PULLED PULLING PULSE PUMP PUMPS PUNCH PUNK PUPILS PUPPY PURCHASE PURE PURPLE PURPOSE PURPOSES PURSE PURSUANT PURSUE PURSUIT PUSH PUSHED PUSHING PUT PUTS PUTTING PUZZLE PUZZLES PYTHON QUAD QUALIFY QUALITY QUANTITY QUANTUM QUARTER QUARTERS QUEEN QUEENS QUERIES QUERY QUEST QUESTION QUEUE QUICK QUICKLY QUIET QUILT QUIT QUITE QUIZ QUIZZES QUOTE QUOTED QUOTES RABBIT RACE RACES RACIAL RACING RACK RACKS RADAR RADICAL RADIO RADIOS RADIUS RAGE RAID RAIL RAILROAD RAILWAY RAIN RAINBOW RAISE RAISED RAISES RAISING RALLY RALPH RAM RAN RANCH RAND RANDOM RANDY RANGE RANGER RANGERS RANGES RANGING RANK RANKED RANKING RANKINGS RANKS RAP RAPID RAPIDLY RAPIDS RARE RARELY RAT RATE RATED RATES RATHER RATING RATINGS RATIO RATIONAL RATIOS RATS RAW RAY RAYS REACH REACHED REACHES REACHING REACTION READ READER READERS READILY READING READINGS READS READY REAL REALITY REALIZE REALIZED REALLY REALM REALTY REAR REASON REASONS REBATE REBATES REBEL REBOUND REC RECALL RECEIPT RECEIVE RECEIVED RECEIVER RECEIVES RECENT RECENTLY RECEPTOR RECIPE RECIPES RECORD RECORDED RECORDER RECORDS RECOVER RECOVERY RED REDEEM REDHEAD REDUCE REDUCED REDUCES REDUCING REED REEF REEL REF REFER REFERRAL REFERRED REFERS REFINE REFINED REFLECT REFLECTS REFORM REFORMS REFRESH REFUGEES REFUND REFUSE REFUSED REG REGARD REGARDED REGARDS REGGAE REGIME REGION REGIONAL REGIONS REGISTER REGISTRY REGULAR REHAB REJECT REJECTED RELATE RELATED RELATES RELATING RELATION RELATIVE RELAX RELAY RELEASE RELEASED RELEASES RELEVANT RELIABLE RELIANCE RELIEF RELIGION RELOAD RELY RELYING REMAIN REMAINED REMAINS REMARK REMARKS REMEDIES REMEDY REMEMBER REMIND REMINDER REMIX REMOTE REMOVAL REMOVE REMOVED REMOVING RENDER RENDERED RENEW RENEWAL RENT RENTAL RENTALS REP REPAIR REPAIRS REPEAT REPEATED REPLACE REPLACED REPLICA REPLIED REPLIES REPLY REPORT REPORTED REPORTER REPORTS REPRINT REPRINTS REPUBLIC REQUEST REQUESTS REQUIRE REQUIRED REQUIRES RES RESCUE RESEARCH RESELLER RESERVE RESERVED RESERVES RESET RESIDENT RESIST RESOLVE RESOLVED RESORT RESORTS RESOURCE RESPECT RESPOND RESPONSE REST RESTORE RESTORED RESTRICT RESULT RESULTED RESULTS RESUME RESUMES RETAIL RETAILER RETAIN RETAINED RETIRED RETREAT RETRIEVE RETRO RETURN RETURNED RETURNS REUNION REV REVEAL REVEALED REVEALS REVENGE REVENUE REVENUES REVERSE REVIEW REVIEWED REVIEWER REVIEWS REVISED REVISION REWARD REWARDS RHYTHM RIBBON RICE RICH RICK RID RIDE RIDER RIDERS RIDES RIDGE RIDING RIGHT RIGHTS RIM RING RINGS RIP RIPE RISE RISING RISK RISKS RIVER RIVERS ROAD ROADS ROB ROBIN ROBOT ROBOTS ROBUST ROCK ROCKET ROCKS ROCKY ROD ROGER ROGERS ROLE ROLES ROLL ROLLED ROLLER ROLLING ROLLS ROM ROMAN ROMANCE ROMANTIC ROOF ROOM ROOMMATE ROOMS ROOT ROOTS ROPE ROSE ROSES ROSTER ROTARY ROTATION ROUGE ROUGH ROUGHLY ROULETTE ROUND ROUNDS ROUTE ROUTER ROUTERS ROUTES ROUTINE ROUTINES ROUTING ROVER ROW ROWS ROYAL ROYALTY RUBBER RUBY RUG RUGBY RUGS RULE RULED RULES RULING RUN RUNNER RUNNING RUNS RURAL RUSH RUTH SACRED SAD SAFARI SAFE SAFELY SAFER SAFETY SAGE SAID SAIL SAILING SAINT SAINTS SAKE SALAD SALARIES SALARY SALE SALES SALLY SALMON SALON SALT SAMBA SAME SAMPLE SAMPLES SAMPLING SAND SANDWICH SANDY SANS SAP SAPPHIRE SAT SATIN SATISFY SAUCE SAVAGE SAVANNAH SAVE SAVED SAVER SAVES SAVING SAVINGS SAW SAY SAYING SAYS SCALE SCALES SCAN SCANNED SCANNER SCANNERS SCANNING SCARED SCARY SCENARIO SCENE SCENES SCENIC SCHEDULE SCHEMA SCHEME SCHEMES SCHOLAR SCHOLARS SCHOOL SCHOOLS SCIENCE SCIENCES SCOOP SCOPE SCORE SCORED SCORES SCORING SCOTIA SCOUT SCRATCH SCREEN SCREENS SCREW SCRIPT SCRIPTS SCROLL SCUBA SEA SEAFOOD SEAL SEALED SEARCH SEARCHED SEARCHES SEAS SEASON SEASONAL SEASONS SEAT SEATING SEATS SEC SECOND SECONDS SECRET SECRETS SECTION SECTIONS SECTOR SECTORS SECURE SECURED SECURELY SECURITY SEE SEED SEEDS SEEING SEEK SEEKER SEEKERS SEEKING SEEKS SEEM SEEMED SEEMS SEEN SEES SEGMENT SEGMENTS SELECT SELECTED SELF SELL SELLER SELLERS SELLING SELLS SEMESTER SEMI SEMINAR SEMINARS SEN SENATE SENATOR SENATORS SEND SENDER SENDING SENDS SENIOR SENIORS SENSE SENSOR SENSORS SENT SENTENCE SEPARATE SEPT SEQUENCE SER SERIAL SERIES SERIOUS SERUM SERVE SERVED SERVER SERVERS SERVES SERVICE SERVICES SERVING SESSION SESSIONS SET SETS SETTING SETTINGS SETTLE SETTLED SETUP SEVEN SEVENTH SEVERAL SEVERE SEWING SEXUAL SEXUALLY SHADE SHADES SHADOW SHADOWS SHAFT SHAKE SHALL SHAME SHANGHAI SHAPE SHAPED SHAPES SHARE SHARED SHARES SHARING SHARK SHARP SHAVED SHAW SHE SHED SHEEP SHEER SHEET SHEETS SHELF SHELL SHELTER SHEPHERD SHERIFF SHIELD SHIFT SHINE SHIP SHIPMENT SHIPPED SHIPPING SHIPS SHIRT SHIRTS SHOCK SHOE SHOES SHOOT SHOOTING SHOP SHOPPER SHOPPERS SHOPPING SHOPS SHORE SHORT SHORTER SHORTLY SHORTS SHOT SHOTS SHOULD SHOULDER SHOW SHOWCASE SHOWED SHOWER SHOWERS SHOWING SHOWN SHOWS SHUT SHUTTLE SIC SICK SIDE SIDES SIEMENS SIERRA SIGHT SIGMA SIGN SIGNAL SIGNALS SIGNED SIGNING SIGNS SILENCE SILENT SILICON SILK SILLY SILVER SIM SIMILAR SIMPLE SIMPLY SIMS SIN SINCE SING SINGER SINGING SINGLE SINGLES SINK SIP SIR SISTER SISTERS SIT SITE SITES SITTING SITUATED SIX SIXTH SIZE SIZED SIZES SKATING SKI SKIING SKILL SKILLED SKILLS SKIN SKINS SKIP SKIRT SKIRTS SKY SLAVE SLEEP SLEEPING SLEEPS SLEEVE SLIDE SLIDES SLIGHT SLIGHTLY SLIM SLIP SLOPE SLOT SLOTS SLOW SLOWLY SMALL SMALLER SMALLEST SMART SMELL SMILE SMITH SMOKE SMOKING SMOOTH SNAKE SNAP SNAPSHOT SNOW SOAP SOCCER SOCIAL SOCIETY SOCKET SOCKS SODIUM SOFA SOFT SOFTBALL SOFTWARE SOIL SOL SOLAR SOLD SOLDIER SOLDIERS SOLE SOLELY SOLID SOLO SOLUTION SOLVE SOLVED SOLVING SOMA SOME SOMEBODY SOMEHOW SOMEONE SOMERSET SOMEWHAT SON SONG SONGS SONIC SONS SOON SOONEST SORRY SORT SORTED SORTS SOUGHT SOUL SOULS SOUND SOUNDS SOUP SOURCE SOURCES SOUTH SOUTHERN SOVIET SOX SPA SPACE SPACES SPAN SPANK SPANKING SPARE SPAS SPATIAL SPEAK SPEAKER SPEAKERS SPEAKING SPEAKS SPEARS SPEC SPECIAL SPECIALS SPECIES SPECIFIC SPECIFY SPECS SPECTRUM SPEECH SPEECHES SPEED SPEEDS SPELL SPELLING SPENCER SPEND SPENDING SPENT SPERM SPHERE SPICE SPIDER SPIES SPIN SPINE SPIRIT SPIRITS SPLIT SPOKE SPOKEN SPONSOR SPONSORS SPORT SPORTING SPORTS SPOT SPOTS SPOUSE SPRAY SPREAD SPRING SPRINGER SPRINGS SPRINT SPY SQUAD SQUARE SRI STABLE STACK STADIUM STAFF STAFFING STAGE STAGES STAKE STAMP STAMPS STAND STANDARD STANDING STANDS STAR STARRING STARS START STARTED STARTER STARTING STARTS STARTUP STAT STATE STATED STATES STATIC STATING STATION STATIONS STATS STATUS STATUTE STATUTES STAY STAYED STAYING STAYS STEADY STEAL STEAM STEEL STEERING STEM STEP STEPS STEREO STERLING STICK STICKER STICKERS STICKS STICKY STILL STOCK STOCKS STOLEN STOMACH STONE STONES STOOD STOP STOPPED STOPPING STOPS STORAGE STORE STORED STORES STORIES STORM STORY STRAIGHT STRAIN STRAND STRANGE STRANGER STRAP STRATEGY STREAM STREAMS STREET STREETS STRENGTH STRESS STRETCH STRICT STRICTLY STRIKE STRIKES STRIKING STRING STRINGS STRIP STRIPES STRIPS STROKE STRONG STRONGER STRONGLY STRUCK STRUGGLE STUCK STUD STUDENT STUDENTS STUDIED STUDIES STUDIO STUDIOS STUDY STUDYING STUFF STUFFED STUNNING STUPID STYLE STYLES STYLISH STYLUS SUB SUBJECT SUBJECTS SUBLIME SUBMIT SUBTLE SUBURBAN SUCCEED SUCCESS SUCH SUCKING SUDDEN SUDDENLY SUE SUFFER SUFFERED SUGAR SUGGEST SUGGESTS SUICIDE SUIT SUITABLE SUITE SUITED SUITES SUITS SUM SUMMARY SUMMER SUMMIT SUN SUNNY SUNRISE SUNSET SUNSHINE SUPER SUPERB SUPERIOR SUPPLIED SUPPLIER SUPPLIES SUPPLY SUPPORT SUPPORTS SUPPOSE SUPPOSED SUPREME SURE SURELY SURF SURFACE SURFACES SURFING SURGE SURGEON SURGEONS SURGERY SURGICAL SURNAME SURPLUS SURPRISE SURREY SURROUND SURVEY SURVEYS SURVIVAL SURVIVE SURVIVOR SUSPECT SWAP SWEET SWIFT SWIM SWIMMING SWING SWINGERS SWISS SWITCH SWITCHED SWITCHES SWORD SYMBOL SYMBOLS SYMPATHY SYMPHONY SYMPTOMS SYNC SYNDROME SYNOPSIS SYNTAX SYSTEM SYSTEMS TAB TABLE TABLES TABLET TABLETS TABS TACKLE TACTICS TAG TAGGED TAGS TAIL TAKE TAKEN TAKES TAKING TALE TALENT TALENTED TALES TALK TALKED TALKING TALKS TALL TAN TANK TANKS TAP TAPE TAPES TAR TARGET TARGETED TARGETS TARIFF TASK TASKS TASTE TATTOO TAUGHT TAX TAXATION TAXES TAXI TEA TEACH TEACHER TEACHERS TEACHES TEACHING TEAM TEAMS TEAR TEARS TED TEDDY TEE TEEN TEENAGE TEENS TEETH TEL TELL TELLING TELLS TEMP TEMPLATE TEMPLE TEMPORAL TEN TENANT TEND TENDER TENNIS TENSION TENT TERM TERMINAL TERMS TERRACE TERRAIN TERRIBLE TERROR TERRY TEST TESTED TESTING TESTS TEXAS TEXT TEXTBOOK TEXTILE TEXTILES TEXTS TEXTURE THAN THANK THANKS THAT THE THEATER THEATERS THEATRE THEE THEFT THEIR THEM THEME THEMES THEN THEOLOGY THEOREM THEORIES THEORY THERAPY THERE THEREBY THEREOF THERMAL THESE THESIS THETA THEY THICK THIN THING THINGS THINK THINKING THINKS THIRD THIRTY THIS THONG THONGS THOROUGH THOSE THOU THOUGH THOUGHT THOUGHTS THOUSAND THREAD THREADED THREADS THREAT THREATS THREE THRILLER THROAT THROUGH THROW THROWING THROWN THROWS THRU THUMB THUMBS THUNDER THUS THY TICKET TICKETS TIDE TIE TIED TIER TIES TIFFANY TIGER TIGERS TIGHT TIL TILE TILES TILL TIMBER TIME TIMELINE TIMELY TIMER TIMES TIMING TIMOTHY TIN TINY TIP TIPS TIRE TIRED TIRES TISSUE TITANIUM TITANS TITLE TITLED TITLES TOBACCO TODAY TODDLER TOE TOGETHER TOILET TOKEN TOLD TOLL TOM TOMATO TOMATOES TOMMY TOMORROW TON TONE TONER TONES TONGUE TONIGHT TONS TONY TOO TOOK TOOL TOOLBOX TOOLS TOOTH TOP TOPIC TOPICS TOPS TORTURE TOTAL TOTALLY TOTALS TOUCH TOUCHED TOUGH TOUR TOURING TOURISM TOURIST TOURS TOWARD TOWARDS TOWER TOWERS TOWN TOWNS TOWNSHIP TOXIC TOY TOYS TRACE TRACK TRACKED TRACKER TRACKING TRACKS TRACT TRACTOR TRADE TRADER TRADES TRADING TRAFFIC TRAGEDY TRAIL TRAILER TRAILERS TRAILS TRAIN TRAINED TRAINER TRAINERS TRAINING TRAINS TRANCE TRANS TRANSFER TRANSIT TRANSMIT TRAP TRASH TRAUMA TRAVEL TRAVELER TRAVELS TRAY TREASURE TREASURY TREAT TREATED TREATING TREATY TREE TREES TREK TREND TRENDS TRIAL TRIALS TRIANGLE TRIBAL TRIBE TRIBES TRIBUNAL TRIBUNE TRIBUTE TRICK TRICKS TRIED TRIES TRIGGER TRIM TRINITY TRIO TRIP TRIPLE TRIPS TRIUMPH TRIVIA TROOPS TROPICAL TROUBLE TROUT TROY TRUCK TRUCKS TRUE TRULY TRUNK TRUST TRUSTED TRUSTEE TRUSTEES TRUSTS TRUTH TRY TRYING TSUNAMI TUB TUBE TUBES TUITION TUMOR TUNE TUNER TUNES TUNING TUNNEL TURBO TURKEY TURN TURNED TURNER TURNING TURNS TURTLE TUTORIAL TWELVE TWENTY TWICE TWIN TWINS TWIST TWISTED TWO TYPE TYPES TYPICAL TYPING UGLY ULTIMATE ULTRA UNABLE UNCLE UNDER UNDO UNIFIED UNIFORM UNION UNIONS UNIQUE UNIT UNITED UNITS UNITY UNIVERSE UNKNOWN UNLESS UNLIKE UNLIKELY UNLOCK UNSIGNED UNTIL UNTITLED UNTO UNUSUAL UNWRAP UPCOMING UPDATE UPDATED UPDATES UPDATING UPGRADE UPGRADES UPLOAD UPLOADED UPON UPPER UPS UPSET URBAN URGE URGENT USAGE USE USED USEFUL USER USERS USES USING USUAL USUALLY UTILITY UTILIZE VACATION VACCINE VACUUM VALID VALIDITY VALLEY VALUABLE VALUE VALUED VALUES VALVE VALVES VAMPIRE VAN VANILLA VAR VARIABLE VARIANCE VARIED VARIES VARIETY VARIOUS VARY VARYING VAST VAT VAULT VECTOR VEHICLE VEHICLES VELOCITY VELVET VENDOR VENDORS VENTURE VENTURES VENUE VENUES VERBAL VERIFIED VERIFY VERSE VERSION VERSIONS VERSUS VERTEX VERTICAL VERY VESSEL VESSELS VETERAN VETERANS VIA VICE VICTIM VICTIMS VICTOR VICTORIA VICTORY VIDEO VIDEOS VIEW VIEWED VIEWER VIEWERS VIEWING VIEWS VIKING VILLA VILLAGE VILLAGES VILLAS VINTAGE VINYL VIOLENCE VIOLENT VIOLIN VIRAL VIRGIN VIRTUAL VIRTUE VIRUS VIRUSES VISA VISIBLE VISION VISIT VISITED VISITING VISITOR VISITORS VISITS VISTA VISUAL VITAL VITAMIN VITAMINS VOCAL VOCALS VOICE VOICES VOID VOLT VOLTAGE VOLUME VOLUMES VOTE VOTED VOTERS VOTES VOTING WAGE WAGES WAGON WAIT WAITING WAIVER WAKE WALES WALK WALKED WALKER WALKING WALKS WALL WALLET WALLS WALNUT WAN WANT WANTED WANTING WANTS WAR WARCRAFT WARD WARE WARM WARMING WARNED WARNER WARNING WARNINGS WARRANT WARRANTY WARREN WARRIOR WARRIORS WARS WAS WASH WASHER WASHING WASTE WATCH WATCHED WATCHES WATCHING WATER WATERS WATT WATTS WAVE WAVES WAX WAY WAYS WEAK WEALTH WEAPON WEAPONS WEAR WEARING WEATHER WEB WEBSTER WED WEDDING WEDDINGS WEED WEEK WEEKEND WEEKENDS WEEKLY WEEKS WEIGHT WEIGHTED WEIGHTS WEIRD WELCOME WELDING WELFARE WELL WELLNESS WELLS WELSH WENT WERE WEST WESTERN WET WHALE WHAT WHATEVER WHATS WHEAT WHEEL WHEELS WHEN WHENEVER WHERE WHEREAS WHEREVER WHETHER WHICH WHILE WHILST WHITE WHO WHOLE WHOM WHOSE WHY WICKED WIDE WIDELY WIDER WIDTH WIFE WILD WILDLIFE WILL WILLING WILLOW WIN WIND WINDOW WINDOWS WINDS WINE WINES WING WINGS WINNER WINNERS WINNING WINS WINTER WIRE WIRED WIRELESS WIRES WIRING WISDOM WISE WISH WISHES WISHING WIT WITCH WITH WITHIN WITHOUT WITNESS WIVES WIZARD WOLF WOMAN WOMEN WON WONDER WOOD WOODEN WOODS WOOL WORD WORDS WORK WORKED WORKER WORKERS WORKING WORKOUT WORKS WORKSHOP WORLD WORLDS WORM WORN WORRIED WORRY WORSE WORSHIP WORST WORTH WORTHY WOULD WOUND WOW WRAP WRAPPED WRAPPING WRIGHT WRIST WRITE WRITER WRITERS WRITES WRITING WRITINGS WRITTEN WRONG WROTE XEROX YACHT YAHOO YANG YARD YARDS YARN YEA YEAH YEAR YEARLY YEARS YEAST YELLOW YEN YES YET YIELD YIELDS YOGA YOU YOUNG YOUNGER YOUR YOURS YOURSELF YOUTH ZERO ZINC ZIP ZONE ZONES ZONING ZOO ZOOM";
+const DICT = new Set(DICT_WORDS.split(" "));
+const PREFIX = (() => { const p = new Set(); for (const w of DICT) for (let i = 1; i <= w.length; i++) p.add(w.slice(0, i)); return p; })();
+const ANAGRAM_SEEDS = [...DICT].filter(w => w.length === 7);
+const FIVES = [...DICT].filter(w => w.length === 5);                 // Wordle answers
+const HANGWORDS = [...DICT].filter(w => w.length >= 5 && w.length <= 8);
+const HANG_MAX = 7;                                                  // allowed wrong guesses
+
+/* ---------- state ---------- */
+let db, roomRef, code = "", pid = "", isHost = false, myColor = "", myEmoji = "";
+let placements = {}, words = [], grid = [], gridN = SIZE;
+let roomMode = "search", rackLetters = "", roundTotal = 0;
+let answer = "", wGuesses = [], wSolved = false;                     // Wordle (board is local; answer shared)
+let sel = [], dragging = false, timerInt = null, roundStart = 0, lobbyInt = null, lobbyAt = 0;
+const $ = id => document.getElementById(id);
+const show = (...ids) => { ["setup","home","lobby","game"].forEach(s => $(s).classList.add("hidden")); ids.forEach(i => $(i).classList.remove("hidden")); };
+
+/* ============================================================
+   2. BOOT — wire up Firebase or prompt for config
+   ============================================================ */
+function getConfig() {
+  if (BAKED_CONFIG.databaseURL) return BAKED_CONFIG;
+  const saved = localStorage.getItem("wp_cfg");
+  if (saved) { try { return JSON.parse(saved); } catch (e) {} }
+  return null;
+}
+function boot() {
+  const cfg = getConfig();
+  if (!cfg) { show("setup"); return; }
+  try {
+    firebase.initializeApp(cfg);
+    db = firebase.database();
+  } catch (e) { show("setup"); $("cfgInput").value = "Init failed: " + e.message; return; }
+  pid = localStorage.getItem("wp_pid") || (Math.random().toString(36).slice(2, 10));
+  localStorage.setItem("wp_pid", pid);
+  $("name").value = localStorage.getItem("wp_name") || "";
+  // theme dropdown
+  Object.keys(BANKS).forEach(t => { const o = document.createElement("option"); o.value = o.textContent = t; $("theme").appendChild(o); });
+  show("home");
+}
+$("cfgSave").onclick = () => {
+  let raw = $("cfgInput").value.trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (m) raw = m[0];
+  try {
+    // tolerate JS object literal (unquoted keys, trailing commas)
+    const obj = Function('"use strict";return (' + raw + ')')();
+    if (!obj.databaseURL) throw new Error("missing databaseURL");
+    localStorage.setItem("wp_cfg", JSON.stringify(obj));
+    location.reload();
+  } catch (e) { $("cfgInput").value = "Couldn't parse config (" + e.message + ").\n\n" + $("cfgInput").value; }
+};
+
+/* ============================================================
+   3. GRID GENERATION (host only)
+   ============================================================ */
+function makeRound(theme) {
+  const bank = (BANKS[theme] || BANKS.Mixed).filter(w => w.length <= SIZE);
+  const pick = bank.slice().sort(() => Math.random() - .5).slice(0, WORDS_PER_ROUND)
+                   .sort((a, b) => b.length - a.length);
+  const g = Array.from({ length: SIZE }, () => Array(SIZE).fill(""));
+  const place = {};
+  for (const w of pick) {
+    let placed = false;
+    for (let t = 0; t < 220 && !placed; t++) {
+      const [dr, dc] = DIRS[(Math.random() * DIRS.length) | 0];
+      const r0 = (Math.random() * SIZE) | 0, c0 = (Math.random() * SIZE) | 0;
+      const cells = [];
+      let ok = true;
+      for (let i = 0; i < w.length; i++) {
+        const r = r0 + dr * i, c = c0 + dc * i;
+        if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) { ok = false; break; }
+        if (g[r][c] && g[r][c] !== w[i]) { ok = false; break; }
+        cells.push([r, c]);
+      }
+      if (!ok) continue;
+      cells.forEach(([r, c], i) => g[r][c] = w[i]);
+      place[w] = cells;
+      placed = true;
+    }
+  }
+  const used = Object.keys(place);
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++)
+    if (!g[r][c]) g[r][c] = letters[(Math.random() * 26) | 0];
+  return { grid: g.map(row => row.join("")), words: used, placements: place };
+}
+
+/* ---------- Boggle: random letter grid, find adjacent-path words ---------- */
+const LETTER_BAG = "AAAAAAAAAEEEEEEEEEEEEIIIIIIIIIOOOOOOOOUUUUBBCCDDDDFFGGGHHJKLLLLMMNNNNNNPPRRRRRRSSSSTTTTTTVVWWXYYZ";
+const randLetter = () => LETTER_BAG[(Math.random() * LETTER_BAG.length) | 0];
+function boggleWords(g) {
+  const N = g.length, found = new Set();
+  const dfs = (r, c, seen, str) => {
+    str += g[r][c];
+    if (!PREFIX.has(str)) return;
+    if (str.length >= 3 && DICT.has(str)) found.add(str);
+    if (str.length >= 8) return;
+    for (const [dr, dc] of DIRS) {
+      const r2 = r + dr, c2 = c + dc, k = r2 * N + c2;
+      if (r2 >= 0 && r2 < N && c2 >= 0 && c2 < N && !seen.has(k)) { seen.add(k); dfs(r2, c2, seen, str); seen.delete(k); }
+    }
+  };
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) dfs(r, c, new Set([r * N + c]), "");
+  return found;
+}
+function makeBoggle() {
+  let g, found;
+  for (let t = 0; t < 40; t++) {
+    g = Array.from({ length: BOGGLE_SIZE }, () => Array.from({ length: BOGGLE_SIZE }, randLetter));
+    found = boggleWords(g);
+    if (found.size >= 25) break;
+  }
+  return { grid: g.map(row => row.join("")), total: found.size };
+}
+
+/* ---------- Anagrams: a 7-letter rack with a guaranteed pangram ---------- */
+function canForm(word, letters) {
+  const have = {}; for (const ch of letters) have[ch] = (have[ch] || 0) + 1;
+  for (const ch of word) { if (!have[ch]) return false; have[ch]--; }
+  return true;
+}
+function anagramCount(letters) {
+  let n = 0; for (const w of DICT) if (w.length >= 3 && w.length <= letters.length && canForm(w, letters)) n++;
+  return n;
+}
+function makeAnagram() {
+  let best = null;
+  for (let t = 0; t < 12; t++) {
+    const seed = ANAGRAM_SEEDS[(Math.random() * ANAGRAM_SEEDS.length) | 0];
+    const letters = seed.split("").sort(() => Math.random() - .5).join("");
+    const total = anagramCount(letters);
+    if (!best || total > best.total) best = { letters, total };
+    if (best.total >= 15) break;
+  }
+  return best;
+}
+
+/* ---------- Wordle & Hangman: pick a shared secret word (host only) ---------- */
+function makeWordle() { return { answer: FIVES[(Math.random() * FIVES.length) | 0] }; }
+function makeHangman() { const w = HANGWORDS[(Math.random() * HANGWORDS.length) | 0]; return { answer: w, total: new Set(w).size }; }
+function wordleMark(guess, ans) {
+  const res = Array(5).fill("x"), pool = {};
+  for (let i = 0; i < 5; i++) { if (guess[i] === ans[i]) res[i] = "g"; else pool[ans[i]] = (pool[ans[i]] || 0) + 1; }
+  for (let i = 0; i < 5; i++) { if (res[i] === "g") continue; if (pool[guess[i]]) { res[i] = "y"; pool[guess[i]]--; } }
+  return res;
+}
+
+/* ============================================================
+   4. ROOM LIFECYCLE
+   ============================================================ */
+function randCode() { let s = ""; for (let i = 0; i < 4; i++) s += "ABCDEFGHJKLMNPQRSTUVWXYZ"[(Math.random() * 24) | 0]; return s; }
+
+$("createBtn").onclick = async () => {
+  const name = saveName(); if (!name) return;
+  code = randCode(); isHost = true;
+  roomRef = db.ref("rooms/" + code);
+  await roomRef.set({ status: "lobby", host: pid, theme: "Mixed", mode: "search", round: 0, created: Date.now() });
+  enterRoom(name);
+};
+$("joinBtn").onclick = async () => {
+  const name = saveName(); if (!name) return;
+  const c = $("joinCode").value.trim().toUpperCase();
+  if (c.length !== 4) { $("homeErr").textContent = "Enter a 4-letter code."; return; }
+  const snap = await db.ref("rooms/" + c).get();
+  if (!snap.exists()) { $("homeErr").textContent = "No room with that code."; return; }
+  code = c; isHost = snap.val().host === pid;
+  roomRef = db.ref("rooms/" + code);
+  enterRoom(name);
+};
+function saveName() {
+  const n = $("name").value.trim();
+  if (!n) { $("homeErr").textContent = "Enter your name first."; return null; }
+  $("homeErr").textContent = "";
+  localStorage.setItem("wp_name", n);
+  return n;
+}
+
+function enterRoom(name) {
+  const me = roomRef.child("players/" + pid);
+  me.onDisconnect().remove();
+  // assign a color based on join order
+  roomRef.child("players").get().then(s => {
+    const existing = s.exists() ? Object.values(s.val()) : [];
+    const taken = existing.map(p => p.color), takenE = existing.map(p => p.emoji);
+    myColor = COLORS.find(c => !taken.includes(c)) || COLORS[existing.length % COLORS.length];
+    myEmoji = EMOJIS.find(e => !takenE.includes(e)) || EMOJIS[existing.length % EMOJIS.length];
+    me.set({ name, color: myColor, emoji: myEmoji });
+  });
+  $("lobbyCode").textContent = code;
+  $("gameCode").textContent = code;
+  bindListeners();
+  show("lobby");
+}
+
+function leave() {
+  stopTimer(); stopLobbyTimer();
+  if (roomRef) { roomRef.child("players/" + pid).remove(); roomRef.off(); }
+  roomRef = null; code = ""; isHost = false;
+  $("done").classList.add("hidden");
+  show("home");
+}
+$("leaveBtn").onclick = leave;
+$("doneLeaveBtn").onclick = leave;
+
+/* ============================================================
+   5. LIVE LISTENERS
+   ============================================================ */
+function bindListeners() {
+  roomRef.child("host").on("value", s => { roomHost = s.val() || ""; isHost = roomHost === pid; });
+  roomRef.child("status").on("value", s => {
+    const st = s.val();
+    if (st === "playing") { stopLobbyTimer(); $("done").classList.add("hidden"); show("game"); }
+    else if (st === "starting") { $("done").classList.add("hidden"); show("lobby"); startLobbyTimer(); }
+    else if (st === "ended") { stopTimer(); stopLobbyTimer(); show("lobby"); roomRef.child("claims").get().then(c => showStandings(c.val() || {})); }
+    else if (st === "lobby") { stopLobbyTimer(); $("done").classList.add("hidden"); show("lobby"); }
+  });
+  roomRef.child("theme").on("value", s => { if (s.val()) $("theme").value = s.val(); });
+  roomRef.child("mode").on("value", s => { roomMode = s.val() || "search"; $("gameSel").value = roomMode; updateGamePicker(); });
+  roomRef.child("players").on("value", s => renderPlayers(s.val() || {}));
+  // a new round arrives: rebuild the play area for the current game mode
+  roomRef.child("round").on("value", () => {
+    roomRef.get().then(snap => {
+      const v = snap.val(); if (!v || !v.round) return;
+      roomMode = v.mode || "search";
+      roundStart = v.round || Date.now();
+      roundTotal = v.total || 0;
+      answer = v.answer || "";
+      $("done").classList.add("hidden");
+      if (roomMode === "anagram") {
+        if (!v.letters) return;
+        rackLetters = v.letters; showArea("anagram"); buildRack(); renderFound(v.claims || {});
+      } else if (roomMode === "wordle") {
+        if (!v.answer) return;
+        wGuesses = []; wSolved = false; $("wmsg").textContent = ""; $("wInput").value = "";
+        showArea("wordle"); buildWordleBoard(); renderScores(v.claims || {});
+      } else if (roomMode === "hangman") {
+        if (!v.answer) return;
+        showArea("hangman"); buildKeyboard(); renderHangman(v.claims || {});
+      } else {
+        if (!v.grid) return;
+        showArea("gridwrap");
+        grid = v.grid.map(r => r.split("")); buildGrid();
+        if (roomMode === "search") { words = v.words || []; placements = v.placements || {}; renderWords(v.claims || {}); }
+        else { words = []; placements = {}; renderFound(v.claims || {}); }
+      }
+      startTimer();
+    });
+  });
+  roomRef.child("claims").on("value", s => {
+    const claims = s.val() || {};
+    if (roomMode === "search") { renderWords(claims); colorClaims(claims); }
+    else if (roomMode === "boggle" || roomMode === "anagram") renderFound(claims);
+    else if (roomMode === "hangman") renderHangman(claims);
+    // wordle: each board is local; the scoreboard reflects who has solved
+    renderScores(claims);
+    checkDone(claims);
+  });
+}
+
+/* host changes theme / game */
+$("theme").onchange = () => { if (isHost && roomRef) roomRef.child("theme").set($("theme").value); };
+$("gameSel").onchange = () => { if (isHost && roomRef) roomRef.child("mode").set($("gameSel").value); };
+function updateGamePicker() { $("themeRow").classList.toggle("hidden", roomMode !== "search"); }
+function showArea(id) { ["gridwrap","anagram","wordle","hangman"].forEach(a => $(a).classList.toggle("hidden", a !== id)); }
+
+$("startBtn").onclick = startRound;
+$("againBtn").onclick = startRound; // next round also runs the shared countdown so latecomers join
+// "Start round" from the lobby kicks off a shared 60s countdown so latecomers can join.
+function startRound() {
+  if (!roomRef || !isHost) return;
+  roomRef.update({ status: "starting", startAt: Date.now() + LOBBY_SECONDS * 1000 });
+}
+// Builds the grid and flips everyone into play. Called by the host when the countdown
+// ends, and immediately on "Play again".
+function beginPlay() {
+  if (!roomRef || !isHost) return;
+  const mode = roomMode || "search";
+  const upd = { claims: null, status: "playing", round: Date.now(), mode,
+                grid: null, words: null, placements: null, letters: null, answer: null, total: 0 };
+  if (mode === "boggle") { const b = makeBoggle(); upd.grid = b.grid; upd.total = b.total; }
+  else if (mode === "anagram") { const a = makeAnagram(); upd.letters = a.letters; upd.total = a.total; }
+  else if (mode === "wordle") { upd.answer = makeWordle().answer; }
+  else if (mode === "hangman") { const hm = makeHangman(); upd.answer = hm.answer; upd.total = hm.total; }
+  else { const r = makeRound($("theme").value || "Mixed"); upd.grid = r.grid; upd.words = r.words; upd.placements = r.placements; upd.total = r.words.length; }
+  roomRef.update(upd);
+}
+
+/* ============================================================
+   6. RENDERING
+   ============================================================ */
+function renderPlayers(players) {
+  const ids = Object.keys(players);
+  const ul = $("lobbyPlayers"); ul.innerHTML = "";
+  ids.forEach(id => {
+    const p = players[id];
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="dot" style="background:${p.color}"></span>` +
+                   `<span class="${id === pid ? "me" : ""}">${p.emoji || ""} ${esc(p.name)}${id === pid ? " (you)" : ""}${players[id] && roomHost === id ? " · host" : ""}</span>`;
+    ul.appendChild(li);
+  });
+  const counting = lobbyInt !== null;
+  const hint = counting ? "Round starting — others can still join!"
+             : isHost ? "You're the host — pick a theme and start when everyone's in."
+                      : "Waiting for the host to start the round…";
+  $("lobbyHint").textContent = hint;
+  $("startBtn").classList.toggle("hidden", !isHost || counting);
+  $("theme").disabled = !isHost || counting;
+  $("gameSel").disabled = !isHost || counting;
+}
+let roomHost = "";
+
+function buildGrid() {
+  gridN = grid.length;
+  const g = $("grid");
+  g.style.gridTemplateColumns = `repeat(${gridN}, 1fr)`;
+  const avail = Math.min(window.innerWidth - 24, 440);
+  const cell = Math.floor((avail - (gridN - 1) * 3) / gridN);
+  g.style.fontSize = Math.max(13, Math.floor(cell * 0.46)) + "px";
+  g.innerHTML = "";
+  for (let r = 0; r < gridN; r++) for (let c = 0; c < gridN; c++) {
+    const d = document.createElement("div");
+    d.className = "cell"; d.dataset.r = r; d.dataset.c = c;
+    d.style.width = cell + "px";
+    d.textContent = grid[r][c];
+    g.appendChild(d);
+  }
+}
+function cellAt(r, c) { return $("grid").children[r * gridN + c]; }
+
+function renderWords(claims) {
+  const wl = $("wordlist"); wl.innerHTML = "";
+  words.forEach(w => {
+    const el = document.createElement("div");
+    el.className = "word";
+    if (claims[w]) { el.textContent = w; el.classList.add("done"); el.style.background = claims[w].color; el.style.borderColor = claims[w].color; }
+    else { el.textContent = HINTS[w] || w; el.classList.add("clue"); }
+    wl.appendChild(el);
+  });
+  $("total").textContent = words.length;
+  $("found").textContent = Object.keys(claims).length;
+}
+function colorClaims(claims) {
+  if (!$("grid").children.length) return;
+  Object.keys(claims).forEach(w => {
+    (placements[w] || []).forEach(([r, c]) => {
+      const el = cellAt(r, c);
+      if (el) { el.style.background = claims[w].color; el.style.color = "#1a1300"; }
+    });
+  });
+}
+/* Boggle / Anagram: list of claimed words, coloured by claimer */
+function renderFound(claims) {
+  const wl = $("wordlist"); wl.innerHTML = "";
+  Object.keys(claims).sort((a, b) => b.length - a.length || a.localeCompare(b)).forEach(w => {
+    const el = document.createElement("div");
+    el.className = "word done"; el.textContent = w;
+    el.style.background = claims[w].color; el.style.borderColor = claims[w].color;
+    wl.appendChild(el);
+  });
+  $("total").textContent = roundTotal || "·";
+  $("found").textContent = Object.keys(claims).length;
+}
+function buildRack() {
+  const wrap = $("rack"); wrap.innerHTML = "";
+  for (const ch of rackLetters) { const t = document.createElement("div"); t.className = "tile"; t.textContent = ch; wrap.appendChild(t); }
+  $("anaInput").value = "";
+}
+function submitAnagram() {
+  const word = $("anaInput").value.trim().toUpperCase(); $("anaInput").value = "";
+  if (word.length < 3) { flash("3+ letters", "#ff7a7a"); claimFx(false); return; }
+  if (!canForm(word, rackLetters)) { flash("not in your letters", "#ff7a7a"); claimFx(false); return; }
+  if (!DICT.has(word)) { flash("✗ not a word", "#ff7a7a"); claimFx(false); return; }
+  claimWord(word);
+}
+const claimPts = (w, c) => (c && c.p != null) ? c.p : pts(w); // word modes score by length; wordle/hangman store p
+function renderScores(claims) {
+  roomRef.child("players").get().then(s => {
+    const players = s.val() || {};
+    const score = {};
+    Object.entries(claims).forEach(([w, c]) => score[c.by] = (score[c.by] || 0) + claimPts(w, c));
+    const rows = Object.keys(players).map(id => ({ id, name: players[id].name, color: players[id].color, emoji: players[id].emoji || "", s: score[id] || 0 }))
+                       .sort((a, b) => b.s - a.s);
+    const sb = $("scoreboard"); sb.innerHTML = "";
+    rows.forEach(r => {
+      const p = document.createElement("div"); p.className = "pill";
+      p.innerHTML = `<span class="dot" style="background:${r.color}"></span>${r.emoji} ${esc(r.name)}: ${r.s}`;
+      sb.appendChild(p);
+    });
+    if (roomMode === "wordle") { $("found").textContent = Object.values(claims).filter(c => c.solved).length; $("total").textContent = Object.keys(players).length; }
+  });
+}
+function endRound(claims) {
+  showStandings(claims);
+  if (isHost && roomRef) roomRef.child("status").set("ended"); // so latecomers land on standings too
+}
+function checkDone(claims) {
+  if (roomMode === "search") {
+    if (words.length && Object.keys(claims).length >= words.length) endRound(claims);
+  } else if (roomMode === "hangman") {
+    const wrong = Object.keys(claims).filter(L => !answer.includes(L)).length;
+    const solved = answer && [...new Set(answer)].every(L => claims[L]);
+    if (answer && (solved || wrong >= HANG_MAX)) endRound(claims);
+  } else if (roomMode === "wordle") {
+    roomRef.child("players").get().then(s => {
+      const n = Object.keys(s.val() || {}).length;
+      if (n && Object.keys(claims).length >= n) endRound(claims);
+    });
+  }
+  // boggle / anagram: end on the timer only
+}
+function showStandings(claims) {
+  stopTimer();
+  roomRef.child("players").get().then(s => {
+    const players = s.val() || {};
+    const score = {};
+    Object.entries(claims).forEach(([w, c]) => score[c.by] = (score[c.by] || 0) + claimPts(w, c));
+    const rows = Object.keys(players).map(id => ({ name: players[id].name, color: players[id].color, emoji: players[id].emoji || "", s: score[id] || 0 }))
+                       .sort((a, b) => b.s - a.s);
+    const ol = $("standings"); ol.innerHTML = "";
+    rows.forEach((r, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="rank">${i === 0 ? "🏆" : "#" + (i + 1)}</span>` +
+                     `<span class="dot" style="background:${r.color}"></span>` +
+                     `<span style="flex:1">${r.emoji} ${esc(r.name)}</span><b>${r.s}</b>`;
+      ol.appendChild(li);
+    });
+    $("againBtn").classList.toggle("hidden", !isHost);
+    $("doneCode").textContent = "Room " + code + " — share it, others can still join";
+    const reveal = answer ? "The word was " + answer + ". " : "";
+    $("doneHint").textContent = reveal + (isHost ? "Take your time — tap Play again when everyone's ready."
+                                                 : "Waiting for the host to start the next round…");
+    $("done").classList.remove("hidden");
+  });
+}
+
+/* ============================================================
+   7. SELECTION & CLAIMING (drag to trace a straight line)
+   ============================================================ */
+const gridEl = $("grid");
+function cellFromPoint(x, y) {
+  const el = document.elementFromPoint(x, y);
+  return el && el.classList.contains("cell") ? el : null;
+}
+function lineCells(a, b) {
+  const r0 = +a.dataset.r, c0 = +a.dataset.c, r1 = +b.dataset.r, c1 = +b.dataset.c;
+  const dr = r1 - r0, dc = c1 - c0;
+  const straight = (dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc));
+  if (!straight) return null;
+  const steps = Math.max(Math.abs(dr), Math.abs(dc));
+  const sr = Math.sign(dr), sc = Math.sign(dc);
+  const out = [];
+  for (let i = 0; i <= steps; i++) out.push(cellAt(r0 + sr * i, c0 + sc * i));
+  return out;
+}
+function clearSel() { sel.forEach(c => c && c.classList.remove("sel")); sel = []; }
+function paintSel(start, end) {
+  const cells = lineCells(start, end);
+  clearSel();
+  if (cells) { sel = cells; cells.forEach(c => c.classList.add("sel")); }
+}
+let startCell = null;
+function adjacent(a, b) { const dr = Math.abs(+a.dataset.r - +b.dataset.r), dc = Math.abs(+a.dataset.c - +b.dataset.c); return dr <= 1 && dc <= 1 && (dr + dc) > 0; }
+function onDown(e) {
+  const t = e.touches ? e.touches[0] : e;
+  const cell = cellFromPoint(t.clientX, t.clientY);
+  if (!cell) return;
+  dragging = true;
+  if (roomMode === "boggle") { clearSel(); sel = [cell]; cell.classList.add("sel"); }
+  else { startCell = cell; paintSel(cell, cell); }
+  e.preventDefault();
+}
+function onMove(e) {
+  if (!dragging) return;
+  const t = e.touches ? e.touches[0] : e;
+  const cell = cellFromPoint(t.clientX, t.clientY);
+  if (!cell) { e.preventDefault(); return; }
+  if (roomMode === "boggle") {
+    if (sel.length >= 2 && cell === sel[sel.length - 2]) { sel.pop().classList.remove("sel"); }       // backtrack
+    else if (sel.length && !sel.includes(cell) && adjacent(sel[sel.length - 1], cell)) { sel.push(cell); cell.classList.add("sel"); }
+  } else { paintSel(startCell, cell); }
+  e.preventDefault();
+}
+function onUp() {
+  if (!dragging) return;
+  dragging = false;
+  if (sel.length > 1) attemptClaim();
+  clearSel();
+}
+function attemptClaim() {
+  const str = sel.map(c => grid[+c.dataset.r][+c.dataset.c]).join("");
+  if (roomMode === "boggle") {
+    if (str.length < 3) { flash("3+ letters", "#ff7a7a"); claimFx(false); return; }
+    if (!DICT.has(str)) { flash("✗ not a word", "#ff7a7a"); claimFx(false); return; }
+    claimWord(str);
+  } else {
+    const rev = str.split("").reverse().join("");
+    const match = words.find(w => w === str || w === rev);
+    if (!match) { flash("✗ not a word", "#ff7a7a"); claimFx(false); return; }
+    claimWord(match);
+  }
+}
+/* race-safe claim shared by all modes (claims keyed by the word) */
+function claimWord(word) {
+  const ref = roomRef.child("claims/" + word);
+  ref.transaction(cur => cur === null ? { by: pid, name: localStorage.getItem("wp_name"), color: myColor, ts: Date.now() } : undefined)
+     .then(res => {
+       if (res.committed && res.snapshot.val() && res.snapshot.val().by === pid) { flash("✓ " + word + "  +" + pts(word), "#4ade80"); claimFx(true); }
+       else { flash("taken!", "#ffd43b"); claimFx(false); }
+     });
+}
+
+/* ---------- Wordle (private 6-guess board, shared secret answer) ---------- */
+function buildWordleBoard() {
+  const b = $("wboard"); b.innerHTML = "";
+  for (let r = 0; r < 6; r++) {
+    const row = document.createElement("div"); row.className = "wrow";
+    const g = wGuesses[r], mark = g ? wordleMark(g, answer) : null;
+    for (let i = 0; i < 5; i++) {
+      const t = document.createElement("div"); t.className = "wtile";
+      if (g) { t.textContent = g[i]; t.classList.add(mark[i]); }
+      row.appendChild(t);
+    }
+    b.appendChild(row);
+  }
+}
+function submitWordle() {
+  if (wSolved || wGuesses.length >= 6) return;
+  const g = $("wInput").value.trim().toUpperCase(); $("wInput").value = "";
+  if (g.length !== 5) { flash("5 letters", "#ff7a7a"); claimFx(false); return; }
+  if (!DICT.has(g)) { flash("✗ not a word", "#ff7a7a"); claimFx(false); return; }
+  wGuesses.push(g); buildWordleBoard();
+  const me = { by: pid, name: localStorage.getItem("wp_name"), color: myColor, ts: Date.now() };
+  if (g === answer) {
+    wSolved = true; const tries = wGuesses.length, p = Math.max(1, 7 - tries);
+    flash("✓ solved! +" + p, "#4ade80"); claimFx(true);
+    $("wmsg").textContent = "Solved in " + tries + "! Waiting for others…";
+    roomRef.child("claims/" + pid).set({ ...me, p, g: tries, solved: true });
+  } else if (wGuesses.length >= 6) {
+    flash("out of guesses", "#ffd43b"); claimFx(false);
+    $("wmsg").textContent = "Out of guesses — it was " + answer;
+    roomRef.child("claims/" + pid).set({ ...me, p: 0, g: 6, solved: false });
+  }
+}
+
+/* ---------- Hangman (team: shared word + shared letter guesses) ---------- */
+function buildKeyboard() {
+  const k = $("kbd"); k.innerHTML = "";
+  for (const L of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+    const b = document.createElement("button"); b.className = "key"; b.textContent = L;
+    b.onclick = () => guessLetter(L);
+    k.appendChild(b);
+  }
+}
+function renderHangman(claims) {
+  if (!answer) return;
+  $("hmword").textContent = answer.split("").map(ch => claims[ch] ? ch : "·").join(" ");
+  const wrong = Object.keys(claims).filter(L => !answer.includes(L)).sort();
+  $("hmstatus").textContent = "Misses: " + wrong.length + "/" + HANG_MAX + (wrong.length ? "  " + wrong.join(" ") : "");
+  [...$("kbd").children].forEach(btn => {
+    const L = btn.textContent, c = claims[L];
+    btn.disabled = !!c;
+    btn.classList.toggle("ok", !!c && answer.includes(L));
+    btn.classList.toggle("no", !!c && !answer.includes(L));
+  });
+  $("found").textContent = [...new Set(answer)].filter(L => claims[L]).length;
+  $("total").textContent = new Set(answer).size;
+}
+function guessLetter(L) {
+  if (!roomRef || !answer) return;
+  const correct = answer.includes(L), occ = answer.split("").filter(ch => ch === L).length;
+  roomRef.child("claims/" + L).transaction(cur => cur === null ? { by: pid, name: localStorage.getItem("wp_name"), color: myColor, p: correct ? occ * 2 : 0, ts: Date.now() } : undefined)
+     .then(res => {
+       if (res.committed && res.snapshot.val() && res.snapshot.val().by === pid) {
+         if (correct) { flash("✓ " + L + "  +" + occ * 2, "#4ade80"); claimFx(true); }
+         else { flash("✗ " + L, "#ff7a7a"); claimFx(false); }
+       }
+     });
+}
+let flashT;
+function flash(msg, col) {
+  const f = $("flash"); f.textContent = msg; f.style.color = col;
+  clearTimeout(flashT); flashT = setTimeout(() => { if (f.textContent === msg) f.textContent = ""; }, 1200);
+}
+
+/* round timer (shared via the host's round timestamp) */
+function fmt(s) { s = Math.max(0, s); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+function stopTimer() { if (timerInt) { clearInterval(timerInt); timerInt = null; } }
+function startTimer() {
+  stopTimer();
+  const tick = () => {
+    const left = ROUND_SECONDS - Math.floor((Date.now() - roundStart) / 1000);
+    $("timer").textContent = fmt(left);
+    $("timerPill").classList.toggle("low", left <= 30);
+    if (left <= 0) { stopTimer(); roomRef.child("claims").get().then(s => showStandings(s.val() || {})); if (isHost && roomRef) roomRef.child("status").set("ended"); }
+  };
+  tick(); timerInt = setInterval(tick, 250);
+}
+
+/* pre-game lobby countdown — everyone starts together when it hits zero */
+function stopLobbyTimer() {
+  if (lobbyInt) { clearInterval(lobbyInt); lobbyInt = null; }
+  $("countdown").classList.add("hidden");
+  $("startBtn").classList.toggle("hidden", !isHost);
+  $("theme").disabled = !isHost;
+  $("gameSel").disabled = !isHost;
+}
+function startLobbyTimer() {
+  if (lobbyInt) return;
+  $("countdown").classList.remove("hidden");
+  $("startBtn").classList.add("hidden");
+  $("theme").disabled = true;
+  $("gameSel").disabled = true;
+  roomRef.child("startAt").get().then(s => {
+    lobbyAt = s.val() || (Date.now() + LOBBY_SECONDS * 1000);
+    const tick = () => {
+      const left = Math.ceil((lobbyAt - Date.now()) / 1000);
+      $("countdown").innerHTML = "Starts in " + fmt(Math.max(0, left)) +
+        "<small>jump in — everyone starts together</small>";
+      if (left <= 0) { stopLobbyTimer(); if (isHost) beginPlay(); }
+    };
+    tick(); lobbyInt = setInterval(tick, 250);
+  });
+}
+
+/* sound + haptics on claim */
+let actx;
+function beep(freq, dur, type) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.type = type || "sine"; o.frequency.value = freq;
+    o.connect(g); g.connect(actx.destination);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.2, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) {}
+}
+function vibrate(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+function claimFx(ok) {
+  if (ok) { beep(680, 0.12); setTimeout(() => beep(1020, 0.12), 90); vibrate(35); }
+  else { beep(170, 0.2, "square"); vibrate(110); }
+}
+gridEl.addEventListener("mousedown", onDown);
+window.addEventListener("mousemove", onMove);
+window.addEventListener("mouseup", onUp);
+gridEl.addEventListener("touchstart", onDown, { passive: false });
+gridEl.addEventListener("touchmove", onMove, { passive: false });
+window.addEventListener("touchend", onUp);
+$("anaSubmit").onclick = submitAnagram;
+$("anaInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitAnagram(); } });
+$("wSubmit").onclick = submitWordle;
+$("wInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitWordle(); } });
+
+window.addEventListener("resize", () => { if (grid.length && !$("game").classList.contains("hidden")) buildGrid(); });
+
+/* ---------- utils ---------- */
+function esc(s) { return String(s).replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m])); }
+
+boot();
+</script>
+</body>
+</html>

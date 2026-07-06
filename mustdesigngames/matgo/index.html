@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Matgo · 맞고</title>
+<style>
+  :root{
+    --bg:#0d2a1e; --felt:#15523a; --felt2:#0f4230; --cream:#f6efe0; --ink:#222; --line:#0a3325;
+    --gold:#e8b923; --green:#2f8f57; --red:#c0392b; --brown:#a9602f; --blue:#2e6fb0; --gray:#9aa0a8; --dgray:#5a606b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; background:radial-gradient(circle at 50% 18%, #1c5c41, var(--bg)); color:#eee;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  #app{max-width:520px; margin:0 auto; min-height:100vh; padding:8px 8px 16px; display:flex; flex-direction:column; gap:6px;}
+  .row{display:flex; align-items:center; gap:8px;}
+  .topbar{justify-content:space-between; font-size:13px; padding:2px 4px;}
+  .title{font-weight:800; letter-spacing:.5px;}
+  .title small{opacity:.7; font-weight:500;}
+  .tally{font-variant-numeric:tabular-nums; opacity:.95;}
+  .tally b{color:var(--gold);}
+  .seat{background:rgba(0,0,0,.18); border-radius:12px; padding:6px 8px; display:flex; flex-direction:column; gap:5px;}
+  .seathead{display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700;}
+  .seathead .sc{font-size:13px;}
+  .sc .pt{display:inline-block; min-width:20px; text-align:center; background:var(--gold); color:#3a2c00; font-weight:800;
+    border-radius:7px; padding:1px 6px; margin-left:4px;}
+  .go{color:#ffd84a; font-weight:800; font-size:11px; margin-left:6px;}
+  .hand{display:flex; flex-wrap:wrap; gap:4px; min-height:46px;}
+  .floorwrap{background:var(--felt); border:2px solid var(--line); border-radius:14px; padding:8px;
+    box-shadow:inset 0 2px 14px rgba(0,0,0,.35); position:relative;}
+  .floorlbl{position:absolute; top:4px; right:8px; font-size:10px; opacity:.55; letter-spacing:1px;}
+  .floor{display:flex; flex-wrap:wrap; gap:5px; justify-content:center; min-height:120px; align-content:center;}
+  .deckchip{position:absolute; left:8px; top:6px; font-size:11px; opacity:.85; display:flex; align-items:center; gap:4px;}
+  .deckchip .pile{width:20px; height:28px; border-radius:4px; background:linear-gradient(135deg,#7a1d1d,#4a0f0f);
+    border:1.5px solid #320a0a;}
+  /* cards */
+  .card{width:46px; height:66px; border-radius:7px; background:var(--cream); color:var(--ink);
+    border:1.5px solid #d8cdb0; box-shadow:0 1px 3px rgba(0,0,0,.4); display:flex; flex-direction:column;
+    overflow:hidden; user-select:none; position:relative; flex:0 0 auto;}
+  .card .band{height:16px; display:flex; align-items:center; justify-content:space-between; padding:0 4px;
+    color:#fff; font-size:10px; font-weight:800;}
+  .card .mo{opacity:.95;} .card .tag{font-size:9px;}
+  .card .hero{flex:1; display:flex; align-items:center; justify-content:center; font-size:24px; line-height:1;}
+  .card .cname{font-size:8px; text-align:center; padding:0 1px 3px; color:#4b4b4b; white-space:nowrap; overflow:hidden;}
+  .card.play{cursor:pointer;}
+  .card.play:active{transform:translateY(1px);}
+  .card.playable{outline:2px solid #ffe27a; outline-offset:1px; box-shadow:0 0 10px rgba(255,226,122,.7);}
+  .card.back{background:repeating-linear-gradient(45deg,#7a1d1d 0 6px,#8f2424 6px 12px); border-color:#3a0c0c;}
+  .k-gwang .band{background:var(--gold); color:#3a2c00;}
+  .k-animal .band{background:var(--green);} .k-animal.sake .band{background:#b8862b;}
+  .k-hong .band{background:var(--red);} .k-plain .band{background:#a23b2f;}
+  .k-cho .band{background:var(--brown);} .k-blue .band{background:var(--blue);}
+  .k-junk .band{background:var(--gray);} .k-dpi .band{background:var(--dgray);}
+  /* captured mini stacks */
+  .cap{display:flex; flex-wrap:wrap; gap:8px; min-height:30px;}
+  .capgrp{display:flex; align-items:center;}
+  .mini{width:22px; height:30px; border-radius:4px; background:var(--cream); border:1px solid #cfc4a6;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:8px; color:#333;
+    box-shadow:0 1px 2px rgba(0,0,0,.35); flex:0 0 auto; position:relative;}
+  .mini .mtag{font-weight:800;} .mini .mmo{font-size:7px; opacity:.7;}
+  .mini.k-gwang{border-color:var(--gold); background:#fff7df;}
+  .mini.k-animal{background:#eafaef;} .mini.k-hong,.mini.k-plain{background:#fdecea;}
+  .mini.k-cho{background:#f7ede3;} .mini.k-blue{background:#eaf2fb;} .mini.k-dpi{background:#e9eaec;}
+  .empty{opacity:.4; font-size:12px;}
+  .status{min-height:34px; font-size:13px; text-align:center; padding:4px 6px; background:rgba(0,0,0,.22);
+    border-radius:9px; line-height:1.3;}
+  .status .ev{color:#ffd84a; font-weight:700;}
+  .turn{text-align:center; font-size:12px; opacity:.85; font-weight:700; letter-spacing:.5px;}
+  /* buttons + modal */
+  button{font:inherit; border:none; border-radius:10px; padding:10px 16px; font-weight:800; cursor:pointer;}
+  .btn-go{background:#e8b923; color:#3a2c00;} .btn-stop{background:#c0392b; color:#fff;}
+  .btn-ghost{background:rgba(255,255,255,.14); color:#fff;}
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.62); display:none; align-items:center; justify-content:center; padding:16px; z-index:10;}
+  .overlay.on{display:flex;}
+  .modal{background:#143b2a; border:2px solid #2f8f57; border-radius:16px; padding:18px; max-width:380px; width:100%;
+    text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.5);}
+  .modal h2{margin:0 0 6px; font-size:20px;} .modal .big{font-size:15px; margin:8px 0;}
+  .modal .bd{text-align:left; font-size:12px; background:rgba(0,0,0,.25); border-radius:10px; padding:8px 10px; margin:10px 0; line-height:1.5;}
+  .modal .bd .flag{color:#ff8a6a; font-weight:800;}
+  .modal .acts{display:flex; gap:10px; justify-content:center; margin-top:12px;}
+  .modal .acts button{flex:1;}
+  details.legend{background:rgba(0,0,0,.2); border-radius:10px; padding:6px 10px; font-size:12px;}
+  details.legend summary{cursor:pointer; font-weight:700; opacity:.9;}
+  details.legend div{margin-top:6px; line-height:1.5; opacity:.92;}
+  details.legend b{color:var(--gold);}
+  .pt-big{color:var(--gold); font-size:30px; font-weight:800;}
+  .btn-primary{background:var(--green); color:#fff;}
+  /* main menu */
+  .menu-card{max-width:340px;}
+  .menu-title{font-size:40px; font-weight:800; margin:0; letter-spacing:1px;}
+  .menu-sub{opacity:.82; font-size:13px; margin:4px 0 12px;}
+  .menu-chips{display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin:6px 0 16px;}
+  .chip{font-size:11px; padding:3px 9px; border-radius:20px; font-weight:800; color:#fff;}
+  .menu-btns{display:flex; flex-direction:column; gap:10px;}
+  .menu-btns button{width:100%; padding:14px; font-size:16px;}
+  .menu-tally{margin-top:14px; font-size:12px; opacity:.7;}
+  /* tutorial */
+  .tut-modal{max-width:430px;}
+  .tut-modal h2{font-size:19px;}
+  .tut-body{min-height:170px; font-size:13.5px; line-height:1.5; text-align:left;}
+  .tut-body p{margin:8px 0;} .tut-body b{color:var(--gold);}
+  .tut-body ul{margin:8px 0; padding-left:20px;} .tut-body li{margin:4px 0;}
+  .tut-row{display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap:wrap; margin:12px 0 4px;}
+  .tut-row .op{font-size:22px; font-weight:800; opacity:.85; margin:0 2px;}
+  .tut-cap{font-size:11px; opacity:.72; text-align:center; margin:0 0 6px;}
+  .dots{display:flex; gap:5px; justify-content:center; margin-top:12px;}
+  .dot{width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.25);}
+  .dot.on{background:var(--gold);}
+  .tut-nav{display:flex; gap:10px; align-items:center; margin-top:12px;}
+  .tut-nav button{flex:1;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="row topbar">
+    <span class="title">맞고 <small>Matgo · digital hwatu</small></span>
+    <span class="tally">You <b id="tYou">0</b> · <b id="tAi">0</b> AI</span>
+  </div>
+
+  <div class="seat" id="seatOpp">
+    <div class="seathead"><span>🤖 AI <span class="go" id="oppGo"></span></span>
+      <span class="sc">pts<span class="pt" id="oppScore">0</span></span></div>
+    <div class="hand" id="oppHand"></div>
+    <div class="cap" id="oppCap"></div>
+  </div>
+
+  <div class="floorwrap">
+    <span class="deckchip"><span class="pile"></span>×<span id="deckCount">0</span></span>
+    <span class="floorlbl">FLOOR · 바닥</span>
+    <div class="floor" id="floor"></div>
+  </div>
+
+  <div class="turn" id="turnInd">—</div>
+  <div class="status" id="status">Tap a card in your hand to play it.</div>
+
+  <div class="seat" id="seatMe">
+    <div class="seathead"><span>🧑 You <span class="go" id="meGo"></span></span>
+      <span class="sc">pts<span class="pt" id="meScore">0</span></span></div>
+    <div class="cap" id="meCap"></div>
+    <div class="hand" id="meHand"></div>
+  </div>
+
+  <details class="legend">
+    <summary>How to play & scoring ▾</summary>
+    <div>
+      <b>Goal:</b> match cards by month to capture them, build scoring sets, and at <b>3+ points</b> choose
+      <b>Go</b> (push on) or <b>Stop</b> (bank the win).<br>
+      <b>Turn:</b> tap a hand card → it captures a same-month floor card (else it's laid down), then the deck flips one card and resolves the same way.<br>
+      <b>광 Brights:</b> 3 = 3pt (2 if it's the ☔ rain-bright), 4 = 4pt, 5 = 15pt.<br>
+      <b>고도리 Godori:</b> the 3 bird animals (Feb·Apr·Aug) = 5pt. &nbsp; <b>열 Animals:</b> 5 = 1pt, +1 each.<br>
+      <b>띠 Ribbons:</b> 홍단/청단/초단 sets = 3pt each; any 5 ribbons = 1pt, +1 each.<br>
+      <b>피 Junk:</b> 10 = 1pt, +1 each (쌍피 = 2, 🍶 sake = animal or 2 junk).<br>
+      <b>Go:</b> +1 each, and ×2 from the 3rd Go. <b>Bak (×2):</b> 광박 loser no brights · 피박 loser &lt;7 junk · 고박 loser had gone.
+    </div>
+  </details>
+
+  <div class="row" style="justify-content:center; gap:10px; margin-top:2px;">
+    <button class="btn-ghost" id="btnMenu">☰ Menu</button>
+    <button class="btn-ghost" id="btnNew">New round</button>
+    <button class="btn-ghost" id="btnReset">Reset match</button>
+  </div>
+</div>
+
+<div class="overlay on" id="ovMenu">
+  <div class="modal menu-card">
+    <h1 class="menu-title">맞고</h1>
+    <div class="menu-sub">Matgo · digital hwatu — you vs the AI</div>
+    <div class="menu-chips">
+      <span class="chip" style="background:var(--gold);color:#3a2c00">광 bright</span>
+      <span class="chip" style="background:var(--green)">열 animal</span>
+      <span class="chip" style="background:var(--red)">띠 ribbon</span>
+      <span class="chip" style="background:var(--gray)">피 junk</span>
+    </div>
+    <div class="menu-btns">
+      <button class="btn-primary" id="btnPlay">▶ Play</button>
+      <button class="btn-go" id="btnTut">📖 How to Play</button>
+    </div>
+    <div class="menu-tally" id="menuTally"></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovTut">
+  <div class="modal tut-modal">
+    <h2 id="tutTitle"></h2>
+    <div class="tut-body" id="tutBody"></div>
+    <div class="dots" id="tutDots"></div>
+    <div class="tut-nav">
+      <button class="btn-ghost" id="tutBack">← Menu</button>
+      <button class="btn-primary" id="tutNext">Next →</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovGoStop">
+  <div class="modal">
+    <h2>3점! Go or Stop?</h2>
+    <div class="big">You have <span class="pt-big" id="gsPts">0</span> points.</div>
+    <div class="bd" id="gsBreak"></div>
+    <div class="acts">
+      <button class="btn-go" id="btnGo">GO ▶ push on</button>
+      <button class="btn-stop" id="btnStop">STOP ■ bank it</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovResult">
+  <div class="modal">
+    <h2 id="resTitle">Round over</h2>
+    <div class="big"><span class="pt-big" id="resPts">0</span> points</div>
+    <div class="bd" id="resBreak"></div>
+    <div class="acts"><button class="btn-go" id="btnNext">Next round ▶</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+
+/* ---------- deck definition (48 cards, 12 months) ---------- */
+const MONTHS = [
+  {m:1, name:'Pine',      gwang:'Crane', gG:'🕊️',                         ribbon:'hong', junk:2},
+  {m:2, name:'Plum',                       animal:'Nightingale', aG:'🐦', godori:true, ribbon:'hong', junk:2},
+  {m:3, name:'Cherry',    gwang:'Curtain', gG:'🎴',                       ribbon:'hong', junk:2},
+  {m:4, name:'Wisteria',                   animal:'Cuckoo', aG:'🐦', godori:true,      ribbon:'cho', junk:2},
+  {m:5, name:'Iris',                       animal:'Bridge', aG:'🌉',                    ribbon:'cho', junk:2},
+  {m:6, name:'Peony',                      animal:'Butterfly', aG:'🦋',                ribbon:'blue', junk:2},
+  {m:7, name:'Clover',                     animal:'Boar', aG:'🐗',                      ribbon:'cho', junk:2},
+  {m:8, name:'Pampas',    gwang:'Moon', gG:'🌕', animal:'Geese', aG:'🦆', godori:true,                junk:2},
+  {m:9, name:'Chrysanth', animal:'Sake cup', aG:'🍶', sake:true,                       ribbon:'blue', junk:2},
+  {m:10,name:'Maple',                      animal:'Deer', aG:'🦌',                      ribbon:'blue', junk:2},
+  {m:11,name:'Rain',      gwang:'Rain', gG:'☔', rain:true, animal:'Swallow', aG:'🐦',  ribbon:'plain', junk:0, dpi:1},
+  {m:12,name:'Paulownia', gwang:'Phoenix', gG:'🦅',                                                    junk:2, dpi:1},
+];
+const RIB = {hong:'홍단', cho:'초단', blue:'청단', plain:'비띠'};
+let CID = 0;
+function buildDeck(){
+  const d = [];
+  for(const M of MONTHS){
+    if(M.gwang) d.push({id:CID++, m:M.m, type:'gwang', rain:!!M.rain, glyph:M.gG, name:(M.rain?'비광':'광')+' '+M.gwang});
+    if(M.animal) d.push({id:CID++, m:M.m, type:'animal', godori:!!M.godori, sake:!!M.sake, glyph:M.aG, name:'열 '+M.animal});
+    if(M.ribbon) d.push({id:CID++, m:M.m, type:'ribbon', kind:M.ribbon, glyph:'🎀', name:RIB[M.ribbon]});
+    for(let i=0;i<(M.junk||0);i++)  d.push({id:CID++, m:M.m, type:'junk', glyph:'🃏', name:'피'});
+    for(let i=0;i<(M.dpi||0);i++)   d.push({id:CID++, m:M.m, type:'junk', dpi:true, glyph:'🃏', name:'쌍피'});
+  }
+  return d; // 48
+}
+/* sample deck for tutorial card visuals */
+const SAMPLE = buildDeck();
+const exc = (m,type) => SAMPLE.find(c=>c.m===m && c.type===type);
+const exSake = SAMPLE.find(c=>c.sake), exDpi = SAMPLE.find(c=>c.dpi);
+
+/* ---------- state ---------- */
+let deck, floor, players, turn, phase, starter=0, pendingRaw=0;
+let match = loadMatch();
+function loadMatch(){ try{ return JSON.parse(localStorage.getItem('matgo_match')) || {you:0,ai:0}; }catch(e){ return {you:0,ai:0}; } }
+function saveMatch(){ try{ localStorage.setItem('matgo_match', JSON.stringify(match)); }catch(e){} }
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function deal(){
+  CID = 0;
+  deck = shuffle(buildDeck());
+  players = [
+    {hand:[], cap:[], go:0, lastGo:2, isAI:false},
+    {hand:[], cap:[], go:0, lastGo:2, isAI:true},
+  ];
+  for(let i=0;i<10;i++){ players[0].hand.push(deck.pop()); players[1].hand.push(deck.pop()); }
+  floor = []; for(let i=0;i<8;i++) floor.push(deck.pop());
+  turn = starter; phase='play';
+  render();
+  setStatus('Tap a card in your hand to play it.');
+  if(turn===1) setTimeout(aiTurn, 800);
+}
+
+/* ---------- engine helpers ---------- */
+function rm(c){ const i=floor.indexOf(c); if(i>=0) floor.splice(i,1); }
+function val(c){
+  if(c.type==='gwang') return 100;
+  if(c.type==='animal') return c.godori?70:(c.sake?55:50);
+  if(c.type==='ribbon') return c.kind==='plain'?30:45;
+  return c.dpi?35:20; // junk
+}
+function best(arr){ return arr.reduce((a,b)=> val(b)>val(a)?b:a ); }
+function stealPi(from, to){
+  const cap = players[from].cap;
+  let i = cap.findIndex(c=>c.type==='junk' && !c.dpi);
+  if(i<0) i = cap.findIndex(c=>c.type==='junk');
+  if(i>=0){ players[to].cap.push(cap.splice(i,1)[0]); }
+}
+
+/* core turn resolution: play a hand card, then flip a deck card */
+function resolvePlay(p, card){
+  const ev=[]; let steal=0; const m=card.m;
+  const before = floor.filter(c=>c.m===m);
+  let placedEmpty=false, leftover=null;
+  let cap=[];
+  if(before.length===0){ floor.push(card); placedEmpty=true; }
+  else if(before.length===1){ cap.push(card, before[0]); rm(before[0]); }
+  else if(before.length===2){ const t=best(before); leftover=before.find(c=>c!==t); cap.push(card,t); rm(t); }
+  else { cap.push(card,...before); before.forEach(rm); steal++; ev.push('스택 Stack +pi'); }
+
+  let flip=null;
+  if(deck.length){
+    flip = deck.pop();
+    const fm = flip.m;
+    if(placedEmpty && fm===m){                                   // 쪽 Jjok
+      rm(card); cap.push(card, flip); steal++; ev.push('쪽 Jjok! +pi');
+    } else if(!placedEmpty && before.length===1 && fm===m){      // 뻑 Ppeok
+      cap = cap.filter(c=>c!==card && c!==before[0]);
+      floor.push(card, before[0], flip); ev.push('뻑 Ppeok! 3 left on floor');
+    } else if(!placedEmpty && before.length===2 && fm===m){      // 따닥 Ttadak
+      cap.push(leftover, flip); rm(leftover); steal++; ev.push('따닥 Ttadak! +pi');
+    } else {                                                     // normal flip
+      const fb = floor.filter(c=>c.m===fm);
+      if(fb.length===0){ floor.push(flip); }
+      else if(fb.length===1){ cap.push(flip, fb[0]); rm(fb[0]); }
+      else if(fb.length===2){ const t=best(fb); cap.push(flip,t); rm(t); }
+      else { cap.push(flip,...fb); fb.forEach(rm); steal++; ev.push('스택 Stack +pi'); }
+    }
+  }
+  players[p].cap.push(...cap);
+  if(floor.length===0 && cap.length>0){ steal++; ev.push('싹쓸이 Sweep! +pi'); }
+  for(let i=0;i<steal;i++) stealPi(1-p, p);
+  return {ev, flip, cap};
+}
+
+/* ---------- scoring ---------- */
+function scoreDetail(p){
+  const cap = players[p].cap;
+  const G=cap.filter(c=>c.type==='gwang'), A=cap.filter(c=>c.type==='animal'),
+        R=cap.filter(c=>c.type==='ribbon'), J=cap.filter(c=>c.type==='junk');
+  const ng=G.length; let base=0; const bd=[];
+  if(ng>=5){ base+=15; bd.push('오광 5-Bright +15'); }
+  else if(ng===4){ base+=4; bd.push('사광 4-Bright +4'); }
+  else if(ng===3){ const wet=G.some(c=>c.rain); base+= wet?2:3; bd.push(wet?'비삼광 Wet 3-Bright +2':'삼광 3-Bright +3'); }
+  if(A.filter(c=>c.godori).length===3){ base+=5; bd.push('고도리 Godori +5'); }
+  const hong=R.filter(c=>c.kind==='hong').length, cho=R.filter(c=>c.kind==='cho').length, blue=R.filter(c=>c.kind==='blue').length;
+  if(hong===3){ base+=3; bd.push('홍단 Hongdan +3'); }
+  if(cho===3){ base+=3; bd.push('초단 Chodan +3'); }
+  if(blue===3){ base+=3; bd.push('청단 Cheongdan +3'); }
+  if(R.length>=5){ base+=R.length-4; bd.push('띠 Ribbons '+R.length+' +'+(R.length-4)); }
+  const hasSake=A.some(c=>c.sake), piBase=J.reduce((s,c)=>s+(c.dpi?2:1),0);
+  function ap(asPi){ let an=A.length, pc=piBase; if(asPi&&hasSake){ an--; pc+=2; } let pts=0; if(an>=5)pts+=an-4; if(pc>=10)pts+=pc-9; return {pts,an,pc}; }
+  const a0=ap(false), a1=ap(true), ch = a1.pts>a0.pts ? a1 : a0;
+  if(ch.an>=5) bd.push('열끗 Animals '+ch.an+' +'+(ch.an-4));
+  if(ch.pc>=10) bd.push('피 Junk '+ch.pc+' +'+(ch.pc-9));
+  return {total:base+ch.pts, gwang:ng, pi:ch.pc, bd};
+}
+const rawScore = p => scoreDetail(p).total;
+
+/* ---------- turn flow ---------- */
+function humanPlay(i){ if(phase!=='play' || turn!==0) return; doTurn(0, i); }
+function aiTurn(){ if(phase!=='play' || turn!==1) return; doTurn(1, aiChoose()); }
+
+function doTurn(p, handIndex){
+  const card = players[p].hand.splice(handIndex,1)[0];
+  const r = resolvePlay(p, card);
+  render();
+  const who = p===0?'You':'AI';
+  const flipTxt = r.flip ? ' · flip '+r.flip.name : '';
+  setStatus(`${who} played <b>${card.name}</b>${flipTxt}. ` + (r.ev.length?`<span class="ev">${r.ev.join(' · ')}</span>`:''));
+  const raw = rawScore(p);
+  if(raw>=3 && raw>players[p].lastGo){
+    if(p===0){ phase='gostop'; pendingRaw=raw; showGoStop(raw); return; }
+    if(aiDecide(raw)==='stop'){ endRound(1); return; }
+    players[1].go++; players[1].lastGo=raw; setStatus(`AI calls <b>GO ×${players[1].go}</b> (${raw}pt). Watch out.`);
+  }
+  endOrNext(p);
+}
+function endOrNext(p){
+  if(players[0].hand.length===0 && players[1].hand.length===0){ endRound(null); return; }
+  turn = 1-p; render();
+  if(turn===1 && phase==='play') setTimeout(aiTurn, 850);
+}
+
+/* ---------- AI ---------- */
+function aiChoose(){
+  const h=players[1].hand; let bi=0, bs=-1e9;
+  for(let i=0;i<h.length;i++){
+    const fs=floor.filter(c=>c.m===h[i].m); let s;
+    if(fs.length===0) s = -val(h[i])/10;           // no capture: prefer dumping low-value cards
+    else s = val(best(fs)) + val(h[i])*0.05;        // capture: grab highest value available
+    if(s>bs){ bs=s; bi=i; }
+  }
+  return bi;
+}
+function aiDecide(raw){
+  const left=players[1].hand.length, you=rawScore(0);
+  if(raw>=7) return 'stop';
+  if(left<=2) return 'stop';
+  if(you>=3 && (raw-you)<=1) return 'stop';
+  if(raw<5 && left>=4) return 'go';
+  return 'stop';
+}
+
+/* ---------- end of round ---------- */
+function finalize(w){
+  const sw=scoreDetail(w), l=1-w, sl=scoreDetail(l);
+  let s = sw.total + players[w].go;
+  if(players[w].go>=3) s *= Math.pow(2, players[w].go-2);
+  let mult=1; const flags=[];
+  if(sw.gwang>=3 && sl.gwang===0){ mult*=2; flags.push('광박 Gwang-bak'); }
+  if(sw.pi>=10 && sl.pi<7){ mult*=2; flags.push('피박 Pi-bak'); }
+  if(players[l].go>=1){ mult*=2; flags.push('고박 Go-bak'); }
+  s *= mult;
+  return {points:s, base:sw.total, bd:sw.bd, go:players[w].go, mult, flags};
+}
+function endRound(winner){
+  phase='over'; render();
+  if(winner===null){ // 나가리 draw — nobody stopped before the hands ran out
+    $('#resTitle').textContent = '나가리 · Draw';
+    $('#resPts').textContent = '0';
+    $('#resBreak').innerHTML = 'The hands ran out before anyone called Stop. No score this round — re-deal.';
+    $('#ovResult').classList.add('on'); return;
+  }
+  const f = finalize(winner);
+  if(winner===0) match.you += f.points; else match.ai += f.points;
+  saveMatch(); render();
+  $('#resTitle').textContent = winner===0 ? '🎉 You win the round!' : '🤖 AI wins the round';
+  $('#resPts').textContent = f.points;
+  let html = f.bd.map(x=>'• '+x).join('<br>') || '• (under 3 points)';
+  if(f.go>0) html += '<br>• Go ×'+f.go+(f.go>=3?' (3rd+ Go doubles)':'');
+  if(f.flags.length) html += '<br>'+f.flags.map(x=>'<span class="flag">'+x+' ×2</span>').join(' ');
+  html += '<br><b>= '+f.points+' points</b>';
+  $('#resBreak').innerHTML = html;
+  $('#ovResult').classList.add('on');
+}
+
+/* ---------- go/stop modal ---------- */
+function showGoStop(raw){
+  $('#gsPts').textContent = raw;
+  $('#gsBreak').innerHTML = scoreDetail(0).bd.map(x=>'• '+x).join('<br>');
+  $('#ovGoStop').classList.add('on');
+}
+$('#btnGo').onclick = ()=>{ $('#ovGoStop').classList.remove('on'); players[0].go++; players[0].lastGo=pendingRaw; phase='play';
+  setStatus(`You call <b>GO ×${players[0].go}</b>. Keep capturing!`); endOrNext(0); };
+$('#btnStop').onclick = ()=>{ $('#ovGoStop').classList.remove('on'); endRound(0); };
+
+/* ---------- render ---------- */
+function tag(c){ return c.type==='gwang'?'광':c.type==='animal'?'열':c.type==='ribbon'?'띠':(c.dpi?'쌍피':'피'); }
+function cls(c){ if(c.type==='gwang')return 'k-gwang'; if(c.type==='animal')return c.sake?'k-animal sake':'k-animal';
+  if(c.type==='ribbon')return 'k-'+c.kind; return c.dpi?'k-dpi':'k-junk'; }
+function cardHTML(c, playable){
+  return `<div class="card ${cls(c)} ${playable?'play playable':''}">
+    <div class="band"><span class="mo">${c.m}</span><span class="tag">${tag(c)}</span></div>
+    <div class="hero">${c.glyph}</div><div class="cname">${c.name}</div></div>`;
+}
+function capHTML(p){
+  const cap=players[p].cap, g={gwang:[],animal:[],ribbon:[],junk:[]};
+  cap.forEach(c=>g[c.type].push(c));
+  let out='';
+  for(const t of ['gwang','animal','ribbon','junk']){
+    if(!g[t].length) continue;
+    out += '<div class="capgrp">' + g[t].map((c,i)=>
+      `<div class="mini ${cls(c)}" style="margin-left:${i?-13:0}px"><span class="mtag">${tag(c)}</span><span class="mmo">${c.m}</span></div>`
+    ).join('') + '</div>';
+  }
+  return out || '<span class="empty">— no cards yet —</span>';
+}
+function render(){
+  $('#tYou').textContent=match.you; $('#tAi').textContent=match.ai;
+  $('#oppHand').innerHTML = players[1].hand.map(()=>'<div class="card back"></div>').join('');
+  $('#oppCap').innerHTML = capHTML(1);
+  $('#oppScore').textContent = rawScore(1);
+  $('#oppGo').textContent = players[1].go?`GO×${players[1].go}`:'';
+  $('#floor').innerHTML = floor.map(c=>cardHTML(c,false)).join('');
+  $('#deckCount').textContent = deck.length;
+  $('#meCap').innerHTML = capHTML(0);
+  $('#meScore').textContent = rawScore(0);
+  $('#meGo').textContent = players[0].go?`GO×${players[0].go}`:'';
+  const myTurn = (phase==='play' && turn===0);
+  const hd=$('#meHand'); hd.innerHTML = players[0].hand.map(c=>cardHTML(c,myTurn)).join('');
+  if(myTurn) [...hd.children].forEach((el,i)=> el.onclick=()=>humanPlay(i));
+  $('#turnInd').textContent = phase==='over' ? 'Round over' : (turn===0?'▶ Your turn':'AI thinking…');
+}
+function setStatus(html){ $('#status').innerHTML = html; }
+
+/* ---------- main menu ---------- */
+let started = false;
+function showMenu(){
+  $('#btnPlay').textContent = started ? '▶ Resume' : '▶ Play';
+  $('#menuTally').textContent = (match.you||match.ai) ? `Match so far — You ${match.you} · ${match.ai} AI` : '';
+  $('#ovTut').classList.remove('on');
+  $('#ovMenu').classList.add('on');
+}
+function startGame(){
+  $('#ovMenu').classList.remove('on'); $('#ovTut').classList.remove('on');
+  if(!started){ started = true; deal(); }
+}
+$('#btnPlay').onclick = startGame;
+$('#btnMenu').onclick = showMenu;
+
+/* ---------- tutorial ---------- */
+const card = c => cardHTML(c, false);
+const TUT = [
+  {t:'🎯 The goal', h:`
+    <p>Match cards by their <b>month number</b> to capture them, build the captures into scoring <b>sets</b>, and bank points.</p>
+    <p>Reach <b>3 points</b> and you choose: <b>Stop</b> to bank the round, or <b>Go</b> to push for more. The round's points add to your match total.</p>`},
+  {t:'🃏 Four kinds of card', h:`
+    <p>48 cards, months <b>1–12</b>, four per month. The coloured tag tells you the type:</p>
+    <div class="tut-row">${card(exc(1,'gwang'))}${card(exc(8,'animal'))}${card(exc(1,'ribbon'))}${card(exc(12,'junk'))}</div>
+    <div class="tut-cap"><b>광</b> bright · <b>열</b> animal · <b>띠</b> ribbon · <b>피</b> junk</div>
+    <p>Two specials: <b>🍶 sake cup</b> counts as an animal <i>or</i> 2 junk (whichever scores more), and <b>쌍피</b> is worth 2 junk.</p>`},
+  {t:'🖐️ Taking a turn', h:`
+    <p>Tap a card from your hand. If a floor card shares its <b>month</b>, you capture the pair:</p>
+    <div class="tut-row">${card(exc(3,'ribbon'))}<span class="op">+</span>${card(exc(3,'junk'))}<span class="op">→</span>🫳</div>
+    <div class="tut-cap">Both are month <b>3</b> → captured together</div>
+    <p>Then the <b>deck flips one card</b> onto the floor and matches the same way — so a single turn can grab up to two pairs.</p>`},
+  {t:'🌳 No match? Lay it down', h:`
+    <p>If nothing on the floor shares your card's month, it just <b>stays on the floor</b>:</p>
+    <div class="tut-row">${card(exc(5,'animal'))}<span class="op">→</span> 🟩</div>
+    <div class="tut-cap">It becomes bait — for a later capture by you or the AI</div>`},
+  {t:'⭐ Sets that score', h:`
+    <p><b>광 Brights:</b> 3 = 3pt · 4 = 4pt · all 5 = 15pt.</p>
+    <div class="tut-row">${card(exc(1,'gwang'))}${card(exc(3,'gwang'))}${card(exc(8,'gwang'))}</div>
+    <p><b>고도리 Godori:</b> these three birds = 5pt.</p>
+    <div class="tut-row">${card(exc(2,'animal'))}${card(exc(4,'animal'))}${card(exc(8,'animal'))}</div>
+    <p><b>홍단 Hongdan:</b> three red-poem ribbons = 3pt (blue 청단 & grass 초단 too).</p>
+    <div class="tut-row">${card(exc(1,'ribbon'))}${card(exc(2,'ribbon'))}${card(exc(3,'ribbon'))}</div>
+    <p><b>Counts:</b> 5 animals = 1pt, 5 ribbons = 1pt, 10 junk = 1pt — then <b>+1</b> for each extra.</p>`},
+  {t:'🔔 Go or Stop?', h:`
+    <p>At <b>3+ points</b> you get the call:</p>
+    <p><b>STOP</b> ■ — end the round now and bank your score.</p>
+    <p><b>GO</b> ▶ — keep playing for more. Each Go adds points (and from the 3rd Go, doubles the score)…</p>
+    <p>…but if the AI reaches Stop first, <b>you pay double</b> (고박). Push your luck.</p>`},
+  {t:'✨ Lucky grabs', h:`
+    <p>Watch for these — each <b>steals a junk</b> from your opponent:</p>
+    <ul>
+      <li><b>쪽 Jjok</b> — you lay a card and the deck flips its twin.</li>
+      <li><b>뻑 Ppeok</b> — three of a month pile up; whoever plays the 4th later sweeps them all.</li>
+      <li><b>따닥 Ttadak</b> — grab all four of a month at once.</li>
+      <li><b>싹쓸이 Sweep</b> — you clear the whole floor.</li>
+    </ul>
+    <p>The game spots and narrates each one for you.</p>`},
+  {t:"You're ready! 🎴", h:`
+    <p>Tap your cards, watch the floor, build sets, and know when to <b>Stop</b>.</p>
+    <p>You can reopen this anytime from <b>☰ Menu</b>. Good luck — 화이팅!</p>`},
+];
+let tutStep = 0;
+function renderTut(){
+  const s = TUT[tutStep];
+  $('#tutTitle').textContent = s.t;
+  $('#tutBody').innerHTML = s.h;
+  $('#tutDots').innerHTML = TUT.map((_,i)=>`<span class="dot${i===tutStep?' on':''}"></span>`).join('');
+  $('#tutBack').textContent = tutStep===0 ? '← Menu' : '← Back';
+  $('#tutNext').textContent = tutStep===TUT.length-1 ? 'Play ▶' : 'Next →';
+}
+function openTutorial(){ tutStep=0; renderTut(); $('#ovMenu').classList.remove('on'); $('#ovTut').classList.add('on'); }
+$('#btnTut').onclick = openTutorial;
+$('#tutBack').onclick = ()=>{ if(tutStep===0){ showMenu(); } else { tutStep--; renderTut(); } };
+$('#tutNext').onclick = ()=>{ if(tutStep===TUT.length-1){ startGame(); } else { tutStep++; renderTut(); } };
+
+/* ---------- buttons ---------- */
+$('#btnNext').onclick = ()=>{ $('#ovResult').classList.remove('on'); starter=1-starter; deal(); };
+$('#btnNew').onclick  = ()=>{ if(phase!=='over' && players[0].cap.length+players[1].cap.length>0 && !confirm('Abandon this round and re-deal?')) return; starter=1-starter; deal(); };
+$('#btnReset').onclick= ()=>{ if(!confirm('Reset the match score to 0–0?')) return; match={you:0,ai:0}; saveMatch(); if(started) deal(); else showMenu(); };
+
+showMenu();
+</script>
+</body>
+</html>
