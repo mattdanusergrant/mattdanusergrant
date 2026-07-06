@@ -63,6 +63,17 @@
   .mdg-list .rm{cursor:pointer;color:var(--muted);border:none;background:none;font-size:16px;line-height:1;padding:0 2px}
   .mdg-list .rm:hover{color:#b4543a}
 
+  /* ── Intro viewer ── */
+  .intro-viewer{margin-top:48px}
+  .intro-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:16px}
+  .intro-card{position:relative;aspect-ratio:16/10;background:#0b0b0d;border:1.5px solid var(--line-2);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .intro-card canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .intro-words{position:absolute;inset:0;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;pointer-events:none;font-family:'Fraunces',serif;font-weight:600;color:#fff;letter-spacing:.02em;line-height:1.05;text-align:center;text-shadow:0 1px 12px rgba(0,0,0,.75),0 0 3px rgba(0,0,0,.85)}
+  .intro-words span{font-size:clamp(13px,3.2vw,18px)}
+  .intro-card.has-variants{cursor:pointer}
+  .intro-card.has-variants:hover{border-color:var(--ink)}
+  .intro-cycle{position:absolute;top:6px;right:9px;color:rgba(255,255,255,.55);font-size:14px;pointer-events:none}
+
   /* ── Footer ── */
   .foot{margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
   .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
@@ -109,6 +120,12 @@
         <ul id="mdg-ideas" class="mdg-list"></ul>
       </div>
     </div>
+  </section>
+
+  <section class="intro-viewer">
+    <p class="mdg-sub">Intro viewer</p>
+    <p class="mdg-intro" style="margin-top:0">Every phrase the homepage intro can open with, each behind its live Math&nbsp;Draws&nbsp;Graphics sketch — browse them all here instead of reloading for the RNG. Many Doors Guild has three door sketches; click it to cycle.</p>
+    <div id="intro-grid" class="intro-grid"></div>
   </section>
 
   <footer class="foot">
@@ -259,6 +276,7 @@
   show(true);
 })();
 </script>
+<script src="/assets/mdg-intro.js"></script>
 <script src="/assets/site.js"></script>
 </body>
 </html>
