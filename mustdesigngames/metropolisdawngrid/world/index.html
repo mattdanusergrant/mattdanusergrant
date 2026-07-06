@@ -136,9 +136,9 @@
   function siteSpec(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919,ct={plains:0,forest:0,ore:0,water:0};
     for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrAt(c,r,ox,oy)]++;
     var land=ct.plains+ct.forest+ct.ore||1,oS=(ct.ore/land)/0.15,fS=(ct.forest/land)/0.26,wS=(ct.water/(ct.water+land))/0.17,mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'open plains · balanced start';
-    if(mx===oS)return 'ore-rich highlands · Works thrive';
-    if(mx===fS)return 'forested belt · timber Works';
+    if(mx<1.15)return 'open plains · no terrain bonus';
+    if(mx===oS)return 'ore-rich highlands · Works +80% Materials';
+    if(mx===fS)return 'forested belt · Works +40% Materials';
     return 'coastal shelf · free water, tight land';}
 
   // remember where the player founded their city, so the marker + dive persist across visits

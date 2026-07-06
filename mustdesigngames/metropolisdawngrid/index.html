@@ -80,6 +80,7 @@
       <div class="rstat"><span class="rn" id="mat">0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Materials</span></div>
       <div class="rstat"><span class="rn" id="goods">0</span><span class="rl"><span class="dot" style="background:#7C6CB0"></span>Goods</span></div>
       <div class="rstat"><span class="rn" id="exp">0</span><span class="rl"><span class="dot" style="background:#5C8A55"></span>Exports</span></div>
+      <div class="rstat" id="terrstat" title="Extra Materials per tick your Works earn from ore (+80%) and forest (+40%) terrain — put Works where the land favours them"><span class="rn" id="terrb">+0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Terrain</span></div>
     </div>
     <div class="goal" id="goal" title="Your next milestone"><span class="gl" id="goal-label">Next: Hamlet</span><span class="gbar"><i id="goal-fill"></i></span></div>
     <div class="stat"><span class="n" id="pop">0</span><span class="l">Population</span></div>
@@ -175,9 +176,9 @@
     var land=ct.plains+ct.forest+ct.ore||1;
     var oS=(ct.ore/land)/0.15, fS=(ct.forest/land)/0.26, wS=(ct.water/(ct.water+land))/0.17;
     var mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'open plains · balanced start';
-    if(mx===oS)return 'ore-rich highlands · Works thrive';
-    if(mx===fS)return 'forested belt · timber Works';
+    if(mx<1.15)return 'open plains · no terrain bonus';
+    if(mx===oS)return 'ore-rich highlands · Works +80% Materials';
+    if(mx===fS)return 'forested belt · Works +40% Materials';
     return 'coastal shelf · free water, tight land';
   }
 
@@ -326,11 +327,11 @@
     return '';
   }
   // supply chain: Works → Materials → Factories → Goods → Shops (city-wide pools, no routing)
-  var matWanted=false;
+  var matWanted=false, terrBonus=0;
   function computeResources(){
-    var works=0,facs=0,shops=0,matYield=0;
+    var works=0,facs=0,shops=0,matYield=0;terrBonus=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-      if(g.t==='ind'){works+=g.lvl;var mult=g.terr==='ore'?1.8:g.terr==='forest'?1.4:1;matYield+=g.lvl*2*mult;} // terrain specialisation
+      if(g.t==='ind'){works+=g.lvl;var mult=g.terr==='ore'?1.8:g.terr==='forest'?1.4:1;matYield+=g.lvl*2*mult;terrBonus+=g.lvl*2*(mult-1);} // terrain specialisation — bonus = Materials earned above bare plains
       else if(g.t==='fac')facs+=g.lvl;else if(g.t==='com')shops+=g.lvl;}
     matStock+=matYield;                                  // Works extract Materials (ore/forest yield more)
     var facCap=facs*3, drawn=Math.min(matStock,facCap);
@@ -384,9 +385,10 @@
     if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;}
     p+=Math.round(exportRate*35);                         // trade income from rail exports sustains extra population
     popTarget=p;}
-  var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp');
+  var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp'),terrEl=document.getElementById('terrb'),terrStat=document.getElementById('terrstat');
   function updateResourceUI(){matEl.textContent=Math.round(matStock);goodsEl.textContent=Math.round(goodsStock);expEl.textContent=Math.round(exportRate);
-    matEl.style.color=matHealthy?'':'#C85A42';goodsEl.style.color=goodsHealthy?'':'#C85A42';expEl.style.color=exportRate>0.5?'#4C8047':'';}
+    matEl.style.color=matHealthy?'':'#C85A42';goodsEl.style.color=goodsHealthy?'':'#C85A42';expEl.style.color=exportRate>0.5?'#4C8047':'';
+    terrEl.textContent='+'+Math.round(terrBonus);terrStat.style.opacity=terrBonus>0.5?1:0.38;}
   var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
   var demColor={res:'#63A05C',com:'#5589BB',ind:'#BF8F45'};
   function updateDemandUI(){['res','com','ind'].forEach(function(t){var el=demBars[t];el.style.height=(Math.max(0.08,Math.min(1,demand[t]/8))*100)+'%';el.style.background=demColor[t];el.style.opacity=demand[t]>0.3?1:0.35;});}
