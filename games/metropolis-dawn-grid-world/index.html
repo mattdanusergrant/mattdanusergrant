@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Municipal Development Globe — concept</title>
-<meta name="description" content="One shared world. Build your city until you meet your neighbours. A world-model concept for Municipal Development Globe." />
+<title>Metropolis Dawn Grid — the world</title>
+<meta name="description" content="One shared world. Build your city until you meet your neighbours. The world model for Metropolis Dawn Grid." />
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -42,14 +42,14 @@
 </head>
 <body>
   <header class="bar">
-    <a class="home" href="/games/municipal-district-grid/" title="Back to the playable build">← the playable build</a>
+    <a class="home" href="/games/metropolis-dawn-grid/" title="Back to the playable build">← the playable build</a>
     <span class="spacer"></span>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </header>
 
   <div class="intro">
     <p class="eyebrow">Concept · world model</p>
-    <h1>Municipal Development Globe</h1>
+    <h1>Metropolis Dawn Grid</h1>
     <p>One shared world. Everyone builds on the same planet-sized grid — and you keep expanding until you run into your neighbours.</p>
     <p class="tag"><b>Click your city</b> to dive to its surface and build. Click a neighbour to meet them.</p>
   </div>
@@ -68,7 +68,7 @@
 
 <script>
 /* ============================================================
-   Municipal Development Globe — world-model concept
+   Metropolis Dawn Grid — world-model concept
    A spinnable grid-paper planet: your city + neighbouring
    players scattered across one shared world. Orthographic
    sphere projection in plain 2D canvas (zero-build), themed
@@ -238,7 +238,7 @@
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
     if(mode==='diving'){divT+=dt/0.8;var z=1+11*(divT*divT);ctx.translate(zx,zy);ctx.scale(z,z);ctx.translate(-zx,-zy);
       if(fadeEl)fadeEl.style.opacity=Math.min(1,divT*1.25);
-      if(divT>=1&&!navigated){navigated=true;window.location.href='/games/municipal-district-grid/';}}
+      if(divT>=1&&!navigated){navigated=true;window.location.href='/games/metropolis-dawn-grid/';}}
     fillSphere();
     clipSphere(); drawLand(); graticule(); ctx.restore();
     rim();
