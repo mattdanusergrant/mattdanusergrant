@@ -327,7 +327,7 @@
         <div class="btn-row"><a class="btn btn-play" href="https://mustdesigngames.mattdanusergrant.com/mossdewgarden/" target="_blank" rel="noopener">Play</a></div>
       </article>
     </div>
-    <a class="more-link" id="more-games" href="https://mustdesigngames.mattdanusergrant.com/" target="_blank" rel="noopener"><span class="more-text">More Decent Gems</span> <span class="arr">→</span></a>
+    <a class="more-link" id="more-games" href="https://mustdesigngames.mattdanusergrant.com/" target="_blank" rel="noopener"><span class="more-text">More Decent Gadgets</span> <span class="arr">→</span></a>
   </section>
 
   <section class="work" aria-labelledby="apps-h">
@@ -942,19 +942,19 @@
 </script>
 <script>
 /* The "More Games" button is a little MDG word-toy (ported from the design lab).
-   It stays on "More Decent Gems" until interacted with, then decodes into a
+   It stays on "More Decent Gadgets" until interacted with, then decodes into a
    new M-D-G phrase on hover/focus. */
 (function(){
   var link=document.getElementById('more-games');
   if(!link)return;
   var slot=link.querySelector('.more-text');
   var PHRASES=[
-    'More Decent Gems',         // default on load
-    'Mostly Dropped Gadgets',
-    'Mainly Defective Gizmos',
+    'More Decent Gadgets',      // default on load
+    'Mostly Dropped Gizmos',
+    'Mainly Defective Gems',
     'My Derelict Garbage',
-    'Many Discarded Gambles',
-    'Mildly Dubious Gambits'
+    'Mildly Dubious Gambits',
+    'Merely Discarded Gambles'
   ];
   var GLYPHS='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
