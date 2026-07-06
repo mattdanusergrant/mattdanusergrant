@@ -14,7 +14,7 @@
 - The index.html intro is a standout: an interactive MDG glitch-text puzzle backed by six real math sketches, ending with a Conway's Game of Life that dissolves into a persistent living page background — with real accessibility care (prefers-reduced-motion fallback, Escape/Enter keyboard paths, sessionStorage skip, throttled ~11fps background)
 - resume.html is print-engineered (@media print page-break control, orphans/widows, ATS-clean output) with a one-click Save-as-PDF button — plus a public resume-builder.html tool spun off from it
 - Two genuinely strong case studies already written: case-studies/living-atlas-fantasy-rpg.html (anonymized AAA licensing-pitch design test) and case-studies/building-with-ai.html (the career-pivot narrative) — excellent hiring-manager material
-- make-dope-grooves/synth.js is clean, commented ES-module Web Audio DSP (sine+noise+envelope drum synthesis, note-to-frequency math) — real code, not copy-paste
+- makedopegrooves/synth.js is clean, commented ES-module Web Audio DSP (sine+noise+envelope drum synthesis, note-to-frequency math) — real code, not copy-paste
 - 8 playable games shipped as stable builds plus 'Experimental' links to bleeding-edge monorepo versions — a smart stable/canary split
 - tool.html frames toolbox apps in the site shell with a whitelisted ?app param (no open-redirect/iframe injection)
 - Active, disciplined commit history: 51 commits in ~2 weeks (Jun 19–Jul 1), small surgical commits with clear '[Avatar]: description' messages
@@ -106,7 +106,7 @@
 - Visual/brand design at professional polish level — a cohesive custom design system (type scale, palette, dark mode, motion language) built from scratch without frameworks
 - Creative front-end engineering: Canvas 2D generative art (IFS fractals, Lorenz attractor, Fourier epicycles, Game of Life) integrated into UX as a narrative intro with crossfades and performance throttling
 - Accessibility literacy: prefers-reduced-motion honored everywhere, keyboard escape hatches for the intro, aria-labels, noscript-safe theme init
-- Web Audio API / DSP: procedural TR-808-style drum and synth voices with envelopes, waveshaping, and equal-temperament math (make-dope-grooves/synth.js)
+- Web Audio API / DSP: procedural TR-808-style drum and synth voices with envelopes, waveshaping, and equal-temperament math (makedopegrooves/synth.js)
 - Print/PDF engineering: page-break control, ATS-safe resume output, and a reusable resume-builder product
 - Product thinking and copywriting: clear positioning ('AI + game design, one overlap'), lead magnet funnel, stable/experimental release channels for games
 - Security-aware small decisions: whitelisted iframe loader in tool.html, no-secrets .gitignore discipline
@@ -141,7 +141,7 @@
 - case-studies/living-atlas-fantasy-rpg.html: anonymized AAA licensing-pitch design test — constraint-driven systems design (living-atlas framing, death-as-legacy mechanic, monetization values call) written like a senior designer talks in interviews
 - case-studies/building-with-ai.html: the career-pivot narrative — 'designer directs AI as the engineering team', with the personal OS, 11-game arcade, and multi-cloud control plane as evidence
 - resume.html: print-engineered resume with @media print page-break control and one-click PDF — plus resume-builder.html, the generalized ATS-safe builder tool spun off from it
-- make-dope-grooves/synth.js: sample-free TR-808-style Web Audio synthesis in a clean ES module — kick/snare/hats/clap/cowbell from oscillators, noise buffers, and envelopes
+- makedopegrooves/synth.js: sample-free TR-808-style Web Audio synthesis in a clean ES module — kick/snare/hats/clap/cowbell from oscillators, noise buffers, and envelopes
 - tool.html: minimal whitelisted iframe shell that frames toolbox apps inside the site chrome without open-redirect risk
 - The consulting page (consulting.html): a complete positioning + funnel page (two-column offer, overlap pitch, receipts, lead-magnet newsletter) that most senior ICs never manage to write
 
