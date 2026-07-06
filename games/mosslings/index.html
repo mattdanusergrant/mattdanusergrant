@@ -5,6 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f3e7d3">
 <title>Mosslings</title>
+<!-- PWA: installable home-screen app, offline-capable via service worker -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mosslings">
+<meta name="description" content="A cozy virtual pet — adopt a little plant-creature and keep it fed, happy, and rested.">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
 <!-- MOSSLING — cozy virtual pet, mobile-first prototype (v0.1). Neopets DNA:
      adopt a little creature, keep it fed/happy/rested, earn coins in a mini-game,
      spend them on snacks. Real-time needs decay; the pet never dies — it just gets
