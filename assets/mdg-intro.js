@@ -245,6 +245,9 @@
   function mountViewer(grid){
     if(!grid||grid.dataset.mounted)return; grid.dataset.mounted='1';
     var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches, cards=[];
+    // Words stack left-aligned inside a centered block — matches the homepage intro (.i-words: align-items flex-start).
+    function fillWords(cap,words){cap.innerHTML=''; var stack=document.createElement('div'); stack.className='iw-stack';
+      words.forEach(function(word){var s=document.createElement('span'); s.textContent=word; stack.appendChild(s);}); cap.appendChild(stack);}
 
     // ---- lightbox ("embiggen") ----
     var modal=document.createElement('div'); modal.className='intro-modal'; modal.hidden=true;
@@ -259,7 +262,7 @@
 
     function cycleLabel(){ if(mVariants){cycleBtn.hidden=false; cycleBtn.textContent='⟳ next sketch ('+(mVi+1)+'/'+mVariants.length+')';} else cycleBtn.hidden=true; }
     function openModal(intro){
-      mcap.innerHTML=''; intro.words.forEach(function(word){var s=document.createElement('span'); s.textContent=word; mcap.appendChild(s);});
+      fillWords(mcap,intro.words);
       mVariants=intro.variants||null; mVi=0; big.name=mVariants?mVariants[0]:intro.sketch;
       mOpen=true; modal.hidden=false; document.body.style.overflow='hidden'; cycleLabel();
       requestAnimationFrame(function(){sizeCanvas(big); if(reduce)drawTarget(big,performance.now(),reduce);});
@@ -277,7 +280,7 @@
       var fig=document.createElement('figure'); fig.className='intro-card';
       var cv=document.createElement('canvas'); fig.appendChild(cv);
       var cap=document.createElement('figcaption'); cap.className='intro-words';
-      intro.words.forEach(function(word){var s=document.createElement('span'); s.textContent=word; cap.appendChild(s);});
+      fillWords(cap,intro.words);
       fig.appendChild(cap);
       var card={cv:cv,ctx:cv.getContext('2d'),name:intro.sketch,t0:0}; card.SK=makeSketches(card.ctx);
       if(intro.variants){var badge=document.createElement('span'); badge.className='intro-cycle'; badge.textContent='⟳'; fig.appendChild(badge);}
