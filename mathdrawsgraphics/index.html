@@ -6,39 +6,88 @@
 <title>Math Draws Graphics</title>
 <meta name="description" content="Math Draws Graphics — making pictures with a computer. Toggle between Code Art (animated math sketches) and Pixel Art (a sprite editor).">
 <script>!function(){try{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}catch(e){}}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#FBF8F2; --paper:#FFFFFF; --ink:#15161C; --muted:#6A6A6A; --line-2:#CBC4B2; --accent:#C9820A; }
-  :root[data-theme="dark"]{ --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --muted:#7A756D; --line-2:#3A352E; --accent:#E8A317; }
-  *{box-sizing:border-box}
+  :root{ --bg:#FBF8F2; --paper:#FFFFFF; --ink:#15161C; --ink-2:#2A2A2A; --muted:#6A6A6A; --line:#E5E0D2; --line-2:#CBC4B2; --accent:#C9820A; }
+  :root[data-theme="dark"]{ --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink-2:#CAC5BC; --muted:#7A756D; --line:#2E2A24; --line-2:#3A352E; --accent:#E8A317; }
+  *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{font:14px/1.4 'Inter',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    color:var(--ink);background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
-  .umbrella{height:42px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;
-    background:var(--paper);border-bottom:1.5px solid var(--line-2)}
-  .ub-brand{font-weight:700;font-size:13px;letter-spacing:.01em;color:var(--ink);white-space:nowrap;text-decoration:none}
-  .ub-brand:hover{color:var(--accent)}
+    color:var(--ink);background:var(--bg);height:100dvh;overflow:hidden;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+
+  /* ── Site top bar (matches the rest of mattdanusergrant.com) ── */
+  .nav{position:relative;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:0 24px;height:58px;flex:none;
+    border-bottom:1px solid var(--line);font-size:14px;color:var(--muted);letter-spacing:.04em;background:var(--bg)}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em;white-space:nowrap}
+  .nav .links{display:flex;align-items:center}
+  .nav .links a{margin-left:22px;transition:color .15s;white-space:nowrap}
+  .nav .links a:hover{color:var(--ink)}
+  .theme-toggle{background:none;border:none;cursor:pointer;padding:0;margin-left:16px;display:flex;align-items:center;flex-shrink:0}
+  .toggle-track{width:42px;height:22px;border-radius:999px;background:var(--line-2);position:relative;display:block;transition:background .2s}
+  .toggle-thumb{width:16px;height:16px;border-radius:50%;background:#F7F3EA;position:absolute;top:3px;left:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .25s}
+  [data-theme="dark"] .toggle-thumb{transform:translateX(20px)}
+  .toggle-thumb svg{width:11px;height:11px;display:block}
+  .t-sun{fill:none;stroke:#E8A317;stroke-width:2.4;stroke-linecap:round}
+  .t-sun circle{fill:#E8A317;stroke:none}
+  .t-moon{fill:#3A3550;display:none}
+  [data-theme="dark"] .t-sun{display:none}
+  [data-theme="dark"] .t-moon{display:block}
+  .nav-toggle{display:none;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--ink);padding:6px;margin-left:auto;flex-shrink:0}
+  .nav-toggle svg{display:block}
+  .nav-toggle .i-x{display:none}
+
+  /* ── Theme switch FX (site signature) ── */
+  html.mode-shift,html.mode-shift *{transition:background-color 2.5s ease,color 2.5s ease,border-color 2.5s ease,box-shadow 2.5s ease,fill 2.5s ease !important}
+  .fx-overlay{position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;will-change:opacity,transform}
+  .fx-sunrise{background:linear-gradient(0deg,rgba(255,170,99,.22) 0%,rgba(255,201,133,.12) 40%,rgba(255,224,178,.05) 70%,transparent 100%);animation:fx-rise 3.5s ease-in-out forwards}
+  .fx-sunset{background:linear-gradient(0deg,rgba(90,60,100,.2) 0%,rgba(70,55,90,.11) 40%,rgba(50,45,75,.04) 70%,transparent 100%);animation:fx-set 3.5s ease-in-out forwards}
+  @keyframes fx-rise{0%{opacity:0;transform:translateY(14%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(-6%)}}
+  @keyframes fx-set{0%{opacity:0;transform:translateY(-10%)}28%{opacity:1}70%{opacity:.92;transform:translateY(0)}100%{opacity:0;transform:translateY(12%)}}
+
+  /* ── Mode bar (Code Art / Pixel Art) ── */
+  .modebar{flex:none;display:flex;align-items:center;gap:14px;padding:0 24px;height:42px;background:var(--paper);border-bottom:1.5px solid var(--line-2)}
+  .mb-brand{font-weight:700;font-size:13px;letter-spacing:.01em;color:var(--ink);white-space:nowrap}
   .ub-tabs{display:flex;gap:6px}
-  .ub-tab{font:inherit;font-size:12.5px;color:var(--muted);padding:5px 11px;
-    border:1.5px solid transparent;border-radius:999px;white-space:nowrap;background:transparent;cursor:pointer}
+  .ub-tab{font:inherit;font-size:12.5px;color:var(--muted);padding:5px 11px;border:1.5px solid transparent;border-radius:999px;white-space:nowrap;background:transparent;cursor:pointer}
   .ub-tab:hover{color:var(--ink);border-color:var(--line-2)}
   .ub-tab.on{color:var(--ink);border-color:var(--line-2);background:var(--bg)}
-  .spacer{flex:1}
-  .tt{appearance:none;border:1.5px solid var(--line-2);background:transparent;color:var(--muted);
-    border-radius:999px;padding:5px 12px;font:inherit;font-size:12px;cursor:pointer}
-  .tt:hover{border-color:var(--ink);color:var(--ink)}
-  iframe#frame{flex:1;width:100%;border:0;display:block}
+  iframe#frame{flex:1;width:100%;border:0;display:block;background:var(--paper)}
+
+  @media(max-width:640px){
+    .nav{padding:0 16px}
+    .nav-toggle{display:inline-flex}
+    #nav-links{position:absolute;top:calc(100% + 10px);right:0;z-index:60;display:none;flex-direction:column;align-items:stretch;gap:2px;
+      min-width:190px;padding:10px;background:var(--paper);border:1.5px solid var(--line);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.16)}
+    .nav[data-open] #nav-links{display:flex}
+    .nav[data-open] .nav-toggle .i-bars{display:none}
+    .nav[data-open] .nav-toggle .i-x{display:inline}
+    #nav-links a{margin-left:0;padding:9px 12px;border-radius:8px;font-size:15px}
+    #nav-links a:hover{background:var(--bg);color:var(--ink)}
+    .modebar{padding:0 16px}
+  }
 </style>
 </head>
 <body>
-<nav class="umbrella">
-  <a class="ub-brand" href="https://mattdanusergrant.com">Math Draws Graphics</a>
+<nav class="nav">
+  <a class="brand" href="https://mattdanusergrant.com">Matt Danuser-Grant</a>
+  <div class="links" id="nav-links">
+    <a href="https://mustdesigngames.mattdanusergrant.com/">Must Design Games</a>
+    <a href="https://mattdanusergrant.com/consulting.html">Consulting</a>
+    <a href="https://mattdanusergrant.com/resume.html">Resume</a>
+  </div>
+  <button class="nav-toggle" type="button" aria-label="Menu" aria-controls="nav-links" aria-expanded="false"><svg class="i-bars" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="i-x" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+</nav>
+<div class="modebar">
+  <span class="mb-brand">Math Draws Graphics</span>
   <div class="ub-tabs" role="tablist">
     <button class="ub-tab" id="tab-code" data-mode="code" role="tab" type="button">Code Art</button>
     <button class="ub-tab" id="tab-pixel" data-mode="pixel" role="tab" type="button">Pixel Art</button>
   </div>
-  <span class="spacer"></span>
-  <button class="tt" id="tt" type="button" aria-label="Toggle light / dark">theme</button>
-</nav>
+</div>
 <iframe id="frame" title="Math Draws Graphics"></iframe>
 <script>
   var SRC={code:'code-art/',pixel:'pixel-art/'};
@@ -60,13 +109,38 @@
     b.onclick=function(){ setMode(b.dataset.mode,true); };
   });
   addEventListener('hashchange',function(){ setMode(pick(),false); });
-  // theme: keep the shell and the embedded tool in sync (same origin)
-  document.getElementById('tt').onclick=function(){
-    var d=document.documentElement, n=d.getAttribute('data-theme')==='dark'?'light':'dark';
-    d.setAttribute('data-theme',n);
-    try{localStorage.setItem('theme',n);}catch(e){}
-    try{ frame.contentDocument.documentElement.setAttribute('data-theme',n); }catch(e){}
-  };
+
+  /* theme toggle — mirrors the site's site.js, plus syncs the embedded tool */
+  (function(){
+    var btn=document.getElementById('theme-toggle');
+    var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function fx(theme){ if(reduce)return; var o=document.createElement('div');
+      o.className='fx-overlay '+(theme==='light'?'fx-sunrise':'fx-sunset'); document.body.appendChild(o);
+      setTimeout(function(){o.remove();},3600); }
+    btn.addEventListener('click',function(){
+      var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+      if(!reduce){ document.documentElement.classList.add('mode-shift');
+        setTimeout(function(){document.documentElement.classList.remove('mode-shift');},2600); }
+      document.documentElement.setAttribute('data-theme',next);
+      try{localStorage.setItem('theme',next);}catch(e){}
+      try{ frame.contentDocument.documentElement.setAttribute('data-theme',next); }catch(e){}
+      fx(next);
+    });
+  })();
+
+  /* responsive nav — hamburger on small screens (mirrors site.js) */
+  (function(){
+    var nav=document.querySelector('.nav'), btn=nav.querySelector('.nav-toggle'), links=document.getElementById('nav-links');
+    if(!btn||!links)return;
+    function set(open){ if(open)nav.setAttribute('data-open','');else nav.removeAttribute('data-open');
+      btn.setAttribute('aria-expanded',open?'true':'false'); }
+    btn.addEventListener('click',function(e){e.stopPropagation();set(!nav.hasAttribute('data-open'));});
+    links.addEventListener('click',function(e){if(e.target.closest('a'))set(false);});
+    document.addEventListener('click',function(e){if(nav.hasAttribute('data-open')&&!nav.contains(e.target))set(false);});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false);});
+    window.addEventListener('resize',function(){if(window.innerWidth>640)set(false);});
+  })();
+
   setMode(pick(),true);
 </script>
 </body>
