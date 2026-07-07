@@ -53,6 +53,9 @@
   .tool.sel{border-color:var(--ink);background:var(--ink);color:var(--bg)}
   .tool .sw{width:13px;height:13px;border-radius:3px;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.18)}
   .tool .key{font-size:10px;color:var(--muted);border:1px solid var(--line-2);border-radius:4px;padding:0 4px;line-height:15px}
+  .tool .cost{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .tool.sel .cost{color:rgba(255,255,255,.7)}
+  .stat.cash .n{transition:color .3s}
   .tool.sel .key{color:var(--bg);border-color:rgba(255,255,255,.35)}
   .tools .spacer{flex:1}
   .reset{cursor:pointer;font-size:12px;color:var(--muted);background:none;border:none;font-family:inherit;text-decoration:underline;text-underline-offset:2px}
@@ -102,6 +105,7 @@
       <div class="rstat" id="terrstat" title="Extra Materials per tick your Works earn from ore (+80%) and forest (+40%) terrain — put Works where the land favours them"><span class="rn" id="terrb">+0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Terrain</span></div>
     </div>
     <div class="goal" id="goal" title="Your next milestone"><span class="gl" id="goal-label">Next: Hamlet</span><span class="gbar"><i id="goal-fill"></i></span></div>
+    <div class="stat cash" title="Treasury — everything costs money. Taxes &amp; exports earn it; utilities &amp; roads cost upkeep; debt charges interest. Advancing tiers needs a cash reserve."><span class="n" id="cash">₵0</span><span class="l" id="cashrate">—</span></div>
     <div class="stat"><span class="n" id="pop">0</span><span class="l">Population</span></div>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </header>
@@ -173,6 +177,39 @@
   var RP=5, RW=5;                                  // power / water coverage radius (Chebyshev)
   var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
   var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
+
+  // ---- economy: everything costs money; a working city earns it; debt charges interest ----
+  var COST={road:4,rail:10,res:15,com:25,ind:35,fac:60,park:20,power:120,water:100,bulldoze:0};
+  var UPKEEP={power:6,water:5,road:0.2,rail:0.3};       // ₵/month to keep running
+  var TAX={res:6,com:5,ind:3,fac:3};                    // ₵/month per building level
+  var CASH_START=1500, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1500, CREDIT_PER_TIER=1500, REFUND=0.25;
+  var treasury=CASH_START, netRate=0;
+  function creditFloor(){return -(CREDIT_BASE+CREDIT_PER_TIER*(maxMS+1));}   // borrowing power grows with each tier reached
+  function canAfford(c){return treasury-c>=creditFloor();}
+  function spend(c){treasury-=c;updateCashUI();}
+  var _denyT=0;
+  function denyToast(){var now=performance.now();if(now-_denyT<1500)return;_denyT=now;
+    toastEl.innerHTML='Credit maxed <b>— grow income to build more</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);}
+  function economy(){
+    var income=0,upkeep=0;
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;var t=g.t;
+      if(TAX[t])income+=g.lvl*TAX[t];
+      if(UPKEEP[t])upkeep+=UPKEEP[t];}
+    income+=exportRate*EXPORT_PRICE;
+    var interest=treasury<0?(-treasury*INT_RATE):0;
+    netRate=income-upkeep-interest;
+    treasury+=netRate;updateCashUI();
+  }
+  var cashEl,cashRateEl;
+  function updateCashUI(){
+    if(!cashEl){cashEl=document.getElementById('cash');cashRateEl=document.getElementById('cashrate');}
+    if(!cashEl)return;
+    cashEl.textContent='₵'+Math.round(treasury).toLocaleString();
+    cashEl.style.color=treasury<0?'#C85A42':'';
+    var n=Math.round(netRate);
+    cashRateEl.textContent=(n>=0?'▲ +':'▼ −')+Math.abs(n).toLocaleString()+'/mo';
+    cashRateEl.style.color=n>=0?'#4C8047':'#C85A42';
+  }
 
   function idx(c,r){return r*cols+c;}
   function inB(c,r){return c>=0&&r>=0&&c<cols&&r<rows;}
@@ -281,10 +318,14 @@
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
     if(cell.terr==='water'&&brush!=='bulldoze')return;    // can't build on water — route around it
     if((cell.t==='road'||cell.t==='rail')&&brush!=='road'&&brush!=='rail'&&brush!=='bulldoze')return; // protect infrastructure — only Road/Rail/Clear change it
-    if(brush==='bulldoze'){cell.t='empty';cell.lvl=0;cell.grow=0;}
-    else if(brush==='road'||brush==='rail'){cell.t=brush;cell.lvl=0;cell.grow=0;}
-    else if(brush==='park'||brush==='power'||brush==='water'){cell.t=brush;cell.lvl=(brush==='park'?1:0);cell.grow=0;}
-    else if(cell.t!==brush){cell.t=brush;cell.lvl=0;cell.grow=0;}
+    if(brush==='bulldoze'){if(cell.t==='empty')return;treasury+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;updateCashUI();}
+    else{
+      if(cell.t===brush)return;                           // already this type — no charge, no-op
+      var cost=COST[brush]||0;
+      if(!canAfford(cost)){denyToast();return;}
+      spend(cost);
+      cell.t=brush;cell.lvl=(brush==='park'?1:0);cell.grow=0;
+    }
     dirty=true;svcDirty=true;scheduleSave();
   }
   // ---- line tool (road / rail): click start → click end, snaps to a clean L-shape.
@@ -300,10 +341,12 @@
   }
   function placeLineCell(c,r){if(!inB(c,r))return false;var cell=grid[idx(c,r)];
     if(cell.t==='highway'||cell.terr==='water'||cell.t===brush)return false;   // highway fixed, route around water, skip no-ops
-    cell.t=brush;cell.lvl=0;cell.grow=0;return true;}
-  function commitLine(a,b){var path=linePath(a,b),any=false;
-    for(var i=0;i<path.length;i++)if(placeLineCell(path[i][0],path[i][1]))any=true;
-    if(any){dirty=true;svcDirty=true;scheduleSave();}}
+    if(!canAfford(COST[brush]||0))return null;                                 // out of credit → signal to stop the line
+    spend(COST[brush]||0);cell.t=brush;cell.lvl=0;cell.grow=0;return true;}
+  function commitLine(a,b){var path=linePath(a,b),any=false,broke=false;
+    for(var i=0;i<path.length;i++){var r=placeLineCell(path[i][0],path[i][1]);if(r===null){broke=true;break;}if(r)any=true;}
+    if(any){dirty=true;svcDirty=true;scheduleSave();}
+    if(broke)denyToast();}
   function cancelLine(){lineAnchor=null;downCell=null;movedSinceDown=false;dirty=true;}
 
   function down(e){e.preventDefault();var p=cellFromEvent(e);hoverCell=p;
@@ -339,7 +382,7 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();seedRampIfEmpty();maxMS=-1;cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();seedRampIfEmpty();maxMS=-1;treasury=CASH_START;netRate=0;updateCashUI();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -437,7 +480,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=performance.now();dirty=true;scheduleSave();}
     }
-    updatePop();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
+    economy();updatePop();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -453,15 +496,17 @@
   var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
   var demColor={res:'#63A05C',com:'#5589BB',ind:'#BF8F45'};
   function updateDemandUI(){['res','com','ind'].forEach(function(t){var el=demBars[t];el.style.height=(Math.max(0.08,Math.min(1,demand[t]/8))*100)+'%';el.style.background=demColor[t];el.style.opacity=demand[t]>0.3?1:0.35;});}
-  var MS=[{n:150,l:'Hamlet'},{n:500,l:'Village'},{n:1500,l:'Town'},{n:4000,l:'City'},{n:9000,l:'Metropolis'},{n:20000,l:'Megacity'}];
+  // each tier needs BOTH a population and a banked treasury reserve — money gates progression
+  var MS=[{n:150,l:'Hamlet',cash:0},{n:500,l:'Village',cash:600},{n:1500,l:'Town',cash:1800},{n:4000,l:'City',cash:4000},{n:9000,l:'Metropolis',cash:9000},{n:20000,l:'Megacity',cash:20000}];
   var maxMS=-1,toastEl=document.getElementById('toast'),toastTimer=0;
-  function checkMilestone(){var reached=maxMS;for(var i=0;i<MS.length;i++)if(popTarget>=MS[i].n)reached=i;if(reached>maxMS){maxMS=reached;showToast(MS[reached].l,MS[reached].n);scheduleSave();}}
+  function checkMilestone(){var reached=maxMS;for(var i=0;i<MS.length;i++)if(popTarget>=MS[i].n&&treasury>=MS[i].cash)reached=i;if(reached>maxMS){maxMS=reached;showToast(MS[reached].l,MS[reached].n);scheduleSave();}}
   var goalLabel=document.getElementById('goal-label'),goalFill=document.getElementById('goal-fill');
   function updateGoalUI(){var ni=maxMS+1;
     if(ni>=MS.length){goalLabel.textContent='Megacity · top tier';goalFill.style.width='100%';return;}
-    var nx=MS[ni],prev=ni>0?MS[ni-1].n:0;
-    goalLabel.textContent='Next: '+nx.l+' · '+nx.n.toLocaleString();
-    goalFill.style.width=(Math.max(0,Math.min(1,(popTarget-prev)/(nx.n-prev)))*100)+'%';}
+    var nx=MS[ni],prevP=ni>0?MS[ni-1].n:0,prevC=ni>0?MS[ni-1].cash:0;
+    goalLabel.textContent='Next: '+nx.l+' · '+nx.n.toLocaleString()+'p · ₵'+nx.cash.toLocaleString();
+    var pf=(popTarget-prevP)/(nx.n-prevP), cf=nx.cash>prevC?(treasury-prevC)/(nx.cash-prevC):1;
+    goalFill.style.width=(Math.max(0,Math.min(1,Math.min(pf,cf)))*100)+'%';}
   function showToast(label,n){toastEl.innerHTML=label+' <b>'+n.toLocaleString()+' people</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);}
 
   // ---- guided first-run: a short objective path that teaches the loop as you play ----
@@ -495,7 +540,7 @@
   function showTutor(){var box=document.getElementById('tutor');if(!box)return;buildTutorPanel();renderTutor();box.hidden=false;}
   function endTutor(){tutorActive=false;try{localStorage.setItem(TUTOR_KEY,'1');}catch(e){}tutorDone=true;}
   function finishTutor(){endTutor();var box=document.getElementById('tutor');if(!box)return;
-    box.innerHTML='<div class="tutor-done"><b>Your first city is alive 🎉</b><p>Works feed Factories, Shops sell, and trains export your surplus. Keep growing toward Hamlet, Village, City…</p><button type="button" id="tutor-close">Build on →</button></div>';
+    box.innerHTML='<div class="tutor-done"><b>Your first city is alive 🎉</b><p>Works feed Factories, Shops sell, and trains export your surplus for cash. Keep your <b>Treasury</b> in the black — you\'ll need a reserve to charter each new tier.</p><button type="button" id="tutor-close">Build on →</button></div>';
     var cl=document.getElementById('tutor-close');if(cl)cl.addEventListener('click',function(){box.hidden=true;});}
   function tutorTick(){if(!tutorActive)return;var ev=tutorEval();if(ev.step!==tutorStep){tutorStep=ev.step;renderTutor(ev);}if(ev.step>=STEPS.length)finishTutor();}
   function initTutorDecision(){
@@ -699,6 +744,8 @@
   }
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-sw]'),function(el){el.style.background=SWATCH[el.getAttribute('data-sw')];});
+  // show each tool's build cost on its button
+  Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){var b=el.getAttribute('data-brush'),c=COST[b];if(c>0){var s=document.createElement('span');s.className='cost';s.textContent='₵'+c;var k=el.querySelector('.key');el.insertBefore(s,k);}});
   new MutationObserver(readTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   matchMedia('(prefers-color-scheme:dark)').addEventListener('change',readTheme);
 
@@ -706,10 +753,10 @@
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
   function save(){try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];if(g&&g.t!=='empty'&&g.t!=='highway')out.push([c,r,g.t,g.lvl]);}
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:5,ms:maxMS,mat:matStock,goods:goodsStock,cells:out}));}catch(e){}}
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:6,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
-    if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;}
+    if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;}
     list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway'||g.terr==='water')return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;}});
     dirty=true;}catch(e){}}
 
@@ -733,7 +780,7 @@
   resize();load();ensureHighway();
   initTutorDecision();
   if(!tutorActive)seedRampIfEmpty();          // returning players get the starter road; new players lay it themselves (step 1)
-  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();
+  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);if(tt==='rail'||tt==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
   if(tutorActive)showTutor();
