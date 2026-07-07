@@ -134,6 +134,8 @@
     <div class="tool" data-brush="power"><span class="sw" data-sw="power"></span>Power<span class="key">8</span></div>
     <div class="tool" data-brush="water"><span class="sw" data-sw="water"></span>Water<span class="key">9</span></div>
     <div class="tool" data-brush="bank"><span class="sw" data-sw="bank"></span>Bank<span class="key">B</span></div>
+    <div class="tool" data-brush="port"><span class="sw" data-sw="port"></span>Port<span class="key">P</span></div>
+    <div class="tool" data-brush="tower"><span class="sw" data-sw="tower"></span>Tower<span class="key">T</span></div>
     <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
     <button class="reset" id="reset" type="button">Reset</button>
     <span class="spacer"></span>
@@ -177,19 +179,20 @@
   }catch(e){return null;}})();
   var WOX=REGION?REGION.ox:0, WOY=REGION?REGION.oy:0;
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
-  var ZONES={res:1,com:1,ind:1,fac:1};
+  var ZONES={res:1,com:1,ind:1,fac:1,tower:1};
   var RP=5, RW=5;                                  // power / water coverage radius (Chebyshev)
   var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
   var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
 
   // ---- economy: everything costs money; a working city earns it; debt charges interest ----
-  var COST={road:4,rail:10,res:15,com:25,ind:35,fac:60,park:20,power:120,water:100,bank:180,bulldoze:0};
-  var UPKEEP={power:6,water:5,road:0.2,rail:0.3,bank:4};  // ₵/month to keep running
-  var TAX={res:6,com:5,ind:3,fac:3};                    // ₵/month per building level
+  var COST={road:4,rail:10,res:15,com:25,ind:35,fac:60,park:20,power:120,water:100,bank:180,port:140,tower:200,bulldoze:0};
+  var UPKEEP={power:6,water:5,road:0.2,rail:0.3,bank:4,port:5,tower:3};  // ₵/month to keep running
+  var TAX={res:6,com:5,ind:3,fac:3,tower:14};           // ₵/month per building level (Towers are dense = high tax)
   var CASH_START=1500, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1500, CREDIT_PER_TIER=1500, REFUND=0.25;
   // tier at which each tool unlocks (index into MS: 0=Hamlet,1=Village,…); absent = available from start
-  var TIER_UNLOCK={bank:1};
+  var TIER_UNLOCK={bank:1,port:2,tower:3};
   var BANK_CREDIT=2000, BANK_RATE=0.02, BANK_CAP=50;    // each Bank: +credit ceiling, + interest on reserves (capped)
+  var PORT_BOOST=0.6;                                   // each Port: +60% export revenue
   var treasury=CASH_START, netRate=0, bankCount=0;
   function unlocked(b){var t=TIER_UNLOCK[b];return t===undefined||maxMS>=t;}   // no entry = always available
   function creditFloor(){return -(CREDIT_BASE+CREDIT_PER_TIER*(maxMS+1)+BANK_CREDIT*bankCount);}   // borrowing power grows with tiers + Banks
@@ -199,13 +202,13 @@
   function denyToast(){var now=performance.now();if(now-_denyT<1500)return;_denyT=now;
     toastEl.innerHTML='Credit maxed <b>— grow income to build more</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);}
   function economy(){
-    var income=0,upkeep=0,banks=0;
+    var income=0,upkeep=0,banks=0,ports=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;var t=g.t;
       if(TAX[t])income+=g.lvl*TAX[t];
       if(UPKEEP[t])upkeep+=UPKEEP[t];
-      if(t==='bank')banks++;}
+      if(t==='bank')banks++;else if(t==='port')ports++;}
     bankCount=banks;
-    income+=exportRate*EXPORT_PRICE;
+    income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports);                       // Ports lift export revenue
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
     netRate=income-upkeep-interest;
@@ -267,6 +270,8 @@
       plantBody:'#8A8478',plantRoof:'#6E5A45',plantStack:'#B85C4A',plantGlow:'#E7C24A',
       towerLeg:'#5F574B',towerTank:'#6E93A6',towerHi:'#A6C3CE',
       bankBody:'#EDE7D6',bankRoof:'#3E8E6E',bankCol:'#CFC7B2',bankCoin:'#D9AE52',
+      towerRes:['#5FA5A5','#4E8C8C','#3F7373'],towerResTop:'#B7D4D4',towerWin:'#EAF3EF',
+      portDeck:'#8A8272',portArm:'#4C7EA8',portHi:'#A6C3D6',
 
       lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
       terrWater:'rgba(88,150,182,.22)',terrOre:'rgba(150,120,88,.20)',terrForest:'rgba(92,150,78,.17)',
@@ -284,6 +289,8 @@
       plantBody:'#5B554B',plantRoof:'#463A2C',plantStack:'#B85E4C',plantGlow:'#E7C24A',
       towerLeg:'#4B443A',towerTank:'#5E8496',towerHi:'#8FB0BC',
       bankBody:'#C6BEA8',bankRoof:'#3E8E6E',bankCol:'#8A8272',bankCoin:'#E7C24A',
+      towerRes:['#5FA5A5','#4E8C8C','#3F7373'],towerResTop:'#7FB0B0',towerWin:'#EAF3EF',
+      portDeck:'#5B554B',portArm:'#5D93C4',portHi:'#8FB0BC',
 
       lot:'rgba(255,255,255,.055)',starve:'#D08A50',cuePow:'#E8B653',cueWat:'#5CA6DB',cueMat:'#CA9647',cueGood:'#8474BA',side:'rgba(0,0,0,.4)',
       terrWater:'rgba(92,152,186,.17)',terrOre:'rgba(162,136,100,.14)',terrForest:'rgba(96,160,84,.16)',
@@ -291,7 +298,7 @@
       car:['#D9664C','#5D93C4','#E4B85F','#EDE7DA','#6AA062']
     }
   };
-  var SWATCH={road:'#9c968a',rail:'#8A8272',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',water:'#4C88B8',bank:'#3E8E6E',bulldoze:'#c96a5a'};
+  var SWATCH={road:'#9c968a',rail:'#8A8272',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',water:'#4C88B8',bank:'#3E8E6E',port:'#4C7EA8',tower:'#4E8C8C',bulldoze:'#c96a5a'};
 
   function themeName(){var d=document.documentElement.getAttribute('data-theme');return d?(d==='dark'?'dark':'light'):(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
   function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
@@ -340,7 +347,7 @@
       var cost=COST[brush]||0;
       if(!canAfford(cost)){denyToast();return;}
       spend(cost);
-      cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'?1:0);cell.grow=0;
+      cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'||brush==='port'?1:0);cell.grow=0;
     }
     dirty=true;svcDirty=true;scheduleSave();
   }
@@ -400,7 +407,7 @@
     if(lk){if(key)key.style.display='none';if(!lock){lock=document.createElement('span');lock.className='lock';el.appendChild(lock);}lock.textContent='🔒 '+MS[TIER_UNLOCK[b]].l;}
     else{if(key)key.style.display='';if(lock)lock.remove();}});}
   tools.addEventListener('click',function(e){var t=e.target.closest('.tool');if(t)selectBrush(t.getAttribute('data-brush'));});
-  window.addEventListener('keydown',function(e){if(e.key==='Escape'){cancelLine();return;}var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank'}[e.key];if(m)selectBrush(m);});
+  window.addEventListener('keydown',function(e){if(e.key==='Escape'){cancelLine();return;}var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank','p':'port','P':'port','t':'tower','T':'tower'}[e.key];if(m)selectBrush(m);});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
@@ -475,7 +482,7 @@
   }
 
   function complement(c,r,t){
-    var wants=t==='res'?{com:1,ind:1,park:1}:{res:1,park:1};
+    var wants=(t==='res'||t==='tower')?{com:1,ind:1,park:1}:{res:1,park:1};
     for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){if(!dc&&!dr)continue;
       if(inB(c+dc,r+dr)){var n=grid[idx(c+dc,r+dr)];if(n.lvl>0&&wants[n.t])return true;}}
     return false;
@@ -484,8 +491,8 @@
   function computeDemand(){
     var R=0,Cc=0,I=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-      if(g.t==='res')R+=g.lvl;else if(g.t==='com')Cc+=g.lvl;else if(g.t==='ind')I+=g.lvl;}
-    demand.res=(Cc+I)+3-R;demand.com=(R*0.6)+2-Cc;demand.ind=(R*0.5)+1-I;
+      if(g.t==='res'||g.t==='tower')R+=g.lvl;else if(g.t==='com')Cc+=g.lvl;else if(g.t==='ind')I+=g.lvl;}
+    demand.res=(Cc+I)+3-R;demand.com=(R*0.6)+2-Cc;demand.ind=(R*0.5)+1-I;demand.tower=demand.res;  // Towers follow residential demand
   }
   var GROW_NEED=6, roadList=[];
   function tick(){
@@ -508,7 +515,7 @@
   // ---- population, demand UI, milestones ----
   var popEl=document.getElementById('pop'),popShown=0,popTarget=0;
   function updatePop(){var p=0;for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-    if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;}
+    if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='tower')p+=g.lvl*g.lvl*135;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;}
     p+=Math.round(exportRate*35);                         // trade income from rail exports sustains extra population
     popTarget=p;}
   var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp'),terrEl=document.getElementById('terrb'),terrStat=document.getElementById('terrstat');
@@ -694,6 +701,27 @@
     ctx.fillStyle=pal.bankCoin;ctx.beginPath();ctx.arc(px(x+CELL/2),py(by-ph-3),Math.max(2,px(2.4*s)),0,6.2832);ctx.fill();
     ctx.fillStyle=pal.side;ctx.fillRect(bx,by,w,1);ctx.fillRect(bx,by+h-1,w,1);
   }
+  function drawPort(x,y,cell){                              // a little dock: deck + a loading crane
+    var s=growScale(cell),w=px(22*s),h=px(6*s),bx=px(x+(CELL-w)/2),by=px(y+CELL-6-h);
+    ctx.fillStyle=pal.portDeck;ctx.fillRect(bx,by,w,h);                       // deck
+    for(var i=bx+2;i<bx+w-2;i+=4){ctx.fillStyle=pal.side;ctx.fillRect(i,by+h,1,3);}  // pilings
+    // crane: mast + arm + hanging crate
+    var mx=px(bx+4),mt=py(y+5);ctx.fillStyle=pal.portArm;ctx.fillRect(mx,mt,2,by-mt);
+    ctx.fillRect(mx,mt,px(12*s),2);ctx.fillRect(mx+px(11*s),mt,2,px(5*s));
+    ctx.fillStyle=pal.bankCoin;ctx.fillRect(mx+px(10*s),mt+px(5*s),4,4);      // crate
+    ctx.fillStyle=pal.portHi;ctx.fillRect(bx,by,w,1);
+  }
+  function drawHighrise(x,y,cell){                          // dense residential: a tall slab with lit windows
+    var lvl=cell.lvl,s=growScale(cell),pxs=Math.max(2,Math.round(CELL/12));
+    var w=px((5+lvl*0.4)*pxs*s),h=px((6+lvl*3)*pxs*s),bx=px(x+(CELL-w)/2),by=px(y+CELL-4-h);
+    ctx.fillStyle=pal.side;ctx.fillRect(bx+pxs,by+h,w,pxs);                    // shadow
+    ctx.fillStyle=pal.towerRes[Math.min(2,lvl-1)];ctx.fillRect(bx,by,w,h);    // slab
+    ctx.fillStyle=pal.towerResTop;ctx.fillRect(bx,by,w,Math.max(2,px(pxs*0.8)));  // crown
+    // window grid
+    ctx.fillStyle=pal.towerWin;var ws=Math.max(1,px(pxs*0.7)),gap=px(pxs*0.8),sx=bx+pxs,sy=by+px(pxs*1.6);
+    for(var wy=0;sy+wy*(ws+gap)<by+h-pxs;wy++)for(var wx=0;sx+wx*(ws+gap)<bx+w-pxs;wx++){if(((cell.seed>>((wx+wy*3)&15))&3)!==0)ctx.fillRect(px(sx+wx*(ws+gap)),px(sy+wy*(ws+gap)),ws,ws);}
+    ctx.fillStyle=pal.side;ctx.fillRect(bx,by,1,h);ctx.fillRect(bx+w-1,by,1,h);ctx.fillRect(bx,by,w,1);
+  }
   function buildingBase(x,y,cell,lvl){var pxs=Math.max(2,Math.round(CELL/12));var w=(4+lvl)*pxs,h=(3+lvl*1.9)*pxs,s=growScale(cell);w*=s;h*=s;w=px(w);h=px(h);return {bx:px(x+(CELL-w)/2),by:px(y+CELL-4-h),w:w,h:h,pxs:pxs};}
   function windows(b,cols_,rows_,seed,color){ctx.fillStyle=color;var ws=Math.max(2,px(b.pxs*0.9)),gap=b.pxs*0.7,sx=b.bx+b.pxs,sy=b.by+Math.round(b.pxs*2.4);
     for(var wy=0;wy<rows_;wy++)for(var wx=0;wx<cols_;wx++){var lx=sx+wx*(ws+gap),ly=sy+wy*(ws+gap);if(lx+ws<=b.bx+b.w-b.pxs*0.6&&ly+ws<=b.by+b.h-b.pxs*0.6&&((seed>>(wx+wy*3))&3)!==0)ctx.fillRect(px(lx),px(ly),ws,ws);}}
@@ -753,9 +781,10 @@
       if(t==='power'){drawPlant(x,y,cell);continue;}
       if(t==='water'){drawTower(x,y,cell);continue;}
       if(t==='bank'){drawBank(x,y,cell);continue;}
+      if(t==='port'){drawPort(x,y,cell);continue;}
       // zones: draw lot/building, then a cue for what's missing
       if(cell.lvl<1){ctx.fillStyle=pal.lot;ctx.fillRect(x+2,y+2,CELL-4,CELL-4);}
-      else if(t==='res')drawHome(x,y,cell);else if(t==='com')drawShop(x,y,cell);else if(t==='ind')drawWorks(x,y,cell);else drawFactory(x,y,cell);
+      else if(t==='res')drawHome(x,y,cell);else if(t==='tower')drawHighrise(x,y,cell);else if(t==='com')drawShop(x,y,cell);else if(t==='ind')drawWorks(x,y,cell);else drawFactory(x,y,cell);
       if(cell.lvl<MAXLVL){var bl=connected?blocker(c,r):'';if(bl)drawCue(x,y,bl);}
     }
     // cars on top
