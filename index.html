@@ -637,23 +637,27 @@
     };
     // Double Helix - two phase-shifted sine backbones with base-pair rungs, twisting as it scrolls; the strand in front (cos>0) brightens/thickens to sell the 3D turn, rungs fade edge-on (MASTER DATA GENOME).
     SK.helix=function(w,h,t){
-      var cx=w/2,A=Math.min(w,h)*0.16,twist=TAU/(Math.min(w,h)*0.46),scroll=reduce?0:t*0.9,step=Math.max(3,Math.round(h/120));
+      var A=Math.min(w,h)*0.16,twist=TAU/(Math.min(w,h)*0.46),scroll=reduce?0:t*0.45,step=Math.max(3,Math.round(h/120));
       ctx.shadowBlur=0;ctx.lineCap='round';
-      // base-pair rungs (drawn first, behind the backbones)
-      for(var y=-A;y<=h+A;y+=step*3){
-        var ph=y*twist+scroll,sa=Math.sin(ph),dp=Math.cos(ph),xa=cx+A*sa,xb=cx-A*sa;
-        ctx.strokeStyle=col(0,0.12+0.30*Math.abs(sa));ctx.lineWidth=1;   // rungs vanish when the ladder turns edge-on
-        ctx.beginPath();ctx.moveTo(xa,y);ctx.lineTo(xb,y);ctx.stroke();
-        ctx.fillStyle=col(0,0.22+0.62*(dp+1)/2);ctx.beginPath();ctx.arc(xa,y,1.8,0,TAU);ctx.fill();   // nucleotide caps, near strand bright
-        ctx.fillStyle=col(0,0.22+0.62*(1-(dp+1)/2));ctx.beginPath();ctx.arc(xb,y,1.8,0,TAU);ctx.fill();
+      // twin helixes flank the centered words — one on each side
+      function helixAt(cx){
+        // base-pair rungs (drawn first, behind the backbones)
+        for(var y=-A;y<=h+A;y+=step*3){
+          var ph=y*twist+scroll,sa=Math.sin(ph),dp=Math.cos(ph),xa=cx+A*sa,xb=cx-A*sa;
+          ctx.strokeStyle=col(0,0.12+0.30*Math.abs(sa));ctx.lineWidth=1;   // rungs vanish when the ladder turns edge-on
+          ctx.beginPath();ctx.moveTo(xa,y);ctx.lineTo(xb,y);ctx.stroke();
+          ctx.fillStyle=col(0,0.22+0.62*(dp+1)/2);ctx.beginPath();ctx.arc(xa,y,1.8,0,TAU);ctx.fill();   // nucleotide caps, near strand bright
+          ctx.fillStyle=col(0,0.22+0.62*(1-(dp+1)/2));ctx.beginPath();ctx.arc(xb,y,1.8,0,TAU);ctx.fill();
+        }
+        // the two sugar-phosphate backbones; per-segment alpha/width by "frontness" reads as a rotating helix
+        function strand(po){var px,py;
+          for(var y=-A;y<=h+A;y+=step){var ph=y*twist+scroll+po,x=cx+A*Math.sin(ph),front=(Math.cos(ph)+1)/2;
+            if(y>-A){ctx.strokeStyle=col(0,0.18+0.77*front);ctx.lineWidth=0.8+1.9*front;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();}
+            px=x;py=y;}
+        }
+        strand(0);strand(Math.PI);
       }
-      // the two sugar-phosphate backbones; per-segment alpha/width by "frontness" reads as a rotating helix
-      function strand(po){var px,py;
-        for(var y=-A;y<=h+A;y+=step){var ph=y*twist+scroll+po,x=cx+A*Math.sin(ph),front=(Math.cos(ph)+1)/2;
-          if(y>-A){ctx.strokeStyle=col(0,0.18+0.77*front);ctx.lineWidth=0.8+1.9*front;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();}
-          px=x;py=y;}
-      }
-      strand(0);strand(Math.PI);
+      helixAt(w*0.2);helixAt(w*0.8);
     };
     // Sierpinski Triangle - remove each triangle's middle, forever (depth 7); slow turn (MODULAR DIGITAL GOODS).
     SK.sierpinski=function(w,h,t){
