@@ -411,7 +411,7 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();seedRampIfEmpty();maxMS=-1;treasury=CASH_START;netRate=0;updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;treasury=CASH_START;netRate=0;updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
