@@ -5,12 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Metropolis Dawn Grid — the world</title>
 <meta name="description" content="One shared world. Build your city until you meet your neighbours. The world model for Metropolis Dawn Grid." />
-<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/assets/site.css" />
 <style>
+  /* self-contained light theme (no site.css, no dark mode) */
+  :root{
+    --bg:#F3F6FB; --paper:#FFFFFF;
+    --ink:#182230; --ink-2:#3A4653; --muted:#7C8792;
+    --line:#E4E9F0; --line-2:#C7D0DC;
+    --shadow:0 1px 0 rgba(20,30,45,.03),0 12px 30px rgba(20,30,45,.08);
+    --shadow-hover:0 18px 44px rgba(20,30,45,.14);
+  }
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease}
   .bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:14px;padding:12px clamp(14px,3vw,24px);z-index:3}
@@ -47,7 +53,6 @@
   <header class="bar">
     <a class="home" href="../" title="Back to the playable build">← the playable build</a>
     <span class="spacer"></span>
-    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </header>
 
   <div class="intro">
@@ -91,7 +96,7 @@
 
   // ---- theme palette ----
   function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
-  function dark(){var d=document.documentElement.getAttribute('data-theme');return d?d==='dark':matchMedia('(prefers-color-scheme:dark)').matches;}
+  function dark(){return false;}   // light-only
   var P={};
   function readTheme(){
     var D=dark();
@@ -309,12 +314,9 @@
   function paintLegend(){document.getElementById('lg-you').style.background=P.you;document.getElementById('lg-them').style.background=P.them[0];}
 
   readTheme(); paintLegend();
-  new MutationObserver(function(){readTheme();paintLegend();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-  matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(){readTheme();paintLegend();});
   window.addEventListener('resize',resize); resize();
   requestAnimationFrame(frame);
 })();
 </script>
-<script src="/assets/site.js?v=2"></script>
 </body>
 </html>

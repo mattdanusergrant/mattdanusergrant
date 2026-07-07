@@ -5,12 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Metropolis Dawn Grid</title>
 <meta name="description" content="A streamlined 2D city builder on one shared world — build your district, run the supply chain, lay rail, and ship your surplus out by train. From Must Design Games." />
-<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/assets/site.css" />
 <style>
+  /* self-contained light theme — the game owns its look (no site.css, no dark mode) */
+  :root{
+    --bg:#F3F6FB; --paper:#FFFFFF;
+    --ink:#182230; --ink-2:#3A4653; --muted:#7C8792;
+    --line:#E4E9F0; --line-2:#C7D0DC;
+    --shadow:0 1px 0 rgba(20,30,45,.03),0 12px 30px rgba(20,30,45,.08);
+    --shadow-hover:0 18px 44px rgba(20,30,45,.14);
+  }
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease}
   .bar{display:flex;align-items:center;gap:clamp(8px,2vw,16px);padding:10px clamp(12px,3vw,22px);border-bottom:1.5px solid var(--line);background:var(--bg);flex-shrink:0}
@@ -91,7 +97,6 @@
 <body>
 
   <header class="bar">
-    <a class="home" href="https://mattdanusergrant.com/" title="Back to mattdanusergrant.com">← MDG</a>
     <span class="title">Metropolis&nbsp;Dawn&nbsp;Grid</span>
     <a class="home" id="worldlink" href="world/" title="See the whole world">🌍&nbsp;world</a>
     <span class="region" id="region" hidden></span>
@@ -110,7 +115,6 @@
     <div class="goal" id="goal" title="Your next milestone"><span class="gl" id="goal-label">Next: Hamlet</span><span class="gbar"><i id="goal-fill"></i></span></div>
     <div class="stat cash" title="Treasury — everything costs money. Taxes &amp; exports earn it; utilities &amp; roads cost upkeep; debt charges interest. Advancing tiers needs a cash reserve."><span class="n" id="cash">₵0</span><span class="l" id="cashrate">—</span></div>
     <div class="stat"><span class="n" id="pop">0</span><span class="l">Population</span></div>
-    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </header>
 
   <div class="stage">
@@ -277,30 +281,11 @@
       terrWater:'rgba(88,150,182,.22)',terrOre:'rgba(150,120,88,.20)',terrForest:'rgba(92,150,78,.17)',
       railBed:'#C9C2B0',tie:'#9A8E78',rail:'#7C7566',trainEngine:'#3E3D48',
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
-    },
-    dark:{
-      road:'#524D44',curb:'#3D392F',lane:'#726B5E',
-      hw:'#39352D',hwMed:'#C7A23E',hwLane:'#6E675B',
-      res:['#79B075','#61A05F','#4F8553'],resRoof:['#B85E4C','#9E4E3E','#874536'],win:'#F2EDE2',door:'#B99A82',
-      com:['#6FA4D2','#5589BA','#4676A2'],comRoof:'#2E5276',awning:['#E0A659','#D18C6C','#77A6BC'],
-      ind:['#E0AB5B','#CA9647','#B27F33'],indRoof:'#7C5822',stack:'#5B554B',smoke:'rgba(180,170,150,.45)',
-      fac:['#9C8CC6','#8474BA','#6E5DA4'],facRoof:'#463878',facPipe:'#B8AFD2',
-      park:'#5FA054',parkTrunk:'#8A6343',parkDark:'#478542',grass:'rgba(95,160,84,.20)',
-      plantBody:'#5B554B',plantRoof:'#463A2C',plantStack:'#B85E4C',plantGlow:'#E7C24A',
-      towerLeg:'#4B443A',towerTank:'#5E8496',towerHi:'#8FB0BC',
-      bankBody:'#C6BEA8',bankRoof:'#3E8E6E',bankCol:'#8A8272',bankCoin:'#E7C24A',
-      towerRes:['#5FA5A5','#4E8C8C','#3F7373'],towerResTop:'#7FB0B0',towerWin:'#EAF3EF',
-      portDeck:'#5B554B',portArm:'#5D93C4',portHi:'#8FB0BC',
-
-      lot:'rgba(255,255,255,.055)',starve:'#D08A50',cuePow:'#E8B653',cueWat:'#5CA6DB',cueMat:'#CA9647',cueGood:'#8474BA',side:'rgba(0,0,0,.4)',
-      terrWater:'rgba(92,152,186,.17)',terrOre:'rgba(162,136,100,.14)',terrForest:'rgba(96,160,84,.16)',
-      railBed:'#3A362E',tie:'#544E42',rail:'#8A8272',trainEngine:'#5A5866',
-      car:['#D9664C','#5D93C4','#E4B85F','#EDE7DA','#6AA062']
     }
   };
   var SWATCH={road:'#9c968a',rail:'#8A8272',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',water:'#4C88B8',bank:'#3E8E6E',port:'#4C7EA8',tower:'#4E8C8C',bulldoze:'#c96a5a'};
 
-  function themeName(){var d=document.documentElement.getAttribute('data-theme');return d?(d==='dark'?'dark':'light'):(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');}
+  function themeName(){return 'light';}   // light-only — the game owns its palette
   function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
   var pal,C={};
   function readTheme(){pal=PAL[themeName()];C.bg=cssVar('--bg');C.line=cssVar('--line');C.line2=cssVar('--line-2');dirty=true;}
@@ -812,8 +797,6 @@
   // show each tool's build cost on its button
   Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){var b=el.getAttribute('data-brush'),c=COST[b];if(c>0){var s=document.createElement('span');s.className='cost';s.textContent='₵'+c;var k=el.querySelector('.key');el.insertBefore(s,k);}});
   updateToolLocks();
-  new MutationObserver(readTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-  matchMedia('(prefers-color-scheme:dark)').addEventListener('change',readTheme);
 
   // ---- save / load ----
   var saveTimer=0;
@@ -868,6 +851,5 @@
   if(wl&&wf)wl.addEventListener('click',function(e){e.preventDefault();wf.classList.add('on');setTimeout(function(){location.href=wl.getAttribute('href');},420);});
 })();
 </script>
-<script src="/assets/site.js?v=2"></script>
 </body>
 </html>
