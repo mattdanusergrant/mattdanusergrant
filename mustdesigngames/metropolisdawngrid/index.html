@@ -59,6 +59,25 @@
   .reset:hover{color:var(--ink)}
   .hint{font-size:12px;color:var(--muted);max-width:330px;line-height:1.4}
   @media(max-width:760px){.hint{display:none}}
+  .tutor{position:absolute;top:12px;left:12px;z-index:6;width:min(252px,74vw);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;box-shadow:var(--shadow);padding:11px 13px;font-size:12.5px;pointer-events:none}
+  .tutor-skip,.tutor-done button{pointer-events:auto}
+  .tutor-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .tutor-t{font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--ink);letter-spacing:-.01em}
+  .tutor-skip{font-family:inherit;font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0}
+  .tutor-skip:hover{color:var(--ink)}
+  .tutor-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .tutor-step{display:flex;gap:8px;align-items:flex-start;line-height:1.35;color:var(--muted);transition:color .2s,opacity .2s}
+  .tutor-step .tm{width:13px;flex:none;text-align:center;font-weight:700}
+  .tutor-step.now{color:var(--ink);font-weight:500}
+  .tutor-step.now .tm{color:var(--ink-2)}
+  .tutor-step.done{opacity:.5}
+  .tutor-step.done .tt{text-decoration:line-through}
+  .tutor-step.done .tm{color:#5C8A55}
+  .tutor-step .tt b{color:inherit}
+  .tutor-done b{font-family:'Fraunces',serif;font-size:14px;color:var(--ink)}
+  .tutor-done p{margin:6px 0 10px;color:var(--ink-2);line-height:1.45}
+  .tutor-done button{font-family:'Fraunces',serif;font-size:12px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:6px 14px;cursor:pointer}
+  @media(max-width:600px){.tutor{width:190px;font-size:11.5px;top:8px;left:8px;padding:9px 11px}}
   #worldfade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:50;transition:opacity .42s ease}
   #worldfade.on{opacity:1;pointer-events:all}
 </style>
@@ -90,6 +109,10 @@
   <div class="stage">
     <canvas id="city"></canvas>
     <div class="toast" id="toast"></div>
+    <div class="tutor" id="tutor" hidden>
+      <div class="tutor-h"><span class="tutor-t">Your first city</span><button class="tutor-skip" id="tutor-skip" type="button">Skip</button></div>
+      <ol class="tutor-l" id="tutor-l"></ol>
+    </div>
   </div>
   <div id="worldfade"></div>
 
@@ -383,7 +406,7 @@
     matHealthy=(facCap-drawn)<=0.01;                     // factories got all the Materials they wanted
     goodsHealthy=(need-sold)<=0.01;                      // shops got all the Goods they wanted
     matWanted=(facCap-drawn>0.01);                       // Works in demand when factories are starved
-    demand.fac=(shops>0&&(!goodsHealthy||goodsStock<need+1))?3:(facs<shops?1:-1);  // grow factories to feed shops
+    demand.fac=(shops>0&&(!goodsHealthy||goodsStock<need+1))?3:(matStock>2?1:(facs<shops?1:-1));  // feed shops, or process piled-up Materials (bootstraps the chain)
   }
 
   function complement(c,r,t){
@@ -414,7 +437,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=performance.now();dirty=true;scheduleSave();}
     }
-    updatePop();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();
+    updatePop();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -440,6 +463,48 @@
     goalLabel.textContent='Next: '+nx.l+' · '+nx.n.toLocaleString();
     goalFill.style.width=(Math.max(0,Math.min(1,(popTarget-prev)/(nx.n-prev)))*100)+'%';}
   function showToast(label,n){toastEl.innerHTML=label+' <b>'+n.toLocaleString()+' people</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);}
+
+  // ---- guided first-run: a short objective path that teaches the loop as you play ----
+  var TUTOR_KEY='mdg-tutor-done';
+  var STEPS=[
+    {label:'Lay a <b>Road</b> up to the highway'},
+    {label:'Zone <b>3 Homes</b> beside the road'},
+    {label:'Add <b>Power</b> &amp; <b>Water</b> to reach them'},
+    {label:'Build <b>Works</b> (on ore) + a <b>Factory</b>'},
+    {label:'Lay <b>Rail</b> to the highway → ship an <b>Export</b>'}
+  ];
+  var tutorDone=false, tutorActive=false, tutorStep=-1, exportedEver=false;
+  function tutorEval(){
+    var road=false,res=0,served=false,ind=0,fac=0;
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
+      if(g.t==='road'){if(connected&&connected[i])road=true;}
+      else if(g.t==='res'){res++;if(!served&&connected&&blocker(i%cols,(i/cols)|0)==='')served=true;}
+      else if(g.t==='ind')ind++;else if(g.t==='fac')fac++;}
+    if(exportRate>0.5)exportedEver=true;
+    var done=[road,res>=3,served,(ind>=1&&fac>=1),exportedEver];
+    var s=0;while(s<done.length&&done[s])s++;
+    return {done:done,step:s};
+  }
+  function buildTutorPanel(){var ol=document.getElementById('tutor-l');if(!ol)return;ol.innerHTML='';
+    STEPS.forEach(function(s){var li=document.createElement('li');li.className='tutor-step todo';
+      li.innerHTML='<span class="tm">○</span><span class="tt">'+s.label+'</span>';ol.appendChild(li);});}
+  function renderTutor(ev){ev=ev||tutorEval();var ol=document.getElementById('tutor-l');if(!ol)return;var lis=ol.children;
+    for(var i=0;i<STEPS.length;i++){var li=lis[i];if(!li)continue;
+      li.className='tutor-step '+(ev.done[i]?'done':(i===ev.step?'now':'todo'));
+      li.firstChild.textContent=ev.done[i]?'✓':(i===ev.step?'▸':'○');}}
+  function showTutor(){var box=document.getElementById('tutor');if(!box)return;buildTutorPanel();renderTutor();box.hidden=false;}
+  function endTutor(){tutorActive=false;try{localStorage.setItem(TUTOR_KEY,'1');}catch(e){}tutorDone=true;}
+  function finishTutor(){endTutor();var box=document.getElementById('tutor');if(!box)return;
+    box.innerHTML='<div class="tutor-done"><b>Your first city is alive 🎉</b><p>Works feed Factories, Shops sell, and trains export your surplus. Keep growing toward Hamlet, Village, City…</p><button type="button" id="tutor-close">Build on →</button></div>';
+    var cl=document.getElementById('tutor-close');if(cl)cl.addEventListener('click',function(){box.hidden=true;});}
+  function tutorTick(){if(!tutorActive)return;var ev=tutorEval();if(ev.step!==tutorStep){tutorStep=ev.step;renderTutor(ev);}if(ev.step>=STEPS.length)finishTutor();}
+  function initTutorDecision(){
+    try{tutorDone=localStorage.getItem(TUTOR_KEY)==='1';}catch(e){tutorDone=false;}
+    if(tutorDone){tutorActive=false;return;}
+    if(maxMS>=0){endTutor();return;}         // already past a milestone → experienced player, skip
+    tutorActive=true;
+  }
+  (function(){var s=document.getElementById('tutor-skip');if(s)s.addEventListener('click',function(){endTutor();var b=document.getElementById('tutor');if(b)b.hidden=true;});})();
 
   // ---- ambient cars (drive roads + highway) ----
   var cars=[];
@@ -665,10 +730,13 @@
   // ---- boot ----
   readTheme();
   window.addEventListener('resize',resize);
-  resize();load();ensureHighway();seedRampIfEmpty();
+  resize();load();ensureHighway();
+  initTutorDecision();
+  if(!tutorActive)seedRampIfEmpty();          // returning players get the starter road; new players lay it themselves (step 1)
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);if(tt==='rail'||tt==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
+  if(tutorActive)showTutor();
   // region: name the header chip + welcome the player to their patch of the shared world
   if(REGION){
     var esc=function(s){return String(s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});};
