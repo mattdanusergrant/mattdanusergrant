@@ -345,15 +345,24 @@ const FOODS = [
 ];
 
 // ---- garden: plant catalog. cost=coins to sow, grow=minutes to bloom,
-// reward=coins on harvest, xp on harvest, lvl=pet level needed to sow it. ----
+// each plant's harvest has a yield: coins (cash crop), food (fills tummy),
+// calm (happiness), or rest (energy). amt = how much. xp on harvest, lvl = pet
+// level needed to sow it. The garden feeds the care loop, not just a coin faucet.
 const PLANTS = [
-  { id:'moss',  e:'🌿', n:'Moss Tuft', cost:2,  grow:6,  reward:4,  xp:2,  lvl:0 },
-  { id:'daisy', e:'🌼', n:'Daisy',     cost:4,  grow:12, reward:8,  xp:3,  lvl:0 },
-  { id:'tulip', e:'🌷', n:'Tulip',     cost:7,  grow:22, reward:14, xp:5,  lvl:1 },
-  { id:'sun',   e:'🌻', n:'Sunflower', cost:11, grow:35, reward:22, xp:7,  lvl:2 },
-  { id:'rose',  e:'🌹', n:'Rose',      cost:16, grow:55, reward:34, xp:11, lvl:3 },
-  { id:'lotus', e:'🪷', n:'Lotus',     cost:24, grow:80, reward:52, xp:16, lvl:4 },
+  { id:'moss',  e:'🌿', n:'Moss Tuft',    cost:2,  grow:6,  yield:'coins', amt:4,  xp:2,  lvl:0 },
+  { id:'berry', e:'🍓', n:'Sunberry Bush',cost:4,  grow:12, yield:'food',  amt:22, xp:3,  lvl:0 },
+  { id:'daisy', e:'🌼', n:'Daisy',        cost:6,  grow:18, yield:'calm',  amt:20, xp:4,  lvl:1 },
+  { id:'sun',   e:'🌻', n:'Sunflower',    cost:9,  grow:30, yield:'rest',  amt:28, xp:6,  lvl:2 },
+  { id:'tulip', e:'🌷', n:'Tulip',        cost:13, grow:45, yield:'coins', amt:30, xp:9,  lvl:3 },
+  { id:'lotus', e:'🪷', n:'Lotus',        cost:20, grow:70, yield:'calm',  amt:40, xp:14, lvl:4 },
 ];
+// per-yield presentation + how a harvest is applied to the player/pet
+const YIELD_INFO = {
+  coins: { ic:'🪙', shop:a=>`+${a} 🪙 on harvest`,  word:a=>`+${a} 🪙`,        maxed:()=>false,          apply:a=>{ S.coins += a; } },
+  food:  { ic:'🍓', shop:a=>`feeds +${a} 🍓`,        word:a=>`+${a} 🍓 tummy`,   maxed:()=>P.full>=99.5,   apply:a=>{ P.full  = clamp(P.full  + a); } },
+  calm:  { ic:'💞', shop:a=>`cheers +${a} 💞`,       word:a=>`+${a} 💞 happy`,   maxed:()=>P.happy>=99.5,  apply:a=>{ P.happy = clamp(P.happy + a); } },
+  rest:  { ic:'⚡', shop:a=>`rests +${a} ⚡`,         word:a=>`+${a} ⚡ energy`,  maxed:()=>P.energy>=99.5, apply:a=>{ P.energy= clamp(P.energy+ a); } },
+};
 const MAXPLOTS = 6;          // garden capacity; 3 free, the rest clear as the pet levels
 const GARDEN_CHEER = 0.8;    // each bloom slows happy decay by this much per hour
 
@@ -1047,7 +1056,7 @@ function openPlant(i){
     const locked = pl.lvl > lvl;
     const afford = S.coins >= pl.cost && !locked;
     b.disabled = !afford;
-    const sub = locked ? `unlocks at level ${pl.lvl}` : `blooms in ~${pl.grow} min · sells for ${pl.reward} 🪙`;
+    const sub = locked ? `unlocks at level ${pl.lvl}` : `blooms in ~${pl.grow} min · ${YIELD_INFO[pl.yield].shop(pl.amt)}`;
     b.innerHTML = `<span class="fe">${pl.e}</span><span class="fmeta"><div class="fn">${pl.n}</div>
       <div class="fsub">${sub}</div></span><span class="cost"><span class="c"></span>${pl.cost}</span>`;
     b.onclick = ()=>plantSeed(i, pl.id);
@@ -1070,12 +1079,18 @@ function harvest(i){
   const plot = S.garden.plots[i];
   if (plantStage(plot) !== 3) return;
   const pl = plantMeta(plot.plant);
-  S.coins += pl.reward; gainXP(pl.xp);
+  const yi = YIELD_INFO[pl.yield] || YIELD_INFO.coins;
+  // don't waste a care crop the pet can't use yet — leave it bloomed for later
+  if (yi.maxed()){
+    const w = pl.yield==='food' ? 'full' : pl.yield==='calm' ? 'delighted' : 'well-rested';
+    toast(`${P.name} is already ${w} — leave it to bloom`); return;
+  }
+  yi.apply(pl.amt); gainXP(pl.xp);
   const g = gardenPlots()[i];
-  spawnHearts(3, g.x, g.y-30); sfx('firefly');
+  spawnHearts(3, g.x, g.y-30); sfx(pl.yield==='coins' ? 'firefly' : 'daily');
   S.garden.plots[i] = null;
   save(); refresh();
-  toast(`Harvested a ${pl.n} ${pl.e} — +${pl.reward} 🪙`);
+  toast(`Harvested ${pl.n} ${pl.e} — ${yi.word(pl.amt)}`);
 }
 $('gardenClose').onclick = ()=>$('ovGarden').classList.remove('show');
 
