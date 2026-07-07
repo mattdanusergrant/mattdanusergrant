@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Must Design Games · Matt Danuser-Grant</title>
-<meta name="description" content="A game designer who can't stop shipping — a pile of small, playable browser games by Matt Danuser-Grant. Pick one and play.">
-<link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/">
+<title>Workshop · Must Design Games</title>
+<meta name="description" content="Private works-in-progress — not listed on the public arcade.">
+<meta name="robots" content="noindex, nofollow">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Must Design Games">
-<meta property="og:description" content="A game designer who can't stop shipping — a pile of small, playable browser games by Matt Danuser-Grant. Pick one and play.">
-<meta property="og:url" content="https://mustdesigngames.mattdanusergrant.com/">
+<meta property="og:title" content="Workshop · Must Design Games">
+<meta property="og:description" content="Private works-in-progress.">
 <meta name="twitter:card" content="summary">
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -135,14 +134,14 @@
   </nav>
 
   <section class="hero">
-    <p class="eyebrow">The Arcade</p>
-    <h1>Must Design Games</h1>
-    <p class="lede">A game designer who can't stop shipping. A pile of small browser games — pick one and play.</p>
+    <p class="eyebrow">The Workshop · Private</p>
+    <h1>Workshop</h1>
+    <p class="lede">Works in progress, kept off the public arcade. This page isn't linked or indexed — reachable only if you have the URL. Still fully playable while you build.</p>
   </section>
 
   <div class="listhead">
     <span class="count" id="count"></span>
-    <span class="sortnote">Sorted by latest change — freshest on top, quietest at the bottom.</span>
+    <span class="sortnote">Private drafts — sorted by latest change.</span>
   </div>
   <main class="list" id="games"></main>
 
@@ -161,57 +160,18 @@
     // One entry per game. `updated` = date of the last substantive change (YYYY-MM-DD).
     // Bump `updated` and `change` whenever you ship work on a game; the list re-sorts itself.
     const GAMES = [
-      {slug:'metropolisdawngrid', name:'Metropolis Dawn Grid', updated:'2026-07-07',
-        change:'Guided first-run onboarding + supply-chain bootstrap fix',
-        desc:'A streamlined 2D city builder on one shared world — build your district, run the supply chain, lay rail, and ship your surplus out by train.'},
-      {slug:'mossdewgarden', name:'Moss Dew Garden', updated:'2026-07-07',
-        change:'Harvests you can use — the garden now feeds the care loop',
-        desc:'A cozy virtual pet — adopt a little plant-creature and keep it fed, happy, and rested.'},
-      {slug:'honk-beach', name:'Honk Beach', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'Defend your beach picnic from a siege of hungry geese. Tap to shoo!'},
-      {slug:'keeprippingpacks', name:'Keep Ripping Packs', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'Rip booster packs, sort the spill, craft Sets, and sell on a live market.'},
-      {slug:'rhythm-rpg', name:'Rolls Per Groove', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A rhythm RPG — every lane is a class, every note an attack. Fight short, intense songs, then level your party between battles.'},
-      {slug:'sigil-tactics', name:'Sigil Tactics', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A 5v5 tactical card-battler on a 5×4 grid — initiative by speed, push-and-pull positioning, and sigils that chain into combo turns.'},
-      {slug:'switchback-td', name:'Switchback TD', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'Maze-building tower defence — wind the path, hold the wave.'},
-      {slug:'airwolf', name:'Airwolf', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A side-scrolling attack-helicopter shooter — strafe the ground and survive the run.'},
-      {slug:'baduk-blitz', name:'Baduk Blitz', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'Go on a blitz clock — capture territory on a small board before the timer runs out.'},
-      {slug:'bannerfall', name:'Bannerfall', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A creature-battler prototype — field units of different rarities and fight for the banner.'},
-      {slug:'berm-burner', name:'Berm Burner', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A downhill trail-riding prototype — carve the berms and hold your speed through the run.'},
-      {slug:'bloom-again', name:'Bloom Again', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'An atmospheric prototype slice — move through the Hollow and light the Lantern Frame.'},
-      {slug:'groundwork', name:'Groundwork', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A land-parcel prototype — work the job sheet and bring "Hollow Field" up to spec.'},
-      {slug:'matgo', name:'Matgo', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'Korean Go-Stop (Hwatu) — match flower cards, call Go or Stop, and race to points.'},
-      {slug:'multiplayerdeckgateway', name:'Multiplayer Deck Gateway', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A multiplayer card-table gateway — a shared deck engine and lobby for suited-card games.'},
-      {slug:'prism-pond', name:'Prism Pond', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A light-and-colour puzzle — route beams around the hub and solve the pond.'},
-      {slug:'word-pounce', name:'Word Pounce', updated:'2026-07-06',
-        change:'Added to the arcade',
-        desc:'A quick word game — Wordle-and-Hangman-flavoured guessing in fast rounds.'},
+      {slug:'apple-tree-lane', name:'Apple Tree Lane', updated:'2026-07-06',
+        change:'In the workshop',
+        desc:'Run the orchard from Farm HQ — manage trees, patrol pests, press cider, and host you-pick days across four modes.'},
+      {slug:'grand-theft-apples', name:'Grand Theft Apples', updated:'2026-07-06',
+        change:'In the workshop',
+        desc:'A 3D third-person romp — raid the orchard, rack up a wanted level, pelt the farmers, and bank your loot before you get busted.'},
+      {slug:'eat-monkey-eat', name:'Eat, Monkey, Eat', updated:'2026-07-06',
+        change:'In the workshop',
+        desc:'An oddball training sim — build your stats and pick your methods, one action at a time.'},
+      {slug:'split-system', name:'Split System', updated:'2026-07-06',
+        change:'In the workshop',
+        desc:'A charge-management trainer — balance the split system and keep it in the green.'},
     ];
 
     function ago(iso){
@@ -228,10 +188,10 @@
 
     const sorted = GAMES.slice().sort((a, b) => b.updated.localeCompare(a.updated));
     const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    document.getElementById('count').textContent = sorted.length + ' prototypes';
+    document.getElementById('count').textContent = sorted.length + ' in the workshop';
     document.getElementById('games').innerHTML = sorted.map(g => {
       const stale = (Date.now() - new Date(g.updated + 'T00:00:00')) > 30 * 86400000;
-      return `<a class="row${stale ? ' stale' : ''}" href="./${g.slug}/">
+      return `<a class="row${stale ? ' stale' : ''}" href="../${g.slug}/">
         <div class="row-main">
           <span class="name">${esc(g.name)}</span>
           <div class="desc">${esc(g.desc)}</div>
