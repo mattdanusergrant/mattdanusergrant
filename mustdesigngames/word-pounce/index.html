@@ -118,18 +118,25 @@
   <div id="home" class="card hidden">
     <label>Your name</label>
     <input id="name" maxlength="12" placeholder="e.g. Mum" />
-    <button id="createBtn">Create a room</button>
-    <div class="row">
-      <input id="joinCode" class="code" maxlength="4" placeholder="CODE" />
+    <button id="soloBtn">Play solo</button>
+    <div id="mp">
+      <div class="note" style="text-align:center;margin:12px 0 6px">— or play with the family online —</div>
+      <button id="createBtn">Create a room</button>
+      <div class="row">
+        <input id="joinCode" class="code" maxlength="4" placeholder="CODE" />
+      </div>
+      <button id="joinBtn" class="ghost">Join room</button>
     </div>
-    <button id="joinBtn" class="ghost">Join room</button>
+    <div id="mpNote" class="note hidden" style="text-align:center"></div>
     <div id="homeErr" class="err"></div>
   </div>
 
   <!-- LOBBY -->
   <div id="lobby" class="card hidden">
-    <label>Room code — share it with the family</label>
-    <div id="lobbyCode" class="roomcode">----</div>
+    <div id="roomCodeRow">
+      <label>Room code — share it with the family</label>
+      <div id="lobbyCode" class="roomcode">----</div>
+    </div>
     <label>Game</label>
     <select id="gameSel">
       <option value="search">Word Search</option>
@@ -432,6 +439,60 @@ let answer = "", wGuesses = [], wSolved = false;                     // Wordle (
 let sel = [], dragging = false, timerInt = null, roundStart = 0, lobbyInt = null, lobbyAt = 0;
 const $ = id => document.getElementById(id);
 const show = (...ids) => { ["setup","home","lobby","game"].forEach(s => $(s).classList.add("hidden")); ids.forEach(i => $(i).classList.remove("hidden")); };
+let solo = false, localDb = null;
+
+/* ============================================================
+   SOLO MODE — a tiny in-memory stand-in for the slice of the
+   Firebase Realtime Database API this game uses (ref / child /
+   set / update / get / remove / on("value") / off / transaction /
+   onDisconnect + snapshot exists()/val()). It lets the whole game —
+   every mode, scoring, claims, round flow — run locally with no
+   network and no backend, so a single player can just play.
+   ============================================================ */
+function makeLocalDb() {
+  const root = {}, subs = [];
+  const clone = v => v == null ? v : JSON.parse(JSON.stringify(v));
+  const nodeAt = p => { let n = root; for (const k of p) { if (n == null) return null; n = n[k]; } return n === undefined ? null : n; };
+  const writeAt = (p, v) => {
+    if (!p.length) { Object.keys(root).forEach(k => delete root[k]); if (v && typeof v === "object") Object.assign(root, clone(v)); return; }
+    let n = root;
+    for (let i = 0; i < p.length - 1; i++) { const k = p[i]; if (n[k] == null || typeof n[k] !== "object") n[k] = {}; n = n[k]; }
+    const last = p[p.length - 1];
+    if (v == null) delete n[last]; else n[last] = clone(v);
+  };
+  const snap = p => ({ exists: () => nodeAt(p) != null, val: () => clone(nodeAt(p)), child: k => snap(p.concat(String(k).split("/").filter(Boolean))) });
+  const online = (a, b) => { const n = Math.min(a.length, b.length); for (let i = 0; i < n; i++) if (a[i] !== b[i]) return false; return true; }; // one path is a prefix of the other
+  const fire = p => subs.slice().forEach(s => { if (online(s.path, p)) s.cb(snap(s.path)); });
+  const seg = k => String(k).split("/").filter(Boolean);
+  const ref = p => ({
+    child: k => ref(p.concat(seg(k))),
+    set(v) { writeAt(p, v); Promise.resolve().then(() => fire(p)); return Promise.resolve(); },
+    update(o) { const ks = Object.keys(o); ks.forEach(k => writeAt(p.concat(seg(k)), o[k])); Promise.resolve().then(() => ks.forEach(k => fire(p.concat(seg(k))))); return Promise.resolve(); },
+    remove() { writeAt(p, null); Promise.resolve().then(() => fire(p)); return Promise.resolve(); },
+    get() { return Promise.resolve(snap(p)); },
+    on(ev, cb) { if (ev === "value") { subs.push({ path: p, cb }); Promise.resolve().then(() => cb(snap(p))); } return cb; },
+    off() { for (let i = subs.length - 1; i >= 0; i--) if (online(subs[i].path, p)) subs.splice(i, 1); },
+    onDisconnect() { return { remove: () => Promise.resolve() }; },
+    transaction(fn) { const next = fn(clone(nodeAt(p))); if (next === undefined) return Promise.resolve({ committed: false, snapshot: snap(p) }); writeAt(p, next); Promise.resolve().then(() => fire(p)); return Promise.resolve({ committed: true, snapshot: snap(p) }); },
+  });
+  return { ref: path => ref(seg(path)) };
+}
+function startSolo() {
+  solo = true; isHost = true;
+  localDb = makeLocalDb();
+  pid = "solo";
+  const name = ($("name").value.trim() || "You").slice(0, 12);
+  localStorage.setItem("wp_name", name);
+  myColor = COLORS[0]; myEmoji = EMOJIS[0];
+  code = "SOLO";
+  roomRef = localDb.ref("rooms/SOLO");
+  roomRef.set({ status: "lobby", host: pid, theme: "Mixed", mode: "search", round: 0, created: Date.now() });
+  roomRef.child("players/" + pid).set({ name, color: myColor, emoji: myEmoji });
+  $("gameCode").textContent = "SOLO";
+  $("roomCodeRow").classList.add("hidden");
+  bindListeners();
+  show("lobby");
+}
 
 /* ============================================================
    2. BOOT — wire up Firebase or prompt for config
@@ -443,19 +504,27 @@ function getConfig() {
   return null;
 }
 function boot() {
+  // Online multiplayer needs Firebase; solo never does. Wire Firebase if it's
+  // available, otherwise fall back to solo-only — no scary init errors.
   const cfg = getConfig();
-  if (!cfg) { show("setup"); return; }
-  try {
-    firebase.initializeApp(cfg);
-    db = firebase.database();
-  } catch (e) { show("setup"); $("cfgInput").value = "Init failed: " + e.message; return; }
+  let online = false;
+  if (cfg && typeof firebase !== "undefined") {
+    try { firebase.initializeApp(cfg); db = firebase.database(); online = true; }
+    catch (e) { online = false; }
+  }
   pid = localStorage.getItem("wp_pid") || (Math.random().toString(36).slice(2, 10));
   localStorage.setItem("wp_pid", pid);
   $("name").value = localStorage.getItem("wp_name") || "";
   // theme dropdown
   Object.keys(BANKS).forEach(t => { const o = document.createElement("option"); o.value = o.textContent = t; $("theme").appendChild(o); });
+  if (!online) {
+    $("mp").classList.add("hidden");
+    const n = $("mpNote"); n.classList.remove("hidden");
+    n.textContent = "Online multiplayer is offline right now — but you can play solo.";
+  }
   show("home");
 }
+$("soloBtn").onclick = startSolo;
 $("cfgSave").onclick = () => {
   let raw = $("cfgInput").value.trim();
   const m = raw.match(/\{[\s\S]*\}/);
@@ -605,6 +674,7 @@ function enterRoom(name) {
     myEmoji = EMOJIS.find(e => !takenE.includes(e)) || EMOJIS[existing.length % EMOJIS.length];
     me.set({ name, color: myColor, emoji: myEmoji });
   });
+  $("roomCodeRow").classList.remove("hidden");
   $("lobbyCode").textContent = code;
   $("gameCode").textContent = code;
   bindListeners();
@@ -614,7 +684,7 @@ function enterRoom(name) {
 function leave() {
   stopTimer(); stopLobbyTimer();
   if (roomRef) { roomRef.child("players/" + pid).remove(); roomRef.off(); }
-  roomRef = null; code = ""; isHost = false;
+  roomRef = null; code = ""; isHost = false; solo = false; localDb = null;
   $("done").classList.add("hidden");
   show("home");
 }
@@ -687,6 +757,7 @@ $("againBtn").onclick = startRound; // next round also runs the shared countdown
 // "Start round" from the lobby kicks off a shared 60s countdown so latecomers can join.
 function startRound() {
   if (!roomRef || !isHost) return;
+  if (solo) { beginPlay(); return; }   // no waiting-room countdown when you're on your own
   roomRef.update({ status: "starting", startAt: Date.now() + LOBBY_SECONDS * 1000 });
 }
 // Builds the grid and flips everyone into play. Called by the host when the countdown
@@ -718,7 +789,8 @@ function renderPlayers(players) {
     ul.appendChild(li);
   });
   const counting = lobbyInt !== null;
-  const hint = counting ? "Round starting — others can still join!"
+  const hint = solo ? "Pick a game and theme, then start."
+             : counting ? "Round starting — others can still join!"
              : isHost ? "You're the host — pick a theme and start when everyone's in."
                       : "Waiting for the host to start the round…";
   $("lobbyHint").textContent = hint;
@@ -844,10 +916,11 @@ function showStandings(claims) {
       ol.appendChild(li);
     });
     $("againBtn").classList.toggle("hidden", !isHost);
-    $("doneCode").textContent = "Room " + code + " — share it, others can still join";
+    $("doneCode").textContent = solo ? "Solo round" : "Room " + code + " — share it, others can still join";
     const reveal = answer ? "The word was " + answer + ". " : "";
-    $("doneHint").textContent = reveal + (isHost ? "Take your time — tap Play again when everyone's ready."
-                                                 : "Waiting for the host to start the next round…");
+    $("doneHint").textContent = reveal + (solo ? "Tap Play again for a fresh round."
+                                               : isHost ? "Take your time — tap Play again when everyone's ready."
+                                                        : "Waiting for the host to start the next round…");
     $("done").classList.remove("hidden");
   });
 }
@@ -952,7 +1025,7 @@ function submitWordle() {
   if (g === answer) {
     wSolved = true; const tries = wGuesses.length, p = Math.max(1, 7 - tries);
     flash("✓ solved! +" + p, "#4ade80"); claimFx(true);
-    $("wmsg").textContent = "Solved in " + tries + "! Waiting for others…";
+    $("wmsg").textContent = "Solved in " + tries + (solo ? "!" : "! Waiting for others…");
     roomRef.child("claims/" + pid).set({ ...me, p, g: tries, solved: true });
   } else if (wGuesses.length >= 6) {
     flash("out of guesses", "#ffd43b"); claimFx(false);
