@@ -75,68 +75,8 @@
   .replay-btn{background:none;border:none;cursor:pointer;padding:0;color:var(--muted);font-size:inherit;font-family:inherit;transition:color .15s}
   .replay-btn:hover{color:var(--ink)}
 
-  /* ── Intro puzzle ────────────────────────────────────────────────────── */
-  #intro-backdrop{position:fixed;inset:0;background:#000;z-index:9997;pointer-events:none;transition:opacity .8s ease}
-  /* Math Draws Graphics - sketches play white-on-black during the intro; afterwards the
-     Game of Life keeps running and drops behind the site as a faint living background */
-  #intro-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:9998;pointer-events:none;transition:opacity 1.1s ease}
-  #intro-canvas.bg{z-index:-1}
-  #intro{position:fixed;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
-  .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1}
-  .i-words{display:flex;flex-direction:column;align-items:flex-start;position:relative}
-  .i-word{
-    user-select:none;
-    position:relative;
-    font-family:'Fraunces',serif;font-weight:700;
-    font-size:clamp(60px,15vw,120px);
-    letter-spacing:-0.025em;line-height:.95;
-    color:#fff;
-    /* glyph-hugging black glow - follows the exact letters, so it adapts to whatever text shows */
-    text-shadow:0 0 14px rgba(0,0,0,.96),0 0 30px rgba(0,0,0,.85),0 0 54px rgba(0,0,0,.6),0 3px 22px rgba(0,0,0,.9);
-    white-space:nowrap;
-  }
-  /* per-line dark halo sized to each word's own box - the backing tracks the text width line by line and changes with it */
-  .i-word::before{
-    content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-    width:calc(100% + 0.6em);height:calc(100% + 0.34em);
-    z-index:-1;pointer-events:none;
-    background:radial-gradient(ellipse at center,rgba(0,0,0,.84) 0%,rgba(0,0,0,.66) 44%,rgba(0,0,0,0) 78%);
-  }
-  @media (max-width:480px){
-    .i-word{font-size:clamp(32px,10vw,48px)}
-  }
-  .i-init{display:inline-block}
-  .i-txt{display:inline-block;transition:transform .25s}
-  .i-word.glitching       .i-txt{animation:i-shake .09s steps(1) infinite}
-  .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite}
-  .i-word.glitching-micro .i-txt{animation:i-shake-micro .05s steps(1) infinite}
-  @keyframes i-shake{
-    0%  {transform:translate(0,0)}
-    14% {transform:translate(-4px,1px)}
-    28% {transform:translate(3px,-2px)}
-    42% {transform:translate(-2px,3px)}
-    57% {transform:translate(4px,-1px)}
-    71% {transform:translate(-3px,-2px)}
-    85% {transform:translate(2px,2px)}
-    100%{transform:translate(-1px,-1px)}
-  }
-  @keyframes i-shake-heavy{
-    0%  {transform:translate(0,0)}
-    14% {transform:translate(-8px,3px)}
-    28% {transform:translate(7px,-5px)}
-    42% {transform:translate(-5px,7px)}
-    57% {transform:translate(9px,-3px)}
-    71% {transform:translate(-7px,-5px)}
-    85% {transform:translate(5px,5px)}
-    100%{transform:translate(-3px,-3px)}
-  }
-  @keyframes i-shake-micro{
-    0%  {transform:translate(0,0)}
-    25% {transform:translate(-2px,1px)}
-    50% {transform:translate(2px,-1px)}
-    75% {transform:translate(-1px,2px)}
-    100%{transform:translate(1px,-1px)}
-  }
+  /* ── Living Game of Life background (same as the home screen after its intro) ── */
+  #intro-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
 
   /* ── Game list (vertical, sorted by latest change) ── */
   /* ── Sort control ── */
@@ -179,17 +119,8 @@
 </style>
 </head>
 <body>
-<div id="intro-backdrop" aria-hidden="true"></div>
-<canvas id="intro-canvas" aria-hidden="true"></canvas>
-<div id="intro" aria-hidden="true">
-  <div class="i-inner">
-    <div class="i-words">
-      <div class="i-word"><span class="i-init">M</span><span class="i-txt">ATT</span></div>
-      <div class="i-word"><span class="i-init">D</span><span class="i-txt">ANUSER</span></div>
-      <div class="i-word"><span class="i-init">G</span><span class="i-txt">RANT</span></div>
-    </div>
-  </div>
-</div>
+<!-- Conway's Game of Life lives behind the page as a faint, slowly-evolving background (same as the home screen after its intro). No intro reveal here. -->
+<canvas id="intro-canvas" class="bg" aria-hidden="true"></canvas>
 <div class="wrap">
 
   <nav class="nav">
@@ -221,16 +152,13 @@
       <span><a href="https://linkedin.com/in/mattdanusergrant" target="_blank" rel="noopener">LinkedIn</a></span>
       <span><a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">GitHub</a></span>
     </div>
-    <div>Newark, CA · <button class="replay-btn" type="button" onclick="sessionStorage.removeItem('mdg-intro');location.reload()">Replay intro</button></div>
+    <div>Newark, CA</div>
   </footer>
 
 </div>
 <script>
 (function(){
-  var intro=document.getElementById('intro');
-  if(!intro)return;
-
-  /* ── Math Draws Graphics: a live sketch plays behind the words, one per phrase ──── */
+  /* Conway's Game of Life as the faint living site background — the home screen's post-intro state, with no intro reveal. */
   var mdgBg=(function(){
     var canvas=document.getElementById('intro-canvas');
     if(!canvas||!canvas.getContext)return null;
@@ -529,208 +457,9 @@
       }
     };
   })();
-  if(mdgBg)window.addEventListener('resize',mdgBg.resize);
-  if(sessionStorage.getItem('mdg-intro')){
-    // intro already seen this session - skip straight to the living background
-    var bd0=document.getElementById('intro-backdrop');if(bd0)bd0.remove();
-    intro.remove();
-    if(mdgBg)mdgBg.toBackground();
-    return;
-  }
-  var prefersReduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  if(prefersReduced){
-    // Respect prefers-reduced-motion: skip the animated intro, show the static living background.
-    var bdR=document.getElementById('intro-backdrop');if(bdR)bdR.remove();
-    intro.remove();
-    if(mdgBg)mdgBg.toBackground();
-    sessionStorage.setItem('mdg-intro','1');
-    return;
-  }
-  if(mdgBg)mdgBg.start();
-
-  // Each phrase pairs with a Math Draws Graphics sketch; MANY DOORS GUILD RNGs among three door sketches.
-  var BRIDGE_SETS=[
-    {words:['MAKE','DOPE','GROOVES'],            sketch:'waves'},
-    {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
-    {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
-    {words:['MULTIPLAYER','DECK','GATEWAY'],     sketch:'cards'},
-    {words:['MASTER','DATA','GENOME'],           sketch:'helix'},
-    {words:['METROPOLIS','DAWN','GRID'],         sketch:'hilbert'},
-    {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
-    {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
-    {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
-    {words:['MATH','DRAWS','GRAPHICS'],          sketch:'fourier'}
-  ];
-  var FINAL={words:['MUST','DESIGN','GAMES'], sketch:'life'};
-
-  var FLAVORS=[
-    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:false, cls:'glitching'},
-    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', revealAt:0.55, rtl:false, cls:'glitching-heavy'},
-    {chars:'!@#$%&*?<>~^|ABCDEFGHIJKLMNOPQRSTUVWXYZ', revealAt:0.60, rtl:false, cls:'glitching-micro'},
-    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:true,  cls:'glitching'},
-    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.30, rtl:false, cls:'glitching-heavy'},
-    {chars:'!@#$%&*?<>~^|',                     revealAt:0.65, rtl:false, cls:'glitching-micro'}
-  ];
-  var lastFlavor=-1;
-  function pickFlavor(){
-    var idx;
-    do{idx=Math.floor(Math.random()*FLAVORS.length);}while(idx===lastFlavor);
-    lastFlavor=idx;
-    return FLAVORS[idx];
-  }
-
-  var wordEls=Array.from(document.querySelectorAll('.i-word'));
-  var step=0;
-  var animating=false;
-  var bgRevealed=false;
-
-  (function pinFinalWidth(){
-    var finalTails=['UST','ESIGN','AMES'];
-    function measure(){
-      var saved=wordEls.map(function(el){return el.querySelector('.i-txt').textContent;});
-      var maxW=0;
-      wordEls.forEach(function(el,i){
-        el.querySelector('.i-txt').textContent=finalTails[i];
-        var w=el.getBoundingClientRect().width;
-        if(w>maxW)maxW=w;
-      });
-      document.querySelector('.i-words').style.width=maxW+'px';
-      wordEls.forEach(function(el,i){el.querySelector('.i-txt').textContent=saved[i];});
-    }
-    if(document.fonts&&document.fonts.ready){document.fonts.ready.then(measure);}
-    else{setTimeout(measure,200);}
-  })();
-
-  function scramble(n,chars){var s='';for(var i=0;i<n;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
-
-  function glitch(el,to,delay,flavor,cb){
-    setTimeout(function(){
-      var txt=el.querySelector('.i-txt');
-      var from=txt.textContent;
-      var frames=Math.round(700/80);
-      var frame=0;
-      el.classList.add(flavor.cls);
-      var iv=setInterval(function(){
-        frame++;
-        var p=frame/frames;
-        var chars=flavor.chars;
-        if(p>flavor.revealAt){
-          var prog=(p-flavor.revealAt)/(1-flavor.revealAt);
-          var rest=to.slice(1);
-          var resolved=Math.floor(prog*rest.length);
-          txt.textContent=flavor.rtl
-            ? scramble(rest.length-resolved,chars)+rest.slice(rest.length-resolved)
-            : rest.slice(0,resolved)+scramble(rest.length-resolved,chars);
-        }else{
-          txt.textContent=scramble(Math.max(from.length,to.length-1),chars);
-        }
-        if(frame>=frames){
-          clearInterval(iv);
-          el.classList.remove(flavor.cls);
-          txt.textContent=to.slice(1);
-          if(cb)cb();
-        }
-      },80);
-    },delay);
-  }
-
-  function advance(){
-    if(step===2){finish();return;}
-    if(animating)return;
-    animating=true;
-    step++;
-    var pick=step===1?BRIDGE_SETS[Math.floor(Math.random()*BRIDGE_SETS.length)]:FINAL;
-    var targets=pick.words;
-    if(mdgBg)mdgBg.setSketch(pick.sketches?pick.sketches[Math.floor(Math.random()*pick.sketches.length)]:pick.sketch);
-    if(step===2)startBgReveal();   // start morphing the black backdrop toward the site bg as the GoL appears
-    var flavor=pickFlavor();
-    var pending=wordEls.length;
-    wordEls.forEach(function(el,i){
-      glitch(el,targets[i],i*80,flavor,function(){
-        if(--pending===0){
-          animating=false;
-          if(step===2)celebrate();
-        }
-      });
-    });
-  }
-
-  intro.addEventListener('click',advance);
-  intro.addEventListener('wheel',function(e){
-    e.preventDefault();
-    advance();
-  },{passive:false});
-
-  var touchY=0;
-  intro.addEventListener('touchstart',function(e){touchY=e.touches[0].clientY;},{passive:true});
-  intro.addEventListener('touchend',function(e){
-    if(Math.abs(touchY-e.changedTouches[0].clientY)>30)advance();
-  },{passive:true});
-
-  // Keyboard access: Enter/Space advance the intro, Escape skips it — avoids a keyboard-only lockout.
-  window.addEventListener('keydown',function(e){
-    if(step>2)return;
-    if(e.key==='Escape'){e.preventDefault();finish();}
-    else if(e.key==='Enter'||e.key===' '){e.preventDefault();advance();}
-  });
-
-  function celebrate(){
-    var txts=wordEls;
-
-    txts.forEach(function(t,i){
-      setTimeout(function(){
-        t.style.transition='transform .3s cubic-bezier(.17,.67,.35,1.5)';
-        t.style.transform='scale(1.2)';
-        setTimeout(function(){
-          t.style.transition='transform .22s ease';
-          t.style.transform='';
-        },300);
-      },i*150);
-    });
-
-    setTimeout(function(){
-      txts.forEach(function(t){
-        t.style.transition='transform .2s ease';
-        t.style.transform='scale(1.07)';
-        setTimeout(function(){t.style.transform='';},200);
-      });
-    },950);
-
-    // logo fades at a middle speed - into the background the GoL has been easing toward
-    setTimeout(function(){
-      var wordsEl=document.querySelector('.i-words');
-      wordsEl.style.transition='opacity .85s ease';
-      wordsEl.style.opacity='0';
-    },1500);
-
-    setTimeout(function(){if(step===2)finish();},2400);
-  }
-
-  // As the final Game of Life appears, morph the black backdrop toward the site's --bg colour
-  // over the same window the cells ease white -> grey, so cell contrast is kept the whole way.
-  function startBgReveal(){
-    if(bgRevealed)return;bgRevealed=true;
-    var bd=document.getElementById('intro-backdrop');
-    if(!bd)return;
-    var bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#000';
-    bd.style.transition='background-color 3.2s linear';
-    requestAnimationFrame(function(){bd.style.backgroundColor=bg;});
-  }
-
-  // Words gone, backdrop already at the site bg colour: drop the GoL behind the content as the
-  // faint living background, remove the (now bg-coloured) backdrop, and fade the page content in.
-  function finish(){
-    if(step>2)return;step=3;
-    startBgReveal();
-    if(mdgBg)mdgBg.toBackground();
-    var bd=document.getElementById('intro-backdrop');if(bd)bd.remove();
-    var wrap=document.querySelector('.wrap');
-    if(wrap){wrap.style.transition='none';wrap.style.opacity='0';
-      requestAnimationFrame(function(){wrap.style.transition='opacity .7s ease';wrap.style.opacity='1';
-        setTimeout(function(){wrap.style.transition='';wrap.style.opacity='';},780);});}
-    intro.remove();
-    sessionStorage.setItem('mdg-intro','1');
-  }
+  if(!mdgBg)return;
+  window.addEventListener("resize",mdgBg.resize);
+  mdgBg.toBackground();   // straight to the living Game of Life background — no intro reveal
 })();
 </script>
     <script>
