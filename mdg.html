@@ -88,6 +88,12 @@
   .intro-cycle-btn[hidden]{display:none}
   .intro-cycle-btn:hover{background:rgba(255,255,255,.24)}
 
+  /* ── Site map ── */
+  .sitemap-viewer{margin-top:48px}
+  .sitemap-wrap{position:relative;margin-top:16px;height:clamp(380px,62vh,560px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  #sitemap-canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none;user-select:none}
+  #sitemap-canvas.grabbing{cursor:grabbing}
+
   /* ── Footer ── */
   .foot{margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
   .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
@@ -102,6 +108,7 @@
   <nav class="nav">
     <a class="brand" href="/">Matt Danuser-Grant</a>
     <div class="links" id="nav-links">
+      <a href="https://mustdesigngames.mattdanusergrant.com/">Must Design Games</a>
       <a href="/consulting.html">Consulting</a>
       <a href="/resume.html">Resume</a>
     </div>
@@ -139,6 +146,12 @@
     <p class="mdg-sub">Intro viewer</p>
     <p class="mdg-intro" style="margin-top:0">Every phrase the homepage intro can open with, each behind its live Math&nbsp;Draws&nbsp;Graphics sketch — browse them all here instead of reloading for the RNG. Click any to <em>embiggen</em> it (Esc or click away to close); Many Doors Guild cycles its three door sketches once enlarged.</p>
     <div id="intro-grid" class="intro-grid"></div>
+  </section>
+
+  <section class="sitemap-viewer">
+    <p class="mdg-sub">Site map</p>
+    <p class="mdg-intro" style="margin-top:0">Every corner of the site on one map. Drag the canvas to pan, drag a node to rearrange, click a node to go there.</p>
+    <div class="sitemap-wrap"><canvas id="sitemap-canvas"></canvas></div>
   </section>
 
   <footer class="foot">
@@ -290,6 +303,7 @@
 })();
 </script>
 <script src="/assets/mdg-intro.js?v=2"></script>
+<script src="/assets/mdg-sitemap.js?v=1"></script>
 <script src="/assets/site.js?v=2"></script>
 </body>
 </html>
