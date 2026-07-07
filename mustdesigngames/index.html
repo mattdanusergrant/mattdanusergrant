@@ -80,13 +80,13 @@
 
   /* ── Game list (vertical, sorted by latest change) ── */
   /* ── Sort control ── */
-  .listhead{margin:40px 0 0;display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;width:min(920px,calc(100vw - 44px));position:relative;left:50%;transform:translateX(-50%)}
+  .listhead{margin:40px 0 0;display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;width:min(1000px,calc(100vw - 44px));position:relative;left:50%;transform:translateX(-50%)}
   .listhead .count{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
   .listhead .sortnote{font-size:13px;color:var(--muted)}
 
   /* ── Game table (sortable) ── */
-  .tablewrap{margin:14px 0 0;overflow-x:auto;-webkit-overflow-scrolling:touch;width:min(920px,calc(100vw - 44px));position:relative;left:50%;transform:translateX(-50%)}
-  table.gtable{width:100%;border-collapse:separate;border-spacing:0 8px;min-width:600px;font-size:14px}
+  .tablewrap{margin:14px 0 0;overflow-x:auto;-webkit-overflow-scrolling:touch;width:min(1000px,calc(100vw - 44px));position:relative;left:50%;transform:translateX(-50%)}
+  table.gtable{width:100%;border-collapse:separate;border-spacing:0 10px;min-width:720px;font-size:14px}
   .gtable th{
     text-align:left;font-family:'Inter',sans-serif;font-weight:500;
     font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
@@ -98,16 +98,16 @@
   .gtable th[aria-sort] .ar{opacity:1;color:var(--ink)}
   .gtable th[aria-sort="descending"] .ar::after{content:'▼'}
   .gtable th[aria-sort="ascending"] .ar::after{content:'▲'}
-  .gtable td{background:var(--paper);border-top:1.5px solid var(--line);border-bottom:1.5px solid var(--line);padding:9px 12px;vertical-align:middle;transition:border-color .15s}
-  .gtable td:first-child{border-left:1.5px solid var(--line);border-top-left-radius:12px;border-bottom-left-radius:12px}
-  .gtable td:last-child{border-right:1.5px solid var(--line);border-top-right-radius:12px;border-bottom-right-radius:12px}
+  .gtable td{background:var(--paper);border-top:1.5px solid var(--line);border-bottom:1.5px solid var(--line);padding:16px 14px;vertical-align:middle;transition:border-color .15s}
+  .gtable td:first-child{border-left:1.5px solid var(--line);border-top-left-radius:14px;border-bottom-left-radius:14px}
+  .gtable td:last-child{border-right:1.5px solid var(--line);border-top-right-radius:14px;border-bottom-right-radius:14px}
   .gtable tr:hover td{border-color:var(--line-2)}
-  .gtable th:nth-child(2),.gtable td:nth-child(2){width:52%}
-  .g-thumb{width:96px;height:60px;object-fit:cover;border-radius:7px;border:1px solid var(--line-2);display:block;background:var(--bg)}
-  .g-name{font-family:'Fraunces',serif;font-weight:500;font-size:16px;color:var(--ink);letter-spacing:-0.01em;display:block}
+  .gtable th:nth-child(2),.gtable td:nth-child(2){width:50%}
+  .g-thumb{width:192px;height:120px;object-fit:cover;border-radius:9px;border:1px solid var(--line-2);display:block;background:var(--bg)}
+  .g-name{font-family:'Fraunces',serif;font-weight:500;font-size:18px;color:var(--ink);letter-spacing:-0.01em;display:block}
   .g-name:hover{text-decoration:underline}
-  .g-desc{color:var(--muted);font-size:12.5px;line-height:1.45;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .g-tag{color:var(--ink-2);font-weight:600}
+  .g-desc{color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:5px;max-width:520px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .g-desc b{color:var(--ink-2);font-weight:600}
   .g-num{font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
   .g-when{color:var(--muted);white-space:nowrap}
   .g-played{font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
@@ -168,23 +168,23 @@
        play counts (localStorage). Thumbnails live in ./thumbs/<slug>.jpg — re-screenshot
        a game's page to refresh one. Promote/demote by editing this array (see mdg.html tiers). */
     const GAMES = [
-      {slug:'metropolisdawngrid', name:'Metropolis Dawn Grid', updated:'2026-07-07', change:'Guided first-run onboarding + supply-chain bootstrap fix', genre:'City builder', size:64, desc:'one shared world; build your district, run the supply chain, lay rail, and ship your surplus out by train.', intent:'Can a shared-world city builder work async, on one grid?'},
-      {slug:'mossdewgarden', name:'Moss Dew Garden', updated:'2026-07-07', change:'Harvests you can use — the garden now feeds the care loop', genre:'Virtual pet', size:136, desc:'adopt a little plant-creature and keep it fed, happy, and rested.', intent:'A cozy care loop that earns a daily check-in.'},
-      {slug:'honk-beach', name:'Honk Beach', updated:'2026-07-06', change:'Added to the arcade', genre:'Arcade', size:20, desc:'defend your beach picnic from a siege of hungry geese. Tap to shoo!', intent:'One-tap defense — pure reaction, phone-first.'},
-      {slug:'keeprippingpacks', name:'Keep Ripping Packs', updated:'2026-07-06', change:'Added to the arcade', genre:'Economy sim', size:425, desc:'rip booster packs, sort the spill, craft Sets, and sell on a live market.', intent:'The dopamine of pack-opening as a full economy.'},
-      {slug:'rhythm-rpg', name:'Rolls Per Groove', updated:'2026-07-06', change:'Added to the arcade', genre:'Rhythm RPG', size:25, desc:'every lane a class, every note an attack; fight short songs, then level your party between battles.', intent:'Every lane a class, every note an attack.'},
-      {slug:'sigil-tactics', name:'Sigil Tactics', updated:'2026-07-06', change:'Added to the arcade', genre:'Tactics', size:134, desc:'a 5v5 card-battler on a 5×4 grid — initiative by speed, push-and-pull positioning, chaining sigils.', intent:'Initiative-by-speed and push/pull as the core tactic.'},
-      {slug:'switchback-td', name:'Switchback TD', updated:'2026-07-06', change:'Added to the arcade', genre:'Tower defense', size:87, desc:'maze-building; wind the path, hold the wave.', intent:'Maze-building TD — the player draws the path.'},
-      {slug:'airwolf', name:'Airwolf', updated:'2026-07-06', change:'Added to the arcade', genre:'Shmup', size:47, desc:'a side-scrolling attack-helicopter shooter; strafe the ground and survive the run.', intent:'How much game fits on one screen?'},
-      {slug:'baduk-blitz', name:'Baduk Blitz', updated:'2026-07-06', change:'Added to the arcade', genre:'Board', size:35, desc:'Go on a blitz clock; capture territory on a small board before the timer runs out.', intent:'Go under a blitz clock — speed on an ancient game.'},
-      {slug:'bannerfall', name:'Bannerfall', updated:'2026-07-06', change:'Added to the arcade', genre:'Auto-battler', size:27, desc:'field units of different rarities and fight for the banner.', intent:'A rarity-driven creature battler.'},
-      {slug:'berm-burner', name:'Berm Burner', updated:'2026-07-06', change:'Added to the arcade', genre:'Racing', size:24, desc:'a downhill trail-riding prototype; carve the berms and hold your speed through the run.', intent:'Downhill flow — carve berms, keep speed.'},
-      {slug:'bloom-again', name:'Bloom Again', updated:'2026-07-06', change:'Added to the arcade', genre:'Ambient', size:28, desc:'an atmospheric slice; move through the Hollow and light the Lantern Frame.', intent:'A quiet mood piece — light the frames.'},
-      {slug:'groundwork', name:'Groundwork', updated:'2026-07-06', change:'Added to the arcade', genre:'Puzzle', size:18, desc:'a land-parcel prototype; work the job sheet and bring "Hollow Field" up to spec.', intent:'A land-parcel job sheet as a puzzle.'},
-      {slug:'matgo', name:'Matgo', updated:'2026-07-06', change:'Added to the arcade', genre:'Card', size:30, desc:'Korean Go-Stop (Hwatu); match flower cards, call Go or Stop, and race to points.', intent:'Korean Go-Stop (Hwatu) against an AI.'},
-      {slug:'multiplayerdeckgateway', name:'Multiplayer Deck Gateway', updated:'2026-07-06', change:'Added to the arcade', genre:'Card platform', size:138, desc:'a shared deck engine and lobby; build browser card games and deal them to friends by room code.', intent:'One engine, many card games — deal by room code.'},
-      {slug:'prism-pond', name:'Prism Pond', updated:'2026-07-06', change:'Added to the arcade', genre:'Puzzle', size:68, desc:'route light beams around the hub and solve the pond.', intent:'Route light beams — a spatial colour puzzle.'},
-      {slug:'word-pounce', name:'Word Pounce', updated:'2026-07-06', change:'Added to the arcade', genre:'Word', size:103, desc:'Wordle-and-Hangman-flavoured guessing in fast rounds.', intent:'Wordle meets Hangman.'},
+      {slug:"metropolisdawngrid", name:"Metropolis Dawn Grid", updated:"2026-07-07", change:"Guided first-run onboarding + supply-chain bootstrap fix", size:64, desc:"A lean <b>city-builder</b> set on one shared world: zone your district, wire up the supply chain, and lay rail across the map. Ship your surplus out by train while the neighbours build theirs.", intent:"Can a shared-world city builder work async, on one grid?"},
+      {slug:"mossdewgarden", name:"Moss Dew Garden", updated:"2026-07-07", change:"Harvests you can use — the garden now feeds the care loop", size:136, desc:"A cozy <b>virtual pet</b> kept in a jar of moss and dew. Adopt the little plant-creature, keep it fed, happy and rested, and let the garden you grow feed the care loop back.", intent:"A cozy care loop that earns a daily check-in."},
+      {slug:"honk-beach", name:"Honk Beach", updated:"2026-07-06", change:"Added to the arcade", size:20, desc:"A frantic one-tap <b>arcade</b> defense — your beach picnic is under siege by a mob of hungry geese. Tap to shoo them off before they make off with lunch; built phone-first for pure reaction.", intent:"One-tap defense — pure reaction, phone-first."},
+      {slug:"keeprippingpacks", name:"Keep Ripping Packs", updated:"2026-07-06", change:"Added to the arcade", size:425, desc:"An <b>economy sim</b> running on the dopamine of the pack rip. Tear open boosters, sort the spill, craft complete Sets, and sell into a live market that moves with supply.", intent:"The dopamine of pack-opening as a full economy."},
+      {slug:"rhythm-rpg", name:"Rolls Per Groove", updated:"2026-07-06", change:"Added to the arcade", size:25, desc:"A <b>rhythm RPG</b> where every lane is a class and every note is an attack. Fight through short, intense songs, then spend what you earn levelling your party between battles.", intent:"Every lane a class, every note an attack."},
+      {slug:"sigil-tactics", name:"Sigil Tactics", updated:"2026-07-06", change:"Added to the arcade", size:134, desc:"A compact <b>tactics</b> card-battler fought 5v5 on a 5×4 grid. Initiative runs on speed, positioning is push-and-pull, and free sigils chain into bonus turns.", intent:"Initiative-by-speed and push/pull as the core tactic."},
+      {slug:"switchback-td", name:"Switchback TD", updated:"2026-07-06", change:"Added to the arcade", size:87, desc:"Maze-building <b>tower defense</b> where you draw the path yourself. Wind the lane back on itself to buy time, then hold the line as each wave floods through.", intent:"Maze-building TD — the player draws the path."},
+      {slug:"airwolf", name:"Airwolf", updated:"2026-07-06", change:"Added to the arcade", size:47, desc:"A tight, one-screen <b>shmup</b> starring an attack helicopter. Strafe the ground, dodge the fire coming back at you, and see how long you last on a single run.", intent:"How much game fits on one screen?"},
+      {slug:"baduk-blitz", name:"Baduk Blitz", updated:"2026-07-06", change:"Added to the arcade", size:35, desc:"<b>Go</b> with the pressure turned up — the ancient board game on a blitz clock. Read the board fast and grab territory before the timer runs you out.", intent:"Go under a blitz clock — speed on an ancient game."},
+      {slug:"bannerfall", name:"Bannerfall", updated:"2026-07-06", change:"Added to the arcade", size:27, desc:"A rarity-driven <b>auto-battler</b>: field a squad of creatures from commons to legendaries and let the fight play out. Line up the right roster and push for the banner.", intent:"A rarity-driven creature battler."},
+      {slug:"berm-burner", name:"Berm Burner", updated:"2026-07-06", change:"Added to the arcade", size:24, desc:"A downhill trail-<b>racing</b> prototype about flow. Carve each berm clean, stay off the brakes, and string the whole run together to the bottom.", intent:"Downhill flow — carve berms, keep speed."},
+      {slug:"bloom-again", name:"Bloom Again", updated:"2026-07-06", change:"Added to the arcade", size:28, desc:"A quiet <b>ambient</b> slice — more mood piece than challenge. Drift through the Hollow, light the Lantern's frames one by one, and watch it bloom.", intent:"A quiet mood piece — light the frames."},
+      {slug:"groundwork", name:"Groundwork", updated:"2026-07-06", change:"Added to the arcade", size:18, desc:"A land-parcel <b>puzzle</b> dressed up as a job sheet. Read the brief, work the parcel, and bring “Hollow Field” up to spec one task at a time.", intent:"A land-parcel job sheet as a puzzle."},
+      {slug:"matgo", name:"Matgo", updated:"2026-07-06", change:"Added to the arcade", size:30, desc:"Korean Go-Stop (Hwatu), a flower <b>card game</b> played against an AI. Match cards, weigh whether to call Go or Stop, and race the deck to points.", intent:"Korean Go-Stop (Hwatu) against an AI."},
+      {slug:"multiplayerdeckgateway", name:"Multiplayer Deck Gateway", updated:"2026-07-06", change:"Added to the arcade", size:138, desc:"A browser <b>card-game platform</b> more than a single game — one shared deck engine and lobby. Build a card game, spin up a variant, then deal it to friends over a room code.", intent:"One engine, many card games — deal by room code."},
+      {slug:"prism-pond", name:"Prism Pond", updated:"2026-07-06", change:"Added to the arcade", size:68, desc:"A spatial light <b>puzzle</b> set in a still pond. Route beams around the central hub, bend them through the colours, and light every node to solve it.", intent:"Route light beams — a spatial colour puzzle."},
+      {slug:"word-pounce", name:"Word Pounce", updated:"2026-07-06", change:"Added to the arcade", size:103, desc:"A quick daily <b>word</b> game with a Wordle-and-Hangman streak. Read the clue, trace the word on the grid, and claim it before your guesses run out.", intent:"Wordle meets Hangman."},
     ];
 
     // ── Client-only play tracking (localStorage; private to each visitor, no backend) ──
@@ -213,7 +213,7 @@
     const COLS = [
       {label:'', key:null, cell:g => `<img class="g-thumb" src="./thumbs/${g.slug}.jpg" alt="${esc(g.name)} thumbnail" width="92" height="58">`},
       {label:'Game', key:'name', val:g => g.name.toLowerCase(), cell:g =>
-        `<a class="g-name" href="./${g.slug}/" title="${esc(g.intent)}">${esc(g.name)}</a><div class="g-desc"><b class="g-tag">${esc(g.genre)}</b> — ${esc(g.desc)}</div>`},
+        `<a class="g-name" href="./${g.slug}/" title="${esc(g.intent)}">${esc(g.name)}</a><div class="g-desc">${g.desc}</div>`},
       {label:'Updated', key:'updated', val:g => g.updated, cell:g =>
         `<span class="g-when"><time datetime="${g.updated}" title="${fmt.format(new Date(g.updated+'T00:00:00'))} — ${esc(g.change)}">${ago(new Date(g.updated+'T00:00:00').getTime())}</time></span>`},
       {label:'Size', key:'size', val:g => g.size, cell:g => `<span class="g-num">${g.size} KB</span>`},
