@@ -1,5 +1,5 @@
 /* Split System — charge engine (pure, dual-mode: browser <script src> + node require)
-   Real R-410A / R-22 PT data, real superheat/subcooling math. No arcade abstraction.
+   Real R-410A / R-22 PT data, real superheat/subcooling math. No arcade abstraction. */
 
 var HVAC = (function () {
   // Pressure–Temperature tables: saturation temp (°F) -> gauge pressure (psig).
