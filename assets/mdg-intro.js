@@ -17,6 +17,7 @@
     {words:['METROPOLIS','DAWN','GRID'],          sketch:'hilbert'},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'], sketch:'lorenz'},
     {words:['MODULAR','DIGITAL','GOODS'],         sketch:'sierpinski'},
+    {words:['MOSS','DEW','GARDEN'],               sketch:'pythagoras'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],      sketch:'metatron'},
     {words:['MATH','DRAWS','GRAPHICS'],           sketch:'fourier'},
     {words:['MUST','DESIGN','GAMES'],             sketch:'life'}
@@ -211,6 +212,22 @@
       ctx.strokeStyle=col(0,0.25);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(waveX0,S.trace[0]);ctx.stroke();
       ctx.strokeStyle=col(0,0.95);ctx.lineWidth=1.6;ctx.beginPath();
       for(var i=0;i<S.trace.length;i++){var X=waveX0+i*dx,Y=S.trace[i];i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}
+      ctx.stroke();
+    };
+    // Pythagoras Tree — recursively branching empty squares (line-only); branch angle sways like foliage (MOSS DEW GARDEN).
+    SK.pythagoras=function(w,h,t){
+      var m=Math.min(w,h),s0=m*0.135,baseY=h*0.74,cx=w/2,ang=Math.PI/4+Math.sin(t*0.5)*0.30;
+      ctx.shadowBlur=0;ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle=col(0,0.82);ctx.lineWidth=1;
+      ctx.beginPath();
+      (function pyth(x1,y1,x2,y2,depth){
+        var dx=x2-x1,dy=y2-y1;
+        if(depth<=0||Math.abs(dx)+Math.abs(dy)<1.5)return;
+        var x3=x2+dy,y3=y2-dx,x4=x1+dy,y4=y1-dx;
+        ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineTo(x3,y3);ctx.lineTo(x4,y4);ctx.closePath();
+        var c=Math.cos(ang),si=Math.sin(ang),ex=x4+c*(dx*c+dy*si),ey=y4+c*(-dx*si+dy*c);
+        pyth(x4,y4,ex,ey,depth-1);
+        pyth(ex,ey,x3,y3,depth-1);
+      })(cx-s0/2,baseY,cx+s0/2,baseY,12);
       ctx.stroke();
     };
     // Conway's Game of Life — the MUST DESIGN GAMES finale, simplified for the viewer
