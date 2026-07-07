@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>A multi-tenant SaaS with no server · Case Study · Matt Danuser-Grant</title>
+<meta name="description" content="Engineering case study: shipping a live, multi-tenant scheduling SaaS whose entire backend is Postgres row-level security and RPC functions on Neon — no custom server, plus a 57-line Cloudflare Worker to survive iOS/Safari cookie policy." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/site.css" />
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:17px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+
+  .wrap{max-width:768px;margin:0 auto;padding:0 28px 80px}
+
+  /* ── Top nav ───────────────────────────── */
+  .nav{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:24px 0 0;font-size:14px;color:var(--muted);
+    letter-spacing:.04em;
+  }
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+
+  /* ── Header ───────────────────────────── */
+  .head{padding:60px 0 28px;max-width:660px}
+  .head .eyebrow{
+    font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px;font-weight:500;
+  }
+  .head h1{
+    font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(34px,6vw,50px);
+    line-height:1.1;letter-spacing:-0.02em;margin:0 0 18px;
+  }
+  .head h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .head .lede{color:var(--ink-2);font-size:18.5px;line-height:1.6;margin:0}
+
+  /* ── Meta row ───────────────────────────── */
+  .meta{
+    display:flex;flex-wrap:wrap;gap:26px;
+    margin:8px 0 4px;padding:20px 0;
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .meta div{display:flex;flex-direction:column;gap:3px}
+  .meta dt{
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  .meta dd{margin:0;font-size:14.5px;color:var(--ink-2);font-weight:500}
+
+  /* ── Prose body ───────────────────────────── */
+  .prose{padding:36px 0 0;max-width:680px}
+  .prose section{margin:0 0 40px}
+  .prose h2{
+    font-family:'Fraunces',serif;font-weight:500;font-size:26px;
+    letter-spacing:-0.01em;line-height:1.2;margin:0 0 14px;
+  }
+  .prose h3{
+    font-family:'Fraunces',serif;font-weight:500;font-size:19px;
+    margin:26px 0 8px;letter-spacing:-0.005em;
+  }
+  .prose p{margin:0 0 16px;color:var(--ink-2)}
+  .prose ul,.prose ol{margin:0 0 16px;padding-left:22px;color:var(--ink-2)}
+  .prose li{margin:0 0 8px}
+  .prose strong{font-weight:600;color:var(--ink)}
+  .prose code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:0.86em;background:var(--code-bg);border-radius:5px;padding:1px 6px;
+    color:var(--ink);
+  }
+
+  /* ── Architecture figure ───────────────────────────── */
+  .arch{margin:26px 0}
+  .diagram{
+    border:1.5px solid var(--line);border-radius:14px;
+    overflow:hidden;background:var(--paper);box-shadow:var(--shadow);
+  }
+  .diagram svg{display:block;width:100%;height:auto}
+  figcaption{
+    font-size:12.5px;color:var(--muted);margin:10px 2px 0;text-align:center;
+  }
+
+  /* ── Pull quote ───────────────────────────── */
+  .pull{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:400;
+    font-size:23px;line-height:1.4;color:var(--ink);
+    margin:30px 0;padding:4px 0 4px 24px;
+    border-left:2px solid var(--line-2);
+  }
+
+  /* ── Callout ───────────────────────────── */
+  .callout{
+    background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
+    padding:22px 24px;margin:26px 0;box-shadow:var(--shadow);
+  }
+  .callout .label{
+    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin:0 0 10px;
+  }
+  .callout ul{margin:0;padding-left:20px}
+  .callout li:last-child{margin-bottom:0}
+
+  /* ── Tags ───────────────────────────── */
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}
+  .tag{
+    font-size:12.5px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;
+    padding:4px 12px;background:var(--paper);
+  }
+
+  /* ── Footer ───────────────────────────── */
+  .foot{
+    margin:64px 0 0;padding-top:28px;
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    color:var(--muted);font-size:14px;
+  }
+  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot a:hover{border-color:var(--ink-2)}
+
+  .note{
+    max-width:680px;margin:30px auto 0;font-size:12.5px;color:var(--muted);
+    text-align:center;font-style:italic;
+  }
+
+  @media (max-width:480px){
+    .wrap{padding:0 22px 60px}
+    .head{padding:40px 0 24px}
+    .meta{gap:18px}
+    .nav .links a{margin-left:14px;font-size:13px}
+    .theme-toggle{margin-left:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links" id="nav-links">
+      <a href="/consulting.html">Consulting</a>
+      <a href="/resume.html">Resume</a>
+    </div>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-controls="nav-links" aria-expanded="false"><svg class="i-bars" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="i-x" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <header class="head">
+    <p class="eyebrow">Case Study · Engineering</p>
+    <h1>A multi-tenant SaaS <em>with no server.</em></h1>
+    <p class="lede">Keeping Cadence is a live, multi-tenant team-scheduling app. It has real accounts, cross-device sync, teams and invites, and a plan-vs-actual-hours permission model &mdash; and it runs at <strong>$0/month</strong> with <strong>no application server at all</strong>. The whole backend is Postgres row-level security and RPC functions on Neon, plus one 57-line edge worker. Here is how that holds together, and the two bugs that cost the most to find.</p>
+  </header>
+
+  <dl class="meta">
+    <div><dt>What</dt><dd>Live multi-tenant scheduling SaaS</dd></div>
+    <div><dt>Stack</dt><dd>Neon Postgres · PostgREST · Cloudflare Workers · vanilla JS</dd></div>
+    <div><dt>Role</dt><dd>Solo &mdash; design, DB, client, infra</dd></div>
+    <div><dt>Status</dt><dd>Shipped &amp; live</dd></div>
+  </dl>
+
+  <article class="prose">
+
+    <section>
+      <h2>The constraint that shaped everything</h2>
+      <p>I wanted accounts and sync without paying for or babysitting a backend. The usual answer is a small API server &mdash; auth middleware, an ORM, a hosting bill, a thing to patch. I wanted none of it. The constraint became the design: <strong>if there is no server, the database itself has to be the API, and the database has to enforce every rule.</strong></p>
+      <p>Neon makes that possible. Its Data API exposes Postgres over REST (PostgREST), and Neon Auth issues the identity. So the browser talks straight to the database: reads are table <code>GET</code>s filtered by row-level security; writes are <code>POST /rpc/&hellip;</code> calls to Postgres functions. The front end is a single static <code>app.html</code> on a CDN. There is nothing in between to run.</p>
+
+      <figure class="arch">
+        <div class="diagram">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" font-family="'Inter',system-ui,-apple-system,sans-serif" role="img" aria-label="A static browser app talks directly to Neon: auth via a same-origin Cloudflare Worker proxy, reads via the Data API under row-level security, and writes via public SECURITY INVOKER wrappers that delegate to private SECURITY DEFINER workers.">
+          <defs>
+            <marker id="cs-arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6A6A6A"/></marker>
+          </defs>
+          <rect x="1" y="1" width="958" height="468" rx="16" fill="#FBF8F2" stroke="#CBC4B2"/>
+          <text x="32" y="40" font-size="20" font-weight="700" fill="#15161C">Keeping Cadence &mdash; no server, just Neon</text>
+          <text x="32" y="62" font-size="13" fill="#6A6A6A">A static single-file app talks directly to Neon. The only edge piece is a 57-line stateless Cloudflare Worker.</text>
+          <rect x="32" y="92" width="196" height="340" rx="12" fill="#FFFFFF" stroke="#CBC4B2"/>
+          <text x="130" y="122" font-size="15" font-weight="700" fill="#15161C" text-anchor="middle">Browser</text>
+          <text x="130" y="142" font-size="12" fill="#6A6A6A" text-anchor="middle">app.html · static · Vercel</text>
+          <line x1="52" y1="158" x2="208" y2="158" stroke="#E5E0D2"/>
+          <text x="130" y="182" font-size="11.5" fill="#2A2A2A" text-anchor="middle">Offline-first</text>
+          <text x="130" y="200" font-size="11.5" fill="#6A6A6A" text-anchor="middle">localStorage draft</text>
+          <text x="130" y="218" font-size="11.5" fill="#6A6A6A" text-anchor="middle">#s= share links</text>
+          <text x="130" y="252" font-size="11.5" fill="#2A2A2A" text-anchor="middle">Signed in adds</text>
+          <text x="130" y="270" font-size="11.5" fill="#6A6A6A" text-anchor="middle">accounts · sync</text>
+          <text x="130" y="288" font-size="11.5" fill="#6A6A6A" text-anchor="middle">teams · invites</text>
+          <rect x="732" y="92" width="196" height="340" rx="12" fill="#FFFFFF" stroke="#CBC4B2"/>
+          <text x="830" y="122" font-size="15" font-weight="700" fill="#15161C" text-anchor="middle">Neon</text>
+          <text x="830" y="142" font-size="12" fill="#6A6A6A" text-anchor="middle">Postgres + Neon Auth</text>
+          <line x1="752" y1="158" x2="908" y2="158" stroke="#E5E0D2"/>
+          <text x="830" y="182" font-size="11.5" fill="#2A2A2A" text-anchor="middle">Row-level security</text>
+          <text x="830" y="200" font-size="11.5" fill="#6A6A6A" text-anchor="middle">every table</text>
+          <text x="830" y="234" font-size="11.5" fill="#2A2A2A" text-anchor="middle">kc_private schema</text>
+          <text x="830" y="252" font-size="11.5" fill="#6A6A6A" text-anchor="middle">not exposed by</text>
+          <text x="830" y="270" font-size="11.5" fill="#6A6A6A" text-anchor="middle">the Data API</text>
+          <text x="830" y="304" font-size="11.5" fill="#2A2A2A" text-anchor="middle">Better Auth</text>
+          <text x="830" y="322" font-size="11.5" fill="#6A6A6A" text-anchor="middle">cookie session</text>
+          <rect x="300" y="176" width="176" height="44" rx="9" fill="#FFFFFF" stroke="#009E73" stroke-width="2"/>
+          <text x="388" y="194" font-size="12.5" font-weight="600" fill="#15161C" text-anchor="middle">Cloudflare Worker</text>
+          <text x="388" y="210" font-size="11" fill="#6A6A6A" text-anchor="middle">same-origin auth proxy</text>
+          <text x="512" y="166" font-size="11.5" font-weight="600" fill="#009E73">Auth &mdash; HttpOnly cookie &rarr; short-lived Data API JWT</text>
+          <line x1="228" y1="198" x2="298" y2="198" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
+          <line x1="476" y1="198" x2="730" y2="198" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
+          <rect x="300" y="272" width="210" height="44" rx="9" fill="#FFFFFF" stroke="#0072B2" stroke-width="2"/>
+          <text x="405" y="290" font-size="12.5" font-weight="600" fill="#15161C" text-anchor="middle">Neon Data API (PostgREST)</text>
+          <text x="405" y="306" font-size="11" fill="#6A6A6A" text-anchor="middle">GET /schedules · /weeks · /teams</text>
+          <text x="546" y="262" font-size="11.5" font-weight="600" fill="#0072B2">Reads &mdash; bearer JWT, RLS-filtered</text>
+          <line x1="228" y1="294" x2="298" y2="294" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
+          <line x1="510" y1="294" x2="730" y2="294" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
+          <rect x="284" y="368" width="150" height="46" rx="9" fill="#FFFFFF" stroke="#D55E00" stroke-width="2"/>
+          <text x="359" y="386" font-size="12" font-weight="600" fill="#15161C" text-anchor="middle">public wrapper</text>
+          <text x="359" y="402" font-size="10.5" fill="#6A6A6A" text-anchor="middle">SECURITY INVOKER</text>
+          <rect x="470" y="368" width="150" height="46" rx="9" fill="#FFFFFF" stroke="#D55E00" stroke-width="2"/>
+          <text x="545" y="386" font-size="12" font-weight="600" fill="#15161C" text-anchor="middle">kc_private worker</text>
+          <text x="545" y="402" font-size="10.5" fill="#6A6A6A" text-anchor="middle">SECURITY DEFINER</text>
+          <text x="284" y="358" font-size="11.5" font-weight="600" fill="#D55E00">Writes &mdash; POST /rpc/*, validated + concurrency-checked</text>
+          <line x1="228" y1="391" x2="282" y2="391" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
+          <line x1="434" y1="391" x2="468" y2="391" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
+          <line x1="620" y1="391" x2="730" y2="391" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
+        </svg>
+        </div>
+        <figcaption>The whole backend. Nothing in the middle runs application code except a stateless 57-line edge worker.</figcaption>
+      </figure>
+    </section>
+
+    <section>
+      <h2>Authorization is the architecture</h2>
+      <p>With no server to check permissions, every rule lives in Postgres. Reads are governed by <strong>row-level security</strong>: a policy on each table decides what the signed-in user can see (their own profile; teams they own or joined; schedules assigned to them or in a team they own). A user simply cannot <code>GET</code> another tenant&rsquo;s rows &mdash; the database refuses.</p>
+      <p>Writes use a two-layer pattern I&rsquo;m proud of. The only functions the Data API exposes are thin <strong><code>SECURITY INVOKER</code> wrappers</strong> in the <code>public</code> schema. Each one reads the caller&rsquo;s identity once, then delegates to a privileged <strong><code>SECURITY DEFINER</code> worker</strong> in a separate <code>kc_private</code> schema that is <em>not</em> exposed by the API. The workers do the real work but trust only the user id the wrapper hands them. A column-level grant even hides a team&rsquo;s secret invite token from ordinary <code>SELECT</code>s. It is genuine privilege separation, written in SQL rather than a framework &mdash; and I verified it live with negative tests: RLS isolation between users, and confirming the private workers are unreachable through the API.</p>
+      <p class="pull">If there&rsquo;s no server, the database is the API &mdash; so the database has to be the security boundary too.</p>
+    </section>
+
+    <section>
+      <h2>Gotcha 1 &mdash; the signed-in user was <code>NULL</code> inside my own functions</h2>
+      <p>The first version put the logic directly in <code>SECURITY DEFINER</code> functions and asked Postgres &ldquo;who is calling?&rdquo; It always answered <code>NULL</code>. On this Neon project the JWT identity only resolves while running as the <code>authenticated</code> role &mdash; inside a <code>SECURITY DEFINER</code> function, which runs as the table owner, both <code>auth.uid()</code> and the request&rsquo;s JWT claims are empty. A brand-new signup couldn&rsquo;t even create its own profile row.</p>
+      <p>The fix is the invoker/definer split above: read the identity <em>once</em>, in the invoker context, via a <code>current_uid()</code> helper (Neon&rsquo;s <code>auth.uid()</code> with a fallback to the <code>sub</code> claim so it needs no grant on the auth schema), and thread that id down to the privileged worker as an argument. Identity is captured in the one place it&rsquo;s trustworthy and passed explicitly everywhere else.</p>
+    </section>
+
+    <section>
+      <h2>Gotcha 2 &mdash; iOS quietly logged everyone out on refresh</h2>
+      <p>Login worked, then a page refresh signed you out &mdash; but only on Safari and iOS. Neon Auth&rsquo;s session cookie is set by the <code>neon.tech</code> host, which is <em>third-party</em> to the app&rsquo;s domain, so Safari&rsquo;s tracking prevention dropped it. Moving to a same-site <strong>subdomain</strong> still failed: iOS WebKit won&rsquo;t persist a cookie for a host the user never visited at the top level.</p>
+      <p>The fix was to make the cookie first-party by routing auth <strong>same-origin</strong>: <code>app&hellip;/__neonauth</code> is rewritten to a 57-line Cloudflare Worker that proxies to Neon, so the cookie is set on the app&rsquo;s own origin and every browser keeps it. The Worker also does a few non-obvious header transforms (stripping <code>x-forwarded-host</code>, which otherwise makes Neon reject the request). Hiding under it was a client bug that masked the whole thing: the session-restore call was gated on a bearer token that Neon never sends, so it never ran &mdash; the cookie was there, just never checked. Now the app always restores from the cookie on load.</p>
+      <div class="callout">
+        <p class="label">Why these two were worth writing down</p>
+        <ul>
+          <li><strong>They&rsquo;re invisible in the happy path.</strong> Both passed a casual test on desktop Chrome and failed only in production, on specific engines, under specific policies.</li>
+          <li><strong>They&rsquo;re the price of &ldquo;no server.&rdquo;</strong> Pushing auth and authorization to the edges of the stack means learning exactly how JWT context and browser cookie policy behave &mdash; knowledge a middle-tier server would have hidden.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Hardening it like a product</h2>
+      <p>A live app with cloud sync deserves more than a happy path, so I went back and closed the gaps a reviewer would ask about:</p>
+      <ul>
+        <li><strong>Tests &amp; CI on a build-stepless app.</strong> A dependency-free harness loads the single inline <code>&lt;script&gt;</code> in a Node <code>vm</code> behind a DOM stub and asserts the load-bearing pure logic (time math, data migration, the share-link round-trip). GitHub Actions runs it on every push.</li>
+        <li><strong>Honest sync state.</strong> The client no longer swallows save failures; a persisted dirty-set tracks unsynced edits, the indicator shows synced / offline / failed with a retry, and a pull can&rsquo;t clobber an edit that hasn&rsquo;t landed yet.</li>
+        <li><strong>Optimistic concurrency.</strong> Two devices editing the same week used to silently overwrite each other. Saves now carry the last-seen <code>updated_at</code>; if the row moved on, Postgres raises a <em>stale write</em> and the client reloads the winner instead of clobbering it.</li>
+        <li><strong>Defense in depth at the DB.</strong> Because any authenticated caller can hit the RPCs directly, the save functions validate payload shape and size in SQL and cap free-text lengths &mdash; the client can&rsquo;t be the only thing keeping data sane. All of it has its own SQL test suite.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>What it demonstrates</h2>
+      <ul>
+        <li><strong>Postgres authorization engineering</strong> &mdash; RLS policies, <code>SECURITY INVOKER</code>/<code>DEFINER</code> privilege separation, an unexposed private schema, and column-level grants: real multi-tenant access control written in SQL, not bought from a framework.</li>
+        <li><strong>Web-auth internals</strong> &mdash; HttpOnly cookie semantics, <code>SameSite</code>/<code>Partitioned</code>, Safari ITP and iOS WebKit persistence rules, and JWT minting with refresh-on-401.</li>
+        <li><strong>Edge/infra composition</strong> &mdash; a Cloudflare Worker reverse proxy with surgical header rewriting, host-based rewrites, and custom DNS across providers, deliberately kept to $0/month.</li>
+        <li><strong>Product judgment</strong> &mdash; knowing which corners to leave (email verification off for a private beta) and which to harden (never silently lose a user&rsquo;s saved hours).</li>
+      </ul>
+      <p>The one place this design would ever add a server is a Stripe webhook receiver &mdash; the single seam where money, not data, has to cross. That&rsquo;s a deliberate line, documented, not an accident.</p>
+    </section>
+
+    <div class="tags">
+      <span class="tag">Postgres / RLS</span>
+      <span class="tag">PostgREST</span>
+      <span class="tag">Web Auth</span>
+      <span class="tag">Cloudflare Workers</span>
+      <span class="tag">Multi-tenant SaaS</span>
+    </div>
+
+  </article>
+
+  <p class="note">Keeping Cadence is live at <a href="https://app.keepingcadence.com">app.keepingcadence.com</a>. This writeup describes my own project; nothing here is confidential.</p>
+
+  <footer class="foot">
+    <div><a href="/#case-studies">← Case Studies</a></div>
+    <div><a href="/">← Home</a></div>
+  </footer>
+
+</div>
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
