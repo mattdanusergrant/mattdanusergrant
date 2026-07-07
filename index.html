@@ -574,21 +574,28 @@
         ctx.stroke();
       }
     };
-    // Card Flower - the whole deck fanned out from the center like petals; slow spin + gentle bloom (MULTIPLAYER DECK GATEWAY).
+    // Card Fractal - an endless Droste bloom: cards born tiny at the center, spiralling out and scaling forever; self-similar so it loops seamlessly (MULTIPLAYER DECK GATEWAY).
     SK.cards=function(w,h,t){
-      var cx=w/2,cy=h/2,m=Math.min(w,h),ch=m*0.34,cw=ch*0.64,rr=cw*0.14,N=14;
-      var spin=t*0.16,bloom=Math.sin(t*0.6)*0.5+0.5,r0=m*(0.006+0.03*bloom);
+      var cx=w/2,cy=h/2,m=Math.min(w,h),S=1.9,N=7,twist=0.7,CH0=m*0.05,DC0=CH0*1.05,SMIN=-3,SMAX=7,screenR=Math.hypot(w,h)/2;
+      var phase=(t*0.22)%1;   // one generation per ~4.5s; wraps seamlessly (each gen is S× the last)
       ctx.shadowBlur=0;ctx.lineJoin='round';ctx.lineCap='round';
       function rrect(x,y,ww,hh,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+ww,y,x+ww,y+hh,r);ctx.arcTo(x+ww,y+hh,x,y+hh,r);ctx.arcTo(x,y+hh,x,y,r);ctx.arcTo(x,y,x+ww,y,r);ctx.closePath();}
-      for(var i=0;i<N;i++){
-        var a=i/N*TAU+spin;
-        ctx.save();
-        ctx.translate(cx+Math.cos(a)*(r0+ch/2),cy+Math.sin(a)*(r0+ch/2));
-        ctx.rotate(a-Math.PI/2);
-        rrect(-cw/2,-ch/2,cw,ch,rr);
-        ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fill();
-        ctx.lineWidth=Math.max(1,cw*0.06);ctx.strokeStyle=col(0,0.9);ctx.stroke();
-        ctx.restore();
+      for(var s=SMIN;s<=SMAX;s++){
+        var L=s+phase,scale=Math.pow(S,L),ch=CH0*scale,cw=ch*0.64,rr=Math.max(0.4,cw*0.14),D=DC0*scale,rOuter=D+ch/2;
+        if(rOuter>screenR*1.2)continue;
+        // alpha is purely a function of scale (fade in from the vanishing point, out past the edge) → the loop is seamless
+        var alpha=Math.max(0,Math.min(1,(L-SMIN)/1.8))*Math.max(0,Math.min(1,(screenR*1.05-rOuter)/(screenR*0.4)));
+        if(alpha<=0.01)continue;
+        for(var i=0;i<N;i++){
+          var ang=i/N*TAU+L*twist;
+          ctx.save();
+          ctx.translate(cx+Math.cos(ang)*D,cy+Math.sin(ang)*D);
+          ctx.rotate(ang-Math.PI/2);
+          rrect(-cw/2,-ch/2,cw,ch,rr);
+          ctx.fillStyle='rgba(0,0,0,'+(0.7*Math.min(1,alpha+0.25)).toFixed(3)+')';ctx.fill();
+          ctx.lineWidth=Math.max(0.6,cw*0.06);ctx.strokeStyle=col(0,0.9*alpha);ctx.stroke();
+          ctx.restore();
+        }
       }
     };
     // Lorenz Attractor - the butterfly of chaos (MULTIPLE DIMENSIONS GENERATED).
