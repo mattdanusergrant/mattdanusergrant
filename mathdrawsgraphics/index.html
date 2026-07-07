@@ -2,84 +2,72 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Math Draws Graphics</title>
-<meta name="description" content="Math Draws Graphics — making pictures with a computer. Code Art (animated math sketches) and Pixel Art (a sprite editor).">
+<meta name="description" content="Math Draws Graphics — making pictures with a computer. Toggle between Code Art (animated math sketches) and Pixel Art (a sprite editor).">
 <script>!function(){try{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}catch(e){}}()</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#FBF8F2; --paper:#FFFFFF; --ink:#15161C; --ink-2:#2A2A2A; --muted:#6A6A6A;
-    --line:#E5E0D2; --line-2:#CBC4B2; --accent:#C9820A; --shadow:0 1px 2px rgba(0,0,0,.04); --shadow-h:0 8px 30px rgba(0,0,0,.08); }
-  :root[data-theme="dark"]{ --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink-2:#CAC5BC; --muted:#7A756D;
-    --line:#2E2A24; --line-2:#3A352E; --accent:#E8A317; --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-h:0 10px 34px rgba(0,0,0,.45); }
-  *,*::before,*::after{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--bg); color:var(--ink); font:18px/1.55 'Inter',system-ui,-apple-system,sans-serif;
-    -webkit-font-smoothing:antialiased; min-height:100vh}
-  a{color:inherit; text-decoration:none}
-  .wrap{max-width:820px; margin:0 auto; padding:0 28px 80px}
-  .nav{display:flex; justify-content:space-between; align-items:center; padding:24px 0 0; font-size:14px; color:var(--muted); letter-spacing:.03em}
-  .nav .home{transition:color .15s}
-  .nav .home:hover{color:var(--ink)}
-  .tt{appearance:none; border:1.5px solid var(--line-2); background:transparent; color:var(--muted); border-radius:999px; padding:5px 12px; font:inherit; font-size:12.5px; cursor:pointer}
-  .tt:hover{border-color:var(--ink); color:var(--ink)}
-  header.head{padding:66px 0 8px; max-width:640px}
-  .eyebrow{font-size:12.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:0 0 16px; font-weight:500}
-  h1{font-family:'Fraunces',serif; font-weight:500; font-size:clamp(38px,7vw,60px); line-height:1.05; letter-spacing:-0.02em; margin:0 0 18px}
-  h1 em{font-style:italic; color:var(--accent)}
-  .lede{color:var(--muted); font-size:18px; margin:0; max-width:52ch}
-  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin:44px 0 0}
-  .card{background:var(--paper); border:1.5px solid var(--line); border-radius:16px; padding:24px 24px 22px;
-    display:flex; flex-direction:column; box-shadow:var(--shadow); transition:transform .18s,border-color .18s,box-shadow .18s}
-  .card:hover{transform:translateY(-3px); border-color:var(--line-2); box-shadow:var(--shadow-h)}
-  .card .tag{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600; margin:0 0 10px}
-  .card h2{font-family:'Fraunces',serif; font-weight:500; font-size:26px; letter-spacing:-0.01em; margin:0 0 8px}
-  .card p{color:var(--muted); font-size:15.5px; margin:0 0 20px; flex:1}
-  .go{align-self:flex-start; font-family:'Fraunces',serif; font-size:14px; font-weight:500;
-    background:var(--ink); color:var(--bg); border:1.5px solid var(--ink); border-radius:999px; padding:8px 18px; transition:.15s}
-  .go:hover{background:var(--ink-2); border-color:var(--ink-2)}
-  .foot{margin:64px 0 0; padding-top:26px; border-top:1px solid var(--line); color:var(--muted); font-size:14px}
-  .foot a{color:var(--ink-2); border-bottom:1px solid transparent}
-  .foot a:hover{border-color:var(--ink-2)}
-  @media (max-width:480px){ .wrap{padding:0 22px 60px} header.head{padding:44px 0 8px} }
+  :root{ --bg:#FBF8F2; --paper:#FFFFFF; --ink:#15161C; --muted:#6A6A6A; --line-2:#CBC4B2; --accent:#C9820A; }
+  :root[data-theme="dark"]{ --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --muted:#7A756D; --line-2:#3A352E; --accent:#E8A317; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:14px/1.4 'Inter',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:var(--ink);background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+  .umbrella{height:42px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;
+    background:var(--paper);border-bottom:1.5px solid var(--line-2)}
+  .ub-brand{font-weight:700;font-size:13px;letter-spacing:.01em;color:var(--ink);white-space:nowrap;text-decoration:none}
+  .ub-brand:hover{color:var(--accent)}
+  .ub-tabs{display:flex;gap:6px}
+  .ub-tab{font:inherit;font-size:12.5px;color:var(--muted);padding:5px 11px;
+    border:1.5px solid transparent;border-radius:999px;white-space:nowrap;background:transparent;cursor:pointer}
+  .ub-tab:hover{color:var(--ink);border-color:var(--line-2)}
+  .ub-tab.on{color:var(--ink);border-color:var(--line-2);background:var(--bg)}
+  .spacer{flex:1}
+  .tt{appearance:none;border:1.5px solid var(--line-2);background:transparent;color:var(--muted);
+    border-radius:999px;padding:5px 12px;font:inherit;font-size:12px;cursor:pointer}
+  .tt:hover{border-color:var(--ink);color:var(--ink)}
+  iframe#frame{flex:1;width:100%;border:0;display:block}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav class="nav">
-    <a class="home" href="https://mattdanusergrant.com">← mattdanusergrant.com</a>
-    <button class="tt" id="tt" type="button" aria-label="Toggle light / dark">theme</button>
-  </nav>
-
-  <header class="head">
-    <h1>Math Draws <em>Graphics</em></h1>
-    <p class="lede">Making pictures with a computer — one tool where the maths does the drawing, one where you push the pixels yourself.</p>
-  </header>
-
-  <div class="grid">
-    <article class="card">
-      <p class="tag">In code</p>
-      <h2>Code Art</h2>
-      <p>A gallery of animated math sketches — fractals, curves, chaos, string art — each with the maths explained and live, editable code. Zoom, spin, export SVG/PNG.</p>
-      <a class="go" href="/code-art/">Open Code Art →</a>
-    </article>
-    <article class="card">
-      <p class="tag">In pixels</p>
-      <h2>Pixel Art</h2>
-      <p>A browser sprite editor — palette, brushes, mirror mode, PNG export at any scale. Built for authoring game art, one pixel at a time.</p>
-      <a class="go" href="/pixel-art/">Open Pixel Art →</a>
-    </article>
+<nav class="umbrella">
+  <a class="ub-brand" href="https://mattdanusergrant.com">Math Draws Graphics</a>
+  <div class="ub-tabs" role="tablist">
+    <button class="ub-tab" id="tab-code" data-mode="code" role="tab" type="button">Code Art</button>
+    <button class="ub-tab" id="tab-pixel" data-mode="pixel" role="tab" type="button">Pixel Art</button>
   </div>
-
-  <div class="foot">Part of <a href="https://mattdanusergrant.com/">mattdanusergrant.com</a> · Matt Danuser-Grant</div>
-</div>
+  <span class="spacer"></span>
+  <button class="tt" id="tt" type="button" aria-label="Toggle light / dark">theme</button>
+</nav>
+<iframe id="frame" title="Math Draws Graphics"></iframe>
 <script>
+  var SRC={code:'code-art/',pixel:'pixel-art/'};
+  var frame=document.getElementById('frame');
+  function pick(){
+    var h=(location.hash||'').replace('#','');
+    if(h==='code'||h==='pixel') return h;
+    try{var m=localStorage.getItem('mdg.mode'); if(m==='code'||m==='pixel') return m;}catch(e){}
+    return 'code';
+  }
+  function setMode(mode,push){
+    document.getElementById('tab-code').classList.toggle('on',mode==='code');
+    document.getElementById('tab-pixel').classList.toggle('on',mode==='pixel');
+    if(frame.getAttribute('src')!==SRC[mode]) frame.setAttribute('src',SRC[mode]);
+    try{localStorage.setItem('mdg.mode',mode);}catch(e){}
+    if(push && location.hash!=='#'+mode) history.replaceState(null,'','#'+mode);
+  }
+  document.querySelectorAll('.ub-tab').forEach(function(b){
+    b.onclick=function(){ setMode(b.dataset.mode,true); };
+  });
+  addEventListener('hashchange',function(){ setMode(pick(),false); });
+  // theme: keep the shell and the embedded tool in sync (same origin)
   document.getElementById('tt').onclick=function(){
     var d=document.documentElement, n=d.getAttribute('data-theme')==='dark'?'light':'dark';
-    d.setAttribute('data-theme',n); try{localStorage.setItem('theme',n)}catch(e){}
+    d.setAttribute('data-theme',n);
+    try{localStorage.setItem('theme',n);}catch(e){}
+    try{ frame.contentDocument.documentElement.setAttribute('data-theme',n); }catch(e){}
   };
+  setMode(pick(),true);
 </script>
 </body>
 </html>

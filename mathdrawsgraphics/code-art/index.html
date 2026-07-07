@@ -29,7 +29,7 @@
     color:var(--ink); background:var(--bg); overflow:hidden;
     -webkit-tap-highlight-color:transparent; -webkit-font-smoothing:antialiased;
   }
-  .app{display:flex; height:calc(100dvh - 42px)}
+  .app{display:flex; height:100dvh}
   .umbrella{height:42px; display:flex; align-items:center; gap:14px; padding:0 14px;
     background:var(--paper); border-bottom:1.5px solid var(--line-2)}
   .ub-brand{font-weight:700; font-size:13px; letter-spacing:.01em; color:var(--ink); white-space:nowrap}
@@ -152,13 +152,6 @@
 </style>
 </head>
 <body>
-<nav class="umbrella">
-  <span class="ub-brand">Math Draws Graphics</span>
-  <div class="ub-tabs">
-    <a class="ub-tab on" href="/code-art/">Code Art</a>
-    <a class="ub-tab" href="/pixel-art/">Pixel Art</a>
-  </div>
-</nav>
 <div class="app">
   <div class="stage">
     <canvas id="c" title="Drag to pan · Shift-drag to spin in 3D · scroll to zoom · double-click to reset"></canvas>

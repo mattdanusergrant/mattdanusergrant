@@ -16,8 +16,8 @@
 # Deduped brand slugs — collapse dashed variants to the canonical no-dash paths
 /make-dope-grooves/*           /makedopegrooves/:splat 301
 /manufacture-digital-grooves/* /makedopegrooves/:splat 301
-/math-draws-graphics/*         https://mathdrawsgraphics.mattdanusergrant.com/code-art/:splat 301
-/pixel-art/*                   https://mathdrawsgraphics.mattdanusergrant.com/pixel-art/:splat 301
+/math-draws-graphics/*         https://mathdrawsgraphics.mattdanusergrant.com/ 301
+/pixel-art/*                   https://mathdrawsgraphics.mattdanusergrant.com/#pixel 301
 
 # Design Lab retired — folded into the homepage (games live on the mustdesigngames subdomain)
 /design-lab.html  /  301
