@@ -122,7 +122,7 @@
           var ang=i/N*TAU+L*twist;
           ctx.save();
           ctx.translate(cx+Math.cos(ang)*D,cy+Math.sin(ang)*D);
-          ctx.rotate(ang-Math.PI/2);
+          ctx.rotate(ang-Math.PI/2-0.4);   // constant left tilt → spiral
           rrect(-cw/2,-ch/2,cw,ch,rr);
           ctx.fillStyle='rgba(0,0,0,'+(0.7*Math.min(1,alpha+0.25)).toFixed(3)+')';ctx.fill();
           ctx.lineWidth=Math.max(0.6,cw*0.06);ctx.strokeStyle=col(0,0.9*alpha);ctx.stroke();

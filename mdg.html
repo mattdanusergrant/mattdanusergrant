@@ -66,13 +66,6 @@
   /* ── Workshop hero + WIP games ── */
   .mdg-title{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(34px,6vw,52px);letter-spacing:-0.02em;line-height:1.05;color:var(--ink);margin:56px 0 0;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .mdg-lede{color:var(--ink-2);font-size:18px;line-height:1.55;max-width:640px;margin:16px 0 0}
-  .ws-tiers{margin-top:40px}
-  .tier-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
-  .tier-list li{display:flex;align-items:baseline;gap:16px;padding:14px 18px;background:var(--paper);border:1.5px solid var(--line);border-radius:12px;box-shadow:var(--shadow);flex-wrap:wrap}
-  .tier-n{font-family:'Fraunces',serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex-shrink:0;min-width:3.4em}
-  .tier-name{font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--ink);flex-shrink:0;min-width:7.5em}
-  .tier-desc{color:var(--muted);font-size:14.5px;line-height:1.5;flex:1;min-width:200px}
-  @media(max-width:520px){.tier-list li{gap:4px 14px}.tier-name{min-width:0}}
   .ws-games{margin-top:44px}
   .ws-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
   .ws-row{display:flex;align-items:center;gap:20px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:16px 20px;box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s}
@@ -144,18 +137,9 @@
   </header>
 
   <section class="ws-games">
-    <p class="mdg-sub">Must Design Games — Works in Progress</p>
-    <p class="mdg-intro" style="margin-top:0">New ideas land here. They aspire to join the arcade when they grow up.</p>
+    <h2 class="mdg-head">Must Design Games — Works in Progress</h2>
+    <p class="mdg-intro">New ideas land here. They aspire to join the arcade when they grow up.</p>
     <div id="ws-games" class="ws-list"></div>
-  </section>
-
-  <section class="ws-tiers">
-    <p class="mdg-sub">The Must Design Games tiers</p>
-    <ol class="tier-list">
-      <li><span class="tier-n">Tier 1</span><span class="tier-name">MDG WIP</span><span class="tier-desc">New ideas land here by default.</span></li>
-      <li><span class="tier-n">Tier 2</span><span class="tier-name">MDG Arcade</span><span class="tier-desc">Public-ready games are promoted to here.</span></li>
-      <li><span class="tier-n">Tier 3</span><span class="tier-name">Standalone</span><span class="tier-desc">Games that outgrow the arcade find a new home elsewhere.</span></li>
-    </ol>
   </section>
 
   <section id="mdg-lab" class="mdg-lab" hidden aria-hidden="true">
@@ -185,14 +169,14 @@
   </section>
 
   <section class="intro-viewer">
-    <p class="mdg-sub">Intro viewer</p>
-    <p class="mdg-intro" style="margin-top:0">Every phrase the homepage intro can open with, each behind its live Math&nbsp;Draws&nbsp;Graphics sketch — browse them all here instead of reloading for the RNG. Click any to <em>embiggen</em> it (Esc or click away to close); Many Doors Guild cycles its three door sketches once enlarged.</p>
+    <h2 class="mdg-head">MDG Intro Viewer</h2>
+    <p class="mdg-intro">Every phrase the homepage intro can open with, each behind its live Math&nbsp;Draws&nbsp;Graphics sketch — browse them all here instead of reloading for the RNG. Click any to <em>embiggen</em> it (Esc or click away to close); Many Doors Guild cycles its three door sketches once enlarged.</p>
     <div id="intro-grid" class="intro-grid"></div>
   </section>
 
   <section class="sitemap-viewer">
-    <p class="mdg-sub">Site map</p>
-    <p class="mdg-intro" style="margin-top:0">Every corner of the site on one map. Drag the canvas to pan, drag a node to rearrange, click a node to go there.</p>
+    <h2 class="mdg-head">MDG Site Map</h2>
+    <p class="mdg-intro">Every corner of the site on one map. Drag the canvas to pan, drag a node to rearrange, click a node to go there.</p>
     <div class="sitemap-wrap"><canvas id="sitemap-canvas"></canvas></div>
   </section>
 
@@ -366,7 +350,7 @@
   }).join('');
 })();
 </script>
-<script src="/assets/mdg-intro.js?v=5"></script>
+<script src="/assets/mdg-intro.js?v=6"></script>
 <script src="/assets/mdg-sitemap.js?v=1"></script>
 <script src="/assets/site.js?v=2"></script>
 </body>
