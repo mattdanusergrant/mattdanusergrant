@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Must Design Games</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Must Design Games · Matt Danuser-Grant</title>
 <meta name="description" content="Playable game prototypes by Matt Danuser-Grant — one repo, one folder per game.">
 <link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/">
 <meta property="og:type" content="website">
@@ -11,11 +11,10 @@
 <meta property="og:description" content="Playable game prototypes by Matt Danuser-Grant — one repo, one folder per game.">
 <meta property="og:url" content="https://mustdesigngames.mattdanusergrant.com/">
 <meta name="twitter:card" content="summary">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315161C'/%3E%3Cpath d='M13 10l9 6-9 6z' fill='%23FBF8F2'/%3E%3C/svg%3E">
-<!-- theme init before paint: avoids a flash of the wrong theme -->
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2315161C'/%3E%3Cpath d='M13 10l9 6-9 6z' fill='%23FBF8F2'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 <style>
@@ -29,28 +28,117 @@
     min-height:100vh;
   }
   a{color:inherit;text-decoration:none}
-  .wrap{max-width:1000px;margin:0 auto;padding:0 28px 80px}
+  .wrap{max-width:820px;margin:0 auto;padding:0 28px 80px}
 
-  /* ── Top nav ── */
+  /* ── Top nav ────────────────────────────────────────────────────── */
   .nav{
     display:flex;justify-content:space-between;align-items:center;
     flex-wrap:wrap;row-gap:10px;
-    padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em;
+    padding:24px 0 0;font-size:14px;color:var(--muted);
+    letter-spacing:.04em;
   }
   .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(13px,3.8vw,17px);color:var(--ink);letter-spacing:-0.01em;white-space:nowrap}
   .nav .links{display:flex;align-items:center;flex-wrap:wrap;row-gap:6px;white-space:nowrap}
   .nav .links a{margin-left:22px;transition:color .15s}
   .nav .links a:hover{color:var(--ink)}
-  .nav .links a .arr{display:inline-block;transition:transform .18s}
-  .nav .links a:hover .arr{transform:translate(2px,-2px)}
-
-  /* ── Hero ── */
-  .hero{padding:64px 0 40px}
-  .hero .eyebrow{font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;font-weight:500}
-  .hero h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(40px,7vw,64px);line-height:1.05;letter-spacing:-0.02em;margin:0 0 20px;color:var(--ink)}
+  /* ── Hero ────────────────────────────────────────────────────── */
+  .hero{padding:72px 0 18px}
+  .hero .eyebrow{
+    font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px;font-weight:500;
+  }
+  .hero h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;font-size:clamp(40px,7vw,64px);
+    line-height:1.05;letter-spacing:-0.02em;margin:0 0 24px;
+    color:var(--ink);
+  }
   .hero h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
-  .hero .lede{font-size:20px;line-height:1.6;color:var(--ink-2);max-width:600px;margin:0}
+  .hero .lede{
+    font-size:20px;line-height:1.6;color:var(--ink-2);max-width:600px;
+    margin:0 0 18px;
+  }
+  .hero .lede + .lede{color:var(--muted);font-size:18.5px}
+  /* ── Footer ────────────────────────────────────────────────────── */
+  .foot{
+    margin:80px 0 0;padding-top:28px;
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    color:var(--muted);font-size:14px;
+  }
+  .foot .contact a{
+    color:var(--ink-2);
+    border-bottom:1px solid transparent;transition:border-color .15s;
+  }
+  .foot .contact a:hover{border-color:var(--ink-2)}
+  .foot .contact span + span::before{content:' · ';color:var(--line-2);margin:0 .4em}
+  .replay-btn{background:none;border:none;cursor:pointer;padding:0;color:var(--muted);font-size:inherit;font-family:inherit;transition:color .15s}
+  .replay-btn:hover{color:var(--ink)}
 
+  /* ── Intro puzzle ────────────────────────────────────────────────────── */
+  #intro-backdrop{position:fixed;inset:0;background:#000;z-index:9997;pointer-events:none;transition:opacity .8s ease}
+  /* Math Draws Graphics - sketches play white-on-black during the intro; afterwards the
+     Game of Life keeps running and drops behind the site as a faint living background */
+  #intro-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:9998;pointer-events:none;transition:opacity 1.1s ease}
+  #intro-canvas.bg{z-index:-1}
+  #intro{position:fixed;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s ease;cursor:pointer}
+  .i-inner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1}
+  .i-words{display:flex;flex-direction:column;align-items:flex-start;position:relative}
+  .i-word{
+    user-select:none;
+    position:relative;
+    font-family:'Fraunces',serif;font-weight:700;
+    font-size:clamp(60px,15vw,120px);
+    letter-spacing:-0.025em;line-height:.95;
+    color:#fff;
+    /* glyph-hugging black glow - follows the exact letters, so it adapts to whatever text shows */
+    text-shadow:0 0 14px rgba(0,0,0,.96),0 0 30px rgba(0,0,0,.85),0 0 54px rgba(0,0,0,.6),0 3px 22px rgba(0,0,0,.9);
+    white-space:nowrap;
+  }
+  /* per-line dark halo sized to each word's own box - the backing tracks the text width line by line and changes with it */
+  .i-word::before{
+    content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:calc(100% + 0.6em);height:calc(100% + 0.34em);
+    z-index:-1;pointer-events:none;
+    background:radial-gradient(ellipse at center,rgba(0,0,0,.84) 0%,rgba(0,0,0,.66) 44%,rgba(0,0,0,0) 78%);
+  }
+  @media (max-width:480px){
+    .i-word{font-size:clamp(32px,10vw,48px)}
+  }
+  .i-init{display:inline-block}
+  .i-txt{display:inline-block;transition:transform .25s}
+  .i-word.glitching       .i-txt{animation:i-shake .09s steps(1) infinite}
+  .i-word.glitching-heavy .i-txt{animation:i-shake-heavy .07s steps(1) infinite}
+  .i-word.glitching-micro .i-txt{animation:i-shake-micro .05s steps(1) infinite}
+  @keyframes i-shake{
+    0%  {transform:translate(0,0)}
+    14% {transform:translate(-4px,1px)}
+    28% {transform:translate(3px,-2px)}
+    42% {transform:translate(-2px,3px)}
+    57% {transform:translate(4px,-1px)}
+    71% {transform:translate(-3px,-2px)}
+    85% {transform:translate(2px,2px)}
+    100%{transform:translate(-1px,-1px)}
+  }
+  @keyframes i-shake-heavy{
+    0%  {transform:translate(0,0)}
+    14% {transform:translate(-8px,3px)}
+    28% {transform:translate(7px,-5px)}
+    42% {transform:translate(-5px,7px)}
+    57% {transform:translate(9px,-3px)}
+    71% {transform:translate(-7px,-5px)}
+    85% {transform:translate(5px,5px)}
+    100%{transform:translate(-3px,-3px)}
+  }
+  @keyframes i-shake-micro{
+    0%  {transform:translate(0,0)}
+    25% {transform:translate(-2px,1px)}
+    50% {transform:translate(2px,-1px)}
+    75% {transform:translate(-1px,2px)}
+    100%{transform:translate(1px,-1px)}
+  }
+
+  /* ── Game list (vertical, sorted by latest change) ── */
   /* ── Sort control ── */
   .listhead{margin:40px 0 0;display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap}
   .listhead .count{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
@@ -88,46 +176,563 @@
     .row .change::after{content:'·';margin-left:12px;color:var(--line-2)}
     .row .go{order:2;margin-left:auto}
   }
-
-  /* ── Footer ── */
-  .foot{
-    margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);
-    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
-    color:var(--muted);font-size:14px;
-  }
-  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
-  .foot a:hover{border-color:var(--ink-2)}
-
-  @media (max-width:480px){
-    .wrap{padding:0 22px 60px}
-    .hero{padding:36px 0 24px}
-    .hero .lede{font-size:17px}
-    .nav .links a{margin-left:14px;font-size:13px}
-  }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <nav class="nav">
-      <a class="brand" href="/">Must Design Games</a>
-      <div class="links">
-        <a href="https://mattdanusergrant.com/">mattdanusergrant.com <span class="arr">↗</span></a>
-        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
-      </div>
-    </nav>
-
-    <header class="hero">
-      <p class="eyebrow">The Arcade</p>
-      <h1>Must <em>Design</em> Games</h1>
-      <p class="lede">Playable prototypes by Matt Danuser-Grant — one repo, one folder per game. Pick one and play.</p>
-    </header>
-
-    <div class="listhead">
-      <span class="count" id="count"></span>
-      <span class="sortnote">Sorted by latest change — freshest on top, quietest at the bottom.</span>
+<div id="intro-backdrop" aria-hidden="true"></div>
+<canvas id="intro-canvas" aria-hidden="true"></canvas>
+<div id="intro" aria-hidden="true">
+  <div class="i-inner">
+    <div class="i-words">
+      <div class="i-word"><span class="i-init">M</span><span class="i-txt">ATT</span></div>
+      <div class="i-word"><span class="i-init">D</span><span class="i-txt">ANUSER</span></div>
+      <div class="i-word"><span class="i-init">G</span><span class="i-txt">RANT</span></div>
     </div>
-    <main class="list" id="games"></main>
+  </div>
+</div>
+<div class="wrap">
 
+  <nav class="nav">
+    <a class="brand" href="https://mattdanusergrant.com/">Matt Danuser-Grant</a>
+    <div class="links" id="nav-links">
+      <a href="/">Must Design Games</a>
+      <a href="https://mattdanusergrant.com/consulting.html">Consulting</a>
+      <a href="https://mattdanusergrant.com/resume.html">Resume</a>
+    </div>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-controls="nav-links" aria-expanded="false"><svg class="i-bars" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="i-x" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <section class="hero">
+    <p class="eyebrow">The Arcade</p>
+    <h1>Must Design Games</h1>
+    <p class="lede">Playable prototypes by Matt Danuser-Grant — one repo, one folder per game. Pick one and play.</p>
+  </section>
+
+  <div class="listhead">
+    <span class="count" id="count"></span>
+    <span class="sortnote">Sorted by latest change — freshest on top, quietest at the bottom.</span>
+  </div>
+  <main class="list" id="games"></main>
+
+  <footer class="foot">
+    <div class="contact">
+      <span><a href="mailto:hello@mattdanusergrant.com">hello@mattdanusergrant.com</a></span>
+      <span><a href="https://linkedin.com/in/mattdanusergrant" target="_blank" rel="noopener">LinkedIn</a></span>
+      <span><a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">GitHub</a></span>
+    </div>
+    <div>Newark, CA · <button class="replay-btn" type="button" onclick="sessionStorage.removeItem('mdg-intro');location.reload()">Replay intro</button></div>
+  </footer>
+
+</div>
+<script>
+(function(){
+  var intro=document.getElementById('intro');
+  if(!intro)return;
+
+  /* ── Math Draws Graphics: a live sketch plays behind the words, one per phrase ──── */
+  var mdgBg=(function(){
+    var canvas=document.getElementById('intro-canvas');
+    if(!canvas||!canvas.getContext)return null;
+    var ctx=canvas.getContext('2d');
+    var DPR=Math.min(2,window.devicePixelRatio||1);
+    var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    var TAU=Math.PI*2;
+    var raf=0,t0=0,running=false,cur='fern',lifeS={},fernS={},fourierS={},hilbertS={};
+    // crossfade: a snapshot of the outgoing sketch dissolves out over the incoming one
+    var snap=null,sctx=null,fadeUntil=0,fadeDur=750;
+    var bgMode=false,lastDraw=0,bgStart=0;  // bgMode: the Game of Life lives on as the site background; bgStart: when it began
+    var gFade=0,gFadeStart=0,gFadeMs=3200;  // final GoL eases bright-white -> faint theme-ink over this window
+    function isDark(){var d=document.documentElement.getAttribute('data-theme');return d?d==='dark':matchMedia('(prefers-color-scheme:dark)').matches;}
+    function col(hue,a){return 'rgba(255,255,255,'+a+')';}   // sketches draw pure white on the black intro
+    // Game of Life cells: lerp white(bright) -> theme-ink(faint) by p, so they dissolve into the site background.
+    function lifeCol(p){var r=Math.round(255+((isDark()?237:21)-255)*p),g=Math.round(255+((isDark()?232:22)-255)*p),b=Math.round(255+((isDark()?223:28)-255)*p);return 'rgba('+r+','+g+','+b+','+(0.85+(0.18-0.85)*p)+')';}
+    function resize(){var w=canvas.clientWidth,h=canvas.clientHeight;canvas.width=w*DPR;canvas.height=h*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+      if(!snap){snap=document.createElement('canvas');sctx=snap.getContext('2d');}
+      snap.width=canvas.width;snap.height=canvas.height;fadeUntil=0;}
+
+    // Each sketch is an authentic Math Draws Graphics example, drawing one frame from (w,h,t).
+    var SK={};
+    // Barnsley Fern - an IFS chaos game that builds up behind the name (resting state).
+    SK.fern=function(w,h,t){
+      var S=fernS,key=Math.round(w)+'x'+Math.round(h);
+      if(S.key!==key){S.key=key;S.x=0;S.y=0;S.off=document.createElement('canvas');S.off.width=Math.round(w);S.off.height=Math.round(h);S.octx=S.off.getContext('2d');}
+      var octx=S.octx,W=S.off.width,H=S.off.height,x=S.x,y=S.y,iters=reduce?60000:10;
+      octx.fillStyle='rgba(255,255,255,0.85)';
+      for(var i=0;i<iters;i++){
+        var r=Math.random(),nx,ny;
+        if(r<0.01){nx=0;ny=0.16*y;}
+        else if(r<0.86){nx=0.85*x+0.04*y;ny=-0.04*x+0.85*y+1.6;}
+        else if(r<0.93){nx=0.20*x-0.26*y;ny=0.23*x+0.22*y+1.6;}
+        else{nx=-0.15*x+0.28*y;ny=0.26*x+0.24*y+0.44;}
+        x=nx;y=ny;octx.fillRect(W*(x+2.8)/5.6,H-H*y/11,1,1);
+      }
+      S.x=x;S.y=y;ctx.shadowBlur=0;ctx.drawImage(S.off,0,0,w,h);
+    };
+    // Sound Waves - overlaid oscilloscope waveforms (MAKE DOPE GROOVES).
+    SK.waves=function(w,h,t){
+      var mid=h/2,nw=5,step=Math.max(2,Math.floor(w/260));ctx.lineCap='round';ctx.shadowColor=col(300,0.4);
+      ctx.strokeStyle=col(300,0.1);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();
+      for(var k=0;k<nw;k++){var freq=2+k*1.6,amp=h*0.2*(1-k/(nw+1)),sp=0.7+k*0.35;
+        ctx.strokeStyle=col(300+k*14,0.8-k*0.13);ctx.lineWidth=2.4-k*0.32;ctx.beginPath();
+        for(var x=0;x<=w;x+=step){var u=x/w,win=Math.sin(Math.PI*u),y=mid+Math.sin(u*freq*TAU+t*sp)*amp*win;x?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+        ctx.stroke();}
+    };
+    // Phyllotaxis sunflower - golden-angle seed head (MAXIMUM DOPAMINE GUARANTEED).
+    SK.phyllo=function(w,h,t){
+      var cx=w/2,cy=h/2,golden=TAU/(((1+Math.sqrt(5))/2)*((1+Math.sqrt(5))/2)),N=600,R=Math.min(w,h)*0.46,scale=R/Math.sqrt(N),dot=Math.max(0.8,scale*0.5),spin=t*0.12;
+      ctx.shadowColor=col(40,0.4);
+      for(var i=1;i<=N;i++){var a=i*golden+spin,rad=scale*Math.sqrt(i),x=cx+Math.cos(a)*rad,y=cy+Math.sin(a)*rad,f=i/N;
+        ctx.fillStyle=col(40+30*f,0.35+0.5*f);ctx.beginPath();ctx.arc(x,y,dot,0,TAU);ctx.fill();}
+    };
+    // Doors - first-person corridor of receding doorways (Math Draws Graphics: "Doors").
+    SK.doors=function(w,h,t){
+      var N=22,speed=0.55,focal=Math.min(w,h)*0.62,march=t*speed;
+      var cx=w/2+Math.sin(t*0.9)*w*0.018,cy=h/2+Math.sin(t*1.7)*h*0.012;
+      ctx.shadowBlur=0;ctx.lineCap='butt';ctx.lineJoin='miter';
+      ctx.strokeStyle='hsla(0,0%,45%,0.18)';ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(0,0);ctx.lineTo(cx,cy);ctx.moveTo(w,0);ctx.lineTo(cx,cy);
+      ctx.moveTo(0,h);ctx.lineTo(cx,cy);ctx.moveTo(w,h);ctx.lineTo(cx,cy);
+      ctx.stroke();
+      for(var i=N;i>=1;i--){
+        var z=i-(march%1),s=focal/z,hw=0.26*s,hh=0.42*s;
+        if(hw<0.4)continue;
+        var alpha=Math.min(1,Math.max(0.05,1.2-z/N)),top=cy-hh,bot=cy+hh;
+        ctx.strokeStyle='rgba(255,255,255,'+alpha.toFixed(3)+')';
+        ctx.lineWidth=Math.min(16,Math.max(0.8,7/z));
+        ctx.beginPath();ctx.moveTo(cx-hw,bot);ctx.lineTo(cx-hw,top);ctx.lineTo(cx+hw,top);ctx.lineTo(cx+hw,bot);ctx.stroke();
+      }
+    };
+    // Many Doors - a long hallway lined with doors on both walls (Math Draws Graphics: "Many Doors").
+    SK.manyDoors=function(w,h,t){
+      var N=28,speed=0.5,focal=Math.min(w,h)*0.62,march=t*speed;
+      var cx=w/2+Math.sin(t*0.7)*w*0.012,cy=h/2+Math.sin(t*1.3)*h*0.008;
+      var WX=0.40,HY=0.52,DH=0.80,GAP=0.6;
+      ctx.shadowBlur=0;ctx.lineCap='butt';ctx.lineJoin='miter';
+      var e=focal;
+      ctx.strokeStyle='rgba(255,255,255,0.14)';ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(cx-WX*e,cy-HY*e);ctx.lineTo(cx,cy);ctx.moveTo(cx+WX*e,cy-HY*e);ctx.lineTo(cx,cy);
+      ctx.moveTo(cx-WX*e,cy+HY*e);ctx.lineTo(cx,cy);ctx.moveTo(cx+WX*e,cy+HY*e);ctx.lineTo(cx,cy);
+      ctx.stroke();
+      for(var i=N;i>=1;i--){
+        var z=i-(march%1);
+        if(z<0.12)continue;
+        var s=focal/z;
+        if(WX*s<0.4)continue;
+        var zf=z+GAP,sf=focal/zf;
+        var pass=z>0.4?1:Math.max(0,(z-0.12)/0.28);
+        var alpha=Math.min(1,Math.max(0.05,1.25-z/N))*pass;
+        ctx.lineWidth=Math.min(9,Math.max(0.7,4.2/z));
+        ctx.strokeStyle='rgba(255,255,255,'+alpha.toFixed(3)+')';
+        for(var side=-1;side<=1;side+=2){
+          var xn=cx+side*WX*s,xf=cx+side*WX*sf;
+          var floorN=cy+HY*s,floorF=cy+HY*sf,topN=cy+(HY-DH)*s,topF=cy+(HY-DH)*sf;
+          ctx.beginPath();
+          ctx.moveTo(xn,floorN);ctx.lineTo(xn,topN);ctx.lineTo(xf,topF);ctx.lineTo(xf,floorF);
+          ctx.closePath();ctx.stroke();
+        }
+      }
+    };
+    // Turning Hall - corridor whose centre-line curves as you walk (Math Draws Graphics: "Turning Hall"), rendered white.
+    SK.turningHall=function(w,h,t){
+      var N=22,speed=0.5,focal=Math.min(w,h)*0.62,march=t*speed;
+      var cy=h/2+Math.sin(t*1.4)*h*0.010,WX=0.26,HY=0.42;
+      ctx.shadowBlur=0;ctx.lineCap='butt';ctx.lineJoin='miter';
+      for(var i=N;i>=1;i--){
+        var z=i-(march%1),s=focal/z;
+        if(WX*s<0.4)continue;
+        var bend=Math.sin(z*0.45-t*0.9)*w*0.16*(1-z/(N+3)),dx=w/2+bend;
+        var alpha=Math.min(1,Math.max(0.05,1.2-z/N));
+        ctx.strokeStyle='rgba(255,255,255,'+alpha.toFixed(3)+')';
+        ctx.lineWidth=Math.min(15,Math.max(0.8,6.5/z));
+        var hw=WX*s,hh=HY*s,top=cy-hh,bot=cy+hh;
+        ctx.beginPath();
+        ctx.moveTo(dx-hw,bot);ctx.lineTo(dx-hw,top);ctx.lineTo(dx+hw,top);ctx.lineTo(dx+hw,bot);
+        ctx.stroke();
+      }
+    };
+    // Card Fan - an endless hand of cards spread about a hinge below the frame (Math Draws Graphics: "Card Fan").
+    SK.cards=function(w,h,t){
+      var hx=w/2,hy=h*1.16,R=Math.min(w,h)*0.78,cw=Math.min(w,h)*0.155,ch=cw*1.45,rr=cw*0.12;
+      var spread=TAU*0.34,N=23,flow=t*0.14;
+      ctx.shadowBlur=0;ctx.lineJoin='round';
+      function rrect(x,y,ww,hh,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+ww,y,x+ww,y+hh,r);ctx.arcTo(x+ww,y+hh,x,y+hh,r);ctx.arcTo(x,y+hh,x,y,r);ctx.arcTo(x,y,x+ww,y,r);ctx.closePath();}
+      var fs=[];for(var i=0;i<N;i++)fs.push((((i/N+flow)%1)+1)%1);fs.sort(function(a,b){return a-b;});
+      for(var j=0;j<fs.length;j++){var f=fs[j];
+        var ang=-spread/2+f*spread,cx=hx+Math.sin(ang)*R,cy=hy-Math.cos(ang)*R;
+        var a=Math.min(1,Math.min(f,1-f)/0.05);
+        ctx.save();ctx.translate(cx,cy);ctx.rotate(ang);
+        rrect(-cw/2,-ch/2,cw,ch,rr);
+        ctx.fillStyle='rgba(0,0,0,'+(0.9*a).toFixed(3)+')';ctx.fill();
+        ctx.lineWidth=Math.max(1,cw*0.05);ctx.strokeStyle='rgba(255,255,255,'+a.toFixed(3)+')';ctx.stroke();
+        ctx.beginPath();ctx.arc(0,0,cw*0.15,0,TAU);ctx.fillStyle='rgba(255,255,255,'+a.toFixed(3)+')';ctx.fill();
+        ctx.restore();
+      }
+    };
+    // Lorenz Attractor - the butterfly of chaos (MULTIPLE DIMENSIONS GENERATED).
+    SK.lorenz=function(w,h,t){
+      var sg=10,rho=28,bt=8/3,dt=0.006,x=0.1,y=0,z=0,i,dx,dy,dz;
+      for(i=0;i<400;i++){dx=sg*(y-x);dy=x*(rho-z)-y;dz=x*y-bt*z;x+=dx*dt;y+=dy*dt;z+=dz*dt;}
+      var rot=t*0.25,cr=Math.cos(rot),sr=Math.sin(rot),sc=Math.min(w,h)/62,cx=w/2,cy=h/2;
+      ctx.lineCap='round';ctx.shadowColor=col(190,0.5);ctx.strokeStyle=col(190,0.8);ctx.lineWidth=1.1;ctx.beginPath();
+      for(i=0;i<5200;i++){dx=sg*(y-x);dy=x*(rho-z)-y;dz=x*y-bt*z;x+=dx*dt;y+=dy*dt;z+=dz*dt;var px=cx+(x*cr-y*sr)*sc,py=cy+(z-25)*sc;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+      ctx.stroke();
+    };
+    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes; a looping orbit reads as a world (unused).
+    SK.lissajous=function(w,h,t){
+      var cx=w/2,cy=h/2,R=Math.min(w,h)*0.42,a=3,b=2,ph=t*0.5,N=420;
+      ctx.lineCap='round';ctx.shadowColor=col(0,0.5);ctx.strokeStyle=col(0,0.85);ctx.lineWidth=1.5;ctx.beginPath();
+      for(var i=0;i<=N;i++){var th=i/N*TAU,x=cx+Math.sin(a*th+ph)*R,y=cy+Math.sin(b*th)*R;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+      ctx.stroke();
+    };
+    // Hilbert Curve - a space-filling fractal (order 6) drawn out by a travelling pen, then restarts; one long unbroken path folding to fill the plane, like a strand folded to fit (METROPOLIS DAWN GRID).
+    SK.hilbert=function(w,h,t){
+      var S=hilbertS,order=6,m=Math.min(w,h)*0.86,key=Math.round(w)+'x'+Math.round(h);
+      if(S.key!==key){S.key=key;S.pts=[];var P=S.pts;
+        (function hil(x,y,xi,xj,yi,yj,n){
+          if(n<=0){P.push([x+(xi+yi)/2,y+(xj+yj)/2]);return;}
+          hil(x,y,yi/2,yj/2,xi/2,xj/2,n-1);
+          hil(x+xi/2,y+xj/2,xi/2,xj/2,yi/2,yj/2,n-1);
+          hil(x+xi/2+yi/2,y+xj/2+yj/2,xi/2,xj/2,yi/2,yj/2,n-1);
+          hil(x+xi/2+yi,y+xj/2+yj,-yi/2,-yj/2,-xi/2,-xj/2,n-1);
+        })(w/2-m/2,h/2-m/2,m,0,0,m,order);
+      }
+      var pts=S.pts,N=pts.length,cyc=12,ph=(t%cyc)/cyc,draw=Math.min(1,ph/0.82);   // trace out over 82% of the loop, then hold full
+      var upto=draw*(N-1),full=Math.floor(upto),frac=upto-full,i;
+      ctx.shadowBlur=0;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=col(0,0.35);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);   // faint ghost of the full curve behind the pen
+      for(i=1;i<N;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();
+      ctx.strokeStyle=col(0,0.92);ctx.lineWidth=1.7;
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+      for(i=1;i<=full;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+      if(full<N-1){var a=pts[full],b=pts[full+1];ctx.lineTo(a[0]+(b[0]-a[0])*frac,a[1]+(b[1]-a[1])*frac);}
+      ctx.stroke();
+    };
+    // Double Helix - two phase-shifted sine backbones with base-pair rungs, twisting as it scrolls; the strand in front (cos>0) brightens/thickens to sell the 3D turn, rungs fade edge-on (MASTER DATA GENOME).
+    SK.helix=function(w,h,t){
+      var cx=w/2,A=Math.min(w,h)*0.16,twist=TAU/(Math.min(w,h)*0.46),scroll=reduce?0:t*0.9,step=Math.max(3,Math.round(h/120));
+      ctx.shadowBlur=0;ctx.lineCap='round';
+      // base-pair rungs (drawn first, behind the backbones)
+      for(var y=-A;y<=h+A;y+=step*3){
+        var ph=y*twist+scroll,sa=Math.sin(ph),dp=Math.cos(ph),xa=cx+A*sa,xb=cx-A*sa;
+        ctx.strokeStyle=col(0,0.12+0.30*Math.abs(sa));ctx.lineWidth=1;   // rungs vanish when the ladder turns edge-on
+        ctx.beginPath();ctx.moveTo(xa,y);ctx.lineTo(xb,y);ctx.stroke();
+        ctx.fillStyle=col(0,0.22+0.62*(dp+1)/2);ctx.beginPath();ctx.arc(xa,y,1.8,0,TAU);ctx.fill();   // nucleotide caps, near strand bright
+        ctx.fillStyle=col(0,0.22+0.62*(1-(dp+1)/2));ctx.beginPath();ctx.arc(xb,y,1.8,0,TAU);ctx.fill();
+      }
+      // the two sugar-phosphate backbones; per-segment alpha/width by "frontness" reads as a rotating helix
+      function strand(po){var px,py;
+        for(var y=-A;y<=h+A;y+=step){var ph=y*twist+scroll+po,x=cx+A*Math.sin(ph),front=(Math.cos(ph)+1)/2;
+          if(y>-A){ctx.strokeStyle=col(0,0.18+0.77*front);ctx.lineWidth=0.8+1.9*front;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();}
+          px=x;py=y;}
+      }
+      strand(0);strand(Math.PI);
+    };
+    // Sierpinski Triangle - remove each triangle's middle, forever (depth 7); slow turn (MODULAR DIGITAL GOODS).
+    SK.sierpinski=function(w,h,t){
+      var depth=7,R=Math.min(w,h)*0.46,cx=w/2,cy=h/2+R*0.12,rot=t*0.08,v=[],k;
+      for(k=0;k<3;k++){var a=-Math.PI/2+k*TAU/3+rot;v.push([cx+Math.cos(a)*R,cy+Math.sin(a)*R]);}
+      ctx.shadowColor=col(0,0.4);ctx.fillStyle=col(0,0.9);ctx.beginPath();
+      function tri(a,b,c,n){
+        if(n===0){ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(c[0],c[1]);ctx.closePath();return;}
+        var ab=[(a[0]+b[0])/2,(a[1]+b[1])/2],bc=[(b[0]+c[0])/2,(b[1]+c[1])/2],ca=[(c[0]+a[0])/2,(c[1]+a[1])/2];
+        tri(a,ab,ca,n-1);tri(ab,b,bc,n-1);tri(ca,bc,c,n-1);
+      }
+      tri(v[0],v[1],v[2],depth);ctx.fill();
+    };
+    // Metatron's Cube - sacred geometry of 13 circles (MANIFEST DIVINE GEOMETRY).
+    SK.metatron=function(w,h,t){
+      var cx=w/2,cy=h/2,r=Math.min(w,h)*0.092,rot=t*0.12,p=[{x:0,y:0}],k,a,i,j;
+      for(k=0;k<6;k++){a=k*TAU/6+rot;p.push({x:Math.cos(a)*2*r,y:Math.sin(a)*2*r});}
+      for(k=0;k<6;k++){a=k*TAU/6+rot;p.push({x:Math.cos(a)*4*r,y:Math.sin(a)*4*r});}
+      ctx.shadowColor=col(45,0.4);ctx.strokeStyle=col(45,0.22);ctx.lineWidth=1;ctx.beginPath();
+      for(i=0;i<p.length;i++)for(j=i+1;j<p.length;j++){ctx.moveTo(cx+p[i].x,cy+p[i].y);ctx.lineTo(cx+p[j].x,cy+p[j].y);}ctx.stroke();
+      ctx.strokeStyle=col(45,0.85);ctx.lineWidth=1.5;
+      for(i=0;i<p.length;i++){ctx.beginPath();ctx.arc(cx+p[i].x,cy+p[i].y,r,0,TAU);ctx.stroke();}
+    };
+    // Fourier Epicycles - stacked rotating circles tracing a square wave (MATH DRAWS GRAPHICS).
+    SK.fourier=function(w,h,t){
+      var S=fourierS;if(S.h!==h){S.h=h;S.trace=[];}
+      var terms=6,cyc=h*0.5,baseR=Math.min(w,h)*0.18,cxc=w*0.30,px=cxc,py=cyc;
+      ctx.lineCap='round';ctx.shadowColor=col(0,0.4);
+      for(var k=0;k<terms;k++){
+        var n=2*k+1,r=baseR*(4/(n*Math.PI));
+        ctx.strokeStyle=col(0,0.16);ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,r,0,TAU);ctx.stroke();
+        var ang=n*t,nx=px+r*Math.cos(ang),ny=py+r*Math.sin(ang);
+        ctx.strokeStyle=col(0,0.7);ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(nx,ny);ctx.stroke();
+        px=nx;py=ny;
+      }
+      S.trace.unshift(py);var maxLen=240;if(S.trace.length>maxLen)S.trace.length=maxLen;
+      var waveX0=cxc+baseR+30,dx=(w-waveX0-8)/maxLen;
+      ctx.strokeStyle=col(0,0.25);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(waveX0,S.trace[0]);ctx.stroke();
+      ctx.strokeStyle=col(0,0.95);ctx.lineWidth=1.6;ctx.beginPath();
+      for(var i=0;i<S.trace.length;i++){var X=waveX0+i*dx,Y=S.trace[i];i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}
+      ctx.stroke();
+    };
+    // Background GoL tick schedule: Fibonacci gaps 1,1,2,3,5,8,...,144s, then hold at 144s.
+    // FIB_T holds the cumulative tick times: [1,2,4,7,12,20,33,54,88,143,232,376].
+    var FIB_T=(function(){var g=[1,1,2,3,5,8,13,21,34,55,89,144],a=0,o=[];for(var i=0;i<g.length;i++){a+=g[i];o.push(a);}return o;})();
+    // Conway's Game of Life - the final reveal: MUST DESIGN GAMES.
+    SK.life=function(w,h,t){
+      var cell=Math.max(5,Math.round(Math.min(w,h)/60)),cols=Math.max(8,Math.floor(w/cell)),rows=Math.max(8,Math.floor(h/cell)),S=lifeS;
+      function seed(){S.grid=[];for(var y=0;y<rows;y++){var row=[];for(var x=0;x<cols;x++)row.push(Math.random()<0.15?1:0);S.grid.push(row);}S.cols=cols;S.rows=rows;S.seedGen=S.gen||0;}
+      if(S.cols!==cols||S.rows!==rows||!S.grid){S.gen=0;S.phase=0;S.lastT=t;seed();}
+      // One generation of Conway's Life.
+      function step(){var g=S.grid,ng=[],pop=0;
+        for(var y=0;y<rows;y++){var row=[];for(var x=0;x<cols;x++){var nb=0;
+          for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++)if(dx||dy)nb+=g[(y+dy+rows)%rows][(x+dx+cols)%cols];
+          var alive=g[y][x]?(nb===2||nb===3):(nb===3);row.push(alive?1:0);if(alive)pop++;}ng.push(row);}
+        S.grid=ng;S.gen++;if(pop===0||S.gen-S.seedGen>140)seed();}
+      // Timing. Intro reveal: a smooth 2/s -> 1/s. Background: ticks at Fibonacci gaps —
+      // 1,1,2,3,5,8,13,21,34,55,89,144 seconds — then holds at every 144s forever.
+      if(bgMode){
+        if(S.bgTicks===undefined)S.bgTicks=0;
+        var bgSec=(performance.now()-bgStart)/1000,last=FIB_T[FIB_T.length-1],want;
+        if(bgSec>=last){want=FIB_T.length+Math.floor((bgSec-last)/144);}   // past the 12th tick: every 144s
+        else{want=0;for(var wi=0;wi<FIB_T.length&&FIB_T[wi]<=bgSec;wi++)want++;}
+        while(S.bgTicks<want){step();S.bgTicks++;}
+      }else{
+        var rate=2-gFade;S.phase+=Math.max(0,t-S.lastT)*rate;S.lastT=t;
+        var target=Math.floor(S.phase);while(S.gen<target)step();
+      }
+      var lc=lifeCol(gFade);ctx.shadowColor=lc;ctx.fillStyle=lc;var pad=Math.max(1,cell*0.1);
+      for(var y2=0;y2<rows;y2++)for(var x2=0;x2<cols;x2++)if(S.grid[y2][x2])ctx.fillRect(x2*cell+pad,y2*cell+pad,cell-2*pad,cell-2*pad);
+    };
+
+    function frame(now){
+      if(running)raf=requestAnimationFrame(frame);
+      if(bgMode&&now-lastDraw<90)return;   // throttle the persistent background to ~11fps
+      lastDraw=now;
+      gFade=gFadeStart?Math.min(1,(now-gFadeStart)/gFadeMs):(bgMode?1:0);
+      if(!t0)t0=now;var t=(now-t0)/1000,w=canvas.clientWidth,h=canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);ctx.lineCap='butt';ctx.lineJoin='round';ctx.shadowBlur=reduce?0:7*(1-gFade);
+      (SK[cur]||SK.fern)(w,h,t);
+      // dissolve the frozen outgoing frame out over the live incoming sketch (intro only)
+      if(!bgMode&&now<fadeUntil&&snap){var a=(fadeUntil-now)/fadeDur;
+        ctx.save();ctx.globalAlpha=a<0?0:a>1?1:a;ctx.shadowBlur=0;ctx.setTransform(1,0,0,1,0,0);
+        ctx.drawImage(snap,0,0);ctx.restore();}
+    }
+    return {
+      start:function(){resize();if(reduce){running=false;frame(performance.now());}else{running=true;raf=requestAnimationFrame(frame);}},
+      stop:function(){running=false;cancelAnimationFrame(raf);},
+      resize:function(){resize();if(reduce)frame(performance.now());},
+      setSketch:function(name){if(!SK[name])return;
+        if(!reduce&&snap){sctx.setTransform(1,0,0,1,0,0);sctx.clearRect(0,0,snap.width,snap.height);sctx.drawImage(canvas,0,0);fadeUntil=performance.now()+fadeDur;}
+        if(name==='life'){lifeS={};if(!reduce)gFadeStart=performance.now();}cur=name;t0=0;if(reduce)frame(performance.now());},
+      // hand the Game of Life off to the site background and keep it running
+      toBackground:function(){
+        bgMode=true;canvas.classList.add('bg');if(!bgStart)bgStart=performance.now();
+        if(cur!=='life'){cur='life';t0=0;lifeS={};}   // reload path: fresh sim; intro path keeps the running board
+        if(!running){resize();if(reduce){frame(performance.now());}else{running=true;raf=requestAnimationFrame(frame);}}
+      }
+    };
+  })();
+  if(mdgBg)window.addEventListener('resize',mdgBg.resize);
+  if(sessionStorage.getItem('mdg-intro')){
+    // intro already seen this session - skip straight to the living background
+    var bd0=document.getElementById('intro-backdrop');if(bd0)bd0.remove();
+    intro.remove();
+    if(mdgBg)mdgBg.toBackground();
+    return;
+  }
+  var prefersReduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(prefersReduced){
+    // Respect prefers-reduced-motion: skip the animated intro, show the static living background.
+    var bdR=document.getElementById('intro-backdrop');if(bdR)bdR.remove();
+    intro.remove();
+    if(mdgBg)mdgBg.toBackground();
+    sessionStorage.setItem('mdg-intro','1');
+    return;
+  }
+  if(mdgBg)mdgBg.start();
+
+  // Each phrase pairs with a Math Draws Graphics sketch; MANY DOORS GUILD RNGs among three door sketches.
+  var BRIDGE_SETS=[
+    {words:['MAKE','DOPE','GROOVES'],            sketch:'waves'},
+    {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
+    {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
+    {words:['MULTIPLAYER','DECK','GATEWAY'],     sketch:'cards'},
+    {words:['MASTER','DATA','GENOME'],           sketch:'helix'},
+    {words:['METROPOLIS','DAWN','GRID'],         sketch:'hilbert'},
+    {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
+    {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
+    {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
+    {words:['MATH','DRAWS','GRAPHICS'],          sketch:'fourier'}
+  ];
+  var FINAL={words:['MUST','DESIGN','GAMES'], sketch:'life'};
+
+  var FLAVORS=[
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:false, cls:'glitching'},
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', revealAt:0.55, rtl:false, cls:'glitching-heavy'},
+    {chars:'!@#$%&*?<>~^|ABCDEFGHIJKLMNOPQRSTUVWXYZ', revealAt:0.60, rtl:false, cls:'glitching-micro'},
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.55, rtl:true,  cls:'glitching'},
+    {chars:'ABCDEFGHIJKLMNOPQRSTUVWXYZ',        revealAt:0.30, rtl:false, cls:'glitching-heavy'},
+    {chars:'!@#$%&*?<>~^|',                     revealAt:0.65, rtl:false, cls:'glitching-micro'}
+  ];
+  var lastFlavor=-1;
+  function pickFlavor(){
+    var idx;
+    do{idx=Math.floor(Math.random()*FLAVORS.length);}while(idx===lastFlavor);
+    lastFlavor=idx;
+    return FLAVORS[idx];
+  }
+
+  var wordEls=Array.from(document.querySelectorAll('.i-word'));
+  var step=0;
+  var animating=false;
+  var bgRevealed=false;
+
+  (function pinFinalWidth(){
+    var finalTails=['UST','ESIGN','AMES'];
+    function measure(){
+      var saved=wordEls.map(function(el){return el.querySelector('.i-txt').textContent;});
+      var maxW=0;
+      wordEls.forEach(function(el,i){
+        el.querySelector('.i-txt').textContent=finalTails[i];
+        var w=el.getBoundingClientRect().width;
+        if(w>maxW)maxW=w;
+      });
+      document.querySelector('.i-words').style.width=maxW+'px';
+      wordEls.forEach(function(el,i){el.querySelector('.i-txt').textContent=saved[i];});
+    }
+    if(document.fonts&&document.fonts.ready){document.fonts.ready.then(measure);}
+    else{setTimeout(measure,200);}
+  })();
+
+  function scramble(n,chars){var s='';for(var i=0;i<n;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
+
+  function glitch(el,to,delay,flavor,cb){
+    setTimeout(function(){
+      var txt=el.querySelector('.i-txt');
+      var from=txt.textContent;
+      var frames=Math.round(700/80);
+      var frame=0;
+      el.classList.add(flavor.cls);
+      var iv=setInterval(function(){
+        frame++;
+        var p=frame/frames;
+        var chars=flavor.chars;
+        if(p>flavor.revealAt){
+          var prog=(p-flavor.revealAt)/(1-flavor.revealAt);
+          var rest=to.slice(1);
+          var resolved=Math.floor(prog*rest.length);
+          txt.textContent=flavor.rtl
+            ? scramble(rest.length-resolved,chars)+rest.slice(rest.length-resolved)
+            : rest.slice(0,resolved)+scramble(rest.length-resolved,chars);
+        }else{
+          txt.textContent=scramble(Math.max(from.length,to.length-1),chars);
+        }
+        if(frame>=frames){
+          clearInterval(iv);
+          el.classList.remove(flavor.cls);
+          txt.textContent=to.slice(1);
+          if(cb)cb();
+        }
+      },80);
+    },delay);
+  }
+
+  function advance(){
+    if(step===2){finish();return;}
+    if(animating)return;
+    animating=true;
+    step++;
+    var pick=step===1?BRIDGE_SETS[Math.floor(Math.random()*BRIDGE_SETS.length)]:FINAL;
+    var targets=pick.words;
+    if(mdgBg)mdgBg.setSketch(pick.sketches?pick.sketches[Math.floor(Math.random()*pick.sketches.length)]:pick.sketch);
+    if(step===2)startBgReveal();   // start morphing the black backdrop toward the site bg as the GoL appears
+    var flavor=pickFlavor();
+    var pending=wordEls.length;
+    wordEls.forEach(function(el,i){
+      glitch(el,targets[i],i*80,flavor,function(){
+        if(--pending===0){
+          animating=false;
+          if(step===2)celebrate();
+        }
+      });
+    });
+  }
+
+  intro.addEventListener('click',advance);
+  intro.addEventListener('wheel',function(e){
+    e.preventDefault();
+    advance();
+  },{passive:false});
+
+  var touchY=0;
+  intro.addEventListener('touchstart',function(e){touchY=e.touches[0].clientY;},{passive:true});
+  intro.addEventListener('touchend',function(e){
+    if(Math.abs(touchY-e.changedTouches[0].clientY)>30)advance();
+  },{passive:true});
+
+  // Keyboard access: Enter/Space advance the intro, Escape skips it — avoids a keyboard-only lockout.
+  window.addEventListener('keydown',function(e){
+    if(step>2)return;
+    if(e.key==='Escape'){e.preventDefault();finish();}
+    else if(e.key==='Enter'||e.key===' '){e.preventDefault();advance();}
+  });
+
+  function celebrate(){
+    var txts=wordEls;
+
+    txts.forEach(function(t,i){
+      setTimeout(function(){
+        t.style.transition='transform .3s cubic-bezier(.17,.67,.35,1.5)';
+        t.style.transform='scale(1.2)';
+        setTimeout(function(){
+          t.style.transition='transform .22s ease';
+          t.style.transform='';
+        },300);
+      },i*150);
+    });
+
+    setTimeout(function(){
+      txts.forEach(function(t){
+        t.style.transition='transform .2s ease';
+        t.style.transform='scale(1.07)';
+        setTimeout(function(){t.style.transform='';},200);
+      });
+    },950);
+
+    // logo fades at a middle speed - into the background the GoL has been easing toward
+    setTimeout(function(){
+      var wordsEl=document.querySelector('.i-words');
+      wordsEl.style.transition='opacity .85s ease';
+      wordsEl.style.opacity='0';
+    },1500);
+
+    setTimeout(function(){if(step===2)finish();},2400);
+  }
+
+  // As the final Game of Life appears, morph the black backdrop toward the site's --bg colour
+  // over the same window the cells ease white -> grey, so cell contrast is kept the whole way.
+  function startBgReveal(){
+    if(bgRevealed)return;bgRevealed=true;
+    var bd=document.getElementById('intro-backdrop');
+    if(!bd)return;
+    var bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#000';
+    bd.style.transition='background-color 3.2s linear';
+    requestAnimationFrame(function(){bd.style.backgroundColor=bg;});
+  }
+
+  // Words gone, backdrop already at the site bg colour: drop the GoL behind the content as the
+  // faint living background, remove the (now bg-coloured) backdrop, and fade the page content in.
+  function finish(){
+    if(step>2)return;step=3;
+    startBgReveal();
+    if(mdgBg)mdgBg.toBackground();
+    var bd=document.getElementById('intro-backdrop');if(bd)bd.remove();
+    var wrap=document.querySelector('.wrap');
+    if(wrap){wrap.style.transition='none';wrap.style.opacity='0';
+      requestAnimationFrame(function(){wrap.style.transition='opacity .7s ease';wrap.style.opacity='1';
+        setTimeout(function(){wrap.style.transition='';wrap.style.opacity='';},780);});}
+    intro.remove();
+    sessionStorage.setItem('mdg-intro','1');
+  }
+})();
+</script>
     <script>
     // One entry per game. `updated` = date of the last substantive change (YYYY-MM-DD).
     // Bump `updated` and `change` whenever you ship work on a game; the list re-sorts itself.
@@ -227,12 +832,6 @@
       </a>`;
     }).join('');
     </script>
-
-    <footer class="foot">
-      <span>Must Design Games — playable prototypes by Matt Danuser-Grant.</span>
-      <span><a href="https://mattdanusergrant.com/">← Back to the portfolio</a></span>
-    </footer>
-  </div>
-  <script src="/assets/site.js?v=2" defer></script>
+<script src="/assets/site.js?v=2" defer></script>
 </body>
 </html>
