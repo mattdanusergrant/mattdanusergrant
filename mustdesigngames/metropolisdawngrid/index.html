@@ -143,7 +143,7 @@
     <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
     <button class="reset" id="reset" type="button">Reset</button>
     <span class="spacer"></span>
-    <span class="hint"><b>Road &amp; rail:</b> click start, then click end. <b>Ore</b> &amp; <b>forest</b> boost Works; lay rail to the highway to export by train.</span>
+    <span class="hint"><b>Road &amp; rail:</b> click start, then click end. Build <b>Works</b> next to grey <b>mountains</b> (or on <b>forest</b>) to boost Materials; rail to the highway to export.</span>
   </footer>
 
 <script>
@@ -242,22 +242,28 @@
     if(r<=0)return 'plains';                                   // keep the highway row buildable/clear
     var wc=c+WOX, wr=r+WOY;                                    // offset into the shared-world noise field (set by the globe dive)
     var elev=vnoise(wc,wr,8)*0.6+vnoise(wc+11,wr+7,3.5)*0.4, moist=vnoise(wc+80,wr+40,6);
-    if(elev<0.36)return 'water';                               // coast/lake — free water, but no building
-    if(elev>0.68)return 'ore';                                 // hills/ore — best for Works (Materials)
+    if(elev<0.36)return 'water';                               // coast/lake — free water, can't build
+    if(elev>0.72)return 'mountain';                            // peaks — can't build, but mine ore from ADJACENT tiles
     if(moist>0.6)return 'forest';                              // forest — good for Works (timber)
-    return 'plains';
+    return 'plains';                                           // grasslands (the default)
+  }
+  function noBuild(t){return t==='water'||t==='mountain';}     // water & mountains can't be built on
+  function nearMountain(c,r){                                  // a Works next to a peak mines its ore (+80%)
+    for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){if(!dc&&!dr)continue;var a=c+dc,b=r+dr;
+      if(inB(a,b)&&grid[idx(a,b)].terr==='mountain')return true;}
+    return false;
   }
   // terrain make-up over a representative window, scored against the cross-world baseline →
   // a one-line "why here" label naming this patch's comparative advantage (the reason to trade)
   function regionSpec(){
-    var ct={plains:0,forest:0,ore:0,water:0};
+    var ct={plains:0,forest:0,mountain:0,water:0};
     for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrainAt(c,r)]++;
-    var land=ct.plains+ct.forest+ct.ore||1;
-    var oS=(ct.ore/land)/0.15, fS=(ct.forest/land)/0.26, wS=(ct.water/(ct.water+land))/0.17;
+    var land=ct.plains+ct.forest||1;                           // buildable land (mountains aren't buildable)
+    var oS=(ct.mountain/(ct.mountain+land))/0.16, fS=(ct.forest/land)/0.30, wS=(ct.water/(ct.water+land))/0.17;
     var mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'open plains · no terrain bonus';
-    if(mx===oS)return 'ore-rich highlands · Works +80% Materials';
-    if(mx===fS)return 'forested belt · Works +40% Materials';
+    if(mx<1.15)return 'open grassland · balanced start';
+    if(mx===oS)return 'mountainous · Works +80% by the peaks';
+    if(mx===fS)return 'forested · Works +40% timber';
     return 'coastal shelf · free water, tight land';
   }
 
@@ -278,7 +284,7 @@
       portDeck:'#8A8272',portArm:'#4C7EA8',portHi:'#A6C3D6',
 
       lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
-      terrWater:'rgba(88,150,182,.22)',terrOre:'rgba(150,120,88,.20)',terrForest:'rgba(92,150,78,.17)',
+      terrGrass:'rgba(130,196,100,.24)',terrWater:'rgba(74,150,200,.28)',terrMountain:'rgba(126,128,136,.34)',terrForest:'rgba(36,98,46,.5)',terrPeak:'rgba(88,90,98,.55)',
       railBed:'#C9C2B0',tie:'#9A8E78',rail:'#7C7566',trainEngine:'#3E3D48',
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
     }
@@ -297,7 +303,7 @@
     for(var i=0;i<grid.length;i++)if(grid[i]&&grid[i].t==='road')return;
     var mid=Math.floor(cols/2);
     for(var off=0;off<cols;off++){var cc=mid+(off%2?-1:1)*Math.ceil(off/2);
-      if(inB(cc,1)&&grid[idx(cc,1)].terr!=='water'){grid[idx(cc,1)].t='road';if(inB(cc,2)&&grid[idx(cc,2)].terr!=='water')grid[idx(cc,2)].t='road';break;}}
+      if(inB(cc,1)&&!noBuild(grid[idx(cc,1)].terr)){grid[idx(cc,1)].t='road';if(inB(cc,2)&&!noBuild(grid[idx(cc,2)].terr))grid[idx(cc,2)].t='road';break;}}
     dirty=true;
   }
 
@@ -323,7 +329,7 @@
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
-    if(cell.terr==='water'&&brush!=='bulldoze')return;    // can't build on water — route around it
+    if(noBuild(cell.terr)&&brush!=='bulldoze')return;     // can't build on water or mountains — route around them
     if((cell.t==='road'||cell.t==='rail')&&brush!=='road'&&brush!=='rail'&&brush!=='bulldoze')return; // protect infrastructure — only Road/Rail/Clear change it
     if(brush==='bulldoze'){if(cell.t==='empty')return;treasury+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;updateCashUI();}
     else{
@@ -348,7 +354,7 @@
     return cells;
   }
   function placeLineCell(c,r){if(!inB(c,r))return false;var cell=grid[idx(c,r)];
-    if(cell.t==='highway'||cell.terr==='water'||cell.t===brush)return false;   // highway fixed, route around water, skip no-ops
+    if(cell.t==='highway'||noBuild(cell.terr)||cell.t===brush)return false;   // highway fixed, route around water/mountains, skip no-ops
     if(!canAfford(COST[brush]||0))return null;                                 // out of credit → signal to stop the line
     spend(COST[brush]||0);cell.t=brush;cell.lvl=0;cell.grow=0;return true;}
   function commitLine(a,b){var path=linePath(a,b),any=false,broke=false;
@@ -449,7 +455,7 @@
   function computeResources(){
     var works=0,facs=0,shops=0,matYield=0;terrBonus=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-      if(g.t==='ind'){works+=g.lvl;var mult=g.terr==='ore'?1.8:g.terr==='forest'?1.4:1;matYield+=g.lvl*2*mult;terrBonus+=g.lvl*2*(mult-1);} // terrain specialisation — bonus = Materials earned above bare plains
+      if(g.t==='ind'){var wc=i%cols,wr=(i/cols)|0;works+=g.lvl;var mult=nearMountain(wc,wr)?1.8:g.terr==='forest'?1.4:1;matYield+=g.lvl*2*mult;terrBonus+=g.lvl*2*(mult-1);} // Works by a mountain mine ore (+80%); on forest = timber (+40%)
       else if(g.t==='fac')facs+=g.lvl;else if(g.t==='com')shops+=g.lvl;}
     matStock+=matYield;                                  // Works extract Materials (ore/forest yield more)
     var facCap=facs*3, drawn=Math.min(matStock,facCap);
@@ -529,7 +535,7 @@
     {label:'Lay a <b>Road</b> up to the highway'},
     {label:'Zone <b>3 Homes</b> beside the road'},
     {label:'Add <b>Power</b> &amp; <b>Water</b> to reach them'},
-    {label:'Build <b>Works</b> (on ore) + a <b>Factory</b>'},
+    {label:'Build <b>Works</b> (next to a mountain) + a <b>Factory</b>'},
     {label:'Lay <b>Rail</b> to the highway → ship an <b>Export</b>'}
   ];
   var tutorDone=false, tutorActive=false, tutorStep=-1, exportedEver=false;
@@ -607,10 +613,13 @@
   function growScale(cell){var t=performance.now()-cell.pulse;if(t<0||t>=380)return 1;return Math.max(0,easeOutBack(t/380));}
   function drawGridPaper(){
     ctx.fillStyle=C.bg;ctx.fillRect(0,0,cols*CELL,rows*CELL);
-    // terrain tints under the grid (water / ore / forest; plains = bare paper)
+    // terrain under the grid: grasslands default, blue water, grey mountains (with a peak), dark-green forest
     for(var tr=0;tr<rows;tr++)for(var tc=0;tc<cols;tc++){var g=grid[idx(tc,tr)];if(!g)continue;
-      var tt=g.terr;if(tt==='water')ctx.fillStyle=pal.terrWater;else if(tt==='ore')ctx.fillStyle=pal.terrOre;else if(tt==='forest')ctx.fillStyle=pal.terrForest;else continue;
-      ctx.fillRect(tc*CELL,tr*CELL,CELL,CELL);}
+      var tt=g.terr,gx=tc*CELL,gy=tr*CELL;
+      ctx.fillStyle=tt==='water'?pal.terrWater:tt==='mountain'?pal.terrMountain:tt==='forest'?pal.terrForest:pal.terrGrass;
+      ctx.fillRect(gx,gy,CELL,CELL);
+      if(tt==='mountain'){var mx=gx+CELL/2;ctx.fillStyle=pal.terrPeak;ctx.beginPath();ctx.moveTo(mx,gy+7);ctx.lineTo(mx+8,gy+CELL-8);ctx.lineTo(mx-8,gy+CELL-8);ctx.closePath();ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.moveTo(mx,gy+7);ctx.lineTo(mx+3,gy+13);ctx.lineTo(mx-3,gy+13);ctx.closePath();ctx.fill();}}
     ctx.lineWidth=1;
     for(var c=0;c<=cols;c++){ctx.strokeStyle=(c%5===0)?C.line2:C.line;ctx.beginPath();ctx.moveTo(px(c*CELL)+0.5,0);ctx.lineTo(px(c*CELL)+0.5,rows*CELL);ctx.stroke();}
     for(var r=0;r<=rows;r++){ctx.strokeStyle=(r%5===0)?C.line2:C.line;ctx.beginPath();ctx.moveTo(0,px(r*CELL)+0.5);ctx.lineTo(cols*CELL,px(r*CELL)+0.5);ctx.stroke();}
@@ -785,10 +794,10 @@
     if(isLineBrush()&&hoverCell){
       var ps=lineAnchor||((downCell&&movedSinceDown)?downCell:null);
       if(ps){var pp=linePath(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
-        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway'||qcl.terr==='water')continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
+        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway'||noBuild(qcl.terr))continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
         ctx.globalAlpha=1;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(ps.c*CELL+2.5,ps.r*CELL+2.5,CELL-5,CELL-5);
       } else if(!downCell&&inB(hoverCell.c,hoverCell.r)){var hcl=grid[idx(hoverCell.c,hoverCell.r)];
-        if(hcl&&hcl.t!=='highway'&&hcl.terr!=='water'){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
+        if(hcl&&hcl.t!=='highway'&&!noBuild(hcl.terr)){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
     }
     ctx.restore();
   }
@@ -806,7 +815,7 @@
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;}
-    list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway'||g.terr==='water')return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;}});
+    list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway'||noBuild(g.terr))return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;}});
     dirty=true;}catch(e){}}
 
   // ---- animation loop ----

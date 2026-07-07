@@ -137,15 +137,15 @@
     var sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);return (a*(1-sx)+b*sx)*(1-sy)+(d*(1-sx)+e*sx)*sy;}
   function terrAt(c,r,ox,oy){if(r<=0)return 'plains';var wc=c+ox,wr=r+oy;
     var elev=tnoise(wc,wr,8)*0.6+tnoise(wc+11,wr+7,3.5)*0.4,moist=tnoise(wc+80,wr+40,6);
-    if(elev<0.36)return 'water';if(elev>0.68)return 'ore';if(moist>0.6)return 'forest';return 'plains';}
-  function terrainClass(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919,ct={plains:0,forest:0,ore:0,water:0};
+    if(elev<0.36)return 'water';if(elev>0.72)return 'mountain';if(moist>0.6)return 'forest';return 'plains';}
+  function terrainClass(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919,ct={plains:0,forest:0,mountain:0,water:0};
     for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrAt(c,r,ox,oy)]++;
-    var land=ct.plains+ct.forest+ct.ore||1,oS=(ct.ore/land)/0.15,fS=(ct.forest/land)/0.26,wS=(ct.water/(ct.water+land))/0.17,mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'plains';if(mx===oS)return 'ore';if(mx===fS)return 'forest';return 'coast';}
+    var land=ct.plains+ct.forest||1,oS=(ct.mountain/(ct.mountain+land))/0.16,fS=(ct.forest/land)/0.30,wS=(ct.water/(ct.water+land))/0.17,mx=Math.max(oS,fS,wS);
+    if(mx<1.15)return 'plains';if(mx===oS)return 'mountain';if(mx===fS)return 'forest';return 'coast';}
   // Both the found-card label and every neighbour blurb are DERIVED from terrainClass — no hand-written
   // per-city text that can drift from the sim. SPEC strings mirror the builder's regionSpec (keep in sync).
-  var SPEC={ore:'ore-rich highlands · Works +80% Materials',forest:'forested belt · Works +40% Materials',coast:'coastal shelf · free water, tight land',plains:'open plains · no terrain bonus'};
-  var TRADE={ore:'Exports raw Materials; buys finished Goods.',forest:'Timber Materials to spare; trades for Goods.',coast:'Dense in Goods; short on raw Materials.',plains:'Balanced land — no terrain edge; trades opportunistically.'};
+  var SPEC={mountain:'mountainous · Works +80% by the peaks',forest:'forested · Works +40% timber',coast:'coastal shelf · free water, tight land',plains:'open grassland · balanced start'};
+  var TRADE={mountain:'Rich ore — exports raw Materials; buys Goods.',forest:'Timber Materials to spare; trades for Goods.',coast:'Dense in Goods; short on raw Materials.',plains:'Balanced land — no terrain edge; trades opportunistically.'};
   function siteSpec(lat,lon){return SPEC[terrainClass(lat,lon)];}
   function neighbourSpec(lat,lon){var k=terrainClass(lat,lon);return SPEC[k]+' — '+TRADE[k];}
 
