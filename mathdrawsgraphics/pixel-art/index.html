@@ -56,6 +56,15 @@
   .addrow{display:flex;gap:6px;align-items:center}
   .hint{color:var(--muted);font-size:11px;line-height:1.5;margin-top:14px}
   .hint code{background:var(--bg);border:1px solid var(--line-2);border-radius:4px;padding:0 4px}
+  #codewrap{flex:none;display:flex;flex-direction:column;max-height:40%;background:var(--paper);border-top:1.5px solid var(--line-2)}
+  #codewrap.collapsed{max-height:none}
+  #codebar{display:flex;align-items:center;gap:10px;padding:6px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  #codeerr{text-transform:none;letter-spacing:0;color:#d95763;font-size:11px}
+  #codetoggle{margin-left:auto;width:28px;height:24px;padding:0;font-size:12px}
+  #codewrap.collapsed #codetoggle{transform:rotate(180deg)}
+  #code{flex:1;min-height:110px;resize:none;border:0;border-top:1px solid var(--line);background:var(--bg);color:var(--ink);
+    font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow:auto;padding:10px 12px;tab-size:1;-webkit-user-select:text;user-select:text}
+  #codewrap.collapsed #code{display:none}
   @media (max-width:720px){
     #side{width:150px}
     #tools button{width:38px;height:38px;font-size:16px}
@@ -112,6 +121,10 @@
       </div>
     </div>
   </div>
+  <div id="codewrap">
+    <div id="codebar"><span>Pixel code</span><span id="codeerr"></span><button id="codetoggle" type="button" title="Show / hide code">▾</button></div>
+    <textarea id="code" spellcheck="false" wrap="off" aria-label="Pixel art code — edit to change the sprite"></textarea>
+  </div>
 </div>
 <script>
 const $=s=>document.querySelector(s), cv=$('#c'), ctx=cv.getContext('2d');
@@ -125,7 +138,7 @@ const S={ w:32,h:32, px:new Array(32*32).fill(null), tool:'pencil', color:'#ac32
   filled:false, mirror:false, grid:true, cell:16, palette:PALETTE.slice(), undo:[], redo:[] };
 
 /* ---------- persistence ---------- */
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify({w:S.w,h:S.h,px:S.px,palette:S.palette})); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify({w:S.w,h:S.h,px:S.px,palette:S.palette})); }catch(e){} syncCode(); }
 function load(){ try{ const d=JSON.parse(localStorage.getItem(KEY)); if(d&&d.px&&d.px.length===d.w*d.h){
   S.w=d.w; S.h=d.h; S.px=d.px; if(d.palette) S.palette=d.palette; $('#size').value=String(d.w); } }catch(e){} }
 
@@ -268,8 +281,49 @@ addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target.tagName=
 });
 addEventListener('resize',()=>{ fitZoom(); draw(); });
 
+/* ---------- code view (two-way: paint on the canvas, or edit the grid text) ---------- */
+const ALPHA='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const codeEl=$('#code'), codeErr=$('#codeerr'); let applyingCode=false, codeTimer=null;
+function codeFromArt(){                                  // sprite -> character grid + colour legend
+  const map={}, order=[];
+  for(let i=0;i<S.px.length;i++){ const c=S.px[i]; if(c&&!(c in map)){ map[c]=ALPHA[order.length]||'?'; order.push(c); } }
+  const out=['# . = empty  ·  paint on the canvas or edit this grid'];
+  order.forEach(c=>out.push('# '+map[c]+' = '+c));
+  out.push('');
+  for(let y=0;y<S.h;y++){ let row=''; for(let x=0;x<S.w;x++){ const c=S.px[y*S.w+x]; row+= c? map[c] : '.'; } out.push(row); }
+  return out.join('\n');
+}
+function artFromCode(text){                              // character grid -> sprite (dims come from the grid)
+  const lines=text.split('\n'), legend={}, grid=[];
+  for(const ln of lines){
+    if(/^\s*#/.test(ln)){ const re=/([^\s=#])\s*=\s*(#[0-9a-fA-F]{6})/g; let m; while(m=re.exec(ln)) legend[m[1]]=m[2].toLowerCase(); }
+    else if(ln.trim()!=='') grid.push(ln.replace(/\s+$/,''));
+  }
+  if(!grid.length) return null;
+  let w=0; for(const r of grid) w=Math.max(w,r.length); if(w<1||w>128||grid.length>128) return null;
+  const h=grid.length, px=new Array(w*h).fill(null);
+  for(let y=0;y<h;y++){ const r=grid[y]; for(let x=0;x<r.length;x++){ const ch=r[x];
+    if(ch!=='.'&&ch!==' '&&legend[ch]) px[y*w+x]=legend[ch]; } }
+  return {w,h,px};
+}
+function syncCode(){ if(applyingCode||!codeEl||document.activeElement===codeEl) return; codeEl.value=codeFromArt(); if(codeErr) codeErr.textContent=''; }
+function applyCode(){
+  const p=artFromCode(codeEl.value);
+  if(!p){ if(codeErr) codeErr.textContent='no grid'; return; }
+  applyingCode=true;
+  if(p.w===S.w && p.h===S.h){ snapshot(); S.px=p.px; }
+  else { S.w=p.w; S.h=p.h; S.px=p.px; S.undo.length=0; S.redo.length=0;
+    if(S.w===S.h && [16,24,32,48,64].indexOf(S.w)>=0) $('#size').value=String(S.w); fitZoom(); }
+  if(codeErr) codeErr.textContent=''; draw(); save(); applyingCode=false;
+}
+if(codeEl){
+  codeEl.addEventListener('input',()=>{ clearTimeout(codeTimer); codeTimer=setTimeout(applyCode,220); });
+  codeEl.addEventListener('blur',syncCode);
+  $('#codetoggle').onclick=()=>$('#codewrap').classList.toggle('collapsed');
+}
+
 /* ---------- init ---------- */
-load(); fitZoom(); setColor(S.color); renderPalette(); draw();
+load(); fitZoom(); setColor(S.color); renderPalette(); draw(); syncCode();
 </script>
 </body>
 </html>
