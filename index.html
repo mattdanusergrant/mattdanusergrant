@@ -452,6 +452,17 @@
     // crossfade: a snapshot of the outgoing sketch dissolves out over the incoming one
     var snap=null,sctx=null,fadeUntil=0,fadeDur=750;
     var bgMode=false,lastDraw=0,bgStart=0;  // bgMode: the Game of Life lives on as the site background; bgStart: when it began
+    // Shared slow-down clock: one timestamp across every page + subdomain (a cookie
+    // scoped to .mattdanusergrant.com), so the Fibonacci cadence keeps ageing as you
+    // navigate back and forth — a fresh page adopts the current age instead of
+    // restarting the fast early ticks. Set once, then only ever read.
+    function golStart(){
+      var m=document.cookie.match(/(?:^|;\s*)mdgGolStart=(\d+)/);
+      if(m)return parseInt(m[1],10);
+      var ts=Date.now(),dom=/(^|\.)mattdanusergrant\.com$/.test(location.hostname)?';domain=.mattdanusergrant.com':'';
+      document.cookie='mdgGolStart='+ts+';path=/;max-age='+(6*3600)+dom+';SameSite=Lax';
+      return ts;
+    }
     var gFade=0,gFadeStart=0,gFadeMs=3200;  // final GoL eases bright-white -> faint theme-ink over this window
     function isDark(){var d=document.documentElement.getAttribute('data-theme');return d?d==='dark':matchMedia('(prefers-color-scheme:dark)').matches;}
     function col(hue,a){return 'rgba(255,255,255,'+a+')';}   // sketches draw pure white on the black intro
@@ -698,10 +709,10 @@
       // Timing. Intro reveal: a smooth 2/s -> 1/s. Background: ticks at Fibonacci gaps —
       // 1,1,2,3,5,8,13,21,34,55,89,144 seconds — then holds at every 144s forever.
       if(bgMode){
-        if(S.bgTicks===undefined)S.bgTicks=0;
         var bgSec=(performance.now()-bgStart)/1000,last=FIB_T[FIB_T.length-1],want;
         if(bgSec>=last){want=FIB_T.length+Math.floor((bgSec-last)/144);}   // past the 12th tick: every 144s
         else{want=0;for(var wi=0;wi<FIB_T.length&&FIB_T[wi]<=bgSec;wi++)want++;}
+        if(S.bgTicks===undefined)S.bgTicks=want;   // adopt the shared age on handoff — no catch-up burst
         while(S.bgTicks<want){step();S.bgTicks++;}
       }else{
         var rate=2-gFade;S.phase+=Math.max(0,t-S.lastT)*rate;S.lastT=t;
@@ -733,7 +744,7 @@
         if(name==='life'){lifeS={};if(!reduce)gFadeStart=performance.now();}cur=name;t0=0;if(reduce)frame(performance.now());},
       // hand the Game of Life off to the site background and keep it running
       toBackground:function(){
-        bgMode=true;canvas.classList.add('bg');if(!bgStart)bgStart=performance.now();
+        bgMode=true;canvas.classList.add('bg');if(!bgStart)bgStart=performance.now()-(Date.now()-golStart());  // anchor to the shared cross-page clock
         if(cur!=='life'){cur='life';t0=0;lifeS={};}   // reload path: fresh sim; intro path keeps the running board
         if(!running){resize();if(reduce){frame(performance.now());}else{running=true;raf=requestAnimationFrame(frame);}}
       }
