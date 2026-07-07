@@ -146,9 +146,7 @@
       }
       var pts=S.pts,N=pts.length,cyc=12,ph=(t%cyc)/cyc,draw=Math.min(1,ph/0.82);
       var upto=draw*(N-1),full=Math.floor(upto),frac=upto-full,i;
-      ctx.shadowBlur=0;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=col(0,0.35);ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
-      for(i=1;i<N;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();
+      ctx.shadowBlur=0;ctx.lineCap='round';ctx.lineJoin='round';   // no preview ghost — the pen writes the curve onto black
       ctx.strokeStyle=col(0,0.92);ctx.lineWidth=1.7;
       ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
       for(i=1;i<=full;i++)ctx.lineTo(pts[i][0],pts[i][1]);
