@@ -26,7 +26,7 @@
     ]},
     { label:'Consulting', url:'/consulting.html' },
     { label:'Resume', url:'/resume.html' },
-    { label:'MDG Registry', url:'/mdg.html', here:true },
+    { label:'MDG Workshop', url:'/mdg.html', here:true },
     { label:'Many Doors Guild', url:'https://manydoorsguild.com', blank:true }
   ]};
 

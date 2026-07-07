@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>MDG Registry · Matt Danuser-Grant</title>
-<meta name="description" content="A little registry of every MDG in play across the site — and a place to coin a new one." />
+<title>MDG Workshop · Matt Danuser-Grant</title>
+<meta name="description" content="Backstage at Must Design Games — hidden works-in-progress, the MDG registry, and site tooling." />
 <meta name="robots" content="noindex, nofollow" />
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -63,6 +63,21 @@
   .mdg-list .rm{cursor:pointer;color:var(--muted);border:none;background:none;font-size:16px;line-height:1;padding:0 2px}
   .mdg-list .rm:hover{color:#b4543a}
 
+  /* ── Workshop hero + hidden games ── */
+  .mdg-title{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(34px,6vw,52px);letter-spacing:-0.02em;line-height:1.05;color:var(--ink);margin:56px 0 0}
+  .mdg-lede{color:var(--ink-2);font-size:18px;line-height:1.55;max-width:640px;margin:16px 0 0}
+  .ws-games{margin-top:44px}
+  .ws-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+  .ws-row{display:flex;align-items:center;gap:20px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:16px 20px;box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s}
+  .ws-row:hover,.ws-row:focus-visible{transform:translateY(-2px);border-color:var(--line-2);box-shadow:var(--shadow-hover);outline:none}
+  .ws-main{flex:1;min-width:0}
+  .ws-name{font-family:'Fraunces',serif;font-weight:500;font-size:19px;letter-spacing:-0.01em;color:var(--ink);display:block}
+  .ws-desc{color:var(--muted);font-size:14.5px;line-height:1.5;margin-top:4px}
+  .ws-tag{flex-shrink:0;font-size:12px;letter-spacing:.02em;color:var(--muted);white-space:nowrap}
+  .ws-go{flex-shrink:0;font-family:'Fraunces',serif;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 14px 7px;background:transparent;color:var(--muted);border:1.5px solid var(--line-2);transition:border-color .15s,background .15s,color .15s;white-space:nowrap}
+  .ws-row:hover .ws-go,.ws-row:focus-visible .ws-go{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  @media(max-width:640px){.ws-row{align-items:flex-start;flex-wrap:wrap;gap:10px}.ws-tag{order:3;flex-basis:100%}.ws-go{margin-left:auto}}
+
   /* ── Intro viewer ── */
   .intro-viewer{margin-top:48px}
   .intro-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:16px}
@@ -116,8 +131,19 @@
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
   </nav>
 
+  <header>
+    <h1 class="mdg-title">MDG Workshop</h1>
+    <p class="mdg-lede">Backstage at Must Design Games — the hidden works-in-progress kept off the public arcade, plus the site's MDG tooling. Not linked or indexed; you found the door.</p>
+  </header>
+
+  <section class="ws-games">
+    <p class="mdg-sub">Hidden games</p>
+    <p class="mdg-intro" style="margin-top:0">Off the public arcade — still fully playable while I build them. Graduate one to the arcade when it's ready.</p>
+    <div id="ws-games" class="ws-list"></div>
+  </section>
+
   <section id="mdg-lab" class="mdg-lab" hidden aria-hidden="true">
-    <h1 class="mdg-head">MDG Registry <span class="mdg-badge">you found it</span></h1>
+    <h2 class="mdg-head">MDG Registry <span class="mdg-badge">you found it</span></h2>
     <p class="mdg-intro">Every MDG in play across the site. Type a new three-word idea (M, then D, then G) and I'll show which words are already spoken for, and where. Coin a fresh one and you can send it my way.</p>
 
     <input id="mdg-input" type="text" placeholder="e.g. Make Dazzling Gizmos" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Try an MDG" />
@@ -300,6 +326,28 @@
   }
   // This is a dedicated hidden page — finding the URL is the reveal, so show it on load.
   show(true);
+})();
+</script>
+<script>
+/* Hidden games — kept off the public arcade, listed here in the Workshop.
+   They still live (and play) on the mustdesigngames subdomain; links are absolute.
+   Promote one to the public arcade by adding its entry to that gallery's list. */
+(function(){
+  var GAMES=[
+    {slug:'apple-tree-lane',  name:'Apple Tree Lane',  desc:'Run the orchard from Farm HQ — manage trees, patrol pests, press cider, and host you-pick days across four modes.'},
+    {slug:'grand-theft-apples', name:'Grand Theft Apples', desc:'A 3D third-person romp — raid the orchard, rack up a wanted level, pelt the farmers, and bank your loot before you get busted.'},
+    {slug:'eat-monkey-eat',   name:'Eat, Monkey, Eat', desc:'An oddball training sim — build your stats and pick your methods, one action at a time.'},
+    {slug:'split-system',     name:'Split System',     desc:'A charge-management trainer — balance the split system and keep it in the green.'}
+  ];
+  var BASE='https://mustdesigngames.mattdanusergrant.com/';
+  var host=document.getElementById('ws-games'); if(!host) return;
+  var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+  host.innerHTML=GAMES.map(function(g){
+    return '<a class="ws-row" href="'+BASE+g.slug+'/"><div class="ws-main"><span class="ws-name">'+esc(g.name)+'</span>'
+      +'<div class="ws-desc">'+esc(g.desc)+'</div></div>'
+      +'<span class="ws-tag">in the workshop</span>'
+      +'<span class="ws-go">play <span aria-hidden="true">→</span></span></a>';
+  }).join('');
 })();
 </script>
 <script src="/assets/mdg-intro.js?v=2"></script>
