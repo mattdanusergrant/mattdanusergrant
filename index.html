@@ -64,7 +64,7 @@
   .nav .links a:hover{color:var(--ink)}
 
   /* ── Hero ────────────────────────────────────────────────────── */
-  .hero{padding:72px 0 48px}
+  .hero{padding:72px 0 18px}
   .hero .eyebrow{
     font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--muted);margin:0 0 18px;font-weight:500;
@@ -83,7 +83,7 @@
   .hero .lede + .lede{color:var(--muted);font-size:18.5px}
 
   /* ── Work showcase — the good stuff, right on the page ── */
-  .work{margin:48px 0 0}
+  .work{margin:30px 0 0}
   .work-head{
     display:flex;align-items:baseline;justify-content:space-between;gap:16px;
     margin:0 0 18px;padding-bottom:12px;border-bottom:1.5px solid var(--line);
@@ -96,6 +96,15 @@
   .work-head .more:hover{color:var(--ink)}
   .work-head .more span{display:inline-block;transition:transform .18s}
   .work-head .more:hover span{transform:translateX(3px)}
+
+  /* Sub-group heading inside a section (e.g. Tools / Standalone Projects under Modular Digital Goods) */
+  .subhead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:28px 0 12px}
+  .subhead.first{margin-top:6px}
+  .subhead h3{font-family:'Fraunces',serif;font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+  .subhead .more{font-size:13px;color:var(--muted);white-space:nowrap;transition:color .15s}
+  .subhead .more:hover{color:var(--ink)}
+  .subhead .more span{display:inline-block;transition:transform .18s}
+  .subhead .more:hover span{transform:translateX(3px)}
 
   /* "More games" word-toy card — ported from the design lab; drifts through M-D-G phrases */
   .more-link{
@@ -189,12 +198,12 @@
 
   @media (max-width:480px){
     .wrap{padding:0 22px 60px}
-    .hero{padding:36px 0 24px}
+    .hero{padding:36px 0 14px}
     .hero h1{margin:0 0 16px}
     .hero .lede{font-size:17px;margin:0 0 12px}
     .nav .links a{margin-left:14px;font-size:13px}
     .theme-toggle{margin-left:10px}
-    .work{margin:36px 0 0}
+    .work{margin:26px 0 0}
     .work-head h2{font-size:20px}
     .tile{padding:16px 16px 14px}
     .cta-band{margin:40px 0 0;padding:20px}
@@ -282,7 +291,6 @@
   <nav class="nav">
     <a class="brand" href="/">Matt Danuser-Grant</a>
     <div class="links" id="nav-links">
-      <a href="/design-lab.html">Design Lab</a>
       <a href="/consulting.html">Consulting</a>
       <a href="/resume.html">Resume</a>
     </div>
@@ -303,80 +311,75 @@
     </div>
     <div class="shelf">
       <article class="tile">
-        <h3>Metropolis Dawn Grid</h3>
-        <p>A city builder on one shared world. Run the supply chain, lay rail, ship your surplus by train — and expand until you meet your neighbours.</p>
+        <h3>Multiplayer<br>Deck<br>Gateway</h3>
+        <p>Build and playtest browser card games on one shared engine — then deal your creation to friends over a room code.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=multiplayer-deck-gateway">Play</a></div>
+      </article>
+      <article class="tile">
+        <h3>Metropolis<br>Dawn<br>Grid</h3>
+        <p>A city builder on one shared world. Run the supply chain, lay rail, and ship surplus by train to your neighbours.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/" target="_blank" rel="noopener">Play</a></div>
       </article>
       <article class="tile">
-        <h3>Keep Ripping Packs</h3>
-        <p>The part of card games everyone secretly loves most, on its own. Open packs, chase the rare, sort the spill, then go again.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/games/keeprippingpacks/" target="_blank" rel="noopener">Play</a></div>
-      </article>
-      <article class="tile">
-        <h3>Ronin Survivor</h3>
-        <p>A survivor-like: play a lone ronin as the screen fills with enemies. Upgrade between waves and chase the run that finally goes the distance.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/games/ronin-survivor/" target="_blank" rel="noopener">Play</a></div>
-      </article>
-      <article class="tile">
-        <h3>Sigil Tactics</h3>
-        <p>A tactical card-battler for mobile web. Collect sigils, build a hand, and fight turn-based skirmishes where position and timing decide it.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/games/sigil-tactics/" target="_blank" rel="noopener">Play</a></div>
+        <h3>Moss<br>Dew<br>Garden</h3>
+        <p>A cozy virtual pet. Adopt a Mossling, tend the garden it lives in, and keep it fed and happy. It never dies — just dozes till you return.</p>
+        <div class="btn-row"><a class="btn btn-play" href="https://mustdesigngames.mattdanusergrant.com/mossdewgarden/" target="_blank" rel="noopener">Play</a></div>
       </article>
     </div>
-    <a class="more-link" id="more-games" href="https://mustdesigngames.mattdanusergrant.com/" target="_blank" rel="noopener"><span class="more-text">More Decent Games</span> <span class="arr">→</span></a>
+    <a class="more-link" id="more-games" href="https://mustdesigngames.mattdanusergrant.com/" target="_blank" rel="noopener"><span class="more-text">Must Design Games</span> <span class="arr">→</span></a>
   </section>
 
   <section class="work" aria-labelledby="apps-h">
     <div class="work-head">
       <h2 id="apps-h">Modular Digital Goods</h2>
     </div>
+
+    <div class="subhead first" id="tools">
+      <h3>Tools</h3>
+    </div>
+    <div class="shelf">
+      <article class="tile">
+        <h3>Math<br>Draws<br>Graphics</h3>
+        <p>Two tools for making pictures with code: live-editable math sketches, and a pixel-art sprite editor.</p>
+        <div class="btn-row"><a class="btn btn-play" href="https://mathdrawsgraphics.mattdanusergrant.com/">Open</a></div>
+      </article>
+      <article class="tile">
+        <h3>Make<br>Dope<br>Grooves</h3>
+        <p>Write a whole song as code — drums, bass, melodies, chords — and it plays back live in your browser.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=makedopegrooves">Open</a></div>
+      </article>
+      <article class="tile">
+        <h3>Markdown<br>Document<br>Generator</h3>
+        <p>A plain-text resume builder: write on the left, watch a clean, ATS-safe resume build on the right. Save to PDF.</p>
+        <div class="btn-row"><a class="btn btn-play" href="/resume-builder.html">Open</a></div>
+      </article>
+    </div>
+
+    <div class="subhead">
+      <h3>Standalone Projects</h3>
+    </div>
     <div class="shelf">
       <article class="tile">
         <h3>Invisible Ink</h3>
-        <p>A writing app with one idea: your words fade into the page as you type. Still there, just hidden, so you draft forward and never look back.</p>
+        <p>A writing app with one idea: your words fade into the page as you type — still there, just hidden, so you draft forward.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://itsinvisible.ink" target="_blank" rel="noopener">Open</a></div>
       </article>
       <article class="tile">
         <h3>Keeping Cadence</h3>
-        <p>A weekly planner kept deliberately simple. Block your time, name what matters, and see the whole week at a glance. No accounts.</p>
+        <p>A weekly planner kept deliberately simple — block your time, name what matters, see the week at a glance.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://mattdanusergrant.github.io/keeping-cadence/" target="_blank" rel="noopener">Open</a></div>
       </article>
       <article class="tile">
         <h3>Dank Omphalos</h3>
-        <p>A digital arthouse where Magic: The Gathering cards become canvases — hand-painted alters, original paintings, and the artists behind them.</p>
+        <p>A digital arthouse where Magic: The Gathering cards become canvases — hand-painted alters and original paintings.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://dankomphalos.com/" target="_blank" rel="noopener">Open</a></div>
       </article>
     </div>
   </section>
 
-  <section class="work" aria-labelledby="tools-h">
-    <div class="work-head">
-      <h2 id="tools-h">Tools</h2>
-      <a class="more" href="/design-lab.html#tools">Full toolbox <span>→</span></a>
-    </div>
-    <div class="shelf">
-      <article class="tile">
-        <h3>Multiplayer<br>Deck<br>Gateway</h3>
-        <p>Build and playtest card games in the browser — a shared engine (real deck, poker evaluator, online multiplayer) with a dozen games and design tools plugged in. Spin up a variant, then deal it to friends over a room code.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=multiplayer-deck-gateway">Open</a></div>
-      </article>
-      <article class="tile">
-        <h3>Math<br>Draws<br>Graphics</h3>
-        <p>Two tools for making pictures with a computer: Code Art (animated math sketches with live, editable code) and Pixel Art (a sprite editor). The studio behind this site's intro art.</p>
-        <div class="btn-row"><a class="btn btn-play" href="https://mathdrawsgraphics.mattdanusergrant.com/">Open</a></div>
-      </article>
-      <article class="tile">
-        <h3>Make<br>Dope<br>Grooves</h3>
-        <p>Write a whole song as code — drums, bass, melodies, chords — and it plays back, every sound synthesized live in your browser.</p>
-        <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=make-dope-grooves">Open</a></div>
-      </article>
-    </div>
-  </section>
-
-  <section class="work" aria-labelledby="cs-h">
+  <section class="work" aria-labelledby="cs-h" id="case-studies">
     <div class="work-head">
       <h2 id="cs-h">Case Studies</h2>
-      <a class="more" href="/design-lab.html#case-studies">All case studies <span>→</span></a>
     </div>
     <div class="shelf">
       <article class="tile">
@@ -581,14 +584,14 @@
       for(i=0;i<5200;i++){dx=sg*(y-x);dy=x*(rho-z)-y;dz=x*y-bt*z;x+=dx*dt;y+=dy*dt;z+=dz*dt;var px=cx+(x*cr-y*sr)*sc,py=cy+(z-25)*sc;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
       ctx.stroke();
     };
-    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes; a looping orbit reads as a world (METROPOLIS DAWN GRID).
+    // Lissajous - harmonic curve x=sin(a*th+phase), y=sin(b*th), a 3:2 figure that breathes; a looping orbit reads as a world (unused).
     SK.lissajous=function(w,h,t){
       var cx=w/2,cy=h/2,R=Math.min(w,h)*0.42,a=3,b=2,ph=t*0.5,N=420;
       ctx.lineCap='round';ctx.shadowColor=col(0,0.5);ctx.strokeStyle=col(0,0.85);ctx.lineWidth=1.5;ctx.beginPath();
       for(var i=0;i<=N;i++){var th=i/N*TAU,x=cx+Math.sin(a*th+ph)*R,y=cy+Math.sin(b*th)*R;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
       ctx.stroke();
     };
-    // Hilbert Curve - a space-filling fractal (order 6) drawn out by a travelling pen, then restarts; one long unbroken path folding to fill the plane, like a strand folded to fit (MASTER DATA GENOME).
+    // Hilbert Curve - a space-filling fractal (order 6) drawn out by a travelling pen, then restarts; one long unbroken path folding to fill the plane, like a strand folded to fit (METROPOLIS DAWN GRID).
     SK.hilbert=function(w,h,t){
       var S=hilbertS,order=6,m=Math.min(w,h)*0.86,key=Math.round(w)+'x'+Math.round(h);
       if(S.key!==key){S.key=key;S.pts=[];var P=S.pts;
@@ -610,6 +613,26 @@
       for(i=1;i<=full;i++)ctx.lineTo(pts[i][0],pts[i][1]);
       if(full<N-1){var a=pts[full],b=pts[full+1];ctx.lineTo(a[0]+(b[0]-a[0])*frac,a[1]+(b[1]-a[1])*frac);}
       ctx.stroke();
+    };
+    // Double Helix - two phase-shifted sine backbones with base-pair rungs, twisting as it scrolls; the strand in front (cos>0) brightens/thickens to sell the 3D turn, rungs fade edge-on (MASTER DATA GENOME).
+    SK.helix=function(w,h,t){
+      var cx=w/2,A=Math.min(w,h)*0.16,twist=TAU/(Math.min(w,h)*0.46),scroll=reduce?0:t*0.9,step=Math.max(3,Math.round(h/120));
+      ctx.shadowBlur=0;ctx.lineCap='round';
+      // base-pair rungs (drawn first, behind the backbones)
+      for(var y=-A;y<=h+A;y+=step*3){
+        var ph=y*twist+scroll,sa=Math.sin(ph),dp=Math.cos(ph),xa=cx+A*sa,xb=cx-A*sa;
+        ctx.strokeStyle=col(0,0.12+0.30*Math.abs(sa));ctx.lineWidth=1;   // rungs vanish when the ladder turns edge-on
+        ctx.beginPath();ctx.moveTo(xa,y);ctx.lineTo(xb,y);ctx.stroke();
+        ctx.fillStyle=col(0,0.22+0.62*(dp+1)/2);ctx.beginPath();ctx.arc(xa,y,1.8,0,TAU);ctx.fill();   // nucleotide caps, near strand bright
+        ctx.fillStyle=col(0,0.22+0.62*(1-(dp+1)/2));ctx.beginPath();ctx.arc(xb,y,1.8,0,TAU);ctx.fill();
+      }
+      // the two sugar-phosphate backbones; per-segment alpha/width by "frontness" reads as a rotating helix
+      function strand(po){var px,py;
+        for(var y=-A;y<=h+A;y+=step){var ph=y*twist+scroll+po,x=cx+A*Math.sin(ph),front=(Math.cos(ph)+1)/2;
+          if(y>-A){ctx.strokeStyle=col(0,0.18+0.77*front);ctx.lineWidth=0.8+1.9*front;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();}
+          px=x;py=y;}
+      }
+      strand(0);strand(Math.PI);
     };
     // Sierpinski Triangle - remove each triangle's middle, forever (depth 7); slow turn (MODULAR DIGITAL GOODS).
     SK.sierpinski=function(w,h,t){
@@ -735,8 +758,8 @@
     {words:['MAXIMUM','DOPAMINE','GUARANTEED'],  sketch:'phyllo'},
     {words:['MANY','DOORS','GUILD'],             sketches:['doors','manyDoors','turningHall']},
     {words:['MULTIPLAYER','DECK','GATEWAY'],     sketch:'cards'},
-    {words:['MASTER','DATA','GENOME'],           sketch:'hilbert'},
-    {words:['METROPOLIS','DAWN','GRID'],         sketch:'lissajous'},
+    {words:['MASTER','DATA','GENOME'],           sketch:'helix'},
+    {words:['METROPOLIS','DAWN','GRID'],         sketch:'hilbert'},
     {words:['MULTIPLE','DIMENSIONS','GENERATED'],sketch:'lorenz'},
     {words:['MODULAR','DIGITAL','GOODS'],        sketch:'sierpinski'},
     {words:['MANIFEST','DIVINE','GEOMETRY'],     sketch:'metatron'},
@@ -916,19 +939,20 @@
 </script>
 <script>
 /* The "More Games" button is a little MDG word-toy (ported from the design lab).
-   It stays on "More Decent Games" until interacted with, then decodes into a
+   It stays on "Must Design Games" until interacted with, then decodes into a
    new M-D-G phrase on hover/focus. */
 (function(){
   var link=document.getElementById('more-games');
   if(!link)return;
   var slot=link.querySelector('.more-text');
   var PHRASES=[
-    'More Decent Games',        // default on load
-    'Mostly Dropped Gadgets',
-    'Mainly Defective Gizmos',
+    'Must Design Games',        // default on load
+    'More Decent Gadgets',
+    'Mostly Dropped Gizmos',
+    'Mainly Defective Gems',
     'My Derelict Garbage',
-    'Many Discarded Gambles',
-    'Mildly Dubious Gambits'
+    'Mildly Dubious Gambits',
+    'Merely Discarded Gambles'
   ];
   var GLYPHS='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
@@ -957,6 +981,6 @@
   link.addEventListener('focus',function(){ morph(nextIndex()); });
 })();
 </script>
-<script src="/assets/site.js" defer></script>
+<script src="/assets/site.js?v=2" defer></script>
 </body>
 </html>

@@ -2,3 +2,23 @@
 /games/municipal-development-globe/*  https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/world/:splat 301
 /games/metropolis-dawn-grid-world/*   https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/world/:splat 301
 /games/metropolis-dawn-grid/*         https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/:splat 301
+# Moss Dew Garden (formerly Mosslings) — kept local, actively developed
+/games/mosslings/*                    /games/mossdewgarden/:splat 301
+
+# Games consolidated to the mustdesigngames subdomain (canonical home)
+/games/keeprippingpacks/*  https://mustdesigngames.mattdanusergrant.com/keeprippingpacks/:splat 301
+/games/sigil-tactics/*     https://mustdesigngames.mattdanusergrant.com/sigil-tactics/:splat 301
+/games/switchback-td/*     https://mustdesigngames.mattdanusergrant.com/switchback-td/:splat 301
+/games/baduk-blitz/*       https://mustdesigngames.mattdanusergrant.com/baduk-blitz/:splat 301
+/games/bloom-again/*       https://mustdesigngames.mattdanusergrant.com/bloom-again/:splat 301
+/games/prism-pond/*        https://mustdesigngames.mattdanusergrant.com/prism-pond/:splat 301
+
+# Deduped brand slugs — collapse dashed variants to the canonical no-dash paths
+/make-dope-grooves/*           /makedopegrooves/:splat 301
+/manufacture-digital-grooves/* /makedopegrooves/:splat 301
+/math-draws-graphics/*         https://mathdrawsgraphics.mattdanusergrant.com/code-art/:splat 301
+/pixel-art/*                   https://mathdrawsgraphics.mattdanusergrant.com/pixel-art/:splat 301
+
+# Design Lab retired — folded into the homepage (games live on the mustdesigngames subdomain)
+/design-lab.html  /  301
+/design-lab       /  301

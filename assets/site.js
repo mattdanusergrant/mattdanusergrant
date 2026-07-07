@@ -41,3 +41,19 @@
   document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false);});
   window.addEventListener('resize',function(){if(window.innerWidth>640)set(false);});
 })();
+
+/* Secret: type MDG (all caps — hold Shift or Caps Lock) anywhere on the site to
+   jump to the hidden MDG Registry. Ignored while typing in a field, and a no-op
+   when you're already on the page. */
+(function(){
+  if(/\/mdg(\.html)?$/.test(location.pathname))return;   // already at the registry
+  var buf='';
+  document.addEventListener('keydown',function(e){
+    if(e.ctrlKey||e.metaKey||e.altKey)return;             // let shortcuts through untouched
+    var t=e.target,tag=t&&t.tagName;
+    if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(t&&t.isContentEditable))return; // don't hijack typing
+    if(!e.key||e.key.length!==1)return;
+    buf=(buf+e.key).slice(-3);                            // case-sensitive: needs capital M, D, G
+    if(buf==='MDG')location.href='/mdg.html';
+  });
+})();

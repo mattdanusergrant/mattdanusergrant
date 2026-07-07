@@ -61,7 +61,6 @@
   <nav class="nav">
     <a class="brand" href="/">Matt Danuser-Grant</a>
     <div class="links" id="nav-links">
-      <a href="/design-lab.html">Design Lab</a>
       <a href="/consulting.html">Consulting</a>
       <a href="/resume.html">Resume</a>
     </div>
@@ -72,7 +71,7 @@
   <div class="frame-wrap"><iframe class="tool" id="frame" title="Tool" src="about:blank" allow="autoplay"></iframe></div>
 
   <footer class="toolfoot">
-    <div class="left"><a href="/design-lab.html#tools">← Toolbox</a></div>
+    <div class="left"><a href="/#tools">← Toolbox</a></div>
     <div class="where" id="toolname"></div>
     <div class="right"><a href="/">Home</a></div>
   </footer>
@@ -84,8 +83,9 @@
     'math-draws-graphics':        { name:'Math Draws Graphics', src:'https://mathdrawsgraphics.mattdanusergrant.com/code-art/' },
     'code-art':                   { name:'Math Draws Graphics', src:'https://mathdrawsgraphics.mattdanusergrant.com/code-art/' },
     'pixel-art':                  { name:'Pixel Art',           src:'https://mathdrawsgraphics.mattdanusergrant.com/pixel-art/' },
-    'make-dope-grooves':          { name:'Make Dope Grooves',   src:'/make-dope-grooves/' },
-    'manufacture-digital-grooves':{ name:'Make Dope Grooves',   src:'/make-dope-grooves/' }, // legacy alias for old links
+    'makedopegrooves':            { name:'Make Dope Grooves',   src:'/makedopegrooves/' },
+    'make-dope-grooves':          { name:'Make Dope Grooves',   src:'/makedopegrooves/' }, // legacy alias for old links
+    'manufacture-digital-grooves':{ name:'Make Dope Grooves',   src:'/makedopegrooves/' }, // legacy alias for old links
     'multiplayer-deck-gateway':   { name:'Multiplayer Deck Gateway', src:'https://mustdesigngames.mattdanusergrant.com/multiplayerdeckgateway/' }
   };
   var key=new URLSearchParams(location.search).get('app');
@@ -97,6 +97,6 @@
   document.title=t.name+' · Matt Danuser-Grant';
 })();
 </script>
-<script src="/assets/site.js" defer></script>
+<script src="/assets/site.js?v=2" defer></script>
 </body>
 </html>

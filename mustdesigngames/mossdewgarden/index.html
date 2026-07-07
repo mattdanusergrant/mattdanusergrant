@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f3e7d3">
-<title>Mosslings</title>
+<title>Moss Dew Garden</title>
 <!-- PWA: installable home-screen app, offline-capable via service worker -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Mosslings">
+<meta name="apple-mobile-web-app-title" content="Moss Dew Garden">
 <meta name="description" content="A cozy virtual pet — adopt a little plant-creature and keep it fed, happy, and rested.">
 <script>
   if ('serviceWorker' in navigator) {
@@ -188,7 +188,7 @@
 <div id="app">
   <div id="hud">
     <div class="hudtop">
-      <div id="petname">Mosslings</div>
+      <div id="petname">Moss Dew Garden</div>
       <div id="hudright">
         <button id="mute" title="sound">🔇</button>
         <div id="coins"><span class="c"></span><span id="coinval">0</span></div>
@@ -230,6 +230,16 @@
       <p id="feedSub">A little something to fill the tummy.</p>
       <div class="foods" id="foodList"></div>
       <button class="btn ghost" id="feedClose">Close</button>
+    </div>
+  </div>
+
+  <!-- garden: plant a seed -->
+  <div class="ov" id="ovGarden">
+    <div class="sheet">
+      <h2>Plant something 🌱</h2>
+      <p id="gardenSub">Sow a seed — it grows in real time while you tend your Mossling, then sells for coins.</p>
+      <div class="foods" id="plantList"></div>
+      <button class="btn ghost" id="gardenClose">Close</button>
     </div>
   </div>
 
@@ -334,6 +344,28 @@ const FOODS = [
   { id:'cake',   e:'🧁', n:'Moss Cake',    sub:'+45 tummy · treat · 5 morsels',  cost:12, fill:45, joy:12, count:5 },
 ];
 
+// ---- garden: plant catalog. cost=coins to sow, grow=minutes to bloom,
+// each plant's harvest has a yield: coins (cash crop), food (fills tummy),
+// calm (happiness), or rest (energy). amt = how much. xp on harvest, lvl = pet
+// level needed to sow it. The garden feeds the care loop, not just a coin faucet.
+const PLANTS = [
+  { id:'moss',  e:'🌿', n:'Moss Tuft',    cost:2,  grow:6,  yield:'coins', amt:4,  xp:2,  lvl:0 },
+  { id:'berry', e:'🍓', n:'Sunberry Bush',cost:4,  grow:12, yield:'food',  amt:22, xp:3,  lvl:0 },
+  { id:'daisy', e:'🌼', n:'Daisy',        cost:6,  grow:18, yield:'calm',  amt:20, xp:4,  lvl:1 },
+  { id:'sun',   e:'🌻', n:'Sunflower',    cost:9,  grow:30, yield:'rest',  amt:28, xp:6,  lvl:2 },
+  { id:'tulip', e:'🌷', n:'Tulip',        cost:13, grow:45, yield:'coins', amt:30, xp:9,  lvl:3 },
+  { id:'lotus', e:'🪷', n:'Lotus',        cost:20, grow:70, yield:'calm',  amt:40, xp:14, lvl:4 },
+];
+// per-yield presentation + how a harvest is applied to the player/pet
+const YIELD_INFO = {
+  coins: { ic:'🪙', shop:a=>`+${a} 🪙 on harvest`,  word:a=>`+${a} 🪙`,        maxed:()=>false,          apply:a=>{ S.coins += a; } },
+  food:  { ic:'🍓', shop:a=>`feeds +${a} 🍓`,        word:a=>`+${a} 🍓 tummy`,   maxed:()=>P.full>=99.5,   apply:a=>{ P.full  = clamp(P.full  + a); } },
+  calm:  { ic:'💞', shop:a=>`cheers +${a} 💞`,       word:a=>`+${a} 💞 happy`,   maxed:()=>P.happy>=99.5,  apply:a=>{ P.happy = clamp(P.happy + a); } },
+  rest:  { ic:'⚡', shop:a=>`rests +${a} ⚡`,         word:a=>`+${a} ⚡ energy`,  maxed:()=>P.energy>=99.5, apply:a=>{ P.energy= clamp(P.energy+ a); } },
+};
+const MAXPLOTS = 6;          // garden capacity; 3 free, the rest clear as the pet levels
+const GARDEN_CHEER = 0.8;    // each bloom slows happy decay by this much per hour
+
 // ---- decay per real hour (cozy & slow). Energy regenerates while asleep. ----
 const DECAY = { full: 7, happy: 4.5, energyAwake: 5.5, energyAsleep: -22 };
 const MAX_CATCHUP_H = 36;     // cap offline simulation so it never feels punishing
@@ -358,9 +390,17 @@ function freshPet(species, name){
     lastTs: now(), born: now(),
     xp: 0, level: 0, lastVisits: {} };
 }
+function freshGarden(){ return { plots: new Array(MAXPLOTS).fill(null) }; }
 function freshSave(){
   return { pets: [], currentId: null, coins: 8, lastVisitDay: '', streak: 0,
-    unlocked: ['meadow'] };
+    unlocked: ['meadow'], garden: freshGarden() };
+}
+// backfill the garden field on any save that predates it
+function ensureGarden(r){
+  if (!r) return r;
+  if (!r.garden || !Array.isArray(r.garden.plots)) r.garden = freshGarden();
+  while (r.garden.plots.length < MAXPLOTS) r.garden.plots.push(null);
+  return r;
 }
 function refreshP(){ P = (S && S.currentId) ? S.pets.find(p => p.id === S.currentId) || S.pets[0] || null : (S && S.pets[0]) || null; }
 function hasPet(){ return !!(S && S.pets && S.pets.length); }
@@ -372,7 +412,7 @@ function load(){
     if (r && Array.isArray(r.pets)){
       // older v2 saves didn't have the unlocked-locations set — start them with meadow
       if (!Array.isArray(r.unlocked) || !r.unlocked.length) r.unlocked = ['meadow'];
-      return r;
+      return ensureGarden(r);
     }
   } catch(e){}
   // v1 had a single adopted pet at the top level. Bring it forward.
@@ -385,7 +425,7 @@ function load(){
         xp: 0, level: 0, lastVisits: {} };
       return { pets:[pet], currentId: pet.id,
         coins: old.coins||0, lastVisitDay: old.lastVisitDay||'', streak: old.streak||0,
-        unlocked: ['meadow'] };
+        unlocked: ['meadow'], garden: freshGarden() };
     }
   } catch(e){}
   return null;
@@ -563,6 +603,8 @@ function applyDecay(){
   let hLeft = (t - P.lastTs) / 3.6e6;
   if (hLeft <= 0){ P.lastTs = t; return; }
   hLeft = Math.min(hLeft, MAX_CATCHUP_H);
+  // pets love living among the plants: each bloom slows (or reverses) happy decay
+  const happyRate = DECAY.happy - GARDEN_CHEER * gardenLush();
   while (hLeft > 1e-6){
     let segH = hLeft;
     if (!P.asleep && P.energy > TIRED_SLEEP_AT){            // schedule the nap onset
@@ -571,7 +613,7 @@ function applyDecay(){
     const eRate = P.asleep ? DECAY.energyAsleep : DECAY.energyAwake;
     const m = P.asleep ? SLEEP_DECAY_MULT : 1;
     P.full   = clamp(P.full   - DECAY.full  * segH * m);
-    P.happy  = clamp(P.happy  - DECAY.happy * segH * m);
+    P.happy  = clamp(P.happy  - happyRate   * segH * m);
     P.energy = clamp(P.energy - eRate * segH);
     if (P.full < 25 || P.energy < 25) P.happy = Math.max(P.happy - 4*segH*m, 18);
     hLeft -= segH;
@@ -589,9 +631,36 @@ function mood(){
   if (P.full   < 20) return { key:'hungry', tag:`${P.name}'s tummy is rumbling` };
   if (P.happy  < 25) return { key:'sad',   tag:`${P.name} feels a little wistful` };
   const avg = (P.full + P.happy + P.energy) / 3;
-  if (avg > 80 && P.happy > 78) return { key:'joy',  tag:`${P.name} is beaming!` };
-  if (avg > 60) return { key:'happy', tag:`${P.name} is content` };
-  return { key:'ok', tag:`${P.name} is pottering about` };
+  const lush = gardenLush();
+  if (avg > 80 && P.happy > 78) return { key:'joy',  tag: lush>=3 ? `${P.name} is basking in the garden 🌸` : `${P.name} is beaming!` };
+  if (avg > 60) return { key:'happy', tag: lush>=3 ? `${P.name} loves it among the flowers` : `${P.name} is content` };
+  return { key:'ok', tag:`${P.name} is pottering about the garden` };
+}
+
+// ===================== GARDEN (plant-based progression) =====================
+// The home scene IS a garden. Plots hold plants that grow in real time (offline
+// too — stage is derived from the planted timestamp). Sow with coins, harvest a
+// bloom for coins + XP. The garden is player-owned (shared across pets), and a
+// lush garden passively keeps whoever you're tending content (see applyDecay).
+function plantMeta(id){ return PLANTS.find(p => p.id === id) || null; }
+function maxPetLevel(){ return (S && S.pets && S.pets.length) ? Math.max(...S.pets.map(p => p.level||0)) : 0; }
+function unlockedPlots(){ return Math.min(MAXPLOTS, 3 + maxPetLevel()); }   // 3 free, +1 per pet level
+function plotNeedLevel(i){ return Math.max(0, i - 2); }                      // level to clear plot i
+function plantStage(plot){                                                   // -1 empty, 0 seed, 1 sprout, 2 bud, 3 bloom
+  if (!plot || !plot.plant) return -1;
+  const pl = plantMeta(plot.plant); if (!pl) return -1;
+  const frac = ((now() - plot.planted) / 60000) / pl.grow;
+  if (frac < 0.12) return 0; if (frac < 0.4) return 1; if (frac < 1) return 2; return 3;
+}
+function gardenLush(){
+  if (!S || !S.garden) return 0;
+  return S.garden.plots.filter(p => plantStage(p) === 3).length;
+}
+// plot geometry — a planting bed across the lower scene, behind the pet
+function gardenPlots(){
+  const n = MAXPLOTS, y = H*0.74, out = [];
+  for (let i=0;i<n;i++) out.push({ i, x: W*(0.13 + 0.74*(i/(n-1))), y, r: Math.min(W*0.085, 38) });
+  return out;
 }
 
 // ===================== RENDER (scene) =====================
@@ -643,7 +712,7 @@ function frame(ts){
     ctx.globalAlpha=1;
   }
 
-  drawRoom(A);
+  drawGarden(A, ts);
   const cx = W/2;
   petCYRatio += ((feedTray ? 0.22 : 0.58) - petCYRatio) * 0.08;
   const cy = H * petCYRatio;
@@ -664,25 +733,69 @@ function frame(ts){
   requestAnimationFrame(frame);
 }
 
-function drawRoom(A){
-  // floor
-  const fy = H*0.74;
-  ctx.fillStyle = A.night ? '#6b5a7a' : '#e7c89a';
-  ctx.fillRect(0,fy,W,H-fy);
-  ctx.fillStyle = A.night ? '#5d4e6b' : '#d9b787';
-  ctx.fillRect(0,fy,W,4);
-  // a little rug
-  ctx.fillStyle = A.night ? '#7a6790' : '#e89aa9';
-  ctx.beginPath(); ctx.ellipse(W/2, fy+(H-fy)*0.55, W*0.34, (H-fy)*0.32, 0,0,7); ctx.fill();
-  ctx.fillStyle = A.night ? '#8c79a3' : '#f2b3bf';
-  ctx.beginPath(); ctx.ellipse(W/2, fy+(H-fy)*0.55, W*0.24, (H-fy)*0.21, 0,0,7); ctx.fill();
-  // a potted plant in the corner
-  const px = W*0.84, pb = fy;
-  ctx.fillStyle = A.night?'#7a5e52':'#b9784f'; ctx.fillRect(px-14,pb-22,28,22);
-  ctx.fillStyle = A.night?'#5f8f6a':'#7bb87f';
-  for(const a of [-0.5,0,0.5]){ ctx.save(); ctx.translate(px,pb-22); ctx.rotate(a);
-    ctx.beginPath(); ctx.ellipse(0,-22,9,24,0,0,7); ctx.fill(); ctx.restore(); }
+function drawGarden(A, ts){
+  // grassy ground
+  const gy = H*0.66;
+  const gg = ctx.createLinearGradient(0,gy,0,H);
+  if (A.night){ gg.addColorStop(0,'#4f6a55'); gg.addColorStop(1,'#3c5344'); }
+  else        { gg.addColorStop(0,'#a6d888'); gg.addColorStop(1,'#7cbd6a'); }
+  ctx.fillStyle=gg; ctx.fillRect(0,gy,W,H-gy);
+  // a soil planting bed behind the pet
+  const bedY = H*0.74;
+  ctx.fillStyle = A.night ? '#4a3a34' : '#6b4a37';
+  ctx.beginPath(); ctx.ellipse(W/2, bedY+6, W*0.44, (H-bedY)*0.5, 0,0,7); ctx.fill();
+  ctx.fillStyle = A.night ? '#54433b' : '#7c5741';
+  ctx.beginPath(); ctx.ellipse(W/2, bedY+2, W*0.42, (H-bedY)*0.42, 0,0,7); ctx.fill();
+  // plots + plants
+  const ul = unlockedPlots();
+  for (const g of gardenPlots()){
+    const plot = S && S.garden ? S.garden.plots[g.i] : null;
+    drawPlot(g, plot, g.i < ul, ts);
+  }
   if (A.dim>0){ ctx.fillStyle=`rgba(20,16,40,${A.dim})`; ctx.fillRect(0,0,W,H); }
+}
+
+function drawPlot(g, plot, unlocked, ts){
+  const x=g.x, y=g.y;
+  // soil mound
+  ctx.fillStyle='#5c4030'; ctx.beginPath(); ctx.ellipse(x,y,g.r,g.r*0.5,0,0,7); ctx.fill();
+  ctx.fillStyle='#6e4d39'; ctx.beginPath(); ctx.ellipse(x,y-1,g.r*0.82,g.r*0.4,0,0,7); ctx.fill();
+  if (!unlocked){                                   // locked patch
+    ctx.globalAlpha=0.5; ctx.font=`${g.r*0.8}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🔒', x, y-2); ctx.globalAlpha=1; ctx.textBaseline='alphabetic'; return;
+  }
+  const st = plantStage(plot);
+  if (st < 0){                                      // empty: dashed "sow here" hint
+    ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=2; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.ellipse(x,y-2,g.r*0.5,g.r*0.28,0,0,7); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font=`${g.r*0.55}px sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('+', x, y-3); ctx.restore();
+    ctx.textBaseline='alphabetic'; return;
+  }
+  const pl = plantMeta(plot.plant);
+  const sway = Math.sin(ts*0.0016 + g.i)*2;
+  if (st===0){                                      // seedling nub
+    ctx.fillStyle='#8fbf6f'; ctx.beginPath(); ctx.ellipse(x, y-6, 3, 5, 0,0,7); ctx.fill();
+  } else if (st<3){                                  // stem + leaves (sprout / bud)
+    const h = st===1 ? 14 : 26;
+    ctx.strokeStyle='#5aa15a'; ctx.lineWidth=3; ctx.beginPath();
+    ctx.moveTo(x, y-2); ctx.quadraticCurveTo(x+sway, y-h*0.6, x+sway, y-h); ctx.stroke();
+    ctx.fillStyle='#7bc47f';
+    ctx.beginPath(); ctx.ellipse(x-6+sway*0.5, y-h*0.6, 7, 4, -0.6, 0,7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x+6+sway*0.5, y-h*0.55, 7, 4, 0.6, 0,7); ctx.fill();
+    if (st===2){ ctx.fillStyle=pl.e==='🌻'?'#e8c030':pl.e==='🌹'?'#d85a6a':'#e79ac0';
+      ctx.beginPath(); ctx.arc(x+sway, y-h-3, 5, 0,7); ctx.fill(); }
+  } else {                                           // bloom — ready to harvest
+    const bob = Math.sin(ts*0.003 + g.i)*2;
+    ctx.strokeStyle='#5aa15a'; ctx.lineWidth=3; ctx.beginPath();
+    ctx.moveTo(x, y-2); ctx.lineTo(x+sway, y-24); ctx.stroke();
+    ctx.font='30px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(pl.e, x+sway, y-34+bob);
+    if ((Math.sin(ts*0.004 + g.i*2)) > 0.6){        // occasional sparkle so harvest reads
+      ctx.globalAlpha=0.9; ctx.font='13px serif'; ctx.fillText('✨', x+g.r*0.5, y-40); ctx.globalAlpha=1;
+    }
+    ctx.textBaseline='alphabetic';
+  }
 }
 
 // procedural cozy creature; mood drives eyes & mouth, gentle idle bob/blink
@@ -800,6 +913,7 @@ cv.addEventListener('pointerdown', e=>{
     toast(`Good morning, ${P.name}! ☀️`);
     return;
   }
+  if (gardenTap(x, y)) return;      // tending the garden takes priority over cuddle
   const gap = now() - (P.lastCuddleTs || 0);
   const gain = Math.min(3, Math.floor(gap / 2000));   // 2s→+1, 4s→+2, 6s→+3 happy
   if (gain > 0){ P.happy = clamp(P.happy + gain); gainXP(1); }
@@ -820,7 +934,7 @@ cv.addEventListener('pointercancel', ()=>{ if (feedTray) trayRelease(); });
 function refresh(){
   if (!P){
     $('coinval').textContent = S ? Math.floor(S.coins) : 0;
-    $('petname').textContent = 'Mosslings';
+    $('petname').textContent = 'Moss Dew Garden';
     $('moodtag').textContent = '…';
     $('bFull').style.width = $('bHappy').style.width = $('bEnergy').style.width = '0%';
     return;
@@ -834,6 +948,11 @@ function refresh(){
   $('bHappy').style.width  = P.happy+'%';
   $('bEnergy').style.width = P.energy+'%';
   $('moodtag').textContent = mood().tag;
+  // one-time nudge so players discover planting
+  if (S.garden && !S.garden.taught && S.garden.plots.every(p => !p)){
+    S.garden.taught = true; save();
+    setTimeout(()=>toast('Tap a patch of soil to plant something 🌱'), 900);
+  }
 }
 
 let toastT;
@@ -906,6 +1025,74 @@ function feed(f){
   $('ovFeed').classList.remove('show');
   save(); refresh();
 }
+
+// ---- garden: sow / grow / harvest ----
+function gardenTap(x, y){
+  if (!S || !S.garden) return false;
+  const ul = unlockedPlots();
+  for (const g of gardenPlots()){
+    if (Math.abs(x - g.x) > g.r*1.3 || y < g.y-48 || y > g.y+g.r*0.7) continue;
+    if (g.i >= ul){ toast(`reach level ${plotNeedLevel(g.i)} to clear this patch`); return true; }
+    const plot = S.garden.plots[g.i];
+    const st = plantStage(plot);
+    if (st < 0){ openPlant(g.i); return true; }
+    if (st < 3){
+      const pl = plantMeta(plot.plant);
+      const left = Math.max(1, Math.ceil(pl.grow - (now() - plot.planted)/60000));
+      toast(`${pl.e} ${pl.n} is growing — about ${left} min to bloom`); return true;
+    }
+    harvest(g.i); return true;
+  }
+  return false;
+}
+let plantTarget = -1;
+function openPlant(i){
+  if (!P){ return; }
+  plantTarget = i;
+  const list = $('plantList'); list.innerHTML='';
+  const lvl = maxPetLevel();
+  for (const pl of PLANTS){
+    const b = document.createElement('button'); b.className='food';
+    const locked = pl.lvl > lvl;
+    const afford = S.coins >= pl.cost && !locked;
+    b.disabled = !afford;
+    const sub = locked ? `unlocks at level ${pl.lvl}` : `blooms in ~${pl.grow} min · ${YIELD_INFO[pl.yield].shop(pl.amt)}`;
+    b.innerHTML = `<span class="fe">${pl.e}</span><span class="fmeta"><div class="fn">${pl.n}</div>
+      <div class="fsub">${sub}</div></span><span class="cost"><span class="c"></span>${pl.cost}</span>`;
+    b.onclick = ()=>plantSeed(i, pl.id);
+    list.appendChild(b);
+  }
+  $('ovGarden').classList.add('show');
+}
+function plantSeed(i, id){
+  const pl = plantMeta(id);
+  if (!pl || !S || S.coins < pl.cost) return;
+  if (pl.lvl > maxPetLevel()) return;
+  S.coins -= pl.cost;
+  S.garden.plots[i] = { plant: id, planted: now() };
+  sfx('feed');
+  $('ovGarden').classList.remove('show');
+  save(); refresh();
+  toast(`Planted a ${pl.n} ${pl.e} — watch it grow!`);
+}
+function harvest(i){
+  const plot = S.garden.plots[i];
+  if (plantStage(plot) !== 3) return;
+  const pl = plantMeta(plot.plant);
+  const yi = YIELD_INFO[pl.yield] || YIELD_INFO.coins;
+  // don't waste a care crop the pet can't use yet — leave it bloomed for later
+  if (yi.maxed()){
+    const w = pl.yield==='food' ? 'full' : pl.yield==='calm' ? 'delighted' : 'well-rested';
+    toast(`${P.name} is already ${w} — leave it to bloom`); return;
+  }
+  yi.apply(pl.amt); gainXP(pl.xp);
+  const g = gardenPlots()[i];
+  spawnHearts(3, g.x, g.y-30); sfx(pl.yield==='coins' ? 'firefly' : 'daily');
+  S.garden.plots[i] = null;
+  save(); refresh();
+  toast(`Harvested ${pl.n} ${pl.e} — ${yi.word(pl.amt)}`);
+}
+$('gardenClose').onclick = ()=>$('ovGarden').classList.remove('show');
 
 $('tFeed').onclick  = openFeed;
 $('tPlay').onclick  = pickGame;
@@ -1568,7 +1755,7 @@ const MEMORY_EMOJIS=['🌸','🦋','🍄','🌻','🐝','🌿','🍓','🐞'];
 
 function startMemory(){
   mgMode='memory';
-  const pairs=MEMORY_EMOJIS.slice(0,6);
+  const pairs=MEMORY_EMOJIS.slice(0,8);
   const deck=[...pairs,...pairs];
   for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
   const cards=deck.map(e=>({ e, flipped:false, matched:false }));
@@ -1583,7 +1770,7 @@ function startMemory(){
   $('mgQuit').onclick=closeGame;
 }
 function memoryLayout(s){
-  const cols=4, rows=3, gap=8, pad=14, topPad=50;
+  const cols=4, rows=4, gap=8, pad=14, topPad=50;
   const cw=Math.floor((s.w-pad*2-gap*(cols-1))/cols);
   const ch=Math.floor((s.h-topPad-pad*2-gap*(rows-1))/rows);
   return {cols,rows,cw,ch,ox:pad,oy:topPad+pad,gap};

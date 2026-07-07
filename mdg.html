@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>MDG Registry · Matt Danuser-Grant</title>
+<meta name="description" content="A little registry of every MDG in play across the site — and a place to coin a new one." />
+<meta name="robots" content="noindex, nofollow" />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/site.css" />
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 28px 80px}
+
+  /* ── Top nav ── */
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0 0;font-size:14px;color:var(--muted);letter-spacing:.04em}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+
+  /* ── Buttons ── */
+  .btn{font-family:'Fraunces',serif;font-size:13.5px;font-weight:500;display:inline-flex;align-items:center;border-radius:999px;padding:6px 15px 7px;transition:border-color .15s,background .15s,color .15s;letter-spacing:.01em;white-space:nowrap;cursor:pointer}
+  .btn-edge{background:transparent;color:var(--muted);border:1.5px solid var(--line-2)}
+  .btn-edge:hover{border-color:var(--ink);color:var(--ink)}
+
+  /* ── MDG registry ── */
+  .mdg-lab{margin-top:56px}
+  .mdg-lab.mdg-reveal{animation:mdg-in .5s ease both}
+  @keyframes mdg-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .mdg-head{font-family:'Fraunces',serif;font-weight:500;font-size:26px;letter-spacing:-0.01em;color:var(--ink);margin:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .mdg-badge{font-family:'Inter',sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line-2);border-radius:999px;padding:3px 9px;font-weight:500}
+  .mdg-intro{color:var(--muted);font-size:15px;line-height:1.55;margin:14px 0 18px;max-width:640px}
+  #mdg-input{display:block;width:100%;max-width:520px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;color:var(--ink);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
+  #mdg-input:focus{outline:none;border-color:var(--ink)}
+  .mdg-dupe{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:rgba(180,84,58,.1);border:1px solid rgba(180,84,58,.35);color:#b4543a;font-size:14px;max-width:520px}
+  .mdg-result{margin:12px 0 0;max-width:560px;display:flex;flex-direction:column;gap:6px}
+  .mdg-row{display:flex;align-items:baseline;gap:10px;font-size:14.5px;line-height:1.45}
+  .mdg-slot{font-family:'Fraunces',serif;font-weight:600;color:var(--muted);width:1.3em;flex-shrink:0}
+  .mdg-word{font-weight:600;color:var(--ink);min-width:6.5em}
+  .mdg-free{color:#3c8c5a;font-size:13.5px}
+  .mdg-taken{color:#b4543a;font-size:13.5px}
+  .mdg-hint{color:var(--muted);font-size:13px}
+  .mdg-save{margin-top:14px}
+  .mdg-rand{margin-top:12px}
+  .mdg-new{margin:14px 0 0;max-width:520px;padding:14px 16px;border-radius:12px;background:rgba(60,140,90,.1);border:1px solid rgba(60,140,90,.4);animation:mdg-pop .3s ease both}
+  @keyframes mdg-pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+  .mdg-new p{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--ink)}
+  .mdg-new .send{display:inline-flex;align-items:center;gap:6px;font-family:'Fraunces',serif;font-size:14px;font-weight:500;color:#fff;background:#3c8c5a;border:1.5px solid #3c8c5a;border-radius:999px;padding:8px 16px;transition:filter .15s}
+  .mdg-new .send:hover{filter:brightness(1.08)}
+  .mdg-cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:26px}
+  @media(max-width:680px){.mdg-cols{grid-template-columns:1fr}}
+  .mdg-sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 12px}
+  .mdg-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+  .mdg-list li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14.5px;border-bottom:1px solid var(--line);padding-bottom:7px}
+  .mdg-list .ph{font-weight:500;color:var(--ink)}
+  .mdg-list .wh{font-size:12.5px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+  .mdg-list .rm{cursor:pointer;color:var(--muted);border:none;background:none;font-size:16px;line-height:1;padding:0 2px}
+  .mdg-list .rm:hover{color:#b4543a}
+
+  /* ── Intro viewer ── */
+  .intro-viewer{margin-top:48px}
+  .intro-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:16px}
+  .intro-card{position:relative;aspect-ratio:16/10;background:#0b0b0d;border:1.5px solid var(--line-2);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}
+  .intro-card:hover{transform:translateY(-3px);border-color:var(--ink);box-shadow:var(--shadow-hover)}
+  .intro-card:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .intro-card canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .intro-words{position:absolute;inset:0;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0 8%;pointer-events:none;font-family:'Fraunces',serif;font-weight:600;color:#fff;letter-spacing:.02em;line-height:1.05;text-shadow:0 1px 12px rgba(0,0,0,.75),0 0 3px rgba(0,0,0,.85)}
+  .intro-words .iw-stack{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+  .intro-words span{font-size:clamp(13px,3.2vw,18px)}
+  .intro-cycle{position:absolute;top:6px;right:9px;color:rgba(255,255,255,.55);font-size:14px;pointer-events:none}
+
+  /* Embiggen lightbox */
+  .intro-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,8,10,.82);animation:introfade .2s ease both}
+  @keyframes introfade{from{opacity:0}to{opacity:1}}
+  .intro-modal[hidden]{display:none}
+  .intro-modal-inner{position:relative;width:min(94vw,1040px);aspect-ratio:16/10;max-height:78vh;background:#0b0b0d;border:1.5px solid rgba(255,255,255,.14);border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .intro-modal-inner canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .intro-modal .intro-words span{font-size:clamp(28px,7vw,64px);line-height:1.02}
+  .intro-close{position:absolute;top:12px;right:18px;z-index:2;background:none;border:none;color:rgba(255,255,255,.85);font-size:36px;line-height:1;cursor:pointer;padding:2px 8px;font-family:inherit}
+  .intro-close:hover{color:#fff}
+  .intro-cycle-btn{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:2;font-family:'Fraunces',serif;font-size:13.5px;color:#fff;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.3);border-radius:999px;padding:7px 16px;cursor:pointer}
+  .intro-cycle-btn[hidden]{display:none}
+  .intro-cycle-btn:hover{background:rgba(255,255,255,.24)}
+
+  /* ── Footer ── */
+  .foot{margin:72px 0 0;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px}
+  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot a:hover{border-color:var(--ink-2)}
+
+  @media (max-width:480px){.wrap{padding:0 22px 60px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links" id="nav-links">
+      <a href="/consulting.html">Consulting</a>
+      <a href="/resume.html">Resume</a>
+    </div>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-controls="nav-links" aria-expanded="false"><svg class="i-bars" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="i-x" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <section id="mdg-lab" class="mdg-lab" hidden aria-hidden="true">
+    <h1 class="mdg-head">MDG Registry <span class="mdg-badge">you found it</span></h1>
+    <p class="mdg-intro">Every MDG in play across the site. Type a new three-word idea (M, then D, then G) and I'll show which words are already spoken for, and where. Coin a fresh one and you can send it my way.</p>
+
+    <input id="mdg-input" type="text" placeholder="e.g. Make Dazzling Gizmos" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Try an MDG" />
+    <button id="mdg-rand" class="btn btn-edge mdg-rand" type="button">🎲 Randomize missing</button>
+    <div id="mdg-dupe" class="mdg-dupe" hidden></div>
+    <div id="mdg-result" class="mdg-result"></div>
+    <div id="mdg-new" class="mdg-new" hidden>
+      <p>Nice, all three words are brand new. Send it to <strong>MDG@mattdanusergrant.com</strong>:</p>
+      <a id="mdg-send" class="send" href="#">Send it in →</a>
+    </div>
+    <button id="mdg-save" class="btn btn-edge mdg-save" type="button" hidden>+ Save to my ideas</button>
+
+    <div class="mdg-cols">
+      <div>
+        <p class="mdg-sub">In use</p>
+        <ul id="mdg-list" class="mdg-list"></ul>
+      </div>
+      <div id="mdg-ideas-wrap" hidden>
+        <p class="mdg-sub">My ideas</p>
+        <ul id="mdg-ideas" class="mdg-list"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="intro-viewer">
+    <p class="mdg-sub">Intro viewer</p>
+    <p class="mdg-intro" style="margin-top:0">Every phrase the homepage intro can open with, each behind its live Math&nbsp;Draws&nbsp;Graphics sketch — browse them all here instead of reloading for the RNG. Click any to <em>embiggen</em> it (Esc or click away to close); Many Doors Guild cycles its three door sketches once enlarged.</p>
+    <div id="intro-grid" class="intro-grid"></div>
+  </section>
+
+  <footer class="foot">
+    <div><a href="/">← Home</a></div>
+    <div><a href="/#tools">Tools</a></div>
+  </footer>
+
+</div>
+<script>
+/* MDG registry — the recovered Easter egg, now on its own hidden page (/mdg.html).
+   Reveals on load; tracks every MDG phrase live on the site and checks a new idea
+   word by word, with a mailto to send fresh three-word coinages in. */
+(function(){
+  var lab=document.getElementById('mdg-lab'); if(!lab) return;
+  var REGISTRY=[
+    {w:['Matt','Danuser','Grant'], where:'The name'},
+    {w:['Make','Dope','Grooves'], where:'Home intro + Tools'},
+    {w:['Maximum','Dopamine','Guaranteed'], where:'Home intro'},
+    {w:['Many','Doors','Guild'], where:'Home intro'},
+    {w:['Multiplayer','Deck','Gateway'], where:'Home intro + Must Design Games'},
+    {w:['Master','Data','Genome'], where:'Home intro'},
+    {w:['Metropolis','Dawn','Grid'], where:'Home intro + Must Design Games'},
+    {w:['Multiple','Dimensions','Generated'], where:'Home intro'},
+    {w:['Modular','Digital','Goods'], where:'Home intro + section'},
+    {w:['Manifest','Divine','Geometry'], where:'Home intro'},
+    {w:['Math','Draws','Graphics'], where:'Home intro + Tools'},
+    {w:['Markdown','Document','Generator'], where:'Tools'},
+    {w:['Must','Design','Games'], where:'Home intro (finale) + section'},
+    {w:['More','Decent','Gadgets'], where:'More Games button'},
+    {w:['Mostly','Dropped','Gizmos'], where:'More Games button'},
+    {w:['Mainly','Defective','Gems'], where:'More Games button'},
+    {w:['My','Derelict','Garbage'], where:'More Games button'},
+    {w:['Merely','Discarded','Gambles'], where:'More Games button'},
+    {w:['Mildly','Dubious','Gambits'], where:'More Games button'}
+  ];
+  var SLOTS=['M','D','G'], IDEAS_KEY='mdg-ideas';
+  // Word banks for "randomize missing" — fresh M/D/G words; used ones get filtered out at pick time.
+  var BANK={
+    M:['Make','Mighty','Modern','Mellow','Massive','Merry','Mythic','Molten','Mystic','Manic','Marvelous','Murky','Magnetic','Minimal','Monstrous','Mossy','Misty','Moody','Macabre','Majestic','Modular','Motley','Mercurial','Meandering','Maximal','Marbled','Midnight','Moonlit','Melodic','Murmuring','Marauding','Muted'],
+    D:['Dancing','Daring','Dazzling','Decadent','Deep','Delirious','Devious','Diligent','Distant','Divergent','Dizzy','Dormant','Dreaming','Drifting','Dusty','Dynamic','Dapper','Daunting','Dewy','Diabolical','Dappled','Doomed','Drowsy','Dueling','Dulcet','Dusky','Diamond','Doodled','Drastic','Dreamy','Driven','Defiant'],
+    G:['Gardens','Gears','Gestures','Ghosts','Giants','Glaciers','Glyphs','Goblins','Gradients','Grids','Groves','Gusts','Galaxies','Gargoyles','Gateways','Geodes','Geysers','Glimmers','Gnomes','Golems','Gospels','Grottos','Guardians','Gullies','Gusto','Gyroscopes','Glow','Glaze','Gamut','Garlands','Goggles','Gauntlets']
+  };
+  function loadIdeas(){ try{return JSON.parse(localStorage.getItem(IDEAS_KEY))||[];}catch(e){return [];} }
+  function saveIdeas(){ try{localStorage.setItem(IDEAS_KEY,JSON.stringify(ideas));}catch(e){} }
+  var ideas=loadIdeas();
+  function ideaEntries(){ return ideas.map(function(p){return {w:p.split(/\s+/), where:'My idea'};}); }
+  function all(){ return REGISTRY.concat(ideaEntries()); }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function phrase(e){ return e.w.join(' '); }
+
+  var input=document.getElementById('mdg-input'),
+      resultEl=document.getElementById('mdg-result'),
+      dupeEl=document.getElementById('mdg-dupe'),
+      newEl=document.getElementById('mdg-new'),
+      sendEl=document.getElementById('mdg-send'),
+      saveBtn=document.getElementById('mdg-save'),
+      randEl=document.getElementById('mdg-rand'),
+      listEl=document.getElementById('mdg-list'),
+      ideasWrap=document.getElementById('mdg-ideas-wrap'),
+      ideasEl=document.getElementById('mdg-ideas');
+
+  function renderList(){
+    listEl.innerHTML=REGISTRY.map(function(e){
+      return '<li><span class="ph">'+esc(phrase(e))+'</span><span class="wh">'+esc(e.where)+'</span></li>';
+    }).join('');
+    if(ideas.length){
+      ideasWrap.hidden=false;
+      ideasEl.innerHTML=ideas.map(function(p,i){
+        return '<li><span class="ph">'+esc(p)+'</span><button class="rm" data-i="'+i+'" type="button" aria-label="Remove">&times;</button></li>';
+      }).join('');
+    } else { ideasWrap.hidden=true; ideasEl.innerHTML=''; }
+  }
+
+  // Assign typed words to their letter slot (M/D/G) by first letter; first word wins per letter.
+  function readSlots(){
+    var words=input.value.trim().split(/\s+/).filter(Boolean), slot={M:'',D:'',G:''}, stray=[];
+    words.forEach(function(w){
+      var L=w.charAt(0).toUpperCase();
+      if((L==='M'||L==='D'||L==='G') && !slot[L]) slot[L]=w; else stray.push(w);
+    });
+    return {slot:slot, stray:stray, count:words.length};
+  }
+
+  function check(){
+    var r=readSlots(), slot=r.slot, entries=all();
+    var present=SLOTS.filter(function(L){return slot[L];}).length;
+    var dupe=false;
+    if(present===3){
+      var lc=[slot.M,slot.D,slot.G].join(' ').toLowerCase();
+      dupe=entries.filter(function(e){return e.w.join(' ').toLowerCase()===lc;})[0];
+    }
+    if(dupe){ dupeEl.hidden=false; dupeEl.textContent='Already an MDG: "'+phrase(dupe)+'" ('+dupe.where+')'; }
+    else dupeEl.hidden=true;
+    if(!r.count){ resultEl.innerHTML=''; saveBtn.hidden=true; newEl.hidden=true; return; }
+    var rows='', allFree=true;
+    SLOTS.forEach(function(L,i){
+      var word=slot[L], slotEl='<span class="mdg-slot">'+L+'</span>';
+      if(!word){ allFree=false; rows+='<div class="mdg-row">'+slotEl+'<span class="mdg-word mdg-hint">(missing)</span></div>'; return; }
+      var used=entries.filter(function(e){return e.w[i] && e.w[i].toLowerCase()===word.toLowerCase();});
+      var stat;
+      if(used.length){ allFree=false; stat='<span class="mdg-taken">in use: '+used.map(function(e){return '"'+esc(phrase(e))+'" ('+esc(e.where)+')';}).join('; ')+'</span>'; }
+      else stat='<span class="mdg-free">free</span>';
+      rows+='<div class="mdg-row">'+slotEl+'<span class="mdg-word">'+esc(word)+'</span>'+stat+'</div>';
+    });
+    if(r.stray.length) rows+='<div class="mdg-row"><span class="mdg-slot"></span><span class="mdg-hint">extra, ignored: '+esc(r.stray.join(', '))+'</span></div>';
+    resultEl.innerHTML=rows;
+    if(allFree && !dupe){
+      var p=[slot.M,slot.D,slot.G].join(' ');
+      sendEl.href='mailto:MDG@mattdanusergrant.com?subject='+encodeURIComponent('New MDG: '+p)+'&body='+encodeURIComponent(p);
+      newEl.hidden=false;
+    } else newEl.hidden=true;
+    saveBtn.hidden=!(present===3 && !dupe);
+  }
+
+  // Fill only the empty M/D/G letter slots with random unused words; keep what's typed,
+  // and write the result back in M D G order.
+  function randomizeMissing(){
+    var slot=readSlots().slot, entries=all();
+    SLOTS.forEach(function(L,i){
+      if(slot[L]) return;
+      var used={}; entries.forEach(function(e){ if(e.w[i]) used[e.w[i].toLowerCase()]=1; });
+      var pool=BANK[L].filter(function(w){ return !used[w.toLowerCase()]; });
+      if(!pool.length) pool=BANK[L];
+      slot[L]=pool[(Math.random()*pool.length)|0];
+    });
+    input.value=[slot.M,slot.D,slot.G].join(' '); check(); input.focus();
+  }
+
+  input.addEventListener('input',check);
+  randEl.addEventListener('click',randomizeMissing);
+  saveBtn.addEventListener('click',function(){
+    var words=input.value.trim().split(/\s+/).filter(Boolean); if(words.length!==3) return;
+    var p=words.join(' ');
+    if(ideas.map(function(x){return x.toLowerCase();}).indexOf(p.toLowerCase())<0){ ideas.push(p); saveIdeas(); renderList(); check(); }
+  });
+  ideasEl.addEventListener('click',function(e){
+    var b=e.target.closest && e.target.closest('.rm'); if(!b) return;
+    ideas.splice(+b.getAttribute('data-i'),1); saveIdeas(); renderList(); check();
+  });
+  renderList();
+
+  function show(animate){
+    if(!lab.hidden) return;
+    lab.hidden=false; lab.setAttribute('aria-hidden','false');
+    if(animate){ lab.classList.add('mdg-reveal'); setTimeout(function(){input.focus();},450); }
+  }
+  // This is a dedicated hidden page — finding the URL is the reveal, so show it on load.
+  show(true);
+})();
+</script>
+<script src="/assets/mdg-intro.js?v=2"></script>
+<script src="/assets/site.js?v=2"></script>
+</body>
+</html>
