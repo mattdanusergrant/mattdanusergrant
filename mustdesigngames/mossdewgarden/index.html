@@ -209,6 +209,7 @@
   <div id="bar">
     <button class="tool" id="tFeed"><span class="e">🍓</span><span class="l">Feed</span></button>
     <button class="tool" id="tPlay"><span class="e">🎣</span><span class="l">Play</span></button>
+    <button class="tool" id="tDecor"><span class="e">🪴</span><span class="l">Decor</span></button>
     <button class="tool" id="tExplore"><span class="e">🗺️</span><span class="l">Explore</span></button>
   </div>
 
@@ -230,6 +231,16 @@
       <p id="feedSub">A little something to fill the tummy.</p>
       <div class="foods" id="foodList"></div>
       <button class="btn ghost" id="feedClose">Close</button>
+    </div>
+  </div>
+
+  <!-- garden decor shop -->
+  <div class="ov" id="ovDecor">
+    <div class="sheet">
+      <h2>Dress up the garden 🪴</h2>
+      <p>Cozy touches, just for looks. Buy once — it stays in your garden.</p>
+      <div class="foods" id="decorList"></div>
+      <button class="btn ghost" id="decorClose">Close</button>
     </div>
   </div>
 
@@ -366,6 +377,17 @@ const YIELD_INFO = {
 const MAXPLOTS = 6;          // garden capacity; 3 free, the rest clear as the pet levels
 const GARDEN_CHEER = 0.8;    // each bloom slows happy decay by this much per hour
 
+// ---- garden decor: cosmetic only (no stats). Buy once; it appears at a fixed
+// spot in the scene. The cozy "Neohome" thread — personalise, don't optimise. ----
+const DECOR = [
+  { id:'fence',   e:'🪵', n:'Wooden Fence', cost:14, desc:'a cozy border along the back' },
+  { id:'path',    e:'🪨', n:'Stone Path',   cost:18, desc:'stepping stones to the door' },
+  { id:'lantern', e:'🏮', n:'Lanterns',     cost:22, desc:'warm light, brighter at dusk' },
+  { id:'pond',    e:'💧', n:'Little Pond',   cost:30, desc:'a calm blue pool to gaze at' },
+  { id:'bench',   e:'🪑', n:'Garden Bench',  cost:34, desc:'a quiet place to sit a while' },
+  { id:'arch',    e:'🌸', n:'Blossom Arch',  cost:48, desc:'a flowering gateway overhead' },
+];
+
 // ---- decay per real hour (cozy & slow). Energy regenerates while asleep. ----
 const DECAY = { full: 7, happy: 4.5, energyAwake: 5.5, energyAsleep: -22 };
 const MAX_CATCHUP_H = 36;     // cap offline simulation so it never feels punishing
@@ -390,7 +412,7 @@ function freshPet(species, name){
     lastTs: now(), born: now(),
     xp: 0, level: 0, lastVisits: {} };
 }
-function freshGarden(){ return { plots: new Array(MAXPLOTS).fill(null) }; }
+function freshGarden(){ return { plots: new Array(MAXPLOTS).fill(null), decor: [] }; }
 function freshSave(){
   return { pets: [], currentId: null, coins: 8, lastVisitDay: '', streak: 0,
     unlocked: ['meadow'], garden: freshGarden() };
@@ -400,6 +422,7 @@ function ensureGarden(r){
   if (!r) return r;
   if (!r.garden || !Array.isArray(r.garden.plots)) r.garden = freshGarden();
   while (r.garden.plots.length < MAXPLOTS) r.garden.plots.push(null);
+  if (!Array.isArray(r.garden.decor)) r.garden.decor = [];
   return r;
 }
 function refreshP(){ P = (S && S.currentId) ? S.pets.find(p => p.id === S.currentId) || S.pets[0] || null : (S && S.pets[0]) || null; }
@@ -746,6 +769,7 @@ function drawGarden(A, ts){
   ctx.beginPath(); ctx.ellipse(W/2, bedY+6, W*0.44, (H-bedY)*0.5, 0,0,7); ctx.fill();
   ctx.fillStyle = A.night ? '#54433b' : '#7c5741';
   ctx.beginPath(); ctx.ellipse(W/2, bedY+2, W*0.42, (H-bedY)*0.42, 0,0,7); ctx.fill();
+  drawDecor(A, ts);
   // plots + plants
   const ul = unlockedPlots();
   for (const g of gardenPlots()){
@@ -753,6 +777,68 @@ function drawGarden(A, ts){
     drawPlot(g, plot, g.i < ul, ts);
   }
   if (A.dim>0){ ctx.fillStyle=`rgba(20,16,40,${A.dim})`; ctx.fillRect(0,0,W,H); }
+}
+
+// ---- cosmetic decor, drawn procedurally at fixed spots (back-to-front) ----
+const DECOR_Z = ['arch','fence','pond','path','bench','lantern'];
+function drawDecor(A, ts){
+  const owned = S && S.garden && S.garden.decor;
+  if (!owned || !owned.length) return;
+  for (const id of DECOR_Z){
+    if (!owned.includes(id)) continue;
+    if (id==='arch')    dcArch(A);
+    else if (id==='fence')   dcFence(A);
+    else if (id==='pond')    dcPond(A, ts);
+    else if (id==='path')    dcPath(A);
+    else if (id==='bench')   dcBench(A);
+    else if (id==='lantern') dcLanterns(A);
+  }
+}
+function dcFence(A){
+  const y=H*0.665, col=A.night?'#6a5240':'#b9885d', rail=A.night?'#7a6250':'#caa070';
+  ctx.fillStyle=rail; ctx.fillRect(W*0.04, y-6, W*0.92, 5);
+  const n=9; for(let i=0;i<n;i++){ const x=W*(0.06+0.88*(i/(n-1))); ctx.fillStyle=col; rr(ctx,x-4,y-16,8,20,3); ctx.fill(); }
+}
+function dcArch(A){
+  const cx=W/2, topY=H*0.55, postY=H*0.72, half=W*0.20;
+  ctx.strokeStyle=A.night?'#6a5240':'#b9885d'; ctx.lineWidth=7; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(cx-half, postY); ctx.lineTo(cx-half, topY+20);
+  ctx.quadraticCurveTo(cx-half, topY, cx, topY);
+  ctx.quadraticCurveTo(cx+half, topY, cx+half, topY+20);
+  ctx.lineTo(cx+half, postY); ctx.stroke();
+  ctx.font='15px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(const xf of [-1,-0.55,0,0.55,1]){ ctx.fillText('🌸', cx+xf*half, topY+xf*xf*22); }
+  ctx.textBaseline='alphabetic';
+}
+function dcPond(A, ts){
+  const x=W*0.16, y=H*0.86;
+  ctx.fillStyle=A.night?'#2f4a63':'#5fa8d6'; ctx.beginPath(); ctx.ellipse(x,y,W*0.13,H*0.045,0,0,7); ctx.fill();
+  ctx.fillStyle=A.night?'#3d5f7d':'#8ecdf0'; ctx.beginPath(); ctx.ellipse(x-4,y-3,W*0.09,H*0.028,0,0,7); ctx.fill();
+  ctx.globalAlpha=0.4+0.3*Math.sin(ts*0.002); ctx.strokeStyle='#e8f6ff'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.ellipse(x+6,y-2,W*0.04,H*0.012,0,0,7); ctx.stroke(); ctx.globalAlpha=1;
+}
+function dcPath(A){
+  const col=A.night?'#7d7266':'#c9bda8', col2=A.night?'#6b6156':'#b3a892';
+  for(const [fx,fy] of [[0.5,0.985],[0.47,0.94],[0.52,0.9],[0.49,0.86]]){
+    ctx.fillStyle=col;  ctx.beginPath(); ctx.ellipse(W*fx,H*fy,W*0.05,H*0.015,0,0,7); ctx.fill();
+    ctx.fillStyle=col2; ctx.beginPath(); ctx.ellipse(W*fx,H*fy-1,W*0.04,H*0.011,0,0,7); ctx.fill();
+  }
+}
+function dcBench(A){
+  const x=W*0.85, y=H*0.85, w=W*0.14, col=A.night?'#6a5240':'#a9764a', col2=A.night?'#5a4636':'#8f6440';
+  ctx.fillStyle=col2; ctx.fillRect(x-w/2+3,y+2,4,12); ctx.fillRect(x+w/2-7,y+2,4,12);
+  ctx.fillStyle=col; rr(ctx,x-w/2,y-4,w,6,2); ctx.fill();
+  ctx.fillStyle=col2; ctx.fillRect(x-w/2+2,y-16,3,14); ctx.fillRect(x+w/2-5,y-16,3,14);
+  ctx.fillStyle=col; rr(ctx,x-w/2,y-18,w,5,2); ctx.fill();
+}
+function dcLanterns(A){
+  for(const fx of [0.07,0.93]){ const x=W*fx, y=H*0.70, glow=A.night?0.55:0.16;
+    const rg=ctx.createRadialGradient(x,y,2,x,y,34); rg.addColorStop(0,`rgba(255,190,90,${glow})`); rg.addColorStop(1,'rgba(255,190,90,0)');
+    ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(x,y,34,0,7); ctx.fill();
+    ctx.fillStyle='#7a3d34'; ctx.fillRect(x-2,y-16,4,5);
+    ctx.fillStyle='#d85a4a'; rr(ctx,x-8,y-11,16,20,5); ctx.fill();
+    ctx.fillStyle='#f6d27a'; ctx.fillRect(x-8,y-3,16,4);
+  }
 }
 
 function drawPlot(g, plot, unlocked, ts){
@@ -1093,6 +1179,37 @@ function harvest(i){
   toast(`Harvested ${pl.n} ${pl.e} — ${yi.word(pl.amt)}`);
 }
 $('gardenClose').onclick = ()=>$('ovGarden').classList.remove('show');
+
+// ---- garden decor shop (cosmetic) ----
+function decorOwned(id){ return !!(S && S.garden && S.garden.decor && S.garden.decor.includes(id)); }
+function openDecor(){
+  if (!S) return;
+  const list = $('decorList'); list.innerHTML='';
+  for (const d of DECOR){
+    const b = document.createElement('button'); b.className='food';
+    const owned = decorOwned(d.id);
+    const afford = S.coins >= d.cost;
+    b.disabled = owned || !afford;
+    const right = owned ? '<span class="cost">✓ set</span>'
+                        : `<span class="cost"><span class="c"></span>${d.cost}</span>`;
+    b.innerHTML = `<span class="fe">${d.e}</span><span class="fmeta"><div class="fn">${d.n}</div>
+      <div class="fsub">${owned ? 'in your garden' : d.desc}</div></span>${right}`;
+    b.onclick = ()=>buyDecor(d.id);
+    list.appendChild(b);
+  }
+  $('ovDecor').classList.add('show');
+}
+function buyDecor(id){
+  const d = DECOR.find(x=>x.id===id);
+  if (!d || decorOwned(id) || !S || S.coins < d.cost) return;
+  S.coins -= d.cost;
+  S.garden.decor.push(id);
+  sfx('daily');
+  save(); refresh(); openDecor();     // re-render so it flips to "set"
+  toast(`Added ${d.n} ${d.e} to the garden`);
+}
+$('tDecor').onclick = openDecor;
+$('decorClose').onclick = ()=>$('ovDecor').classList.remove('show');
 
 $('tFeed').onclick  = openFeed;
 $('tPlay').onclick  = pickGame;
