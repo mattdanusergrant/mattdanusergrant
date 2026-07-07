@@ -702,7 +702,7 @@
     };
     // Pythagoras Tree - recursively branching empty squares (line-only, white on black); the branch angle sways like foliage (MOSS DEW GARDEN).
     SK.pythagoras=function(w,h,t){
-      var m=Math.min(w,h),s0=m*0.135,baseY=h*0.74,cx=w/2,ang=Math.PI/4+Math.sin(t*0.5)*0.30;
+      var m=Math.min(w,h),s0=m*0.135,baseY=h*0.74,cx=w/2,ang=Math.PI/4+Math.sin(t*0.125)*0.30;
       ctx.shadowBlur=0;ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle=col(0,0.82);ctx.lineWidth=1;
       ctx.beginPath();
       (function pyth(x1,y1,x2,y2,depth){
