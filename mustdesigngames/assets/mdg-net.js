@@ -74,6 +74,21 @@
           .subscribe(st=>{ if(st==="SUBSCRIBED") setConn("online"); else if(st==="CHANNEL_ERROR"||st==="TIMED_OUT") setConn("offline"); });
         return ()=>{ try{ sb.removeChannel(ch); }catch(e){} };
       },
+      async lobby(game){
+        const g = game||"baduk";
+        const [mine, open, live] = await Promise.all([
+          sb.from("game_matches").select("*").eq("game",g).in("status",["waiting","active"]).or("seat_b.eq."+uid+",seat_w.eq."+uid).order("updated_at",{ascending:false}),
+          sb.from("game_matches").select("*").eq("game",g).eq("status","waiting").is("seat_w",null).neq("seat_b",uid).order("created_at",{ascending:false}),
+          sb.from("game_matches").select("*").eq("game",g).eq("status","active").order("updated_at",{ascending:false}),
+        ]);
+        return { mine:mine.data||[], open:open.data||[], live:live.data||[] };
+      },
+      watchLobby(game, onChange){
+        const ch = sb.channel("lobby-"+(game||"baduk"))
+          .on("postgres_changes",{event:"*",schema:"public",table:"game_matches"}, onChange)
+          .subscribe();
+        return ()=>{ try{ sb.removeChannel(ch); }catch(e){} };
+      },
     };
   }
 
@@ -215,6 +230,19 @@
       const a=pickAdapter(); await a.ready();
       return makeMatch(a, id)._start();
     },
+    // Lobby — the "play many games" view. Shapes each match into whose-turn/opponent info.
+    async lobby(game){
+      const a=pickAdapter(); await a.ready();
+      const raw=await a.lobby(game); const uid=a.uid;
+      const shape=r=>{ const turn=(r.ply%2===0)?"B":"W";
+        const myColor = r.seat_b===uid?"B" : r.seat_w===uid?"W" : null;
+        return { id:r.id, status:r.status, ply:r.ply||0, turn,
+          nameB:r.name_b||"Black", nameW:r.name_w||"White", myColor,
+          myTurn: r.status==="active" && myColor===turn,
+          opponent: myColor==="B" ? (r.name_w||"…") : (r.name_b||"…") }; };
+      return { mine:(raw.mine||[]).map(shape), open:(raw.open||[]).map(shape), live:(raw.live||[]).map(shape) };
+    },
+    watchLobby(game, cb){ const a=pickAdapter(); if(!a.watchLobby) return ()=>{}; return a.watchLobby(game, cb); },
     // Room API — is online multiplayer configured, and a firebase-shaped db for it.
     roomsAvailable(){ return !!window.__MDG_ROOM_BACKEND || keySet(); },
     roomDb(){ return makeRoomDb(pickRoomBackend()); },

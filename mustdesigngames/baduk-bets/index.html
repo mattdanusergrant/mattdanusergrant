@@ -64,6 +64,22 @@
   .bigbtn small{display:block; font-size:10px; font-weight:600; letter-spacing:.5px; text-transform:none; opacity:.7; margin-top:3px;}
   .bigbtn .col{display:flex; flex-direction:column; align-items:center; line-height:1.2;}
 
+  /* ---- Lobby (play many games) ---- */
+  .lobby{margin-top:6px; display:flex; flex-direction:column; gap:14px;}
+  .lobby .grp-h{font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold2); opacity:.8; font-weight:800; margin:0 2px 6px; display:flex; justify-content:space-between; align-items:center;}
+  .lobby .grp-h .refresh{cursor:pointer; opacity:.6; font-weight:600; letter-spacing:.5px;}
+  .lobby .row{display:flex; align-items:center; gap:10px; padding:11px 13px; border-radius:12px; cursor:pointer;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);}
+  .lobby .row:active{transform:scale(.99);}
+  .lobby .row .who{flex:1; min-width:0; font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .lobby .row .who small{display:block; font-weight:500; font-size:11px; opacity:.55; margin-top:1px;}
+  .lobby .row .tag{font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; padding:4px 8px; border-radius:999px; white-space:nowrap;}
+  .lobby .row .tag.mine{background:var(--gold2); color:#1a0612;}
+  .lobby .row .tag.wait{background:rgba(255,255,255,.12); color:inherit; opacity:.8;}
+  .lobby .row .tag.join{background:rgba(120,220,150,.2); color:#8fe3a8;}
+  .lobby .row .tag.watch{background:rgba(255,255,255,.08); opacity:.7;}
+  .lobby .empty{font-size:12px; opacity:.4; padding:2px 2px 0;}
+
   /* ---- Share / status banner ---- */
   .banner{margin:8px 14px 0; padding:14px 16px; border-radius:14px; text-align:center;
     background:linear-gradient(180deg,rgba(255,204,51,.1),rgba(255,204,51,.03)); border:1px solid rgba(255,204,51,.4);}
@@ -153,6 +169,7 @@
     <button class="bigbtn primary" id="mNew"><span class="col">Play a friend<small>async · share a link · take turns anytime</small></span></button>
     <button class="bigbtn" id="mAI"><span class="col">Play the computer<small>on a blitz clock</small></span></button>
     <button class="bigbtn" id="mLocal"><span class="col">Pass &amp; play<small>two players, one device</small></span></button>
+    <div class="lobby hidden" id="lobby"></div>
     <div class="banner hidden" id="menuNote"><div class="bs" id="menuNoteTxt"></div></div>
   </div>
 
@@ -610,7 +627,7 @@ $("nameIn").addEventListener("input",()=>localStorage.setItem("baduk_name",$("na
 $("mNew").onclick=()=>{ ac(); createOnlineGame(); };
 $("mAI").onclick=()=>{ ac(); resetLocal("ai"); };
 $("mLocal").onclick=()=>{ ac(); resetLocal("local"); };
-$("menuBtn").onclick=()=>{ teardownOnline(); stopClock(); showScreen("menu"); };
+$("menuBtn").onclick=()=>{ teardownOnline(); stopClock(); showScreen("menu"); renderLobby(); };
 $("joinBtn").onclick=()=>{ if(!match) return; ac();
   const nm=($("joinName").value||"Player").slice(0,14); localStorage.setItem("baduk_name",nm);
   match.join(nm).catch(()=>flash("Couldn't join","lose"));
@@ -626,16 +643,44 @@ $("resignBtn").onclick=()=>{ if(G.phase!=="play") return; ac();
       setStatus("You resigned","White wins by resignation."); flash("Resigned","lose"); }
     else { setStatus("Resigned", G.names[opp(G.toMove)]+" wins by resignation."); flash("Resigned","lose"); }
     renderMeta(); showControls("over"); $("newBtn").textContent="Back to menu ›"; } };
-$("newBtn").onclick=()=>{ teardownOnline(); stopClock(); showScreen("menu"); };
+$("newBtn").onclick=()=>{ teardownOnline(); stopClock(); showScreen("menu"); renderLobby(); };
 $("muteBtn").onclick=e=>{ muted=!muted; e.target.style.opacity=muted?.25:.6; e.target.textContent=muted?"♪̸":"♪"; if(!muted) ac(); };
 function teardownOnline(){ if(match){ try{match.close();}catch(e){} } match=null; prevMoveCount=0; }
 window.addEventListener("resize",()=>{ if(!$("gameView").classList.contains("hidden")) resize(); });
 
+/* ---------- Lobby: play many games (your games · open · live) ---------- */
+let lobbyUnsub=null;
+async function renderLobby(){
+  const el=$("lobby"); if(!el||!NET) return;
+  let u=null; try{ u = NET.auth ? await NET.auth.user() : null; }catch(e){ u=null; }
+  if(!u){ el.classList.add("hidden"); el.innerHTML=""; return; }
+  let L; try{ L = await NET.lobby("baduk"); }catch(e){ el.classList.add("hidden"); return; }
+  const live = L.live.filter(g=>g.myColor===null);     // spectate others' games only
+  const esc=s=>String(s==null?"":s).replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
+  const row=(id,cls,txt,main,sub)=>`<div class="row" data-id="${id}"><div class="who">${esc(main)}<small>${esc(sub)}</small></div><span class="tag ${cls}">${txt}</span></div>`;
+  let h=`<div><div class="grp-h">Your games <span class="refresh" data-refresh>↻ refresh</span></div>`;
+  if(L.mine.length) L.mine.forEach(g=>{
+    if(g.status==="waiting") h+=row(g.id,"wait","waiting","Waiting for an opponent","tap to get the share link");
+    else h+=row(g.id, g.myTurn?"mine":"watch", g.myTurn?"your move":"their move",
+                "vs "+g.opponent, (g.myColor==="B"?"you're Black":"you're White")+" · move "+g.ply);
+  }); else h+=`<div class="empty">No games yet — start one above.</div>`;
+  h+=`</div>`;
+  if(L.open.length){ h+=`<div><div class="grp-h">Open games</div>`;
+    L.open.forEach(g=>h+=row(g.id,"join","join",g.nameB+" is waiting","tap to join as White")); h+=`</div>`; }
+  if(live.length){ h+=`<div><div class="grp-h">Live now</div>`;
+    live.forEach(g=>h+=row(g.id,"watch","watch",g.nameB+" vs "+g.nameW,"move "+g.ply+" · "+(g.turn==="B"?"Black":"White")+" to play")); h+=`</div>`; }
+  el.innerHTML=h; el.classList.remove("hidden");
+  el.querySelectorAll(".row").forEach(r=>r.onclick=async()=>{ ac(); try{ enterMatch(await NET.openMatch(r.getAttribute("data-id"),{})); }catch(e){ menuNote("Couldn't open that game."); } });
+  const rf=el.querySelector("[data-refresh]"); if(rf) rf.onclick=e=>{ e.stopPropagation(); renderLobby(); };
+  if(!lobbyUnsub && NET.watchLobby){ try{ lobbyUnsub=NET.watchLobby("baduk", ()=>{ if(!$("menu").classList.contains("hidden")) renderLobby(); }); }catch(e){} }
+}
+
 /* ---------- Boot / deep link ---------- */
 if(window.MDGAccount) MDGAccount.mount();     // floating chip: sign in + play-money balance
+window.addEventListener("mdg-account", ()=>{ if(!$("menu").classList.contains("hidden")) renderLobby(); });
 (function boot(){
   const params=new URLSearchParams(location.search), g=params.get("g");
-  if(g){ if(NET) NET.connect(); joinOrEnter(g); } else { showScreen("menu"); }
+  if(g){ if(NET) NET.connect(); joinOrEnter(g); } else { showScreen("menu"); renderLobby(); }
 })();
 </script>
 </body>
