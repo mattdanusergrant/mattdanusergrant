@@ -279,6 +279,15 @@
   .rp-time{flex:none;font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);min-width:3.2em;text-align:right}
   .rp-speed{flex:none;font-size:12px;color:var(--muted);border:1.5px solid var(--line-2);border-radius:999px;padding:4px 9px;background:transparent;cursor:pointer;font-family:inherit}
   .rp-speed:hover{border-color:var(--ink);color:var(--ink)}
+
+  /* Fullscreen: fill the screen as a column so the caption + control bar stay on-screen
+     (otherwise the 16:10 stage overflows a 16:9 display and the text gets clipped). */
+  .rp:fullscreen{display:flex;flex-direction:column;width:100vw;height:100vh;border:0;border-radius:0}
+  .rp:fullscreen .rp-stage{flex:1 1 auto;min-height:0;aspect-ratio:auto}
+  .rp:fullscreen .rp-bar{flex:none}
+  .rp:-webkit-full-screen{display:flex;flex-direction:column;width:100vw;height:100vh;border:0;border-radius:0}
+  .rp:-webkit-full-screen .rp-stage{flex:1 1 auto;min-height:0;aspect-ratio:auto}
+  .rp:-webkit-full-screen .rp-bar{flex:none}
   `;
 
   function injectCSS(){ if(document.getElementById('rp-css'))return; var s=document.createElement('style'); s.id='rp-css'; s.textContent=CSS; document.head.appendChild(s); }
@@ -380,6 +389,7 @@
       while(i<TL.length-1&&offs[i+1]<=want)i++; go(i,want-offs[i]); if(playing)sceneStart=now()-local/speed; });
 
     var rt; window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){size();draw();},150);});
+    document.addEventListener('fullscreenchange',function(){setTimeout(function(){size();draw();},60);});
     if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){draw();});
 
     size(); go(0,0);
