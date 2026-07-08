@@ -115,6 +115,11 @@
   .tutor-done p{margin:6px 0 10px;color:var(--ink-2);line-height:1.45}
   .tutor-done button{font-family:'Fraunces',serif;font-size:12px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:6px 14px;cursor:pointer}
   @media(max-width:600px){.tutor{width:190px;font-size:11.5px;top:8px;left:8px;padding:9px 11px}}
+  .obs{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;font-size:13px;color:var(--bar-ink);background:var(--bar);border:1.5px solid var(--bar-line);border-radius:999px;padding:8px 16px;box-shadow:var(--shadow);white-space:nowrap}
+  .obs b{color:#fff}
+  .obs a{color:#8FC4F0;text-decoration:none;font-weight:600}
+  .obs a:hover{text-decoration:underline}
+  body.observing canvas{cursor:default}
   #worldfade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:50;transition:opacity .42s ease}
   #worldfade.on{opacity:1;pointer-events:all}
 </style>
@@ -149,6 +154,7 @@
       <div class="tutor-h"><span class="tutor-t">Your first city</span><button class="tutor-skip" id="tutor-skip" type="button">Skip</button></div>
       <ol class="tutor-l" id="tutor-l"></ol>
     </div>
+    <div class="obs" id="obs" hidden><b>👁 Observing an AI-run city</b> · read-only — <a href="world/">← back to the world</a></div>
   </div>
   <div id="worldfade"></div>
 
@@ -207,6 +213,10 @@
       slug:(Math.round(lat*10)+'_'+Math.round(lon*10)).replace(/-/g,'n')};
   }catch(e){return null;}})();
   var WOX=REGION?REGION.ox:0, WOY=REGION?REGION.oy:0;
+  // ---- AI city (observe mode): ?ai=1&tier=N means "this is an AI-run city — build it, run it, read-only" ----
+  var AI=(function(){try{var q=new URLSearchParams(location.search);if(!q.has('ai')||!REGION)return null;
+    return {tier:Math.max(0,Math.min(5,parseInt(q.get('tier'))||1))};}catch(e){return null;}})();
+  var OBSERVE=!!AI;
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
   var ZONES={res:1,com:1,ind:1,fac:1,tower:1};
   var RP=5, RW=5;                                  // power / water coverage radius (Chebyshev)
@@ -388,7 +398,7 @@
     if(broke)denyToast();}
   function cancelLine(){lineAnchor=null;downCell=null;movedSinceDown=false;dirty=true;}
 
-  function down(e){e.preventDefault();var p=cellFromEvent(e);hoverCell=p;
+  function down(e){e.preventDefault();if(OBSERVE)return;var p=cellFromEvent(e);hoverCell=p;
     if(canvas.setPointerCapture)canvas.setPointerCapture(e.pointerId);
     if(isLineBrush()){downCell=p;movedSinceDown=false;dirty=true;return;}   // line tool decides on pointerup
     painting=true;lastPaint=-1;paintAt(p.c,p.r);}
@@ -423,7 +433,7 @@
     if(lk){if(key)key.style.display='none';if(!lock){lock=document.createElement('span');lock.className='lock';el.appendChild(lock);}lock.textContent='🔒 '+MS[TIER_UNLOCK[b]].l;}
     else{if(key)key.style.display='';if(lock)lock.remove();}});}
   tools.addEventListener('click',function(e){var t=e.target.closest('.tool');if(t)selectBrush(t.getAttribute('data-brush'));});
-  window.addEventListener('keydown',function(e){if(e.key==='Escape'){cancelLine();return;}var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank','p':'port','P':'port','t':'tower','T':'tower'}[e.key];if(m)selectBrush(m);});
+  window.addEventListener('keydown',function(e){if(OBSERVE)return;if(e.key==='Escape'){cancelLine();return;}var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank','p':'port','P':'port','t':'tower','T':'tower'}[e.key];if(m)selectBrush(m);});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
@@ -835,7 +845,7 @@
   // ---- save / load ----
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
-  function save(){try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];if(g&&g.t!=='empty'&&g.t!=='highway')out.push([c,r,g.t,g.lvl]);}
+  function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];if(g&&g.t!=='empty'&&g.t!=='highway')out.push([c,r,g.t,g.lvl]);}
     localStorage.setItem(SAVE_KEY,JSON.stringify({v:6,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
@@ -857,23 +867,44 @@
     requestAnimationFrame(frame);
   }
 
+  // ---- AI city planner: lay a real, terrain-aware city on this patch (observe mode) ----
+  function placeAt(c,r,t,lvl){if(!inB(c,r))return false;var g=grid[idx(c,r)];if(g.t==='highway'||noBuild(g.terr))return false;g.t=t;g.lvl=lvl||0;g.grow=0;return true;}
+  function planCity(tier){
+    // target-driven so the city size reliably tracks the tier (not local terrain / screen size).
+    // All buildings lvl 3 (established, no "needs X" cues); ~half are homes → pop ≈ TARGET/2 × 405.
+    var TARGET=[4,6,10,30,64,92][tier], half=Math.min((cols>>1)-2, 7+tier*2), mid=Math.floor(cols/2);
+    var c0=Math.max(1,mid-half), c1=Math.min(cols-2,mid+half), c, r, placed=0, lastR=2;
+    for(c=c0;c<=c1;c++)placeAt(c,1,'road',0);                          // main street on the highway
+    for(r=2;r<rows-1&&placed<TARGET;r++){
+      if(r%2===1){for(c=c0;c<=c1;c++)placeAt(c,r,'road',0);continue;}  // a street between each building row
+      for(c=c0;c<=c1&&placed<TARGET;c++){var g=grid[idx(c,r)];if(g.t!=='empty'||noBuild(g.terr))continue;
+        var t; if(nearMountain(c,r))t='ind';                          // Works hug the peaks (mine ore)
+        else{var m=placed%6;t=m<3?'res':m<4?'com':m<5?'ind':'fac';}   // homes-heavy mix + shops/works/factory
+        placeAt(c,r,t,3);placed++;lastR=r;}
+    }
+    var ur=Math.min(rows-2,lastR+2);                                  // a little infrastructure below
+    placeAt(c0,ur,'power',0);placeAt(c1,ur,'power',0);placeAt(mid,ur,'water',0);
+    for(var rc=c1+2;rc<cols-1;rc++){if(!noBuild(grid[idx(rc,1)].terr)){for(r=1;r<=3;r++)placeAt(rc,r,'rail',0);break;}} // rail out to the highway
+  }
+
   // ---- boot ----
   readTheme();
   window.addEventListener('resize',resize);
-  resize();load();ensureHighway();
-  initTutorDecision();
-  if(!tutorActive)seedRampIfEmpty();          // returning players get the starter road; new players lay it themselves (step 1)
+  resize();ensureHighway();
+  if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
+  else { load(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);if(tt==='rail'||tt==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
-  if(tutorActive)showTutor();
+  if(!AI&&tutorActive)showTutor();
+  if(OBSERVE){var tb=document.getElementById('tools');if(tb)tb.style.display='none';var ob=document.getElementById('obs');if(ob)ob.hidden=false;document.body.classList.add('observing');}
   // region: name the header chip + welcome the player to their patch of the shared world
   if(REGION){
     var esc=function(s){return String(s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});};
     var regEl=document.getElementById('region');
-    if(regEl){regEl.innerHTML='◉ <b>'+esc(REGION.name)+'</b> · '+regionSpec();regEl.hidden=false;}
-    document.title=REGION.name+' — Metropolis Dawn Grid';
-    toastEl.innerHTML='◉ '+esc(REGION.name)+' <b>your patch of the shared world</b>';
+    if(regEl){regEl.innerHTML=(AI?'👁 <b>':'◉ <b>')+esc(REGION.name)+'</b> · '+regionSpec();regEl.hidden=false;}
+    document.title=(AI?'Observing ':'')+REGION.name+' — Metropolis Dawn Grid';
+    toastEl.innerHTML=AI?('👁 '+esc(REGION.name)+' <b>an AI-run city — watch it run</b>'):('◉ '+esc(REGION.name)+' <b>your patch of the shared world</b>');
     toastEl.classList.add('on');clearTimeout(toastTimer);
     toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3400);
   }
