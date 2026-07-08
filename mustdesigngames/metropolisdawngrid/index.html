@@ -219,13 +219,18 @@
   var AI=(function(){try{var q=new URLSearchParams(location.search);if(!q.has('ai')||!REGION)return null;
     return {tier:Math.max(0,Math.min(5,parseInt(q.get('tier'))||1))};}catch(e){return null;}})();
   var OBSERVE=!!AI;
-  // ---- trade partner: a chosen AI neighbour whose surplus flows to you (set on the globe) ----
-  var TRADE=(function(){try{if(AI)return null;var raw=localStorage.getItem('mdg-trade-partner');if(!raw)return null;
-    var t=JSON.parse(raw);if(t==null||isNaN(t.lat)||isNaN(t.lon))return null;
-    t.cls=classAt(t.lat,t.lon);                       // partner's terrain decides what they trade
-    t.supplies=(t.cls==='coast')?'goods':'mat';       // coast is dense in Goods; everyone else exports raw Materials
-    t.wantsGoods=(t.cls!=='coast');                   // land cities are short on Goods → pay a premium for yours
-    return t;}catch(e){return null;}})();
+  // ---- trade partners: chosen AI neighbours whose surplus flows to you (set on the globe) ----
+  var TRADES=(function(){try{if(AI)return [];
+    var raw=localStorage.getItem('mdg-trade-partners');
+    var list=raw?JSON.parse(raw):null;
+    if(!list){var old=localStorage.getItem('mdg-trade-partner');if(old){var o=JSON.parse(old);list=o?[o]:[];}}  // migrate single-partner key
+    if(!Array.isArray(list))list=[];
+    return list.filter(function(t){return t&&!isNaN(t.lat)&&!isNaN(t.lon);}).map(function(t){
+      t.cls=classAt(t.lat,t.lon);                     // partner's terrain decides what they trade
+      t.supplies=(t.cls==='coast')?'goods':'mat';     // coast is dense in Goods; everyone else exports raw Materials
+      t.wantsGoods=(t.cls!=='coast');                 // land cities are short on Goods → pay a premium for yours
+      return t;});
+  }catch(e){return [];}})();
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
   var ZONES={res:1,com:1,ind:1,fac:1,tower:1};
   var RP=5, RW=5;                                  // power / water coverage radius (Chebyshev)
@@ -505,24 +510,26 @@
   }
   // supply chain: Works → Materials → Factories → Goods → Shops (city-wide pools, no routing)
   var matWanted=false, terrBonus=0;
-  var tradePremium=1, tradeIn=0, tradeInKind='';        // set each tick from the trade partner's inflow
+  var tradePremium=1, tradeMatIn=0, tradeGoodsIn=0;     // set each tick from the trade partners' inflow
   function computeResources(){
     var works=0,facs=0,shops=0,matYield=0;terrBonus=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
       if(g.t==='ind'){var wc=i%cols,wr=(i/cols)|0;works+=g.lvl;var mult=nearMountain(wc,wr)?1.8:g.terr==='forest'?1.4:1;matYield+=g.lvl*2*mult;terrBonus+=g.lvl*2*(mult-1);} // Works by a mountain mine ore (+80%); on forest = timber (+40%)
       else if(g.t==='fac')facs+=g.lvl;else if(g.t==='com')shops+=g.lvl;}
     matStock+=matYield;                                  // Works extract Materials (ore/forest yield more)
-    // trade partner: their surplus flows in over the rail link (Materials, or Goods if they're a coast city)
-    tradeIn=0;tradePremium=1;tradeInKind='';
-    if(TRADE&&railToWorld){
-      tradeIn=Math.min(connectedRailCount*0.8,25)*(1+(TRADE.tier||2)*0.15);
-      tradeInKind=TRADE.supplies;
-      if(TRADE.wantsGoods)tradePremium=1.6;             // partner short on Goods → pays a premium for your exports
-      if(TRADE.supplies==='mat')matStock+=tradeIn;      // ore/timber city ships you raw Materials
+    // trade partners: each ships surplus in over the shared rail link (Materials, or Goods from coast cities)
+    tradeMatIn=0;tradeGoodsIn=0;tradePremium=1;
+    if(TRADES.length&&railToWorld){
+      var landCount=0, perRail=Math.min(connectedRailCount*0.8,25);
+      for(var ti=0;ti<TRADES.length;ti++){var tp=TRADES[ti], flow=perRail*(1+(tp.tier||2)*0.15);
+        if(tp.supplies==='goods')tradeGoodsIn+=flow; else {tradeMatIn+=flow;landCount++;}}
+      tradeMatIn=Math.min(tradeMatIn,34); tradeGoodsIn=Math.min(tradeGoodsIn,22);   // the rail line has finite throughput
+      if(landCount>0)tradePremium=Math.min(1.7,1.5+landCount*0.05);   // land partners short on Goods pay a premium for your exports
     }
+    matStock+=tradeMatIn;                                // ore/timber partners ship raw Materials
     var facCap=facs*3, drawn=Math.min(matStock,facCap);
     matStock-=drawn; goodsStock+=drawn*(2/3);            // Factories convert 3 Materials → 2 Goods
-    if(TRADE&&railToWorld&&TRADE.supplies==='goods')goodsStock+=tradeIn;  // coast partner ships finished Goods straight in
+    goodsStock+=tradeGoodsIn;                            // coast partners ship finished Goods straight in
     var need=shops*1.5, sold=Math.min(goodsStock,need);
     goodsStock-=sold;
     // rail exports: a rail line reaching the highway ships surplus Goods out to the world (seed of inter-city trade)
@@ -936,14 +943,21 @@
     toastEl.classList.add('on');clearTimeout(toastTimer);
     toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3400);
   }
-  // trade partner: show the chip + a welcome toast telling the player what flows and how to profit
-  if(TRADE&&!AI){
+  // trade partners: show the chip + a welcome toast telling the player what flows and how to profit
+  if(TRADES.length&&!AI){
     var escT=function(s){return String(s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});};
+    var n=TRADES.length, landN=TRADES.filter(function(t){return t.wantsGoods;}).length;
+    var names=TRADES.map(function(t){return t.name||'a neighbour';});
     var tc=document.getElementById('tradechip');
-    if(tc){tc.textContent='🤝';tc.hidden=false;
-      tc.title='Trading with '+(TRADE.name||'a neighbour')+' — rail your city to the highway to receive their '+(TRADE.supplies==='goods'?'Goods':'Materials')+(TRADE.wantsGoods?', and your Goods exports earn a +60% premium (they’re short on Goods)':'')+'. Change or clear the partner on the world map.';}
+    if(tc){tc.textContent=n>1?('🤝 ×'+n):'🤝';tc.hidden=false;
+      tc.title=(n>1?('Trading with '+n+' neighbours: '+names.join(', ')):('Trading with '+names[0]))
+        +'. Rail your city to the highway to receive their surplus'
+        +(landN>0?('; your Goods exports earn up to +'+Math.round((Math.min(1.7,1.5+landN*0.05)-1)*100)+'% (partners short on Goods)'):'')
+        +'. Add or clear partners on the world map.';}
     setTimeout(function(){
-      toastEl.innerHTML='🤝 Trading with <b>'+escT(TRADE.name||'a neighbour')+'</b> — '+(TRADE.supplies==='goods'?'Goods flow in':'Materials flow in')+(TRADE.wantsGoods?', exports +60%':'')+' over rail';
+      toastEl.innerHTML=n>1
+        ?('🤝 Trading with <b>'+n+' neighbours</b> — surplus flows in over rail'+(landN>0?', exports boosted':''))
+        :('🤝 Trading with <b>'+escT(names[0])+'</b> — '+(TRADES[0].supplies==='goods'?'Goods flow in':'Materials flow in')+(landN>0?', exports +'+Math.round((Math.min(1.7,1.5+landN*0.05)-1)*100)+'%':'')+' over rail');
       toastEl.classList.add('on');clearTimeout(toastTimer);
       toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3600);
     },REGION?3600:200);
