@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moss Dapple Grove</title>
+<meta name="description" content="A cozy gardening game — you play a Moss Druid, waking a forgotten grove back to life one real plant at a time. In development.">
+<meta name="apple-mobile-web-app-title" content="Moss Dapple Grove">
+<link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/mossdapplegrove/">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(130% 130% at 50% 0%, #eaf1d8 0%, #cfdcb4 45%, #9fbf8f 100%);
+    color:#25331f;
+    font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;text-align:center;padding:32px;
+  }
+  .card{max-width:560px}
+  .sprout{font-size:60px;line-height:1;filter:drop-shadow(0 4px 8px rgba(30,50,20,.22));
+    animation:sway 5s ease-in-out infinite;transform-origin:50% 90%}
+  @keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+  h1{font-size:clamp(34px,9vw,54px);margin:.3em 0 .05em;letter-spacing:.5px;font-weight:600}
+  .role{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:#4c6338;
+    font-family:system-ui,sans-serif;margin-bottom:.2em}
+  p{font-size:18px;line-height:1.6;color:#33452a;margin:.9em auto 0;max-width:44ch}
+  .soil{margin-top:32px;display:flex;gap:12px;justify-content:center;font-size:26px;opacity:.92}
+  .soon{margin-top:30px;display:inline-block;font-family:system-ui,sans-serif;font-size:13px;
+    letter-spacing:.12em;text-transform:uppercase;color:#40593a;
+    border:1px solid #7f9a6a;border-radius:999px;padding:8px 18px}
+  a.back{display:block;margin-top:26px;font-family:system-ui,sans-serif;font-size:14px;color:#4c6338;text-decoration:none}
+  a.back:hover{text-decoration:underline}
+</head>
+<body>
+  <main class="card">
+    <div class="sprout">🌿</div>
+    <div class="role">You are a Moss Druid</div>
+    <h1>Moss Dapple Grove</h1>
+    <p>A cozy gardening game. Wake a forgotten grove back to life — sow real plants
+       in the right dappled light, tend them as they grow in real time, and watch the
+       grove glow back to enchantment around you.</p>
+    <div class="soil">🌱 🌸 🍄 🌿 🕯️</div>
+    <div class="soon">Waking the grove — coming soon</div>
+    <a class="back" href="https://mustdesigngames.mattdanusergrant.com/">← Back to the arcade</a>
+  </main>
+</body>
+</html>

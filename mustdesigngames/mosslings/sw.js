@@ -1,4 +1,4 @@
-// Moss Dew Garden service worker — offline-capable app shell.
+// Mosslings service worker — offline-capable app shell.
 // Bump CACHE when the shell changes to retire the old cache.
 const CACHE = 'mosslings-v1';
 const ASSETS = [
