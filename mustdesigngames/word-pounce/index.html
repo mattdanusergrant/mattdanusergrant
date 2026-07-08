@@ -202,27 +202,16 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../assets/mdg-net.js"></script>
 <script>
 "use strict";
 
 /* ============================================================
-   1. FIREBASE CONFIG
-   Paste your project's config object here before deploying so
-   the whole family shares it. Leave the placeholder to be
-   prompted in-app (saved per-device in localStorage).
+   1. BACKEND
+   Online multiplayer runs on MDGNet (../assets/mdg-net.js) — a
+   Supabase room-document per game code. Solo mode needs no network.
+   Nothing to configure here; the shared anon key lives in mdg-net.js.
    ============================================================ */
-const BAKED_CONFIG = {
-  apiKey: "AIzaSyB23amgbl5FHYzd35G7ImC8TKOY6B0vWjw",
-  authDomain: "word-pounce.firebaseapp.com",
-  databaseURL: "https://word-pounce-default-rtdb.firebaseio.com",
-  projectId: "word-pounce",
-  storageBucket: "word-pounce.firebasestorage.app",
-  messagingSenderId: "508919448966",
-  appId: "1:508919448966:web:3a88a0fda7883d5165d807",
-  measurementId: "G-XX0FVR7ZXV"
-};
 
 /* ---------- word banks ---------- */
 const BANKS = {
@@ -497,21 +486,12 @@ function startSolo() {
 /* ============================================================
    2. BOOT — wire up Firebase or prompt for config
    ============================================================ */
-function getConfig() {
-  if (BAKED_CONFIG.databaseURL) return BAKED_CONFIG;
-  const saved = localStorage.getItem("wp_cfg");
-  if (saved) { try { return JSON.parse(saved); } catch (e) {} }
-  return null;
-}
 function boot() {
-  // Online multiplayer needs Firebase; solo never does. Wire Firebase if it's
-  // available, otherwise fall back to solo-only — no scary init errors.
-  const cfg = getConfig();
+  // Online multiplayer runs on MDGNet (Supabase); solo never touches the network.
+  // If MDGNet has no anon key configured yet, fall back to solo-only — no scary errors.
   let online = false;
-  if (cfg && typeof firebase !== "undefined") {
-    try { firebase.initializeApp(cfg); db = firebase.database(); online = true; }
-    catch (e) { online = false; }
-  }
+  try { if (window.MDGNet && MDGNet.roomsAvailable()) { db = MDGNet.roomDb(); online = true; } }
+  catch (e) { online = false; }
   pid = localStorage.getItem("wp_pid") || (Math.random().toString(36).slice(2, 10));
   localStorage.setItem("wp_pid", pid);
   $("name").value = localStorage.getItem("wp_name") || "";

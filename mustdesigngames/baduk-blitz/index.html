@@ -193,9 +193,8 @@
 </div>
 <div class="flash" id="flash"></div>
 
-<!-- Firebase for the async "play a friend" games (loaded lazily-ish; the rest of the game works without it) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<!-- MDGNet: shared multiplayer client (Supabase state-sync). The rest of the game works without it. -->
+<script src="../assets/mdg-net.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -471,68 +470,52 @@ function resetLocal(mode){
 }
 
 /* ============================================================
-   ONLINE async play — Firebase-synced move list, shared link
+   ONLINE async play — MDGNet (Supabase state-sync), shared link
    ============================================================ */
-const FIREBASE_CONFIG={apiKey:"AIzaSyB23amgbl5FHYzd35G7ImC8TKOY6B0vWjw",authDomain:"word-pounce.firebaseapp.com",
-  databaseURL:"https://word-pounce-default-rtdb.firebaseio.com",projectId:"word-pounce",
-  storageBucket:"word-pounce.firebasestorage.app",messagingSenderId:"508919448966",appId:"1:508919448966:web:3a88a0fda7883d5165d807"};
-let _db=null, _dbTried=false;
-function getDb(){
-  if(window.__BADUK_TESTDB) return window.__BADUK_TESTDB;   // in-memory stand-in for tests
-  if(_db) return _db; if(_dbTried) return null; _dbTried=true;
-  try{ if(typeof firebase==="undefined") return null;
-    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    _db=firebase.database(); return _db; }catch(e){ return null; }
-}
-const uid=(()=>{ let u=localStorage.getItem("baduk_uid"); if(!u){ u=Math.random().toString(36).slice(2,11); localStorage.setItem("baduk_uid",u); } return u; })();
+const NET=window.MDGNet;
+let match=null, prevMoveCount=0;
 function myName(){ return (localStorage.getItem("baduk_name")|| $("nameIn").value || "Player").slice(0,14); }
-function gameCode(){ let s=""; for(let i=0;i<4;i++) s+="ABCDEFGHJKLMNPQRSTUVWXYZ"[(Math.random()*24)|0]; return s; }
-function gameUrl(id){ return location.origin+location.pathname+"?g="+id; }
-function movesToArr(m){ if(!m) return []; if(Array.isArray(m)) return m.filter(x=>x!=null);
-  return Object.keys(m).map(Number).sort((a,b)=>a-b).map(k=>m[k]); }
+function movesToArr(m){ return Array.isArray(m) ? m.filter(x=>x!=null) : []; }
 
-let gameRef=null, gameId=null, gameData=null, connRef=null, prevMoveCount=0;
 function watchConnection(){
-  const db=getDb(); const el=$("conn"); el.classList.remove("hidden");
-  if(!db){ el.className="conn off"; $("connTxt").textContent="offline"; return; }
-  el.className="conn on"; $("connTxt").textContent="online";
-  try{ connRef=db.ref(".info/connected"); connRef.on("value",s=>{ const on=!!s.val();
-    el.className="conn "+(on?"on":"off"); $("connTxt").textContent=on?"online":"reconnecting…"; }); }catch(e){}
+  const el=$("conn"); el.classList.remove("hidden");
+  const paint=s=>{ const on=s==="online"; el.className="conn "+(on?"on":s==="offline"?"off":"off");
+    $("connTxt").textContent=on?"online":s==="offline"?"offline":"connecting…"; };
+  paint(NET?NET.connState:"offline"); if(NET) NET.onConn(paint);
 }
 
-function createOnlineGame(){
-  const db=getDb();
-  if(!db){ menuNote("Can't reach the game server right now, so a shared online game can't start. You can still play the computer or pass & play. (Check your connection and retry.)"); return; }
+async function createOnlineGame(){
+  if(!NET){ menuNote("Multiplayer isn't loaded, so a shared online game can't start. You can still play the computer or pass & play."); return; }
   localStorage.setItem("baduk_name", myName());
-  const id=gameCode();
-  const data={v:1, size:N, komi:KOMI, created:Date.now(),
-    players:{B:{uid, name:myName()}}, moves:{}, status:"waiting", resign:null};
-  db.ref("baduk/"+id).set(data).then(()=>enterOnline(id)).catch(()=>menuNote("Couldn't create the game (server refused the write). The shared database may need its rules opened."));
+  setStatus("Starting…","");
+  try{
+    const m=await NET.createMatch({game:"baduk", config:{size:N, komi:KOMI}, name:myName()});
+    enterMatch(m);
+  }catch(e){ menuNote("Couldn't start a shared game right now ("+(e&&e.message||"server unavailable")+"). You can still play the computer or pass & play."); }
 }
-function joinOrEnter(id){
-  const db=getDb();
-  if(!db){ menuNote("Can't reach the game server, so this shared game can't load. Try again on a connection."); showScreen("menu"); return; }
-  enterOnline(id);
-}
-function enterOnline(id){
-  G.mode="online"; gameId=id; prevMoveCount=-1;
-  showScreen("game"); watchConnection();
+async function joinOrEnter(id){
+  if(!NET){ menuNote("Multiplayer isn't loaded, so this shared game can't open. You can still play the computer or pass & play."); showScreen("menu"); return; }
+  G.mode="online"; showScreen("game"); watchConnection();
   $("clocks").classList.remove("hidden"); $("clocks").classList.add("noclock");
   setStatus("Loading…","");
-  const db=getDb(); gameRef=db.ref("baduk/"+id);
-  gameRef.on("value", s=>{
-    gameData=s.val();
-    if(!gameData){ setStatus("Game not found","That link may be wrong or the game was removed."); showControls("over"); $("newBtn").textContent="Back to menu ›"; return; }
-    onGameData();
-  });
+  try{ const m=await NET.openMatch(id,{}); enterMatch(m); }
+  catch(e){ setStatus("Game not found","That link may be wrong or the game was removed."); showControls("over"); $("newBtn").textContent="Back to menu ›"; }
+}
+function enterMatch(m){
+  teardownOnline();
+  G.mode="online"; match=m; prevMoveCount=-1;
+  showScreen("game"); watchConnection();
+  $("clocks").classList.remove("hidden"); $("clocks").classList.add("noclock");
+  m.on(state=>onState(state, m));
 }
 function renderBoardFrom(rep){ G.board=rep.board; G.koKey=rep.koKey; G.caps=rep.caps; G.toMove=rep.toMove; G.last=rep.last; draw(); renderMeta(); }
-function onGameData(){
-  const p=gameData.players||{};
-  G.myColor = (p.B&&p.B.uid===uid)?BLACK : (p.W&&p.W.uid===uid)?WHITE : 0;
+function onState(st, m){
+  const p=st.players||{};
+  G.myColor = m.myColor;                        // 0 / BLACK / WHITE, resolved by MDGNet from auth uid
   G.names={[BLACK]:(p.B&&p.B.name)||"Black",[WHITE]:(p.W&&p.W.name)||"White"};
+  const moves=movesToArr(st.moves), rep=replay(moves);
   if(!G.myColor){
-    const rep=replay(movesToArr(gameData.moves)); G.showOwner=null; renderBoardFrom(rep);
+    G.showOwner=null; renderBoardFrom(rep);
     if(!p.W){                                   // open seat — offer to join by name
       G.phase="join"; $("shareBanner").classList.add("hidden"); $("joinBanner").classList.remove("hidden");
       $("joinTitle").textContent=((p.B&&p.B.name)||"Someone")+" invited you to play Go";
@@ -540,27 +523,24 @@ function onGameData(){
       setStatus("Join this game","Enter your name, then tap Join to play as White.");
       showControls("play"); $("passBtn").disabled=true; $("resignBtn").disabled=true;
     } else {                                    // both seats taken — watch only
-      G.phase="over"; setStatus("Spectating", p.B.name+" (Black) vs "+p.W.name+" (White).");
+      G.phase="over"; setStatus("Spectating", ((p.B&&p.B.name)||"Black")+" (Black) vs "+p.W.name+" (White).");
       showControls("over"); $("newBtn").textContent="Back to menu ›";
     }
     return;
   }
   $("joinBanner").classList.add("hidden");
-  const moves=movesToArr(gameData.moves);
-  const rep=replay(moves);
   G.board=rep.board; G.koKey=rep.koKey; G.caps=rep.caps; G.toMove=rep.toMove; G.last=rep.last;
   // sound when a new move arrives from the opponent
   if(prevMoveCount>=0 && moves.length>prevMoveCount){ const lm=moves[moves.length-1];
     if(lm && !lm.pass) (G.caps[opp(G.toMove)]>0?sndCap:sndClack)(); }
   prevMoveCount=moves.length;
 
-  const resign=gameData.resign, ended = !!resign || rep.ended || gameData.status==="ended";
-  // Share banner: show only while waiting for an opponent, to the creator
+  const ended = st.status==="ended" || rep.ended;
   const waiting = !p.W;
   $("shareBanner").classList.toggle("hidden", !(waiting && G.myColor===BLACK));
-  if(waiting && G.myColor===BLACK){ $("shareUrl").value=gameUrl(gameId); }
+  if(waiting && G.myColor===BLACK){ $("shareUrl").value=m.url; }
 
-  if(ended){ finishOnline(rep, resign); return; }
+  if(ended){ finishOnline(rep, st.result, m); return; }
   if(waiting){ G.phase="waiting"; G.showOwner=null; draw(); renderMeta();
     setStatus("Waiting for an opponent","Send the link above. When they join and it's your turn, come back.");
     showControls("play"); $("passBtn").disabled=true; $("resignBtn").disabled=true; return; }
@@ -572,38 +552,33 @@ function onGameData(){
   if(myTurn()) setStatus("Your move", "You're "+(G.myColor===BLACK?"Black":"White")+". Tap to place — "+opName+" will see it next time they open this link.");
   else setStatus("Waiting for "+opName+"…", "It's their move. This page updates when they play — leave it open or check back later.");
 }
-function finishOnline(rep, resign){
+function finishOnline(rep, result, m){
   G.phase="over"; stopClock();
   const sc=score(G.board); G.showOwner=sc.owner; G.last=null; draw();
   let winner, detail;
-  if(resign){ winner=opp(resign.color===BLACK?BLACK:WHITE); detail=G.names[resign.color===BLACK?BLACK:WHITE]+" resigned"; }
-  else { winner = sc.blackTotal>sc.whiteTotal?BLACK:WHITE; detail="Black "+sc.blackTotal+" · White "+sc.whiteTotal.toFixed(1)+" ("+KOMI+" komi)"; }
+  if(result && result.reason==="resign"){
+    winner=colorOf(result.winner); detail=G.names[opp(winner)]+" resigned";
+  } else {
+    winner = sc.blackTotal>sc.whiteTotal?BLACK:WHITE;
+    detail="Black "+sc.blackTotal+" · White "+sc.whiteTotal.toFixed(1)+" ("+KOMI+" komi)";
+    // First player to render the scored end posts the result so both sides agree.
+    if(m && G.myColor && !result){ try{ m.end({winner: winner===BLACK?"B":"W", reason:"score", detail}); }catch(e){} }
+  }
   renderMeta();
   const iWon = winner===G.myColor;
   setStatus(iWon?"You win":G.names[winner]+" wins", detail);
   (iWon?sndWin:sndLose)(); flash(iWon?"You win":"You lose", iWon?"win":"lose");
   showControls("over"); $("newBtn").textContent="Back to menu ›";
 }
+function colorOf(s){ return s==="B"?BLACK : s==="W"?WHITE : 0; }
 function onlineMove(mv){
-  if(G.phase!=="play" || !myTurn() || !gameRef) return;
+  if(G.phase!=="play" || !myTurn() || !match) return;
   // validate locally first (both sides run the same engine)
   if(!mv.pass && !tryPlay(G.board,mv.c,mv.r,G.toMove,G.koKey).ok){ flash("Illegal","lose"); return; }
-  const myCol=G.myColor;
-  gameRef.child("moves").transaction(cur=>{
-    const arr=movesToArr(cur); const expect = arr.length%2===0?BLACK:WHITE;
-    if(expect!==myCol) return;                 // not my turn (raced) — abort
-    const obj = cur && !Array.isArray(cur) ? Object.assign({},cur) : Object.assign({}, arr);
-    obj[arr.length]=mv; return obj;
-  }).then(res=>{
-    if(res && res.committed){
-      // if this created a second consecutive pass, mark the game ended
-      const arr=movesToArr(res.snapshot.val());
-      if(replay(arr).ended) gameRef.child("status").set("ended");
-    }
-  }).catch(()=>flash("Move didn't save","lose"));
+  match.move(mv).catch(()=>{ /* stale/not-your-turn resyncs via subscribe */ flash("Move didn't save","lose"); });
 }
 function onlinePass(){ if(myTurn()) onlineMove({pass:true}); }
-function onlineResign(){ if(!gameRef||G.myColor===0) return; gameRef.child("resign").set({color:G.myColor}); gameRef.child("status").set("ended"); }
+function onlineResign(){ if(!match||G.myColor===0) return; match.move({resign:true}).catch(()=>flash("Couldn't resign","lose")); }
 
 function menuNote(t){ $("menuNote").classList.remove("hidden"); $("menuNoteTxt").textContent=t; }
 
@@ -614,11 +589,11 @@ $("mNew").onclick=()=>{ ac(); createOnlineGame(); };
 $("mAI").onclick=()=>{ ac(); resetLocal("ai"); };
 $("mLocal").onclick=()=>{ ac(); resetLocal("local"); };
 $("menuBtn").onclick=()=>{ teardownOnline(); stopClock(); showScreen("menu"); };
-$("joinBtn").onclick=()=>{ if(!gameRef) return; ac();
+$("joinBtn").onclick=()=>{ if(!match) return; ac();
   const nm=($("joinName").value||"Player").slice(0,14); localStorage.setItem("baduk_name",nm);
-  gameRef.child("players/W").set({uid, name:nm}); gameRef.child("status").set("active");
+  match.join(nm).catch(()=>flash("Couldn't join","lose"));
   $("joinBanner").classList.add("hidden"); };
-$("shareBtn").onclick=()=>{ const url=gameUrl(gameId);
+$("shareBtn").onclick=()=>{ const url=match?match.url:location.href;
   if(navigator.share){ navigator.share({title:"Baduk Blitz — let's play Go", text:"Open this to make your move:", url}).catch(()=>{}); }
   else { try{ navigator.clipboard.writeText(url); }catch(e){} flash("Link copied","info"); } };
 $("passBtn").onclick=()=>{ if(G.phase!=="play"||!myTurn()) return; ac(); if(G.mode==="online") onlinePass(); else localApply({pass:true}); };
@@ -631,14 +606,13 @@ $("resignBtn").onclick=()=>{ if(G.phase!=="play") return; ac();
     renderMeta(); showControls("over"); $("newBtn").textContent="Back to menu ›"; } };
 $("newBtn").onclick=()=>{ teardownOnline(); stopClock(); showScreen("menu"); };
 $("muteBtn").onclick=e=>{ muted=!muted; e.target.style.opacity=muted?.25:.6; e.target.textContent=muted?"♪̸":"♪"; if(!muted) ac(); };
-function teardownOnline(){ if(gameRef){ try{gameRef.off();}catch(e){} } if(connRef){ try{connRef.off();}catch(e){} }
-  gameRef=null; gameId=null; gameData=null; G.mode=null; }
+function teardownOnline(){ if(match){ try{match.close();}catch(e){} } match=null; prevMoveCount=0; }
 window.addEventListener("resize",()=>{ if(!$("gameView").classList.contains("hidden")) resize(); });
 
 /* ---------- Boot / deep link ---------- */
 (function boot(){
   const params=new URLSearchParams(location.search), g=params.get("g");
-  if(g){ joinOrEnter(g.toUpperCase()); } else { showScreen("menu"); }
+  if(g){ if(NET) NET.connect(); joinOrEnter(g); } else { showScreen("menu"); }
 })();
 </script>
 </body>
