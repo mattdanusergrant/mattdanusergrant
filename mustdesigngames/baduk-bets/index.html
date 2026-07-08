@@ -80,6 +80,21 @@
   .lobby .row .tag.watch{background:rgba(255,255,255,.08); opacity:.7;}
   .lobby .empty{font-size:12px; opacity:.4; padding:2px 2px 0;}
 
+  /* ---- Bet panel (spectator) ---- */
+  .betp .odds{display:flex; gap:8px; margin:10px 0 8px;}
+  .betp .obtn{flex:1; padding:12px 8px; border-radius:12px; border:1px solid #5a2a3a; cursor:pointer; font-family:inherit;
+    background:rgba(0,0,0,.3); color:var(--cream); font-weight:700; font-size:12px; line-height:1.3;}
+  .betp .obtn b{display:block; font-size:22px; color:var(--gold2); margin-top:3px; letter-spacing:.5px;}
+  .betp .obtn:active{transform:scale(.98);}
+  .betp .stake{display:flex; gap:8px; align-items:center; justify-content:center; margin:6px 0; font-size:13px; opacity:.85;}
+  .betp .stake input{width:110px; padding:10px; border-radius:10px; background:rgba(0,0,0,.35); border:1px solid #5a2a3a; color:var(--cream); font-family:inherit; font-size:16px; text-align:center;}
+  .betp .mybets{margin-top:10px; font-size:12px; text-align:left;}
+  .betp .mybets>b{font-size:10px; letter-spacing:1px; text-transform:uppercase; opacity:.6;}
+  .betp .mybets .b{display:flex; justify-content:space-between; padding:4px 0; border-top:1px solid rgba(255,255,255,.07);}
+  .betp .won{color:var(--neon); font-weight:800;} .betp .lost{color:var(--hot); opacity:.7;}
+  .betp .closed{opacity:.6; font-size:12px; margin:8px 0;}
+  .betp .mmsg{font-size:12px; margin-top:8px; min-height:14px; color:var(--gold2);}
+
   /* ---- Share / status banner ---- */
   .banner{margin:8px 14px 0; padding:14px 16px; border-radius:14px; text-align:center;
     background:linear-gradient(180deg,rgba(255,204,51,.1),rgba(255,204,51,.03)); border:1px solid rgba(255,204,51,.4);}
@@ -185,6 +200,7 @@
       <div class="bs">Enter your name and join — then take turns whenever you like.</div>
       <div class="linkbox"><input class="txt" id="joinName" maxlength="14" placeholder="Your name" style="text-align:center; font-size:14px"><button class="sharebtn" id="joinBtn">Join</button></div>
     </div>
+    <div class="banner hidden" id="betPanel"></div>
 
     <div class="prompt">
       <div class="t" id="pTitle">…</div>
@@ -481,7 +497,7 @@ function resetLocal(mode){
   G.caps={[BLACK]:0,[WHITE]:0}; G.passesTail=0; G.phase="play"; G.clocks={[BLACK]:CLOCK_MS,[WHITE]:CLOCK_MS};
   if(mode==="ai"){ G.names={[BLACK]:"You",[WHITE]:"AI"}; }
   else { G.names={[BLACK]:"Black",[WHITE]:"White"}; }
-  $("conn").classList.add("hidden"); $("shareBanner").classList.add("hidden"); $("joinBanner").classList.add("hidden");
+  $("conn").classList.add("hidden"); $("shareBanner").classList.add("hidden"); $("joinBanner").classList.add("hidden"); $("betPanel").classList.add("hidden");
   $("clocks").classList.remove("hidden"); $("clocks").classList.toggle("noclock", mode!=="ai");
   showScreen("game"); resize(); renderMeta(); showControls("play"); localTurnStatus();
   if(mode==="ai"){ setStatus("Your move","You're Black. Most points wins — both pass to count."); startClock(); }
@@ -552,6 +568,7 @@ function onState(st, m){
   const p=st.players||{};
   G.myColor = m.myColor;                        // 0 / BLACK / WHITE, resolved by MDGNet from auth uid
   G.names={[BLACK]:(p.B&&p.B.name)||"Black",[WHITE]:(p.W&&p.W.name)||"White"};
+  $("betPanel").classList.add("hidden");        // only spectators of a real match see it
   const moves=movesToArr(st.moves), rep=replay(moves);
   if(!G.myColor){
     G.showOwner=null; renderBoardFrom(rep);
@@ -561,9 +578,10 @@ function onState(st, m){
       $("joinName").value=localStorage.getItem("baduk_name")||"";
       setStatus("Join this game","Enter your name, then tap Join to play as White.");
       showControls("play"); $("passBtn").disabled=true; $("resignBtn").disabled=true;
-    } else {                                    // both seats taken — watch only
+    } else {                                    // both seats taken — watch & bet
       G.phase="over"; setStatus("Spectating", ((p.B&&p.B.name)||"Black")+" (Black) vs "+p.W.name+" (White).");
       showControls("over"); $("newBtn").textContent="Back to menu ›";
+      renderBetPanel(m, st);
     }
     return;
   }
@@ -673,6 +691,40 @@ async function renderLobby(){
   el.querySelectorAll(".row").forEach(r=>r.onclick=async()=>{ ac(); try{ enterMatch(await NET.openMatch(r.getAttribute("data-id"),{})); }catch(e){ menuNote("Couldn't open that game."); } });
   const rf=el.querySelector("[data-refresh]"); if(rf) rf.onclick=e=>{ e.stopPropagation(); renderLobby(); };
   if(!lobbyUnsub && NET.watchLobby){ try{ lobbyUnsub=NET.watchLobby("baduk", ()=>{ if(!$("menu").classList.contains("hidden")) renderLobby(); }); }catch(e){} }
+}
+
+/* ---------- Spectator bet panel (fixed-odds) ---------- */
+let betStake=50;
+async function renderBetPanel(m, st){
+  const el=$("betPanel"); if(!el||!m||!NET||G.myColor!==0) return;
+  let u=null; try{ u = NET.auth ? await NET.auth.user() : null; }catch(e){}
+  if(!u){ el.classList.add("hidden"); return; }
+  let odds, bets;
+  try{ [odds, bets] = await Promise.all([NET.matchOdds(m.id), NET.myBets(m.id)]); }catch(e){ el.classList.add("hidden"); return; }
+  if(!odds){ el.classList.add("hidden"); return; }
+  const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const nB=(st.players.B&&st.players.B.name)||"Black", nW=(st.players.W&&st.players.W.name)||"White";
+  let h=`<div class="bt">Bet on this game</div><div class="betp">`;
+  if(odds.betting_open){
+    h+=`<div class="odds"><button class="obtn" data-pick="B">${esc(nB)} · Black<b>${(+odds.black).toFixed(2)}×</b></button>`+
+       `<button class="obtn" data-pick="W">${esc(nW)} · White<b>${(+odds.white).toFixed(2)}×</b></button></div>`+
+       `<div class="stake">Stake <input id="betStake" type="number" min="10" max="500" value="${betStake}"> chips</div>`+
+       `<div class="bs">Bets close at move ${odds.close_ply} (now ${odds.ply}). Your chips are top-right.</div>`;
+  } else h+=`<div class="closed">Betting is closed for this game (move ${odds.ply}).</div>`;
+  if(bets.length){ h+=`<div class="mybets"><b>Your bets</b>`;
+    bets.forEach(b=>{ const r=b.status==="won"?`<span class="won">won +${b.payout}</span>`:b.status==="lost"?`<span class="lost">lost</span>`:"open";
+      h+=`<div class="b"><span>${b.stake} on ${b.pick==="B"?"Black":"White"} @${(+b.odds).toFixed(2)}×</span><span>${r}</span></div>`; }); h+=`</div>`; }
+  h+=`<div class="mmsg" id="betMsg"></div></div>`;
+  el.innerHTML=h; el.classList.remove("hidden");
+  const si=$("betStake"); if(si) si.oninput=()=>{ betStake=Math.max(10,Math.min(500,+si.value||0)); };
+  el.querySelectorAll(".obtn").forEach(btn=>btn.onclick=async()=>{ ac();
+    const pick=btn.getAttribute("data-pick"), s=Math.max(10,Math.min(500,+($("betStake")||{}).value||betStake));
+    $("betMsg").textContent="Placing…";
+    try{ const r=await NET.placeBet(m.id, pick, s);
+      await renderBetPanel(m, st);                 // refresh list first…
+      if(window.MDGAccount) MDGAccount.refresh();
+      const mm=$("betMsg"); if(mm) mm.textContent="Bet placed: "+s+" on "+(pick==="B"?"Black":"White")+" @"+(+r.odds).toFixed(2)+"×";   // …then show the confirmation
+    }catch(e){ const mm=$("betMsg"); if(mm) mm.textContent=(e&&e.message)||"Couldn't place bet."; } });
 }
 
 /* ---------- Boot / deep link ---------- */

@@ -74,6 +74,9 @@
           .subscribe(st=>{ if(st==="SUBSCRIBED") setConn("online"); else if(st==="CHANNEL_ERROR"||st==="TIMED_OUT") setConn("offline"); });
         return ()=>{ try{ sb.removeChannel(ch); }catch(e){} };
       },
+      async matchOdds(id){ const { data, error } = await sb.rpc("mdg_match_odds",{p_id:id}); if(error) throw error; return data; },
+      async placeBet(id, pick, stake){ const { data, error } = await sb.rpc("mdg_place_bet",{p_id:id,p_pick:pick,p_stake:stake}); if(error) throw error; return data; },
+      async myBets(id){ const { data, error } = await sb.from("bets").select("*").eq("match_id",id).eq("bettor",uid).order("placed_at"); if(error) throw error; return data||[]; },
       async lobby(game){
         const g = game||"baduk";
         const [mine, open, live] = await Promise.all([
@@ -243,6 +246,10 @@
       return { mine:(raw.mine||[]).map(shape), open:(raw.open||[]).map(shape), live:(raw.live||[]).map(shape) };
     },
     watchLobby(game, cb){ const a=pickAdapter(); if(!a.watchLobby) return ()=>{}; return a.watchLobby(game, cb); },
+    // Betting (fixed-odds, house). Spectators bet on live games; settlement is server-side.
+    async matchOdds(id){ const a=pickAdapter(); await a.ready(); return a.matchOdds(id); },
+    async placeBet(id, pick, stake){ const a=pickAdapter(); await a.ready(); return a.placeBet(id, pick, stake); },
+    async myBets(id){ const a=pickAdapter(); await a.ready(); return a.myBets(id); },
     // Room API — is online multiplayer configured, and a firebase-shaped db for it.
     roomsAvailable(){ return !!window.__MDG_ROOM_BACKEND || keySet(); },
     roomDb(){ return makeRoomDb(pickRoomBackend()); },
