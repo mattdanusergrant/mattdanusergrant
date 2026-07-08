@@ -22,9 +22,10 @@
 (function(){
   "use strict";
 
-  // ── Config (public-safe: the anon key is meant to ship in client code) ──
-  const SUPABASE_URL  = "https://hprivaysbttdqgebbjio.supabase.co";
-  const SUPABASE_ANON = "REPLACE_ME_GAMES_ANON_KEY";   // paste the "Games" project anon key
+  // ── Config: "Move Delivery Gears" Supabase project (the realtime multiplayer backend).
+  //    The publishable key is client-safe by design — meant to ship in the page. ──
+  const SUPABASE_URL  = "https://xryvcqrobipogjaxtnpw.supabase.co";
+  const SUPABASE_ANON = "sb_publishable_40l9LJrrmY32-9dd3KLNdA_B_Yi6oy9";   // publishable key (public-safe)
   const SUPABASE_LIB  = "https://esm.sh/@supabase/supabase-js@2";
 
   const BLACK=1, WHITE=2;
