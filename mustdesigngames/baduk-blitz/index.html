@@ -485,22 +485,43 @@ function watchConnection(){
   paint(NET?NET.connState:"offline"); if(NET) NET.onConn(paint);
 }
 
+// Online play requires a signed-in account (email). Resolves once the player is signed in;
+// opens the account sheet and waits for the sign-in event otherwise.
+function currentUser(){ try{ return Promise.resolve(NET && NET.auth ? NET.auth.user() : null); }catch(e){ return Promise.resolve(null); } }
+function requireSignIn(){
+  return currentUser().then(u=>{
+    if(u) return true;
+    if(window.MDGAccount) MDGAccount.open();
+    return new Promise(resolve=>{
+      const h=e=>{ if(e.detail && e.detail.user){ window.removeEventListener("mdg-account",h); resolve(true); } };
+      window.addEventListener("mdg-account", h);
+    });
+  }).catch(()=>true);   // if we can't check (backend down), let the RPC surface the real error
+}
 async function createOnlineGame(){
   if(!NET){ menuNote("Multiplayer isn't loaded, so a shared online game can't start. You can still play the computer or pass & play."); return; }
   localStorage.setItem("baduk_name", myName());
+  await requireSignIn();                          // sign in first — then continue
   setStatus("Starting…","");
   try{
     const m=await NET.createMatch({game:"baduk", config:{size:N, komi:KOMI}, name:myName()});
     enterMatch(m);
-  }catch(e){ menuNote("Couldn't start a shared game right now ("+(e&&e.message||"server unavailable")+"). You can still play the computer or pass & play."); }
+  }catch(e){
+    if(/sign in/i.test(e&&e.message||"")){ requireSignIn(); return; }
+    menuNote("Couldn't start a shared game right now ("+(e&&e.message||"server unavailable")+"). You can still play the computer or pass & play.");
+  }
 }
 async function joinOrEnter(id){
   if(!NET){ menuNote("Multiplayer isn't loaded, so this shared game can't open. You can still play the computer or pass & play."); showScreen("menu"); return; }
   G.mode="online"; showScreen("game"); watchConnection();
   $("clocks").classList.remove("hidden"); $("clocks").classList.add("noclock");
+  setStatus("Sign in to play","Enter your email for a one-tap sign-in link — then this game opens.");
+  await requireSignIn();                          // deep link: sign in, then auto-load the game
   setStatus("Loading…","");
   try{ const m=await NET.openMatch(id,{}); enterMatch(m); }
-  catch(e){ setStatus("Game not found","That link may be wrong or the game was removed."); showControls("over"); $("newBtn").textContent="Back to menu ›"; }
+  catch(e){
+    if(/sign in/i.test(e&&e.message||"")){ setStatus("Sign in to play","Use the account panel to sign in, then reopen this link."); requireSignIn(); return; }
+    setStatus("Game not found","That link may be wrong or the game was removed."); showControls("over"); $("newBtn").textContent="Back to menu ›"; }
 }
 function enterMatch(m){
   teardownOnline();

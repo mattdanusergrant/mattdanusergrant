@@ -51,24 +51,20 @@
     const c=els.card; if(!c) return;
     if(user){
       c.innerHTML = `<span class="mdga-x" data-x>×</span><h3>${esc((wallet&&wallet.display_name)||"Your account")}</h3>`+
-        `<p class="sub">${user.email? esc(user.email) : (user.is_anonymous?"Guest — sign in to save your chips":"signed in")}</p>`+
+        `<p class="sub">${user.email? esc(user.email) : "signed in"}</p>`+
         `<div class="mdga-bal"><span class="coin">🪙</span> ${fmt(wallet&&wallet.balance)}</div>`+
         `<p class="sub">+10 chips a day, every day.</p>`+
-        (user.is_anonymous?`<button class="mdga-btn g" data-google>Save account with Google</button>`+
-          `<input class="mdga-in" data-email placeholder="or email for a sign-in link">`+
-          `<button class="mdga-btn" data-otp>Email me a link</button>`:``)+
         `<button class="mdga-btn" data-signout>Sign out</button>`+
         `<div class="mdga-msg" data-msg></div>`;
     } else {
       c.innerHTML = `<span class="mdga-x" data-x>×</span><h3>Sign in</h3>`+
         `<p class="sub">Play-money chips, saved to your account. New players start with 1000.</p>`+
-        `<button class="mdga-btn g" data-google>Continue with Google</button>`+
-        `<div class="mdga-or">— or email —</div>`+
         `<input class="mdga-in" data-email type="email" placeholder="you@example.com">`+
-        `<button class="mdga-btn" data-otp>Email me a sign-in link</button>`+
-        `<input class="mdga-in" data-pw type="password" placeholder="password (optional)">`+
+        `<button class="mdga-btn primary" data-otp>Email me a sign-in link</button>`+
+        `<div class="mdga-or">— or use a password —</div>`+
+        `<input class="mdga-in" data-pw type="password" placeholder="password">`+
         `<div class="mdga-row"><button class="mdga-btn" data-pwin>Sign in</button>`+
-        `<button class="mdga-btn primary" data-pwup>Create account</button></div>`+
+        `<button class="mdga-btn" data-pwup>Create account</button></div>`+
         `<div class="mdga-msg" data-msg></div>`;
     }
     wire();

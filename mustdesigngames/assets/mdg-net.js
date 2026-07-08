@@ -52,10 +52,10 @@
     return {
       get uid(){ return uid; },
       async ready(){
-        if(sb) return true;
+        if(sb && uid) return true;
         sb = await ensureClient();
-        let { data:{ user } } = await sb.auth.getUser().catch(()=>({data:{}}));
-        if(!user){ const r = await sb.auth.signInAnonymously(); if(r.error) throw r.error; user = r.data.user; }
+        const { data:{ user } } = await sb.auth.getUser().catch(()=>({data:{}}));
+        if(!user){ setConn("offline"); throw new Error("sign in first"); }   // accounts required — no anonymous
         uid = user.id; setConn("online"); return true;
       },
       async createMatch(game, config, name){
