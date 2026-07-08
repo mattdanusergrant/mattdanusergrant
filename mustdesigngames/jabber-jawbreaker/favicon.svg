@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Jabber Jawbreaker">
+  <rect width="64" height="64" rx="14" fill="#0c1020"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="#ffc62e" stroke-width="2.5"/>
+  <!-- red boxing glove -->
+  <circle cx="35" cy="26" r="15" fill="#e8342b"/>
+  <circle cx="19" cy="29" r="7.5" fill="#e8342b"/>
+  <rect x="20" y="33" width="30" height="16" rx="6" fill="#e8342b"/>
+  <ellipse cx="30" cy="20" rx="6.5" ry="4" fill="#ff7d72"/>
+  <!-- cuff -->
+  <rect x="22" y="46" width="26" height="9" rx="3" fill="#f4f6fd"/>
+</svg>

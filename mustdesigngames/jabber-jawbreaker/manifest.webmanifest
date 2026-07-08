@@ -1,0 +1,15 @@
+{
+  "name": "Jabber Jawbreaker",
+  "short_name": "Jabber JB",
+  "description": "A 3-round word-boxing bout — 13 word mini-games, one health bar, knock 'em out.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c1020",
+  "theme_color": "#0c1020",
+  "icons": [
+    { "src": "./assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
