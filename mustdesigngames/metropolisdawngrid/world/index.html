@@ -46,6 +46,7 @@
   .nc-inner p b{color:var(--ink)}
   .nc-inner button{font-family:'Fraunces',serif;font-size:13px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:7px 17px;cursor:pointer}
   .nc-inner button.ghost{background:transparent;color:var(--ink-2);border:1.5px solid var(--line-2)}
+  .nc-inner button.ghost.active{background:rgba(95,190,110,.16);color:#2E7D46;border-color:rgba(95,190,110,.6)}
   .nc-actions{display:flex;gap:10px}
 </style>
 </head>
@@ -63,7 +64,7 @@
   </div>
 
   <div id="fade"></div>
-  <div id="ncard"><div class="nc-inner"><h3 id="nc-name"></h3><p id="nc-msg"></p><div class="nc-actions"><button id="nc-visit" type="button">Visit →</button><button id="nc-close" type="button" class="ghost">Close</button></div></div></div>
+  <div id="ncard"><div class="nc-inner"><h3 id="nc-name"></h3><p id="nc-msg"></p><div class="nc-actions"><button id="nc-visit" type="button">Visit →</button><button id="nc-trade" type="button" class="ghost">🤝 Trade</button><button id="nc-close" type="button" class="ghost">Close</button></div></div></div>
   <div id="fcard"><div class="nc-inner"><h3 id="fc-name">Found your city here</h3><p id="fc-msg"></p><div class="nc-actions"><button id="fc-build" type="button">Build here →</button><button id="fc-cancel" type="button" class="ghost">Keep looking</button></div></div></div>
 
   <div class="legend">
@@ -279,11 +280,24 @@
   function startDive(x,y,c){mode='diving';divT=0;zx=x;zy=y;navigated=false;diveCity=c||null;}
   var fadeEl=document.getElementById('fade');
   var ncVisitCity=null;
+  // trade partner (shared with the builder via localStorage): route your exports to one AI neighbour
+  function getPartner(){try{return JSON.parse(localStorage.getItem('mdg-trade-partner'));}catch(e){return null;}}
+  function isPartner(c){var p=getPartner();return p&&Math.abs(p.lat-c.lat)<1e-6&&Math.abs(p.lon-c.lon)<1e-6;}
+  function updateTradeBtn(c){var b=document.getElementById('nc-trade');if(!b)return;
+    if(isPartner(c)){b.textContent='🤝 Trading — stop';b.classList.add('active');}
+    else{b.textContent='🤝 Trade';b.classList.remove('active');}}
   function showNeighbour(c){var k=terrainClass(c.lat,c.lon),t=(typeof c.tier==='number'?c.tier:1);ncVisitCity=c;
     document.getElementById('nc-name').textContent=c.name;
-    document.getElementById('nc-msg').innerHTML='<b>'+TIERNAME[t]+'</b> · ~'+TIERPOP[t].toLocaleString()+' people · '+SPEC[k]+'<br>'+TRADE[k]+'<br><span style="opacity:.7">An AI-run city on the shared world — visit to walk its streets.</span>';
+    var supplies=(k==='coast')?'ships finished <b>Goods</b>':'ships raw <b>Materials</b>';
+    var wants=(k!=='coast')?' and pays a premium for your <b>Goods</b>':'';
+    document.getElementById('nc-msg').innerHTML='<b>'+TIERNAME[t]+'</b> · ~'+TIERPOP[t].toLocaleString()+' people · '+SPEC[k]+'<br>'+TRADE[k]+'<br><span style="opacity:.85">🤝 As a trade partner, '+supplies+' to your city over rail'+wants+'.</span><br><span style="opacity:.7">An AI-run city on the shared world — visit to walk its streets.</span>';
+    updateTradeBtn(c);
     document.getElementById('ncard').classList.add('on');}
   document.getElementById('nc-visit').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');if(ncVisitCity){var p=proj(ncVisitCity.lat,ncVisitCity.lon);startDive(p.sx,p.sy,ncVisitCity);}});
+  document.getElementById('nc-trade').addEventListener('click',function(){var c=ncVisitCity;if(!c)return;
+    if(isPartner(c)){localStorage.removeItem('mdg-trade-partner');}
+    else{localStorage.setItem('mdg-trade-partner',JSON.stringify({name:c.name,lat:c.lat,lon:c.lon,tier:(typeof c.tier==='number'?c.tier:1)}));}
+    updateTradeBtn(c);});
   document.getElementById('nc-close').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');});
   document.getElementById('ncard').addEventListener('click',function(e){if(e.target.id==='ncard')this.classList.remove('on');});
 
