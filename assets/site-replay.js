@@ -41,22 +41,23 @@
   SKETCH.helix=function(ctx,w,h,t,P,S){
     var A=Math.min(w,h)*0.16,twist=TAU/(Math.min(w,h)*0.46),scroll=reduce?0:t*(P.speed||0.45),step=Math.max(3,Math.round(h/120));
     ctx.shadowBlur=0;ctx.lineCap='round';
-    function helixAt(cx){
+    function helixAt(cx,dir){
+      var sc=scroll*dir;
       for(var y=-A;y<=h+A;y+=step*3){
-        var ph=y*twist+scroll,sa=Math.sin(ph),dp=Math.cos(ph),xa=cx+A*sa,xb=cx-A*sa;
+        var ph=y*twist+sc,sa=Math.sin(ph),dp=Math.cos(ph),xa=cx+A*sa,xb=cx-A*sa;
         ctx.strokeStyle=col(0.12+0.30*Math.abs(sa));ctx.lineWidth=1;
         ctx.beginPath();ctx.moveTo(xa,y);ctx.lineTo(xb,y);ctx.stroke();
         ctx.fillStyle=col(0.22+0.62*(dp+1)/2);ctx.beginPath();ctx.arc(xa,y,1.8,0,TAU);ctx.fill();
         ctx.fillStyle=col(0.22+0.62*(1-(dp+1)/2));ctx.beginPath();ctx.arc(xb,y,1.8,0,TAU);ctx.fill();
       }
       function strand(po){var px,py;
-        for(var y=-A;y<=h+A;y+=step){var ph=y*twist+scroll+po,x=cx+A*Math.sin(ph),front=(Math.cos(ph)+1)/2;
+        for(var y=-A;y<=h+A;y+=step){var ph=y*twist+sc+po,x=cx+A*Math.sin(ph),front=(Math.cos(ph)+1)/2;
           if(y>-A){ctx.strokeStyle=col(0.18+0.77*front);ctx.lineWidth=0.8+1.9*front;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();}
           px=x;py=y;}
       }
       strand(0);strand(Math.PI);
     }
-    if((P.strands||2)===1){ helixAt(w/2); } else { helixAt(w*0.2); helixAt(w*0.8); }
+    if((P.strands||2)===1){ helixAt(w/2,1); } else { helixAt(w*0.2,1); helixAt(w*0.8,P.counter?-1:1); }
   };
 
   // Pythagoras tree of empty squares; P.speed sets the sway rate (0.5 fast → 0.125 quarter).
@@ -122,56 +123,63 @@
   };
 
   /* ───────────────────────── the timeline ─────────────────────────
+     kind:'shot' → a real rendered screenshot of a past commit (img);
      kind:'sketch' → a live vignette; kind:'scene' → a typographic card (html + optional enter()). */
-  var CY='#C9820A';
   var TL=[
-    { act:'I · A page about a person', date:'the start', kind:'scene', dwell:5200,
-      title:'It began as a plain portfolio',
-      note:'A designer, a hero line, a list of work. Honest — but it didn’t behave like the things it was describing.',
-      ill:'<div class="rp-hero"><div class="rp-eye">Principal Game Designer</div><div class="rp-h1">I design characters. <em>You’ve played them.</em></div><div class="rp-lede">A decade of mobile F2P — then full-stack AI.</div></div>' },
+    { act:'I · It starts with your name', date:'Jun 11', kind:'shot', img:'/case-studies/replay/01-name.png', dwell:5000,
+      title:'The very first thing on the page was my name',
+      note:'MATT · DANUSER · GRANT, stacked in three lines. Real screenshot, rendered from the June 11 commit.' },
 
-    { act:'I · The hidden rule', date:'Jul 6', kind:'scene', dwell:5600,
-      title:'Every intro is an M·D·G',
-      note:'The site names itself in three words beginning M, D, G — and no word ever repeats across any phrase.',
+    { act:'I · It starts with your name', date:'Jun 11', kind:'shot', img:'/case-studies/replay/02-games.png', dwell:5400,
+      title:'…which the site scrambles into MUST · DESIGN · GAMES',
+      note:'Same three initials — M, D, G. The whole identity of the site is a pun on my own name.' },
+
+    { act:'I · It starts with your name', date:'Jun 14', kind:'scene', dwell:5200,
+      title:'So every intro became an M·D·G',
+      note:'Three words beginning M, D, G — and a rule I held to: no word ever repeats across any phrase.',
       ill:'<div class="rp-mdg"><span>M</span><span>D</span><span>G</span></div><div class="rp-mdg-sub" data-morph></div>' },
 
-    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'hilbert', params:{ghost:true}, dwell:5400,
-      title:'Metropolis Dawn Grid → a Hilbert curve',
-      note:'The grid sketch became a space-filling fractal. First pass: a faint full curve sat behind the travelling pen.' },
+    { act:'I · It starts with your name', date:'Jun 16', kind:'shot', img:'/case-studies/replay/03-home-jun.png', dwell:5400,
+      title:'The homepage, mid-June',
+      note:'A different hero line, a Labs / AI-Consulting nav, three cards. Real footage — this is exactly how it looked.' },
 
-    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'hilbert', params:{ghost:false}, dwell:5000,
+    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'hilbert', params:{ghost:true}, dwell:5200,
+      title:'Metropolis Dawn Grid → a Hilbert curve',
+      note:'An intro sketch became a space-filling fractal. First pass: a faint full curve sat behind the travelling pen.' },
+
+    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'hilbert', params:{ghost:false}, dwell:4800,
       title:'Lose the ghost',
       note:'Drop the preview. Now the pen writes the curve onto pure black — it draws itself, like a strand folded to fit.' },
 
-    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'helix', params:{strands:1,speed:0.9}, dwell:4800,
+    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'helix', params:{strands:1,speed:0.9}, dwell:4600,
       title:'Master Data Genome gets a helix',
       note:'A single twisting backbone with base-pair rungs — the strand in front brightens to sell the turn.' },
 
-    { act:'II · The math starts drawing', date:'Jul 7', kind:'sketch', sketch:'helix', params:{strands:2,speed:0.9}, dwell:4800,
+    { act:'II · The math starts drawing', date:'Jul 7', kind:'sketch', sketch:'helix', params:{strands:2,speed:0.9}, dwell:4600,
       title:'Double it — a strand either side of the words',
       note:'Two helixes now flank the centred title instead of one running through it.' },
 
-    { act:'II · The math starts drawing', date:'Jul 7', kind:'sketch', sketch:'helix', params:{strands:2,speed:0.45}, dwell:4800,
-      title:'…and slow it to half',
-      note:'Half the scroll speed. The twin helixes turn at a calmer, more legible pace.' },
+    { act:'II · The math starts drawing', date:'Jul 8', kind:'sketch', sketch:'helix', params:{strands:2,speed:0.225,counter:true}, dwell:5000,
+      title:'…then slow it and counter-rotate the strands',
+      note:'Quarter of the original speed, and the right helix now spins opposite the left — the two strands turn against each other.' },
 
-    { act:'II · The math starts drawing', date:'Jul 7', kind:'sketch', sketch:'pythagoras', params:{speed:0.5}, dwell:4600,
+    { act:'II · The math starts drawing', date:'Jul 7', kind:'sketch', sketch:'pythagoras', params:{speed:0.5}, dwell:4400,
       title:'Moss Dew Garden — a Pythagoras tree',
       note:'Empty white squares, line-only, branching like foliage and swaying in a breeze.' },
 
-    { act:'II · The math starts drawing', date:'Jul 7', kind:'sketch', sketch:'pythagoras', params:{speed:0.125}, dwell:4600,
+    { act:'II · The math starts drawing', date:'Jul 7', kind:'sketch', sketch:'pythagoras', params:{speed:0.125}, dwell:4400,
       title:'Slow the sway to a quarter',
       note:'A gentler wind. The tree drifts at 0.25× — foliage, not a metronome.' },
 
-    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'cards', params:{mode:'flower'}, dwell:4600,
+    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'cards', params:{mode:'flower'}, dwell:4400,
       title:'Multiplayer Deck Gateway — a card flower',
       note:'The deck fans from the centre like petals. No pips on the cards; just the shapes.' },
 
-    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'cards', params:{mode:'fractal'}, dwell:5400,
+    { act:'II · The math starts drawing', date:'Jul 6', kind:'sketch', sketch:'cards', params:{mode:'fractal'}, dwell:5200,
       title:'Make it infinite',
       note:'Cards are born at the centre and spiral outward forever — a seamless Droste loop, tilted into a spiral.' },
 
-    { act:'III · Cut the homepage down', date:'Jul 6', kind:'scene', dwell:4800,
+    { act:'III · Cut the homepage down', date:'Jul 6', kind:'scene', dwell:4600,
       title:'Three games, out front',
       note:'Feature exactly three. Stack each title onto its own three lines — Multiplayer / Deck / Gateway.',
       ill:'<div class="rp-tiles"><div class="rp-tile">Multiplayer<br>Deck<br>Gateway</div><div class="rp-tile">Metropolis<br>Dawn<br>Grid</div><div class="rp-tile">Moss<br>Dew<br>Garden</div></div>' },
@@ -205,8 +213,12 @@
       note:'Names and copy went through a five-judge decision tournament. Sometimes the judges won. Sometimes I threw it out: “prototypes in various states of disarray.”',
       ill:'<div class="rp-judges"><span>⚖</span><span>⚖</span><span>⚖</span><span>⚖</span><span>⚖</span></div><div class="rp-arrow">→ ✎ your own line</div>' },
 
+    { act:'VII · Where you came in', date:'today', kind:'shot', img:'/case-studies/replay/99-today.png', dwell:5600,
+      title:'The homepage, today',
+      note:'New hero, a games-first nav, the restless “More Decent Gadgets” pill. From my name to here in about a month.' },
+
     { act:'—', date:'now', kind:'scene', dwell:6000, end:true,
-      title:'…which is where you came in',
+      title:'…and it’s still moving',
       note:'Every beat above shipped live. Replay it, or go poke at the real thing.',
       ill:'<div class="rp-cta"><a href="https://mattdanusergrant.com" class="rp-btn">Visit the site</a><a href="/case-studies/building-with-ai.html" class="rp-btn ghost">The full write-up</a></div>' }
   ];
@@ -217,6 +229,8 @@
   .rp-stage{position:relative;width:100%;aspect-ratio:16/10;background:var(--stage);overflow:hidden}
   @media(max-width:560px){.rp-stage{aspect-ratio:4/5}}
   .rp-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .rp-shot{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .rp-shot[hidden]{display:none}
   .rp-ill{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;color:#EDE8DF;padding:26px;font-family:'Inter',system-ui,sans-serif}
   .rp-ill[hidden]{display:none}
   .rp-hero{max-width:560px}
@@ -274,7 +288,7 @@
     if(!root||root.dataset.mounted)return; root.dataset.mounted='1'; injectCSS();
     root.className='rp';
     root.innerHTML=
-      '<div class="rp-stage"><canvas></canvas><div class="rp-ill" hidden></div>'+
+      '<div class="rp-stage"><canvas></canvas><img class="rp-shot" alt="" hidden><div class="rp-ill" hidden></div>'+
       '<div class="rp-cap"><div class="rp-cap-meta"><span class="rp-cap-act"></span><span class="rp-cap-date"></span></div>'+
       '<h3 class="rp-cap-title"></h3><div class="rp-cap-note"></div></div></div>'+
       '<div class="rp-bar">'+
@@ -288,6 +302,7 @@
       '</div>';
 
     var stage=root.querySelector('.rp-stage'),cv=root.querySelector('canvas'),ctx=cv.getContext('2d'),
+        shot=root.querySelector('.rp-shot'),
         ill=root.querySelector('.rp-ill'),capAct=root.querySelector('.rp-cap-act'),capDate=root.querySelector('.rp-cap-date'),
         capTitle=root.querySelector('.rp-cap-title'),capNote=root.querySelector('.rp-cap-note'),
         track=root.querySelector('.rp-track'),fill=root.querySelector('.rp-fill'),timeEl=root.querySelector('.rp-time'),
@@ -308,8 +323,9 @@
       if(cleanup){cleanup();cleanup=null;}
       var sc=TL[i]; S={};
       capAct.textContent=sc.act; capDate.textContent=sc.date; capTitle.textContent=sc.title; capNote.textContent=sc.note;
-      if(sc.kind==='sketch'){ ill.hidden=true; cv.style.display='block'; }
-      else { cv.style.display='none'; ill.hidden=false; ill.innerHTML=sc.ill||''; cleanup=wireScene(ill); }
+      if(sc.kind==='shot'){ cv.style.display='none'; ill.hidden=true; shot.hidden=false; if(shot.getAttribute('src')!==sc.img)shot.src=sc.img; }
+      else if(sc.kind==='sketch'){ shot.hidden=true; ill.hidden=true; cv.style.display='block'; }
+      else { shot.hidden=true; cv.style.display='none'; ill.hidden=false; ill.innerHTML=sc.ill||''; cleanup=wireScene(ill); }
       dots.forEach(function(d,k){d.classList.toggle('cur',k===i);d.classList.toggle('done',k<i);});
     }
 

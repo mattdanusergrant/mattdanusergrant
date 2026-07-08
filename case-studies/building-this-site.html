@@ -82,7 +82,7 @@
     <div><dt>Context</dt><dd>Solo · AI-directed</dd></div>
     <div><dt>Role</dt><dd>Designer as director</dd></div>
     <div><dt>Built with</dt><dd>Vanilla JS · Canvas 2D · no framework</dd></div>
-    <div><dt>The replay</dt><dd>19 decisions · live vignettes</dd></div>
+    <div><dt>The replay</dt><dd>Real footage + live vignettes</dd></div>
   </dl>
 
   <div class="replay-block">
@@ -96,8 +96,8 @@
   <article class="prose">
     <section>
       <h2>Why it can do this</h2>
-      <p>Most sites can’t honestly replay their own history — the past versions are gone, or the record is a pile of noisy commits. This one’s different for a mundane reason: <strong>every design decision was written down as it happened</strong>, in a build log, because that’s how I direct AI. Dates, reasons, before-and-after — all captured. Reconstructing the story was curation, not archaeology.</p>
-      <p>And because the site’s personality lives in motion — the intro sketches, the card fractal, the living Game-of-Life background — the replay doesn’t show screenshots. It re-runs the <strong>actual sketch code</strong> for each era, parameterised so the before-and-after states are faithful: one helix becoming two, the Hilbert curve losing its ghost, the sway slowing to a quarter. What you’re watching is the real thing, not a picture of it.</p>
+      <p>Two things make an honest replay possible. First, <strong>the whole history is still on GitHub</strong> — every commit back to day one — so the early beats are <strong>real screenshots rendered from the actual old commits</strong>: my name on the page, the scramble into <em>Must Design Games</em>, the mid-June homepage. Not mock-ups — the past site, checked out and photographed.</p>
+      <p>Second, the site’s personality lives in motion — the intro sketches, the card fractal, the living Game-of-Life background — so for those beats the replay <strong>re-runs the actual sketch code</strong>, parameterised so the before-and-after is faithful: one helix becoming two and counter-spinning, the Hilbert curve losing its ghost, the sway slowing to a quarter. Real footage where it’s a page, live code where it’s motion — either way, the real thing, not a picture of it.</p>
     </section>
     <section>
       <h2>What it says about the work</h2>
@@ -113,7 +113,7 @@
   </footer>
 
 </div>
-<script src="/assets/site-replay.js?v=1"></script>
+<script src="/assets/site-replay.js?v=2"></script>
 <script>
   var el=document.getElementById('replay');
   var player=window.SiteReplay.mount(el);
