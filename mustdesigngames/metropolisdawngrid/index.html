@@ -16,6 +16,8 @@
     --line:#E4E9F0; --line-2:#C7D0DC;
     --shadow:0 1px 0 rgba(20,30,45,.03),0 12px 30px rgba(20,30,45,.08);
     --shadow-hover:0 18px 44px rgba(20,30,45,.14);
+    /* coloured chrome — dark blue-slate bars frame the light play field */
+    --bar:#223442; --bar-ink:#EDF2F7; --bar-muted:#96A8B7; --bar-line:rgba(255,255,255,.14);
   }
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease}
@@ -67,6 +69,28 @@
   .stat.cash{width:96px}   /* fixed so the treasury + net-rate don't reflow the bar as they change */
   .stat.cash .n{transition:color .3s}
   .tool.sel .key{color:var(--bg);border-color:rgba(255,255,255,.35)}
+  /* ---- coloured chrome: dark bars, light text on them (play field stays light) ---- */
+  .bar{background:var(--bar);border-bottom-color:var(--bar-line)}
+  .tools{background:var(--bar);border-top-color:var(--bar-line)}
+  .bar .title{color:var(--bar-ink)}
+  .bar .home{color:var(--bar-muted)}
+  .bar .home:hover{color:var(--bar-ink)}
+  .bar .region{color:var(--bar-muted);border-color:var(--bar-line)}
+  .bar .region b{color:var(--bar-ink)}
+  .stat .n{color:var(--bar-ink)}
+  .stat .l{color:var(--bar-muted)}
+  .rstat .rn{color:var(--bar-ink)}
+  .rstat .rl{color:var(--bar-muted)}
+  .meter .bar{background:var(--bar-line)}
+  .meter b{color:var(--bar-muted)}
+  .goal .gl{color:var(--bar-muted)}
+  .goal .gbar{background:var(--bar-line)}
+  .goal .gbar i{background:var(--bar-ink)}
+  .tools .hint{color:var(--bar-muted)}
+  .tools .hint b{color:var(--bar-ink)}
+  .reset{color:var(--bar-muted)}
+  .reset:hover{color:var(--bar-ink)}
+  .tool.sel{background:#3F7CB4;border-color:#3F7CB4;color:#fff}
   .tools .spacer{flex:1}
   .reset{cursor:pointer;font-size:12px;color:var(--muted);background:none;border:none;font-family:inherit;text-decoration:underline;text-underline-offset:2px}
   .reset:hover{color:var(--ink)}
@@ -224,10 +248,10 @@
     if(!cashEl){cashEl=document.getElementById('cash');cashRateEl=document.getElementById('cashrate');}
     if(!cashEl)return;
     cashEl.textContent='₵'+Math.round(treasury).toLocaleString();
-    cashEl.style.color=treasury<0?'#C85A42':'';
+    cashEl.style.color=treasury<0?'#F0876A':'';
     var n=Math.round(netRate);
     cashRateEl.textContent=(n>=0?'▲ +':'▼ −')+Math.abs(n).toLocaleString()+'/mo';
-    cashRateEl.style.color=n>=0?'#4C8047':'#C85A42';
+    cashRateEl.style.color=n>=0?'#5FBE6E':'#F0876A';
   }
 
   function idx(c,r){return r*cols+c;}
@@ -512,7 +536,7 @@
     popTarget=p;}
   var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp'),terrEl=document.getElementById('terrb'),terrStat=document.getElementById('terrstat');
   function updateResourceUI(){matEl.textContent=Math.round(matStock);goodsEl.textContent=Math.round(goodsStock);expEl.textContent=Math.round(exportRate);
-    matEl.style.color=matHealthy?'':'#C85A42';goodsEl.style.color=goodsHealthy?'':'#C85A42';expEl.style.color=exportRate>0.5?'#4C8047':'';
+    matEl.style.color=matHealthy?'':'#F0876A';goodsEl.style.color=goodsHealthy?'':'#F0876A';expEl.style.color=exportRate>0.5?'#5FBE6E':'';
     terrEl.textContent='+'+Math.round(terrBonus);terrStat.style.opacity=terrBonus>0.5?1:0.38;}
   var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
   var demColor={res:'#63A05C',com:'#5589BB',ind:'#BF8F45'};
