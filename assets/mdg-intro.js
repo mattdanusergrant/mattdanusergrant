@@ -160,24 +160,25 @@
       ctx.stroke();
     };
     SK.helix=function(w,h,t){
-      var A=Math.min(w,h)*0.16,twist=TAU/(Math.min(w,h)*0.46),scroll=reduce?0:t*0.45,step=Math.max(3,Math.round(h/120));
+      var A=Math.min(w,h)*0.16,twist=TAU/(Math.min(w,h)*0.46),scroll=reduce?0:t*0.225,step=Math.max(3,Math.round(h/120));
       ctx.shadowBlur=0;ctx.lineCap='round';
-      function helixAt(cx){
+      function helixAt(cx,dir){
+        var sc=scroll*dir;
         for(var y=-A;y<=h+A;y+=step*3){
-          var ph=y*twist+scroll,sa=Math.sin(ph),dp=Math.cos(ph),xa=cx+A*sa,xb=cx-A*sa;
+          var ph=y*twist+sc,sa=Math.sin(ph),dp=Math.cos(ph),xa=cx+A*sa,xb=cx-A*sa;
           ctx.strokeStyle=col(0,0.12+0.30*Math.abs(sa));ctx.lineWidth=1;
           ctx.beginPath();ctx.moveTo(xa,y);ctx.lineTo(xb,y);ctx.stroke();
           ctx.fillStyle=col(0,0.22+0.62*(dp+1)/2);ctx.beginPath();ctx.arc(xa,y,1.8,0,TAU);ctx.fill();
           ctx.fillStyle=col(0,0.22+0.62*(1-(dp+1)/2));ctx.beginPath();ctx.arc(xb,y,1.8,0,TAU);ctx.fill();
         }
         function strand(po){var px,py;
-          for(var y=-A;y<=h+A;y+=step){var ph=y*twist+scroll+po,x=cx+A*Math.sin(ph),front=(Math.cos(ph)+1)/2;
+          for(var y=-A;y<=h+A;y+=step){var ph=y*twist+sc+po,x=cx+A*Math.sin(ph),front=(Math.cos(ph)+1)/2;
             if(y>-A){ctx.strokeStyle=col(0,0.18+0.77*front);ctx.lineWidth=0.8+1.9*front;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();}
             px=x;py=y;}
         }
         strand(0);strand(Math.PI);
       }
-      helixAt(w*0.2);helixAt(w*0.8);
+      helixAt(w*0.2,1);helixAt(w*0.8,-1);
     };
     SK.sierpinski=function(w,h,t){
       var depth=7,R=Math.min(w,h)*0.46,cx=w/2,cy=h/2+R*0.12,rot=t*0.08,v=[],k;

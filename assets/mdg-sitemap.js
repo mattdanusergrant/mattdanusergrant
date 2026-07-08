@@ -21,6 +21,7 @@
       { label:'Dank Omphalos', url:'https://dankomphalos.com/', blank:true }
     ]},
     { label:'Case Studies', url:'/#case-studies', children:[
+      { label:'Building this site', url:'/case-studies/building-this-site.html' },
       { label:'Building with AI', url:'/case-studies/building-with-ai.html' },
       { label:'Living Atlas', url:'/case-studies/living-atlas-fantasy-rpg.html' }
     ]},
