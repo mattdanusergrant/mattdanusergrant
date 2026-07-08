@@ -12,7 +12,13 @@
 
    Backend = Supabase (state-sync schema: game_matches + game_moves + turn-gated RPCs,
    identity via Anonymous Auth). Swappable: set window.__MDG_ADAPTER for tests/offline.
-   Games never touch Supabase directly, so changing backends = changing one adapter. */
+   Games never touch Supabase directly, so changing backends = changing one adapter.
+
+   Also exposes a second pattern for N-player party games (word-pounce):
+     const db = window.MDGNet.roomDb();   // firebase-compat–shaped database() over game_rooms
+   ref/child/set/update/remove/get/on/off/transaction/onDisconnect — same interface the
+   game already spoke to Firebase, so the game logic is unchanged. Test backend via
+   window.__MDG_ROOM_BACKEND. */
 (function(){
   "use strict";
 
@@ -27,17 +33,26 @@
 
   let connState="idle", connCbs=[];
   function setConn(s){ if(s===connState) return; connState=s; connCbs.forEach(cb=>{try{cb(s);}catch(e){}}); }
+  function keySet(){ return SUPABASE_ANON.indexOf("REPLACE_ME")!==0; }
 
-  /* ── Supabase adapter ──────────────────────────────────────────────────── */
+  // One Supabase client, shared by the match adapter and the room API.
+  let _sbP=null;
+  function ensureClient(){
+    if(_sbP) return _sbP;
+    if(!keySet()){ setConn("offline"); return _sbP=Promise.reject(new Error("anon key not set")); }
+    _sbP = (async ()=>{ const { createClient } = await import(SUPABASE_LIB);
+      return createClient(SUPABASE_URL, SUPABASE_ANON, { auth:{ persistSession:true, autoRefreshToken:true } }); })();
+    return _sbP;
+  }
+
+  /* ── Supabase adapter (turn-based matches — needs a signed-in identity) ──── */
   function supabaseAdapter(){
     let sb=null, uid=null;
     return {
       get uid(){ return uid; },
       async ready(){
         if(sb) return true;
-        if(SUPABASE_ANON.indexOf("REPLACE_ME")===0){ setConn("offline"); throw new Error("anon key not set"); }
-        const { createClient } = await import(SUPABASE_LIB);
-        sb = createClient(SUPABASE_URL, SUPABASE_ANON, { auth:{ persistSession:true, autoRefreshToken:true } });
+        sb = await ensureClient();
         let { data:{ user } } = await sb.auth.getUser().catch(()=>({data:{}}));
         if(!user){ const r = await sb.auth.signInAnonymously(); if(r.error) throw r.error; user = r.data.user; }
         uid = user.id; setConn("online"); return true;
@@ -87,9 +102,73 @@
     return m;
   }
 
+  /* ── Room documents (N-player party games) ─────────────────────────────────
+     A second pattern for games that aren't 2-seat/turn-based (word-pounce): one
+     mutable jsonb doc per room, every client subscribes. To keep the game code
+     untouched, roomDb() returns an object shaped exactly like firebase-compat's
+     database() — ref/child/set/update/remove/get/on/off/transaction/onDisconnect —
+     so the same game logic runs on Firebase, the in-memory solo mock, or Supabase. */
+  function supabaseRoomBackend(){
+    let sb=null;
+    async function client(){ return sb || (sb = await ensureClient()); }
+    return {
+      async getRoom(code){ const c=await client(); const { data } = await c.from("game_rooms").select("doc").eq("code",code.toUpperCase()).maybeSingle(); return data?data.doc:null; },
+      async createRoom(code, game, doc){ const c=await client(); const { data, error } = await c.rpc("mdg_room_create",{p_code:code,p_game:game||"word-pounce",p_doc:doc||{}}); if(error) throw error; return data; },
+      async setPath(code, path, val){ const c=await client(); const { data, error } = await c.rpc("mdg_room_set",{p_code:code,p_path:path,p_val:val===undefined?null:val}); if(error) throw error; return data; },
+      async updatePatch(code, base, patch){ const c=await client(); const { data, error } = await c.rpc("mdg_room_update",{p_code:code,p_base:base,p_patch:patch}); if(error) throw error; return data; },
+      async claim(code, path, val){ const c=await client(); const { data, error } = await c.rpc("mdg_room_claim",{p_code:code,p_path:path,p_val:val}); if(error) throw error; return data; },
+      async subscribe(code, onDoc){ const c=await client();
+        const ch=c.channel("room-"+code).on("postgres_changes",{event:"*",schema:"public",table:"game_rooms",filter:"code=eq."+code.toUpperCase()},
+          p=>{ if(p.new&&p.new.doc) onDoc(p.new.doc); }).subscribe(st=>{ if(st==="SUBSCRIBED") setConn("online"); });
+        return ()=>{ try{ c.removeChannel(ch); }catch(e){} }; },
+    };
+  }
+
+  const seg = k => String(k).split("/").filter(Boolean);
+  const getPath = (doc, path) => { let n=doc; for(const k of path){ if(n==null) return null; n=n[k]; } return n===undefined?null:n; };
+  const cloneJ = v => v==null?v:JSON.parse(JSON.stringify(v));
+  function mkSnap(v){ return { exists:()=>v!=null, val:()=>cloneJ(v), child:k=>mkSnap(getPath(v, seg(k))) }; }
+  const isPrefix = (a,b)=>{ const n=Math.min(a.length,b.length); for(let i=0;i<n;i++) if(a[i]!==b[i]) return false; return true; };
+
+  function makeRoomDb(backend){
+    const rooms={};                                   // code → {doc, listeners:[{path,cb}], sub, subP}
+    const roomOf = code => rooms[code] || (rooms[code]={doc:null,listeners:[],sub:null,subP:null});
+    const fireAll = code => { const R=rooms[code]; if(R) R.listeners.slice().forEach(L=>{ try{ L.cb(mkSnap(getPath(R.doc,L.path))); }catch(e){} }); };
+    async function ensureSub(code){ const R=roomOf(code); if(R.sub) return;
+      if(!R.subP) R.subP=(async()=>{ R.sub=await backend.subscribe(code, doc=>{ R.doc=doc; fireAll(code); }); })();
+      await R.subP; }
+    const unloaders=[];
+    if(typeof window!=="undefined") window.addEventListener("pagehide",()=>{ unloaders.forEach(fn=>{ try{fn();}catch(e){} }); });
+
+    function ref(segs){
+      const code=segs[1], path=segs.slice(2);           // segs = ['rooms', CODE, ...]
+      return {
+        child(k){ return ref(segs.concat(seg(k))); },
+        async set(v){ const doc = path.length? await backend.setPath(code,path,v) : await backend.createRoom(code, undefined, v);
+          roomOf(code).doc=doc; fireAll(code); },
+        async update(o){ const doc=await backend.updatePatch(code, path, o); roomOf(code).doc=doc; fireAll(code); },
+        async remove(){ const doc=await backend.setPath(code,path,null); roomOf(code).doc=doc; fireAll(code); },
+        async get(){ const R=roomOf(code); if(R.doc==null && !R.sub) R.doc=await backend.getRoom(code); return mkSnap(getPath(R.doc,path)); },
+        on(ev,cb){ if(ev!=="value") return cb; const R=roomOf(code); R.listeners.push({path,cb});
+          (async()=>{ await ensureSub(code); if(R.doc==null) R.doc=await backend.getRoom(code); cb(mkSnap(getPath(R.doc,path))); })();
+          return cb; },
+        off(){ const R=rooms[code]; if(!R) return; R.listeners=R.listeners.filter(L=>!isPrefix(path,L.path));
+          if(!R.listeners.length && R.sub){ R.sub(); R.sub=null; R.subP=null; } },
+        onDisconnect(){ return { remove(){ unloaders.push(()=>{ backend.setPath(code,path,null).catch(()=>{}); }); return Promise.resolve(); } }; },
+        async transaction(fn){ const proposed=fn(null); const R=roomOf(code);
+          if(proposed===undefined) return { committed:false, snapshot:mkSnap(getPath(R.doc,path)) };
+          const res=await backend.claim(code,path,proposed);
+          if(res && res.doc){ R.doc=res.doc; fireAll(code); }
+          return { committed:!!(res&&res.committed), snapshot:mkSnap(res?res.value:null) }; },
+      };
+    }
+    return { ref(p){ return ref(seg(p)); } };
+  }
+
   /* ── Public API ────────────────────────────────────────────────────────── */
   let adapter=null;
   function pickAdapter(){ return window.__MDG_ADAPTER || (adapter || (adapter=supabaseAdapter())); }
+  function pickRoomBackend(){ return window.__MDG_ROOM_BACKEND || supabaseRoomBackend(); }
 
   window.MDGNet = {
     BLACK, WHITE, seatOf, colorOfSeat,
@@ -106,5 +185,8 @@
       const a=pickAdapter(); await a.ready();
       return makeMatch(a, id)._start();
     },
+    // Room API — is online multiplayer configured, and a firebase-shaped db for it.
+    roomsAvailable(){ return !!window.__MDG_ROOM_BACKEND || keySet(); },
+    roomDb(){ return makeRoomDb(pickRoomBackend()); },
   };
 })();
