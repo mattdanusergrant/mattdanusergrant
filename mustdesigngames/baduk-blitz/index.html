@@ -195,6 +195,7 @@
 
 <!-- MDGNet: shared multiplayer client (Supabase state-sync). The rest of the game works without it. -->
 <script src="../assets/mdg-net.js"></script>
+<script src="../assets/mdg-account.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -610,6 +611,7 @@ function teardownOnline(){ if(match){ try{match.close();}catch(e){} } match=null
 window.addEventListener("resize",()=>{ if(!$("gameView").classList.contains("hidden")) resize(); });
 
 /* ---------- Boot / deep link ---------- */
+if(window.MDGAccount) MDGAccount.mount();     // floating chip: sign in + play-money balance
 (function boot(){
   const params=new URLSearchParams(location.search), g=params.get("g");
   if(g){ if(NET) NET.connect(); joinOrEnter(g); } else { showScreen("menu"); }

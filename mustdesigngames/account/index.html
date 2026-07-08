@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your Account · Must Design Games</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+  .wrap{max-width:820px;margin:0 auto;padding:0 28px 80px}
+  .hero{padding:56px 0 8px}
+  .hero .eyebrow{font-family:'Fraunces',serif;text-transform:uppercase;letter-spacing:.14em;font-size:13px;color:var(--muted)}
+  .hero h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(30px,7vw,48px);margin:6px 0 10px;letter-spacing:-.02em}
+  .hero .lede{font-size:19px;line-height:1.6;color:var(--ink-2);max-width:560px}
+  .panel{margin-top:26px;border:1px solid var(--line);border-radius:16px;padding:24px;background:var(--paper,rgba(0,0,0,.02));max-width:460px}
+  .panel .bal{font-size:44px;font-weight:800;font-family:'Fraunces',serif;margin:2px 0 2px}
+  .panel .balnote{color:var(--ink-2);font-size:14px;margin-bottom:16px}
+  .panel .who{color:var(--muted);font-size:14px;margin-bottom:14px}
+  .act{display:inline-block;padding:11px 18px;border-radius:10px;border:1px solid var(--line);background:var(--accent);color:var(--bg);
+    font-weight:600;cursor:pointer;font:600 15px/1 'Inter',system-ui}
+  .act.ghost{background:transparent;color:var(--ink)}
+  .rule{color:var(--muted);font-size:13px;margin-top:18px;line-height:1.5}
+  .back{display:inline-block;margin-top:22px;color:var(--ink-2);border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body>
+<canvas id="intro-canvas" class="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+  <section class="hero">
+    <p class="eyebrow">The Wagering Arena</p>
+    <h1>Your Account</h1>
+    <p class="lede">Sign in to claim your play-money chips. New players start with <b>1,000</b>, and everyone earns <b>+10 a day</b> just for showing up.</p>
+  </section>
+
+  <div class="panel" id="panel">
+    <div id="signed-out">
+      <p class="who">You're not signed in yet.</p>
+      <button class="act" id="signin">Sign in / create account</button>
+    </div>
+    <div id="signed-in" hidden>
+      <div class="bal"><span id="bal">—</span> 🪙</div>
+      <p class="balnote">play-money chips · +10 daily</p>
+      <p class="who" id="who"></p>
+      <button class="act ghost" id="manage">Manage account</button>
+    </div>
+    <p class="rule">Chips are just for fun — buyable later, never cashable. They're your stake in the games.</p>
+  </div>
+
+  <a class="back" href="/">‹ Back to the arcade</a>
+</div>
+
+<script src="/assets/gol-bg.js" defer></script>
+<script src="/assets/mdg-net.js"></script>
+<script src="/assets/mdg-account.js"></script>
+<script>
+  (async function(){
+    await MDGAccount.mount();                       // floating chip + sign-in sheet
+    const so=document.getElementById("signed-out"), si=document.getElementById("signed-in");
+    function paint(){
+      const u=MDGAccount.user, w=MDGAccount.wallet;
+      const on=!!u;
+      so.hidden=on; si.hidden=!on;
+      if(on){ document.getElementById("bal").textContent=((w&&w.balance)||0).toLocaleString();
+        document.getElementById("who").textContent = (w&&w.display_name?w.display_name+" · ":"") + (u.email||(u.is_anonymous?"guest — sign in to save your chips":"")); }
+    }
+    window.addEventListener("mdg-account", paint); paint();
+    document.getElementById("signin").onclick=()=>MDGAccount.open();
+    document.getElementById("manage").onclick=()=>MDGAccount.open();
+    if(!window.MDGNet.accountsAvailable()){
+      document.getElementById("panel").innerHTML='<p class="who">Accounts aren’t configured yet. Check back soon.</p>';
+    }
+  })();
+</script>
+</body>
+</html>

@@ -166,6 +166,35 @@
     return { ref(p){ return ref(seg(p)); } };
   }
 
+  /* ── Accounts + wallet (Wagering Arena Phase 1) ────────────────────────────
+     Real accounts (email + Google) over the same shared client; every session —
+     including the anonymous fallback used for casual play — gets a profile + a
+     play-money chip wallet (1000 to start, +10/day). Mock via window.__MDG_AUTH. */
+  function realAuth(){
+    const self = {
+      async _sb(){ return ensureClient(); },
+      async user(){ const c=await self._sb(); const { data } = await c.auth.getUser().catch(()=>({data:{}})); return (data&&data.user)||null; },
+      async signInWithGoogle(){ const c=await self._sb(); const u=await self.user();
+        // If we're anonymous, LINK so existing chips/games carry over; else plain OAuth.
+        if(u&&u.is_anonymous) return c.auth.linkIdentity({ provider:"google", options:{ redirectTo:location.href } });
+        return c.auth.signInWithOAuth({ provider:"google", options:{ redirectTo:location.href } }); },
+      async signInWithOtp(email){ const c=await self._sb(); return c.auth.signInWithOtp({ email, options:{ emailRedirectTo:location.href } }); },
+      async signInWithPassword(email,password){ const c=await self._sb(); return c.auth.signInWithPassword({ email, password }); },
+      async signUp(email,password){ const c=await self._sb(); return c.auth.signUp({ email, password }); },
+      async signOut(){ const c=await self._sb(); return c.auth.signOut(); },
+      async onAuth(cb){ const c=await self._sb(); c.auth.onAuthStateChange((_e,s)=>cb(s?s.user:null)); cb(await self.user()); },
+      async wallet(){ const c=await self._sb(); const { data, error } = await c.rpc("mdg_wallet"); if(error) throw error; return data; },
+      async claimDaily(){ const c=await self._sb(); const { data, error } = await c.rpc("mdg_claim_daily"); if(error) throw error; return data; },
+      async setName(name){ const c=await self._sb(); const { data, error } = await c.rpc("mdg_set_name",{ p_name:name }); if(error) throw error; return data; },
+      async watchWallet(onChange){ const c=await self._sb(); const u=await self.user(); if(!u) return ()=>{};
+        const ch=c.channel("wallet-"+u.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"wallet_ledger",filter:"uid=eq."+u.id},()=>onChange()).subscribe();
+        return ()=>{ try{ c.removeChannel(ch); }catch(e){} }; },
+    };
+    return self;
+  }
+  let authInst=null;
+  function pickAuth(){ return window.__MDG_AUTH || (authInst || (authInst=realAuth())); }
+
   /* ── Public API ────────────────────────────────────────────────────────── */
   let adapter=null;
   function pickAdapter(){ return window.__MDG_ADAPTER || (adapter || (adapter=supabaseAdapter())); }
@@ -189,5 +218,8 @@
     // Room API — is online multiplayer configured, and a firebase-shaped db for it.
     roomsAvailable(){ return !!window.__MDG_ROOM_BACKEND || keySet(); },
     roomDb(){ return makeRoomDb(pickRoomBackend()); },
+    // Accounts + wallet.
+    accountsAvailable(){ return !!window.__MDG_AUTH || keySet(); },
+    get auth(){ return pickAuth(); },
   };
 })();
