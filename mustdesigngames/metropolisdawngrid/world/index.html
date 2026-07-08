@@ -46,6 +46,8 @@
   .nc-inner p b{color:var(--ink)}
   .nc-inner button{font-family:'Fraunces',serif;font-size:13px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:7px 17px;cursor:pointer}
   .nc-inner button.ghost{background:transparent;color:var(--ink-2);border:1.5px solid var(--line-2)}
+  .nc-inner button.ghost.active{background:rgba(95,190,110,.16);color:#2E7D46;border-color:rgba(95,190,110,.6)}
+  .nc-inner button.ghost.full{opacity:.5;cursor:not-allowed}
   .nc-actions{display:flex;gap:10px}
 </style>
 </head>
@@ -63,7 +65,7 @@
   </div>
 
   <div id="fade"></div>
-  <div id="ncard"><div class="nc-inner"><h3 id="nc-name"></h3><p id="nc-msg"></p><div class="nc-actions"><button id="nc-visit" type="button">Visit →</button><button id="nc-close" type="button" class="ghost">Close</button></div></div></div>
+  <div id="ncard"><div class="nc-inner"><h3 id="nc-name"></h3><p id="nc-msg"></p><div class="nc-actions"><button id="nc-visit" type="button">Visit →</button><button id="nc-trade" type="button" class="ghost">🤝 Trade</button><button id="nc-close" type="button" class="ghost">Close</button></div></div></div>
   <div id="fcard"><div class="nc-inner"><h3 id="fc-name">Found your city here</h3><p id="fc-msg"></p><div class="nc-actions"><button id="fc-build" type="button">Build here →</button><button id="fc-cancel" type="button" class="ghost">Keep looking</button></div></div></div>
 
   <div class="legend">
@@ -215,6 +217,31 @@
   }
   function rim(){ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.lineWidth=2;ctx.strokeStyle=P.rim;ctx.stroke();}
 
+  // trade link: a great-circle arc from your trade partner to your city, with goods pulsing along it
+  function vec3(lat,lon){var la=lat*PI/180,lo=lon*PI/180;return {x:Math.cos(la)*Math.sin(lo),y:Math.sin(la),z:Math.cos(la)*Math.cos(lo)};}
+  function greatCircle(a,b,n){                       // slerp between two cities → sampled, projected points
+    var va=vec3(a.lat,a.lon),vb=vec3(b.lat,b.lon),dot=Math.max(-1,Math.min(1,va.x*vb.x+va.y*vb.y+va.z*vb.z)),om=Math.acos(dot);
+    if(om<1e-4)return [proj(a.lat,a.lon)];
+    var so=Math.sin(om),pts=[];
+    for(var i=0;i<=n;i++){var f=i/n,c0=Math.sin((1-f)*om)/so,c1=Math.sin(f*om)/so;
+      var x=c0*va.x+c1*vb.x,y=c0*va.y+c1*vb.y,z=c0*va.z+c1*vb.z;
+      pts.push(proj(Math.asin(Math.max(-1,Math.min(1,y)))*180/PI, Math.atan2(x,z)*180/PI));}
+    return pts;
+  }
+  function drawTradeLink(t){
+    var list=getPartners();if(!list.length)return;
+    ctx.save();ctx.lineCap='round';
+    list.forEach(function(p,k){
+      if(typeof p.lat!=='number'||typeof p.lon!=='number')return;
+      var pts=greatCircle(p,CITIES[0],52);          // partner → your city, so the pulse flows toward you
+      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(95,190,110,.30)';ctx.lineWidth=6;ctx.stroke();   // soft glow
+      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(74,170,96,.92)';ctx.lineWidth=2;ctx.stroke();     // core line
+      var f=((t/2100)+k*0.28)%1, i0=Math.floor(f*(pts.length-1)), pt=pts[i0];                              // goods in transit (staggered per route)
+      if(pt&&pt.z>0.03){ctx.globalAlpha=Math.min(1,pt.z*2.2);ctx.beginPath();ctx.arc(pt.sx,pt.sy,3.4,0,6.2832);ctx.fillStyle='#EAF7ED';ctx.fill();ctx.globalAlpha=1;}
+    });
+    ctx.restore();
+  }
+
   function drawCities(t){
     var list=CITIES.map(function(c,i){var p=proj(c.lat,c.lon);return {c:c,p:p,i:i};})
                     .filter(function(o){return o.p.z>0.02;})
@@ -279,11 +306,34 @@
   function startDive(x,y,c){mode='diving';divT=0;zx=x;zy=y;navigated=false;diveCity=c||null;}
   var fadeEl=document.getElementById('fade');
   var ncVisitCity=null;
+  // trade partners (shared with the builder via localStorage): route your exports to AI neighbours — up to a small network
+  var MAX_PARTNERS=4;
+  function getPartners(){try{
+    var raw=localStorage.getItem('mdg-trade-partners');var list=raw?JSON.parse(raw):null;
+    if(!list){var old=localStorage.getItem('mdg-trade-partner');if(old){var o=JSON.parse(old);list=o?[o]:[];}}  // migrate single-partner key
+    return Array.isArray(list)?list.filter(function(p){return p&&typeof p.lat==='number'&&typeof p.lon==='number';}):[];
+  }catch(e){return [];}}
+  function setPartners(list){try{localStorage.setItem('mdg-trade-partners',JSON.stringify(list));localStorage.removeItem('mdg-trade-partner');}catch(e){}}
+  function isPartner(c){return getPartners().some(function(p){return Math.abs(p.lat-c.lat)<1e-6&&Math.abs(p.lon-c.lon)<1e-6;});}
+  function updateTradeBtn(c){var b=document.getElementById('nc-trade');if(!b)return;
+    var n=getPartners().length;
+    if(isPartner(c)){b.textContent='🤝 Trading — stop';b.classList.add('active');b.classList.remove('full');}
+    else if(n>=MAX_PARTNERS){b.textContent='🤝 Max '+MAX_PARTNERS;b.classList.remove('active');b.classList.add('full');}
+    else{b.textContent=(n>0?'🤝 Add trade':'🤝 Trade');b.classList.remove('active','full');}}
   function showNeighbour(c){var k=terrainClass(c.lat,c.lon),t=(typeof c.tier==='number'?c.tier:1);ncVisitCity=c;
     document.getElementById('nc-name').textContent=c.name;
-    document.getElementById('nc-msg').innerHTML='<b>'+TIERNAME[t]+'</b> · ~'+TIERPOP[t].toLocaleString()+' people · '+SPEC[k]+'<br>'+TRADE[k]+'<br><span style="opacity:.7">An AI-run city on the shared world — visit to walk its streets.</span>';
+    var supplies=(k==='coast')?'ships finished <b>Goods</b>':'ships raw <b>Materials</b>';
+    var wants=(k!=='coast')?' and pays a premium for your <b>Goods</b>':'';
+    document.getElementById('nc-msg').innerHTML='<b>'+TIERNAME[t]+'</b> · ~'+TIERPOP[t].toLocaleString()+' people · '+SPEC[k]+'<br>'+TRADE[k]+'<br><span style="opacity:.85">🤝 As a trade partner, '+supplies+' to your city over rail'+wants+'.</span><br><span style="opacity:.7">An AI-run city on the shared world — visit to walk its streets.</span>';
+    updateTradeBtn(c);
     document.getElementById('ncard').classList.add('on');}
   document.getElementById('nc-visit').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');if(ncVisitCity){var p=proj(ncVisitCity.lat,ncVisitCity.lon);startDive(p.sx,p.sy,ncVisitCity);}});
+  document.getElementById('nc-trade').addEventListener('click',function(){var c=ncVisitCity;if(!c)return;
+    var list=getPartners();
+    if(isPartner(c)){list=list.filter(function(p){return !(Math.abs(p.lat-c.lat)<1e-6&&Math.abs(p.lon-c.lon)<1e-6);});}
+    else{if(list.length>=MAX_PARTNERS)return;   // at cap — button already shows "Max N"
+      list.push({name:c.name,lat:c.lat,lon:c.lon,tier:(typeof c.tier==='number'?c.tier:1)});}
+    setPartners(list);updateTradeBtn(c);});
   document.getElementById('nc-close').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');});
   document.getElementById('ncard').addEventListener('click',function(e){if(e.target.id==='ncard')this.classList.remove('on');});
 
@@ -308,7 +358,7 @@
       if(fadeEl)fadeEl.style.opacity=Math.min(1,divT*1.25);
       if(divT>=1&&!navigated){navigated=true;var u='../';if(diveCity){u='../?lat='+encodeURIComponent(diveCity.lat)+'&lon='+encodeURIComponent(diveCity.lon)+'&name='+encodeURIComponent(diveCity.name);if(!diveCity.you)u+='&ai=1&tier='+(typeof diveCity.tier==='number'?diveCity.tier:1);}window.location.href=u;}}
     fillSphere();
-    clipSphere(); drawLand(); graticule(); ctx.restore();
+    clipSphere(); drawLand(); graticule(); drawTradeLink(now); ctx.restore();
     rim();
     drawCities(now);
     if(mode!=='diving')surfaceInset();
