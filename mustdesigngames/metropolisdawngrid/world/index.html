@@ -61,7 +61,7 @@
     <p class="eyebrow">Concept · world model</p>
     <h1>Metropolis Dawn Grid</h1>
     <p>One shared world. Everyone builds on the same planet-sized grid — and you keep expanding until you run into your neighbours.</p>
-    <p class="tag"><b>Click your city</b> to drop in and build. Click an <b>AI-run city</b> to see what it trades — and visit to walk its streets. <b>Click empty land</b> to found your city somewhere new.</p>
+    <p class="tag"><b>Click your city</b> to drop in and build. Click an <b>AI-run city</b> to see what it trades — and visit to walk its streets. <b>Click empty land</b> to found your city somewhere new. The AI cities <b>grow over time</b>, so the world changes between visits.</p>
   </div>
 
   <div id="fade"></div>
@@ -132,6 +132,17 @@
   ];
   var TIERNAME=['Hamlet','Village','Town','City','Metropolis','Megacity'];
   var TIERPOP=[150,600,2000,6000,13000,26000];
+
+  // ---- time-growth: AI cities climb tiers over real elapsed time, so the world is alive between visits ----
+  var EPOCH=(function(){try{var e=localStorage.getItem('mdg-world-epoch');if(e)return +e;var now=Date.now();localStorage.setItem('mdg-world-epoch',now);return now;}catch(e){return Date.now();}})();
+  function cityHash(name){var h=2166136261;for(var i=0;i<name.length;i++){h^=name.charCodeAt(i);h=(h*16777619)>>>0;}return h;}
+  function growthMs(c){return (18+(cityHash(c.name)%1000)/1000*22)*3600e3;}          // 18–40h per tier, deterministic per city
+  function phaseMs(c){return ((cityHash(c.name)>>>10)%1000)/1000*growthMs(c);}       // start each city partway into its cycle
+  function grownTier(c){if(c.you||typeof c.tier!=='number')return c.tier;
+    return Math.min(5, c.tier+Math.floor((Date.now()-EPOCH+phaseMs(c))/growthMs(c)));}
+  function nextTierMs(c){if(c.you||typeof c.tier!=='number'||grownTier(c)>=5)return null;
+    var g=growthMs(c);return g-((Date.now()-EPOCH+phaseMs(c))%g);}
+  function fmtDur(ms){var h=ms/3600e3;return h<1?(Math.max(1,Math.round(h*60))+'m'):h<24?(Math.round(h)+'h'):(Math.round(h/24*10)/10+'d');}
   // ---- terrain sampler — MIRRORS the builder (../index.html). Lets the globe label any
   //      clicked site by the same rule the surface uses. Keep in sync: hash2/vnoise/terrainAt,
   //      the WOX/WOY offset formula, and the relative-dominance regionSpec.
@@ -248,8 +259,7 @@
                     .sort(function(a,b){return a.p.z-b.p.z;});          // far first
     list.forEach(function(o){
       var c=o.c,p=o.p,col=c.you?P.you:P.them[(o.i-1)%P.them.length];
-      var pop=c.you?1:0.62+0.32*((o.i*37)%10)/10;                       // vary marker size
-      var rad=(c.you?7:5)*(0.7+0.5*p.z);
+      var rad=(c.you?7:(3.4+grownTier(c)*0.7))*(0.7+0.5*p.z);           // AI markers scale with their grown tier
       // stem + shadow
       ctx.globalAlpha=Math.min(1,p.z*1.6);
       if(c.you){var pr=rad+4+2.5*Math.sin(t/380);ctx.beginPath();ctx.arc(p.sx,p.sy,pr,0,6.2832);ctx.strokeStyle=col;ctx.globalAlpha=0.5*Math.min(1,p.z*1.6);ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=Math.min(1,p.z*1.6);}
@@ -320,11 +330,13 @@
     if(isPartner(c)){b.textContent='🤝 Trading — stop';b.classList.add('active');b.classList.remove('full');}
     else if(n>=MAX_PARTNERS){b.textContent='🤝 Max '+MAX_PARTNERS;b.classList.remove('active');b.classList.add('full');}
     else{b.textContent=(n>0?'🤝 Add trade':'🤝 Trade');b.classList.remove('active','full');}}
-  function showNeighbour(c){var k=terrainClass(c.lat,c.lon),t=(typeof c.tier==='number'?c.tier:1);ncVisitCity=c;
+  function showNeighbour(c){var k=terrainClass(c.lat,c.lon),t=grownTier(c);ncVisitCity=c;
     document.getElementById('nc-name').textContent=c.name;
     var supplies=(k==='coast')?'ships finished <b>Goods</b>':'ships raw <b>Materials</b>';
     var wants=(k!=='coast')?' and pays a premium for your <b>Goods</b>':'';
-    document.getElementById('nc-msg').innerHTML='<b>'+TIERNAME[t]+'</b> · ~'+TIERPOP[t].toLocaleString()+' people · '+SPEC[k]+'<br>'+TRADE[k]+'<br><span style="opacity:.85">🤝 As a trade partner, '+supplies+' to your city over rail'+wants+'.</span><br><span style="opacity:.7">An AI-run city on the shared world — visit to walk its streets.</span>';
+    var nx=nextTierMs(c);
+    var growth=(nx!=null)?'<span style="opacity:.85">▲ Growing — <b>'+TIERNAME[t+1]+'</b> in ~'+fmtDur(nx)+'</span><br>':(t>=5?'<span style="opacity:.85">▲ <b>Megacity</b> — fully grown</span><br>':'');
+    document.getElementById('nc-msg').innerHTML='<b>'+TIERNAME[t]+'</b> · ~'+TIERPOP[t].toLocaleString()+' people · '+SPEC[k]+'<br>'+growth+TRADE[k]+'<br><span style="opacity:.85">🤝 As a trade partner, '+supplies+' to your city over rail'+wants+'.</span><br><span style="opacity:.7">An AI-run city on the shared world — visit to walk its streets.</span>';
     updateTradeBtn(c);
     document.getElementById('ncard').classList.add('on');}
   document.getElementById('nc-visit').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');if(ncVisitCity){var p=proj(ncVisitCity.lat,ncVisitCity.lon);startDive(p.sx,p.sy,ncVisitCity);}});
@@ -332,7 +344,7 @@
     var list=getPartners();
     if(isPartner(c)){list=list.filter(function(p){return !(Math.abs(p.lat-c.lat)<1e-6&&Math.abs(p.lon-c.lon)<1e-6);});}
     else{if(list.length>=MAX_PARTNERS)return;   // at cap — button already shows "Max N"
-      list.push({name:c.name,lat:c.lat,lon:c.lon,tier:(typeof c.tier==='number'?c.tier:1)});}
+      list.push({name:c.name,lat:c.lat,lon:c.lon,tier:grownTier(c)});}
     setPartners(list);updateTradeBtn(c);});
   document.getElementById('nc-close').addEventListener('click',function(){document.getElementById('ncard').classList.remove('on');});
   document.getElementById('ncard').addEventListener('click',function(e){if(e.target.id==='ncard')this.classList.remove('on');});
@@ -356,7 +368,7 @@
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
     if(mode==='diving'){divT+=dt/0.8;var z=1+11*(divT*divT);ctx.translate(zx,zy);ctx.scale(z,z);ctx.translate(-zx,-zy);
       if(fadeEl)fadeEl.style.opacity=Math.min(1,divT*1.25);
-      if(divT>=1&&!navigated){navigated=true;var u='../';if(diveCity){u='../?lat='+encodeURIComponent(diveCity.lat)+'&lon='+encodeURIComponent(diveCity.lon)+'&name='+encodeURIComponent(diveCity.name);if(!diveCity.you)u+='&ai=1&tier='+(typeof diveCity.tier==='number'?diveCity.tier:1);}window.location.href=u;}}
+      if(divT>=1&&!navigated){navigated=true;var u='../';if(diveCity){u='../?lat='+encodeURIComponent(diveCity.lat)+'&lon='+encodeURIComponent(diveCity.lon)+'&name='+encodeURIComponent(diveCity.name);if(!diveCity.you)u+='&ai=1&tier='+grownTier(diveCity);}window.location.href=u;}}
     fillSphere();
     clipSphere(); drawLand(); graticule(); drawTradeLink(now); ctx.restore();
     rim();
