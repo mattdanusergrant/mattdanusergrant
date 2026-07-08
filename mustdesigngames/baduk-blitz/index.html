@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0a0610">
 <title>Baduk Blitz</title>
-<meta name="description" content="Play 9×9 Go against an AI on a blitz clock — capture, make territory, and don't let your flag fall.">
+<meta name="description" content="Play 9×9 Go — against the computer, in person, or a fully asynchronous game by shared link with a friend or family.">
 <style>
   :root{
-    --bg:#0a0610; --bg2:#1a0a18; --felt:#3a0a14;
+    --bg:#0a0610; --felt:#3a0a14;
     --gold:#ffcc33; --gold2:#ffe88a; --hot:#ff2a5c; --neon:#39ff9e;
     --cream:#f5ecd6; --mute:#7a6a5a;
   }
@@ -25,130 +25,192 @@
   }
   #app{width:100%; max-width:520px; min-height:100%; display:flex; flex-direction:column;}
 
-  .hud{display:flex; align-items:center; gap:6px; padding:max(10px,env(safe-area-inset-top)) 12px 8px;
+  .hud{display:flex; align-items:center; gap:8px; padding:max(10px,env(safe-area-inset-top)) 14px 8px;
        border-bottom:1px solid #2a0820;}
   .hud .title{
-    font-size:clamp(13px, 4.4vw, 18px); font-weight:900; letter-spacing:1px;
+    font-size:clamp(14px,4.6vw,19px); font-weight:900; letter-spacing:1px;
     flex:1 1 auto; min-width:0; text-transform:uppercase; white-space:nowrap;
     background:linear-gradient(180deg,var(--gold2),var(--gold) 60%,#b88a1a);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     text-shadow:0 0 12px rgba(255,170,60,.35);
   }
-  .stat{text-align:center; min-width:0; flex:0 0 auto;}
-  .stat .v{font-size:clamp(12px, 3.6vw, 16px); font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap;}
-  .stat .k{font-size:9px; letter-spacing:1.2px; text-transform:uppercase; opacity:.55; margin-top:2px;}
-  .stat .v.streak{color:var(--neon); text-shadow:0 0 8px rgba(57,255,158,.45);}
-  .stat .v.best{color:var(--gold); text-shadow:0 0 10px rgba(255,204,51,.5);}
+  .conn{font-size:10px; letter-spacing:.5px; display:flex; align-items:center; gap:5px; opacity:.75; white-space:nowrap;}
+  .conn .d{width:8px; height:8px; border-radius:50%; background:var(--mute);}
+  .conn.on .d{background:var(--neon); box-shadow:0 0 7px rgba(57,255,158,.7);}
+  .conn.off .d{background:var(--hot);}
+  .muteBtn,.menuBtn{background:none;border:none;color:var(--gold);font-size:18px;opacity:.6;cursor:pointer;flex:0 0 auto;padding:2px 4px;}
 
-  .prompt{text-align:center; padding:8px 14px 2px;}
-  .prompt .t{font-size:14px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--gold2);}
-  .prompt .s{font-size:11px; opacity:.65; margin-top:3px; letter-spacing:.4px; line-height:1.35;}
+  /* ---- Menu ---- */
+  .menu{flex:1; display:flex; flex-direction:column; justify-content:center; gap:14px; padding:24px 22px 40px;}
+  .menu h2{text-align:center; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--gold2); opacity:.8; margin:0 0 2px; font-weight:800;}
+  .menu .lead{text-align:center; opacity:.6; font-size:13px; line-height:1.5; margin:0 0 10px;}
+  .nameField{display:flex; flex-direction:column; gap:6px; margin-bottom:6px;}
+  .nameField label{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.55;}
+  input.txt{
+    width:100%; padding:14px 16px; border-radius:12px; font-size:16px; font-family:inherit;
+    color:var(--cream); background:rgba(0,0,0,.3); border:1px solid #5a2a3a; text-align:center;
+  }
+  input.txt:focus{outline:none; border-color:var(--gold);}
+  .bigbtn{
+    width:100%; padding:20px 16px; border-radius:16px; font-size:16px; font-weight:900; font-family:inherit;
+    letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; border:1px solid #5a2a3a;
+    background:linear-gradient(180deg,#2a121e,#1a0612); color:var(--gold);
+    box-shadow:inset 0 1px 0 rgba(255,200,80,.14), 0 3px 10px rgba(0,0,0,.5);
+    display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  .bigbtn:active{transform:scale(.985);}
+  .bigbtn.primary{background:linear-gradient(180deg,var(--gold2),var(--gold) 50%,#b8861a); color:#1a0612; border:none;
+    box-shadow:0 0 22px rgba(255,204,51,.45), inset 0 1px 0 rgba(255,255,255,.4);}
+  .bigbtn small{display:block; font-size:10px; font-weight:600; letter-spacing:.5px; text-transform:none; opacity:.7; margin-top:3px;}
+  .bigbtn .col{display:flex; flex-direction:column; align-items:center; line-height:1.2;}
 
-  .clocks{display:flex; align-items:center; gap:8px; padding:8px 12px 4px;}
+  /* ---- Share / status banner ---- */
+  .banner{margin:8px 14px 0; padding:14px 16px; border-radius:14px; text-align:center;
+    background:linear-gradient(180deg,rgba(255,204,51,.1),rgba(255,204,51,.03)); border:1px solid rgba(255,204,51,.4);}
+  .banner .bt{font-size:13px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--gold2);}
+  .banner .bs{font-size:12px; opacity:.7; margin-top:5px; line-height:1.45;}
+  .banner .linkbox{display:flex; gap:8px; margin-top:10px;}
+  .banner .linkbox input{flex:1; min-width:0; padding:11px 12px; border-radius:10px; font-size:12px; font-family:inherit;
+    color:var(--cream); background:rgba(0,0,0,.35); border:1px solid #5a2a3a; overflow:hidden; text-overflow:ellipsis;}
+  .sharebtn{flex:0 0 auto; padding:11px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:900; font-family:inherit;
+    font-size:12px; letter-spacing:1px; text-transform:uppercase; background:linear-gradient(180deg,var(--gold2),var(--gold)); color:#1a0612;}
+
+  .prompt{text-align:center; padding:10px 14px 2px;}
+  .prompt .t{font-size:15px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold2);}
+  .prompt .s{font-size:12px; opacity:.65; margin-top:4px; letter-spacing:.3px; line-height:1.4;}
+
+  .clocks{display:flex; align-items:center; gap:8px; padding:8px 12px 2px;}
+  .clocks.hidden{display:none;}
+  .clocks.noclock .clk{display:none;}
   .pl{flex:1 1 0; display:flex; align-items:center; gap:8px; padding:9px 12px; border-radius:12px;
-      border:1px solid #2a0820; background:linear-gradient(180deg,rgba(255,204,51,.05),rgba(0,0,0,.25));
-      transition:border-color .15s, box-shadow .15s;}
+      border:1px solid #2a0820; background:linear-gradient(180deg,rgba(255,204,51,.05),rgba(0,0,0,.25)); transition:border-color .15s, box-shadow .15s;}
   .pl.active{border-color:var(--gold); box-shadow:0 0 16px rgba(255,204,51,.28);}
-  .pl .who{display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; opacity:.85;}
-  .pl .clk{margin-left:auto; font-size:17px; font-weight:900; font-variant-numeric:tabular-nums;}
+  .pl .who{display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; opacity:.85; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pl .clk{margin-left:auto; font-size:16px; font-weight:900; font-variant-numeric:tabular-nums;}
   .pl.low .clk{color:var(--hot); text-shadow:0 0 8px rgba(255,42,92,.5);}
   .caps{flex:0 0 auto; text-align:center; min-width:52px;}
   .caps b{display:block; font-size:14px; font-weight:900; font-variant-numeric:tabular-nums;}
   .caps span{font-size:8px; letter-spacing:1px; text-transform:uppercase; opacity:.5;}
-  .dot{width:15px; height:15px; border-radius:50%; display:inline-block;}
+  .dot{width:15px; height:15px; border-radius:50%; display:inline-block; flex:0 0 auto;}
   .dot.b{background:radial-gradient(circle at 35% 30%,#5a544c,#0c0b0a); box-shadow:0 0 6px rgba(0,0,0,.6);}
   .dot.w{background:radial-gradient(circle at 35% 30%,#fff,#cabfa9); border:1px solid #b3a88f;}
 
-  .boardwrap{flex:1; display:flex; align-items:center; justify-content:center; padding:6px 10px;
-             overflow:hidden; min-width:0;
+  .boardwrap{flex:1; display:flex; align-items:center; justify-content:center; padding:8px 10px; overflow:hidden; min-width:0;
              filter:drop-shadow(0 0 22px rgba(255,170,60,.18));}
-  canvas{display:block; touch-action:none; border-radius:10px; cursor:pointer;
-         box-shadow:0 0 0 2px #5a3a10, 0 0 0 4px #2a1808, 0 14px 40px rgba(0,0,0,.6);}
+  canvas{display:block; touch-action:none; border-radius:10px; box-shadow:0 0 0 2px #5a3a10, 0 0 0 4px #2a1808, 0 14px 40px rgba(0,0,0,.6);}
+  canvas.mine{cursor:pointer;}
 
   .controls{padding:8px 14px max(14px,env(safe-area-inset-bottom));}
   .actionrow{display:flex; gap:10px;}
   .actionrow button{
     flex:1; padding:16px 6px; border-radius:14px; font-size:13px; font-weight:900; font-family:inherit;
-    cursor:pointer; letter-spacing:2px; text-transform:uppercase; transition:transform .08s, opacity .15s;
+    cursor:pointer; letter-spacing:1.5px; text-transform:uppercase; transition:transform .08s, opacity .15s;
     border:1px solid #5a2a3a; background:linear-gradient(180deg,#2a121e,#1a0612); color:var(--gold);
     box-shadow:inset 0 1px 0 rgba(255,200,80,.14), 0 2px 6px rgba(0,0,0,.5);
   }
   .actionrow button:active{transform:scale(.97);}
-  .actionrow .resign{color:#d99; }
+  .actionrow button:disabled{opacity:.3;}
+  .actionrow .resign{color:#d99;}
   .nextbtn{
-    width:100%; padding:18px; border-radius:14px; font-size:15px; font-weight:900;
-    font-family:inherit; letter-spacing:2.5px; text-transform:uppercase;
-    background:linear-gradient(180deg,var(--gold2),var(--gold) 50%,#b8861a);
-    color:#1a0612; border:none; cursor:pointer;
-    box-shadow:0 0 22px rgba(255,204,51,.5), inset 0 1px 0 rgba(255,255,255,.4);
+    width:100%; padding:18px; border-radius:14px; font-size:15px; font-weight:900; font-family:inherit;
+    letter-spacing:2px; text-transform:uppercase; background:linear-gradient(180deg,var(--gold2),var(--gold) 50%,#b8861a);
+    color:#1a0612; border:none; cursor:pointer; box-shadow:0 0 22px rgba(255,204,51,.5), inset 0 1px 0 rgba(255,255,255,.4);
   }
   .nextbtn:active{transform:scale(.98);}
   .hidden{display:none!important;}
 
-  .muteBtn{background:none;border:none;color:var(--gold);font-size:18px;opacity:.6;cursor:pointer;flex:0 0 auto;}
-
   .flash{
-    position:fixed; left:50%; top:16%; transform:translateX(-50%) scale(.9);
+    position:fixed; left:50%; top:14%; transform:translateX(-50%) scale(.9);
     background:rgba(10,6,16,.92); backdrop-filter:blur(6px);
-    padding:14px 28px; border-radius:36px; border:1px solid #5a2a3a;
-    font-size:20px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
+    padding:14px 26px; border-radius:36px; border:1px solid #5a2a3a;
+    font-size:18px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase;
     opacity:0; transition:opacity .2s, transform .25s; pointer-events:none; text-align:center;
-    font-variant-numeric:tabular-nums; z-index:5;
+    font-variant-numeric:tabular-nums; z-index:5; max-width:90vw;
   }
   .flash.show{opacity:1; transform:translateX(-50%) scale(1);}
   .flash.win{color:var(--neon); border-color:var(--neon); box-shadow:0 0 40px rgba(57,255,158,.5);}
   .flash.lose{color:var(--hot); border-color:var(--hot); box-shadow:0 0 40px rgba(255,42,92,.5);}
-  @keyframes shake{0%,100%{transform:translateX(-50%) scale(1);}25%{transform:translateX(calc(-50% - 8px)) scale(1);}75%{transform:translateX(calc(-50% + 8px)) scale(1);}}
-  .flash.lose.show{animation:shake .3s ease-in-out;}
+  .flash.info{color:var(--gold2); border-color:var(--gold);}
 </style>
 </head>
 <body>
 <div id="app">
   <div class="hud">
     <div class="title">Baduk Blitz</div>
-    <div class="stat"><div class="v streak" id="streak">0</div><div class="k">Streak</div></div>
-    <div class="stat"><div class="v best" id="best">0</div><div class="k">Best</div></div>
+    <div class="conn hidden" id="conn"><span class="d"></span><span id="connTxt">…</span></div>
+    <button class="menuBtn hidden" id="menuBtn" title="Menu">☰</button>
     <button class="muteBtn" id="muteBtn">♪</button>
   </div>
 
-  <div class="prompt">
-    <div class="t" id="pTitle">Your move</div>
-    <div class="s" id="pSub">You're Black — tap an intersection to place a stone.</div>
-  </div>
-
-  <div class="clocks">
-    <div class="pl" id="plB"><span class="who"><span class="dot b"></span>You</span><span class="clk" id="clkB">2:00</span></div>
-    <div class="caps"><b id="capsTxt">0 · 0</b><span>Captures</span></div>
-    <div class="pl" id="plW"><span class="who"><span class="dot w"></span>AI</span><span class="clk" id="clkW">2:00</span></div>
-  </div>
-
-  <div class="boardwrap"><canvas id="board"></canvas></div>
-
-  <div class="controls">
-    <div class="actionrow" id="playRow">
-      <button id="passBtn">Pass</button>
-      <button id="resignBtn" class="resign">Resign</button>
+  <!-- MENU -->
+  <div class="menu" id="menu">
+    <h2>9×9 Go</h2>
+    <p class="lead">Capture stones, wall off territory, most points wins.</p>
+    <div class="nameField">
+      <label for="nameIn">Your name</label>
+      <input class="txt" id="nameIn" maxlength="14" placeholder="e.g. Matt" autocomplete="off">
     </div>
-    <button class="nextbtn hidden" id="newBtn">New game ›</button>
+    <button class="bigbtn primary" id="mNew"><span class="col">Play a friend<small>async · share a link · take turns anytime</small></span></button>
+    <button class="bigbtn" id="mAI"><span class="col">Play the computer<small>on a blitz clock</small></span></button>
+    <button class="bigbtn" id="mLocal"><span class="col">Pass &amp; play<small>two players, one device</small></span></button>
+    <div class="banner hidden" id="menuNote"><div class="bs" id="menuNoteTxt"></div></div>
+  </div>
+
+  <!-- GAME -->
+  <div id="gameView" class="hidden" style="flex:1; display:flex; flex-direction:column;">
+    <div class="banner hidden" id="shareBanner">
+      <div class="bt" id="shareTitle">Your game is ready</div>
+      <div class="bs" id="shareSub">Send this link to your opponent. When they open it and play, it's your move.</div>
+      <div class="linkbox"><input id="shareUrl" readonly><button class="sharebtn" id="shareBtn">Send</button></div>
+    </div>
+    <div class="banner hidden" id="joinBanner">
+      <div class="bt" id="joinTitle">You're invited to play Go</div>
+      <div class="bs">Enter your name and join — then take turns whenever you like.</div>
+      <div class="linkbox"><input class="txt" id="joinName" maxlength="14" placeholder="Your name" style="text-align:center; font-size:14px"><button class="sharebtn" id="joinBtn">Join</button></div>
+    </div>
+
+    <div class="prompt">
+      <div class="t" id="pTitle">…</div>
+      <div class="s" id="pSub"></div>
+    </div>
+
+    <div class="clocks hidden" id="clocks">
+      <div class="pl" id="plB"><span class="who"><span class="dot b"></span><span id="nameB">Black</span></span><span class="clk" id="clkB">2:00</span></div>
+      <div class="caps"><b id="capsTxt">0 · 0</b><span>Captures</span></div>
+      <div class="pl" id="plW"><span class="who"><span class="dot w"></span><span id="nameW">White</span></span><span class="clk" id="clkW">2:00</span></div>
+    </div>
+
+    <div class="boardwrap"><canvas id="board"></canvas></div>
+
+    <div class="controls">
+      <div class="actionrow" id="playRow">
+        <button id="passBtn">Pass</button>
+        <button id="resignBtn" class="resign">Resign</button>
+      </div>
+      <button class="nextbtn hidden" id="newBtn">Back to menu ›</button>
+    </div>
   </div>
 </div>
 <div class="flash" id="flash"></div>
 
+<!-- Firebase for the async "play a friend" games (loaded lazily-ish; the rest of the game works without it) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 "use strict";
 /* ============================================================
-   Baduk Blitz — 9×9 Go vs an AI, on a blitz clock.
-   You play Black (you move first); the AI plays White with komi.
-   Capture, build territory, and don't let your clock flag.
+   Baduk Blitz — 9×9 Go.
+   Modes: vs computer (blitz clock) · pass & play (local) ·
+          play a friend (fully asynchronous, by shared link).
+   The Go rules engine (capture, suicide, ko, area scoring) is
+   shared by every mode; async games sync a move list via Firebase.
    ============================================================ */
 
 const EMPTY=0, BLACK=1, WHITE=2;
-const N=9;
-const KOMI=6.5;
-const CLOCK_MS=120000;                 // 2:00 blitz each
+const N=9, KOMI=6.5, CLOCK_MS=120000;
 const opp=c=>c===BLACK?WHITE:BLACK;
 
-/* ---------- Go rules engine (unchanged core: capture, suicide, ko) ---------- */
+/* ---------- Go rules engine ---------- */
 const inb=(c,r)=>r>=0&&r<N&&c>=0&&c<N;
 const nbrs=(c,r)=>[[c+1,r],[c-1,r],[c,r+1],[c,r-1]];
 function clone(b){return b.map(row=>row.slice());}
@@ -167,26 +229,20 @@ function tryPlay(b,c,r,colour,koKey){
   const nb=clone(b); nb[r][c]=colour; const o=opp(colour); let captured=[];
   for(const [nx,ny] of nbrs(c,r)){ if(inb(nx,ny)&&nb[ny][nx]===o){ const g=group(nb,nx,ny);
     if(g.libs.size===0){ g.stones.forEach(([x,y])=>{nb[y][x]=EMPTY;captured.push([x,y]);}); } } }
-  if(captured.length===0 && group(nb,c,r).libs.size===0) return {ok:false};   // suicide
-  if(koKey && boardKey(nb)===koKey) return {ok:false};                        // ko
+  if(captured.length===0 && group(nb,c,r).libs.size===0) return {ok:false};
+  if(koKey && boardKey(nb)===koKey) return {ok:false};
   return {ok:true, board:nb, captured};
 }
-function isEyeish(b,c,r,colour){
-  for(const [nx,ny] of nbrs(c,r)){ if(inb(nx,ny) && b[ny][nx]!==colour) return false; }
-  return true;
-}
+function isEyeish(b,c,r,colour){ for(const [nx,ny] of nbrs(c,r)){ if(inb(nx,ny) && b[ny][nx]!==colour) return false; } return true; }
 function legalMoves(b,colour,koKey){
   const out=[];
   for(let r=0;r<N;r++) for(let c=0;c<N;c++){
-    if(b[r][c]!==EMPTY) continue;
-    if(isEyeish(b,c,r,colour)) continue;      // don't fill your own eyes
+    if(b[r][c]!==EMPTY) continue; if(isEyeish(b,c,r,colour)) continue;
     if(tryPlay(b,c,r,colour,koKey).ok) out.push([c,r]);
   }
   return out;
 }
 function filled(b){ let n=0; for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(b[r][c]!==EMPTY) n++; return n; }
-
-/* ---------- Area scoring (stones + surrounded territory + komi) ---------- */
 function score(b){
   let bl=0, wh=0; const owner=emptyBoard().map(r=>r.map(()=>-1));
   for(let r=0;r<N;r++) for(let c=0;c<N;c++){ if(b[r][c]===BLACK) bl++; else if(b[r][c]===WHITE) wh++; }
@@ -196,8 +252,7 @@ function score(b){
     const region=[], st=[[c,r]]; seen.add(c+","+r); const borders=new Set();
     while(st.length){ const [x,y]=st.pop(); region.push([x,y]);
       for(const [nx,ny] of nbrs(x,y)){ if(!inb(nx,ny)) continue; const v=b[ny][nx];
-        if(v===EMPTY){ if(!seen.has(nx+","+ny)){ seen.add(nx+","+ny); st.push([nx,ny]); } }
-        else borders.add(v); } }
+        if(v===EMPTY){ if(!seen.has(nx+","+ny)){ seen.add(nx+","+ny); st.push([nx,ny]); } } else borders.add(v); } }
     let own=0; if(borders.size===1) own=[...borders][0];
     if(own===BLACK) bl+=region.length; else if(own===WHITE) wh+=region.length;
     region.forEach(([x,y])=>owner[y][x]=own);
@@ -205,48 +260,51 @@ function score(b){
   return {blackTotal:bl, whiteTotal:wh+KOMI, owner};
 }
 
-/* ---------- AI (greedy one-ply: area + safety + captures) ---------- */
-function groupStats(b){
-  const seen=new Set(); let bAtari=0,wAtari=0,bLibs=0,wLibs=0;
-  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
-    const col=b[r][c]; if(col===EMPTY||seen.has(c+","+r)) continue;
-    const g=group(b,c,r); g.stones.forEach(([x,y])=>seen.add(x+","+y));
-    if(col===BLACK){ bLibs+=g.libs.size; if(g.libs.size===1) bAtari+=g.stones.length; }
-    else          { wLibs+=g.libs.size; if(g.libs.size===1) wAtari+=g.stones.length; }
+/* Replay a move list ([{c,r} | {pass:true}]) from empty → full derived state. */
+function replay(moves){
+  let b=emptyBoard(), ko=null, caps={[BLACK]:0,[WHITE]:0}, color=BLACK, last=null, passes=0;
+  for(const m of (moves||[])){
+    if(m && m.pass){ passes++; last=null; color=opp(color); continue; }
+    if(!m) continue;
+    const prevKey=boardKey(b), res=tryPlay(b,m.c,m.r,color,ko);
+    if(!res.ok) break;            // corrupt list — stop (shouldn't happen; moves are validated on write)
+    b=res.board; const capd=res.captured.length; caps[color]+=capd;
+    ko = capd===1?prevKey:null; last=[m.c,m.r]; passes=0; color=opp(color);
   }
-  return {bAtari,wAtari,bLibs,wLibs};
+  return {board:b, koKey:ko, caps, toMove:color, last, ended:passes>=2};
 }
-function evalBoard(b, me){
+
+/* ---------- AI (greedy one-ply) ---------- */
+function groupStats(b){
+  const seen=new Set(); let bA=0,wA=0,bL=0,wL=0;
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){ const col=b[r][c]; if(col===EMPTY||seen.has(c+","+r)) continue;
+    const g=group(b,c,r); g.stones.forEach(([x,y])=>seen.add(x+","+y));
+    if(col===BLACK){ bL+=g.libs.size; if(g.libs.size===1) bA+=g.stones.length; }
+    else          { wL+=g.libs.size; if(g.libs.size===1) wA+=g.stones.length; } }
+  return {bA,wA,bL,wL};
+}
+function evalBoard(b,me){
   const sc=score(b), gs=groupStats(b);
-  const myArea = me===BLACK? sc.blackTotal : sc.whiteTotal;
-  const opArea = me===BLACK? sc.whiteTotal : sc.blackTotal;
-  const myAtari = me===BLACK? gs.bAtari : gs.wAtari;   // own stones in danger
-  const opAtari = me===BLACK? gs.wAtari : gs.bAtari;   // enemy stones I can threaten
-  const myLibs  = me===BLACK? gs.bLibs  : gs.wLibs;
-  const opLibs  = me===BLACK? gs.wLibs  : gs.bLibs;
+  const myArea=me===BLACK?sc.blackTotal:sc.whiteTotal, opArea=me===BLACK?sc.whiteTotal:sc.blackTotal;
+  const myAtari=me===BLACK?gs.bA:gs.wA, opAtari=me===BLACK?gs.wA:gs.bA;
+  const myLibs=me===BLACK?gs.bL:gs.wL, opLibs=me===BLACK?gs.wL:gs.bL;
   return (myArea-opArea) + 2*opAtari - 3*myAtari + 0.05*(myLibs-opLibs);
 }
-function aiBestMove(streak){
-  const me=WHITE, moves=legalMoves(board, me, koKey);
-  if(!moves.length) return null;
-  const fillFrac=filled(board)/(N*N), scored=[];
-  for(const [c,r] of moves){
-    const res=tryPlay(board,c,r,me,koKey); if(!res.ok) continue;
-    let v=evalBoard(res.board, me) + res.captured.length*1.5;
+function aiBestMove(b, ko, me, streak){
+  const moves=legalMoves(b,me,ko); if(!moves.length) return null;
+  const fill=filled(b)/(N*N), scored=[];
+  for(const [c,r] of moves){ const res=tryPlay(b,c,r,me,ko); if(!res.ok) continue;
+    let v=evalBoard(res.board,me)+res.captured.length*1.5;
     const edge=Math.min(c,r,N-1-c,N-1-r);
-    v += (1-fillFrac)*(edge>=2?0.4:edge===1?0.05:-0.4);   // open near the middle, not the first line
-    v += (Math.random()-0.5)*0.05;
-    scored.push({c,r,v});
-  }
+    v += (1-fill)*(edge>=2?0.4:edge===1?0.05:-0.4) + (Math.random()-0.5)*0.05;
+    scored.push({c,r,v}); }
   if(!scored.length) return null;
   scored.sort((a,b)=>b.v-a.v);
-  // Difficulty ramp: early in a streak the AI occasionally plays 2nd/3rd best.
-  const blunder=Math.max(0, 0.22 - streak*0.05);
-  let idx=0;
+  const blunder=Math.max(0,0.22-streak*0.05); let idx=0;
   if(Math.random()<blunder && scored.length>2) idx=1+((Math.random()*Math.min(3,scored.length-1))|0);
-  const cur=evalBoard(board, me), best=scored[idx];
-  if(fillFrac>0.72 && best.v < cur-1.5) return null;      // only self-harming moves left → pass
-  return [best.c, best.r];
+  const best=scored[idx];
+  if(fill>0.72 && best.v < evalBoard(b,me)-1.5) return null;
+  return [best.c,best.r];
 }
 
 /* ---------- Audio ---------- */
@@ -259,21 +317,28 @@ function tone(f,t0,dur,type="sine",g=.16){ const a=ac(); if(!a||muted) return;
 const sndClack=()=>{ const a=ac(); if(a) tone(180,a.currentTime,.05,"triangle",.10); };
 const sndCap  =()=>{ const a=ac(); if(a){ tone(150,a.currentTime,.16,"sine",.16); tone(75,a.currentTime+.02,.2,"triangle",.1);} };
 const sndWin  =()=>{ const a=ac(); if(a){ [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>tone(f,a.currentTime+i*.07,.4,"triangle",.18)); tone(2093,a.currentTime+.35,.5,"sine",.12);} };
-const sndLose =()=>{ const a=ac(); if(a){ tone(330,a.currentTime,.2,"sawtooth",.14); tone(220,a.currentTime+.12,.32,"sawtooth",.13); tone(110,a.currentTime+.28,.4,"triangle",.12);} };
+const sndLose =()=>{ const a=ac(); if(a){ tone(330,a.currentTime,.2,"sawtooth",.14); tone(220,a.currentTime+.12,.32,"sawtooth",.13);} };
 
-/* ---------- State ---------- */
-const cv=document.getElementById("board"), ctx=cv.getContext("2d");
-let board=emptyBoard(), toMove=BLACK, koKey=null, lastMove=null;
-let caps={[BLACK]:0,[WHITE]:0}, passes=0, phase="play", showOwner=null;
-let clocks={[BLACK]:CLOCK_MS,[WHITE]:CLOCK_MS};
-let streak=+(localStorage.getItem("bb_streak")||0);
-let best=+(localStorage.getItem("bb_best")||0);
+/* ---------- DOM helpers ---------- */
+const $=id=>document.getElementById(id);
+const cv=$("board"), ctx=cv.getContext("2d");
+let flashT=null;
+function flash(msg,kind){ const f=$("flash"); f.textContent=msg; f.className="flash show "+(kind||"");
+  clearTimeout(flashT); flashT=setTimeout(()=>f.classList.remove("show"),1800); }
+function showScreen(s){ $("menu").classList.toggle("hidden",s!=="menu"); $("gameView").classList.toggle("hidden",s!=="game");
+  $("menuBtn").classList.toggle("hidden",s!=="game"); }
+
+/* ---------- Shared game state ---------- */
+let G={mode:null, board:emptyBoard(), toMove:BLACK, koKey:null, caps:{[BLACK]:0,[WHITE]:0},
+       last:null, showOwner:null, phase:"idle", myColor:BLACK, streak:0, best:0,
+       names:{[BLACK]:"Black",[WHITE]:"White"}, clocks:{[BLACK]:CLOCK_MS,[WHITE]:CLOCK_MS}};
 let geom={pad:0,cell:0,size:0};
-function save(){ localStorage.setItem("bb_streak",streak); localStorage.setItem("bb_best",best); }
+G.streak=+(localStorage.getItem("bb_streak")||0);
+G.best=+(localStorage.getItem("bb_best")||0);
 
-/* ---------- Geometry & render ---------- */
+/* ---------- Render ---------- */
 function resize(){
-  const wrap=cv.parentElement, avail=Math.min(wrap.clientWidth, window.innerHeight*0.52);
+  const wrap=cv.parentElement, avail=Math.min(wrap.clientWidth, window.innerHeight*0.55);
   const dpr=Math.min(window.devicePixelRatio||1,3), size=Math.max(200,Math.floor(avail));
   cv.style.width=size+"px"; cv.style.height=size+"px"; cv.width=size*dpr|0; cv.height=size*dpr|0;
   ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -281,10 +346,10 @@ function resize(){
 }
 const xy=(c,r)=>[geom.pad+c*geom.cell, geom.pad+r*geom.cell];
 function draw(){
-  const {pad,cell,size}=geom; if(!size) return;
+  const {pad,cell,size}=geom; if(!size) return; const board=G.board;
   const g=ctx.createLinearGradient(0,0,size,size);
   g.addColorStop(0,"#e6c078"); g.addColorStop(1,"#b88636"); ctx.fillStyle=g; ctx.fillRect(0,0,size,size);
-  if(showOwner){ for(let r=0;r<N;r++) for(let c=0;c<N;c++){ const o=showOwner[r][c];
+  if(G.showOwner){ for(let r=0;r<N;r++) for(let c=0;c<N;c++){ const o=G.showOwner[r][c];
     if(o===BLACK||o===WHITE){ const [x,y]=xy(c,r); ctx.fillStyle=o===BLACK?"rgba(20,18,14,.34)":"rgba(250,247,238,.44)";
       ctx.fillRect(x-cell/2,y-cell/2,cell,cell); } } }
   ctx.strokeStyle="rgba(60,42,12,.9)"; ctx.lineWidth=Math.max(1,cell*0.03);
@@ -293,8 +358,8 @@ function draw(){
   for(const [c,r] of [[2,2],[6,6],[2,6],[6,2],[4,4]]){ const [sx,sy]=xy(c,r);
     ctx.fillStyle="rgba(60,42,12,.85)"; ctx.beginPath(); ctx.arc(sx,sy,Math.max(2,cell*0.05),0,7); ctx.fill(); }
   for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(board[r][c]!==EMPTY) stone(c,r,board[r][c]);
-  if(lastMove){ const [mx,my]=xy(lastMove[0],lastMove[1]);
-    ctx.strokeStyle=board[lastMove[1]][lastMove[0]]===BLACK?"rgba(255,204,51,.95)":"rgba(255,42,92,.9)";
+  if(G.last){ const [mx,my]=xy(G.last[0],G.last[1]);
+    ctx.strokeStyle=board[G.last[1]][G.last[0]]===BLACK?"rgba(255,204,51,.95)":"rgba(255,42,92,.9)";
     ctx.lineWidth=cell*0.06; ctx.beginPath(); ctx.arc(mx,my,cell*0.17,0,7); ctx.stroke(); }
 }
 function stone(c,r,colour){ const {cell}=geom,[x,y]=xy(c,r),rad=cell*0.46;
@@ -304,136 +369,277 @@ function stone(c,r,colour){ const {cell}=geom,[x,y]=xy(c,r),rad=cell*0.46;
   else { gr.addColorStop(0,"#fff"); gr.addColorStop(.5,"#f1ece0"); gr.addColorStop(1,"#cabfa9"); }
   ctx.beginPath(); ctx.arc(x,y,rad,0,7); ctx.fillStyle=gr; ctx.fill();
 }
-
-/* ---------- HUD ---------- */
-const $=id=>document.getElementById(id);
-const fmtClock=ms=>{ ms=Math.max(0,ms); const s=Math.ceil(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
 function setStatus(t,s){ $("pTitle").textContent=t; if(s!=null) $("pSub").textContent=s; }
-function syncHud(){ $("streak").textContent=streak; $("best").textContent=best; $("capsTxt").textContent=caps[BLACK]+" · "+caps[WHITE]; }
-function renderClocks(){
-  $("clkB").textContent=fmtClock(clocks[BLACK]); $("clkW").textContent=fmtClock(clocks[WHITE]);
-  const active=phase==="play"?toMove:0;
+function fmtClock(ms){ ms=Math.max(0,ms); const s=Math.ceil(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function renderMeta(){
+  $("capsTxt").textContent=G.caps[BLACK]+" · "+G.caps[WHITE];
+  $("nameB").textContent=G.names[BLACK]; $("nameW").textContent=G.names[WHITE];
+  $("clkB").textContent=fmtClock(G.clocks[BLACK]); $("clkW").textContent=fmtClock(G.clocks[WHITE]);
+  const active=G.phase==="play"?G.toMove:0;
   $("plB").classList.toggle("active",active===BLACK); $("plW").classList.toggle("active",active===WHITE);
-  $("plB").classList.toggle("low",clocks[BLACK]<=20000); $("plW").classList.toggle("low",clocks[WHITE]<=20000);
+  $("plB").classList.toggle("low",G.mode==="ai"&&G.clocks[BLACK]<=20000);
+  $("plW").classList.toggle("low",G.mode==="ai"&&G.clocks[WHITE]<=20000);
+  cv.classList.toggle("mine", G.phase==="play" && myTurn());
 }
-function showControls(mode){
-  $("playRow").classList.toggle("hidden",mode!=="play");
-  $("newBtn").classList.toggle("hidden",mode==="play");
-}
-let flashT=null;
-function flash(msg,kind){ const f=$("flash"); f.textContent=msg; f.className="flash show "+(kind||"");
-  clearTimeout(flashT); flashT=setTimeout(()=>f.classList.remove("show"),1800); }
-
-/* ---------- Clock ---------- */
-let clockInt=null, lastTick=0;
-function runClock(){ stopClock(); lastTick=Date.now();
-  clockInt=setInterval(()=>{
-    if(phase!=="play") return;
-    const now=Date.now(); clocks[toMove]-=now-lastTick; lastTick=now;
-    if(clocks[toMove]<=0){ clocks[toMove]=0; renderClocks(); onTimeout(toMove); return; }
-    renderClocks();
-  },200);
-}
-function stopClock(){ if(clockInt){ clearInterval(clockInt); clockInt=null; } }
-function onTimeout(side){
-  gameOver(side===WHITE, side===BLACK?"Out of time":"AI flagged",
-           side===BLACK?"Your blitz clock ran out.":"White ran out of time.", "Flag falls");
+function showControls(mode){ $("playRow").classList.toggle("hidden",mode!=="play"); $("newBtn").classList.toggle("hidden",mode==="play"); }
+function myTurn(){
+  if(G.mode==="local") return true;                 // whoever's turn it is, is at the device
+  if(G.mode==="ai") return G.toMove===BLACK;
+  if(G.mode==="online") return G.toMove===G.myColor;
+  return false;
 }
 
-/* ---------- Move application ---------- */
-function applyMove(c,r,colour){
-  const prevKey=boardKey(board);
-  const res=tryPlay(board,c,r,colour,koKey);
-  if(!res.ok) return false;
-  board=res.board;
-  const capd=res.captured.length;
-  caps[colour]+=capd;
-  koKey = capd===1 ? prevKey : null;   // simple ko: can't immediately recreate the position
-  lastMove=[c,r]; passes=0;
-  if(capd>0) sndCap(); else sndClack();
-  syncHud(); draw();
-  return true;
-}
-function afterMove(colour){
-  if(phase!=="play") return;
-  toMove=opp(colour); lastTick=Date.now(); renderClocks();
-  if(toMove===BLACK){ setStatus("Your move","Tap to place. Pass twice to count the board."); }
-  else { setStatus("Blitz…","White is reading the board."); scheduleAI(); }
-}
-function doPass(colour){
-  if(phase!=="play") return;
-  passes++;
-  if(passes>=2){ endByScore(); return; }
-  lastMove=null; draw();
-  toMove=opp(colour); lastTick=Date.now(); renderClocks();
-  if(toMove===BLACK){ setStatus("Your move","White passed — pass again to count, or play on."); }
-  else { setStatus("Blitz…","White is reading the board."); scheduleAI(); }
-}
-
-/* ---------- Input ---------- */
+/* ---------- Board input ---------- */
 function onBoardTap(e){
-  if(phase!=="play" || toMove!==BLACK) return;
-  ac();
-  const rect=cv.getBoundingClientRect();
-  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  if(G.phase!=="play" || !myTurn()) return; ac();
+  const rect=cv.getBoundingClientRect(), x=e.clientX-rect.left, y=e.clientY-rect.top;
   const c=Math.round((x-geom.pad)/geom.cell), r=Math.round((y-geom.pad)/geom.cell);
   if(!inb(c,r)) return;
-  const [ix,iy]=xy(c,r); if(Math.hypot(x-ix,y-iy)>geom.cell*0.55) return;   // must tap near a point
-  if(board[r][c]!==EMPTY){ flash("Occupied","lose"); return; }
-  if(!applyMove(c,r,BLACK)){ flash("Illegal","lose"); return; }
-  afterMove(BLACK);
+  const [ix,iy]=xy(c,r); if(Math.hypot(x-ix,y-iy)>geom.cell*0.55) return;
+  if(G.board[r][c]!==EMPTY){ flash("Occupied","lose"); return; }
+  if(!tryPlay(G.board,c,r,G.toMove,G.koKey).ok){ flash("Illegal","lose"); return; }
+  if(G.mode==="online") onlineMove({c,r}); else localApply({c,r});
 }
 cv.addEventListener("pointerdown", onBoardTap);
 
-/* ---------- AI turn ---------- */
+/* ============================================================
+   LOCAL play (vs AI + pass & play) — direct state mutation
+   ============================================================ */
+function localApply(mv){
+  const color=G.toMove;
+  if(mv.pass){ G.passesTail=(G.passesTail||0)+1; G.last=null; }
+  else {
+    const prevKey=boardKey(G.board), res=tryPlay(G.board,mv.c,mv.r,color,G.koKey);
+    if(!res.ok) return;
+    G.board=res.board; const capd=res.captured.length; G.caps[color]+=capd;
+    G.koKey=capd===1?prevKey:null; G.last=[mv.c,mv.r]; G.passesTail=0;
+    (capd>0?sndCap:sndClack)();
+  }
+  if((G.passesTail||0)>=2){ endLocal(); return; }
+  G.toMove=opp(color); draw(); renderMeta(); localTurnStatus();
+  if(G.mode==="ai" && G.toMove===WHITE) scheduleAI();
+}
+function localTurnStatus(){
+  if(G.mode==="ai") setStatus(G.toMove===BLACK?"Your move":"Blitz…", G.toMove===BLACK?"Tap to place. Pass twice to count.":"White is reading the board.");
+  else setStatus((G.toMove===BLACK?G.names[BLACK]:G.names[WHITE])+" to play", "Pass the device. Both pass to count.");
+}
 function scheduleAI(){
-  setTimeout(()=>{
-    if(phase!=="play" || toMove!==WHITE) return;
-    const mv=aiBestMove(streak);
-    if(!mv){ doPass(WHITE); }
-    else { applyMove(mv[0],mv[1],WHITE); afterMove(WHITE); }
+  setTimeout(()=>{ if(G.phase!=="play"||G.mode!=="ai"||G.toMove!==WHITE) return;
+    const mv=aiBestMove(G.board,G.koKey,WHITE,G.streak);
+    localApply(mv?{c:mv[0],r:mv[1]}:{pass:true});
   }, 360+Math.random()*420);
 }
-
-/* ---------- End of game ---------- */
-function gameOver(playerWon, title, sub, flashMsg){
-  phase="over"; stopClock();
-  if(playerWon){ streak++; best=Math.max(best,streak); sndWin(); flash(flashMsg||"You win","win"); }
-  else { streak=0; sndLose(); flash(flashMsg||"You lose","lose"); }
-  save(); syncHud(); renderClocks();
-  setStatus(title, sub);
-  showControls("over");
-}
-function endByScore(){
-  phase="over"; stopClock();
-  const sc=score(board); showOwner=sc.owner; lastMove=null; draw();
-  const bt=sc.blackTotal, wt=sc.whiteTotal, margin=Math.abs(bt-wt);
-  const won=bt>wt;
-  gameOver(won,
-    won ? "You win by "+margin.toFixed(1) : "White wins by "+margin.toFixed(1),
-    "Black "+bt+"  ·  White "+wt.toFixed(1)+"  ("+KOMI+" komi)",
-    (won?"+":"−")+margin.toFixed(1));
-}
-function resign(){ if(phase!=="play") return; gameOver(false,"You resigned","White wins by resignation.","Resigned"); }
-
-/* ---------- New game ---------- */
-function newGame(){
-  board=emptyBoard(); toMove=BLACK; koKey=null; lastMove=null; showOwner=null;
-  caps={[BLACK]:0,[WHITE]:0}; passes=0; phase="play";
-  clocks={[BLACK]:CLOCK_MS,[WHITE]:CLOCK_MS};
-  resize(); renderClocks(); syncHud();
-  setStatus("Your move","You're Black. Capture, wall off territory — most points wins. Both pass to count.");
-  showControls("play"); runClock();
+function endLocal(){
+  const sc=score(G.board); G.showOwner=sc.owner; G.last=null; G.phase="over"; stopClock(); draw(); renderMeta();
+  const bt=sc.blackTotal, wt=sc.whiteTotal, won=bt>wt, margin=Math.abs(bt-wt);
+  if(G.mode==="ai"){
+    if(won){ G.streak++; G.best=Math.max(G.best,G.streak); sndWin(); } else { G.streak=0; sndLose(); }
+    localStorage.setItem("bb_streak",G.streak); localStorage.setItem("bb_best",G.best);
+    setStatus(won?"You win by "+margin.toFixed(1):"White wins by "+margin.toFixed(1),
+      "Black "+bt+" · White "+wt.toFixed(1)+" ("+KOMI+" komi)");
+    flash(won?"You win +"+margin.toFixed(1):"You lose","win".replace("win",won?"win":"lose"));
+  } else {
+    const wName=won?G.names[BLACK]:G.names[WHITE];
+    setStatus(wName+" wins by "+margin.toFixed(1), "Black "+bt+" · White "+wt.toFixed(1)+" ("+KOMI+" komi)");
+    (won?sndWin:sndWin)(); flash(wName+" wins","win");
+  }
+  showControls("over"); $("newBtn").textContent="Back to menu ›";
 }
 
-/* ---------- Wire up ---------- */
-$("passBtn").onclick=()=>{ if(phase==="play"&&toMove===BLACK){ ac(); doPass(BLACK); } };
-$("resignBtn").onclick=resign;
-$("newBtn").onclick=newGame;
+/* Blitz clock (AI mode only) */
+let clockInt=null, lastTick=0;
+function startClock(){ stopClock(); if(G.mode!=="ai") return; lastTick=Date.now();
+  clockInt=setInterval(()=>{ if(G.phase!=="play"){return;} const now=Date.now(); G.clocks[G.toMove]-=now-lastTick; lastTick=now;
+    if(G.clocks[G.toMove]<=0){ G.clocks[G.toMove]=0; renderMeta(); onTimeout(G.toMove); return; } renderMeta(); },200);
+}
+function stopClock(){ if(clockInt){ clearInterval(clockInt); clockInt=null; } }
+function onTimeout(side){ stopClock(); G.phase="over"; const won=side===WHITE;
+  if(won){ G.streak++; G.best=Math.max(G.best,G.streak); sndWin(); } else { G.streak=0; sndLose(); }
+  localStorage.setItem("bb_streak",G.streak); localStorage.setItem("bb_best",G.best);
+  setStatus(won?"AI flagged":"Out of time", won?"White ran out of time.":"Your blitz clock ran out.");
+  flash(won?"Flag! You win":"Flag falls", won?"win":"lose"); renderMeta(); showControls("over");
+}
+function resetLocal(mode){
+  G.mode=mode; G.board=emptyBoard(); G.toMove=BLACK; G.koKey=null; G.last=null; G.showOwner=null;
+  G.caps={[BLACK]:0,[WHITE]:0}; G.passesTail=0; G.phase="play"; G.clocks={[BLACK]:CLOCK_MS,[WHITE]:CLOCK_MS};
+  if(mode==="ai"){ G.names={[BLACK]:"You",[WHITE]:"AI"}; }
+  else { G.names={[BLACK]:"Black",[WHITE]:"White"}; }
+  $("conn").classList.add("hidden"); $("shareBanner").classList.add("hidden"); $("joinBanner").classList.add("hidden");
+  $("clocks").classList.remove("hidden"); $("clocks").classList.toggle("noclock", mode!=="ai");
+  showScreen("game"); resize(); renderMeta(); showControls("play"); localTurnStatus();
+  if(mode==="ai"){ setStatus("Your move","You're Black. Most points wins — both pass to count."); startClock(); }
+}
+
+/* ============================================================
+   ONLINE async play — Firebase-synced move list, shared link
+   ============================================================ */
+const FIREBASE_CONFIG={apiKey:"AIzaSyB23amgbl5FHYzd35G7ImC8TKOY6B0vWjw",authDomain:"word-pounce.firebaseapp.com",
+  databaseURL:"https://word-pounce-default-rtdb.firebaseio.com",projectId:"word-pounce",
+  storageBucket:"word-pounce.firebasestorage.app",messagingSenderId:"508919448966",appId:"1:508919448966:web:3a88a0fda7883d5165d807"};
+let _db=null, _dbTried=false;
+function getDb(){
+  if(window.__BADUK_TESTDB) return window.__BADUK_TESTDB;   // in-memory stand-in for tests
+  if(_db) return _db; if(_dbTried) return null; _dbTried=true;
+  try{ if(typeof firebase==="undefined") return null;
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    _db=firebase.database(); return _db; }catch(e){ return null; }
+}
+const uid=(()=>{ let u=localStorage.getItem("baduk_uid"); if(!u){ u=Math.random().toString(36).slice(2,11); localStorage.setItem("baduk_uid",u); } return u; })();
+function myName(){ return (localStorage.getItem("baduk_name")|| $("nameIn").value || "Player").slice(0,14); }
+function gameCode(){ let s=""; for(let i=0;i<4;i++) s+="ABCDEFGHJKLMNPQRSTUVWXYZ"[(Math.random()*24)|0]; return s; }
+function gameUrl(id){ return location.origin+location.pathname+"?g="+id; }
+function movesToArr(m){ if(!m) return []; if(Array.isArray(m)) return m.filter(x=>x!=null);
+  return Object.keys(m).map(Number).sort((a,b)=>a-b).map(k=>m[k]); }
+
+let gameRef=null, gameId=null, gameData=null, connRef=null, prevMoveCount=0;
+function watchConnection(){
+  const db=getDb(); const el=$("conn"); el.classList.remove("hidden");
+  if(!db){ el.className="conn off"; $("connTxt").textContent="offline"; return; }
+  el.className="conn on"; $("connTxt").textContent="online";
+  try{ connRef=db.ref(".info/connected"); connRef.on("value",s=>{ const on=!!s.val();
+    el.className="conn "+(on?"on":"off"); $("connTxt").textContent=on?"online":"reconnecting…"; }); }catch(e){}
+}
+
+function createOnlineGame(){
+  const db=getDb();
+  if(!db){ menuNote("Can't reach the game server right now, so a shared online game can't start. You can still play the computer or pass & play. (Check your connection and retry.)"); return; }
+  localStorage.setItem("baduk_name", myName());
+  const id=gameCode();
+  const data={v:1, size:N, komi:KOMI, created:Date.now(),
+    players:{B:{uid, name:myName()}}, moves:{}, status:"waiting", resign:null};
+  db.ref("baduk/"+id).set(data).then(()=>enterOnline(id)).catch(()=>menuNote("Couldn't create the game (server refused the write). The shared database may need its rules opened."));
+}
+function joinOrEnter(id){
+  const db=getDb();
+  if(!db){ menuNote("Can't reach the game server, so this shared game can't load. Try again on a connection."); showScreen("menu"); return; }
+  enterOnline(id);
+}
+function enterOnline(id){
+  G.mode="online"; gameId=id; prevMoveCount=-1;
+  showScreen("game"); watchConnection();
+  $("clocks").classList.remove("hidden"); $("clocks").classList.add("noclock");
+  setStatus("Loading…","");
+  const db=getDb(); gameRef=db.ref("baduk/"+id);
+  gameRef.on("value", s=>{
+    gameData=s.val();
+    if(!gameData){ setStatus("Game not found","That link may be wrong or the game was removed."); showControls("over"); $("newBtn").textContent="Back to menu ›"; return; }
+    onGameData();
+  });
+}
+function renderBoardFrom(rep){ G.board=rep.board; G.koKey=rep.koKey; G.caps=rep.caps; G.toMove=rep.toMove; G.last=rep.last; draw(); renderMeta(); }
+function onGameData(){
+  const p=gameData.players||{};
+  G.myColor = (p.B&&p.B.uid===uid)?BLACK : (p.W&&p.W.uid===uid)?WHITE : 0;
+  G.names={[BLACK]:(p.B&&p.B.name)||"Black",[WHITE]:(p.W&&p.W.name)||"White"};
+  if(!G.myColor){
+    const rep=replay(movesToArr(gameData.moves)); G.showOwner=null; renderBoardFrom(rep);
+    if(!p.W){                                   // open seat — offer to join by name
+      G.phase="join"; $("shareBanner").classList.add("hidden"); $("joinBanner").classList.remove("hidden");
+      $("joinTitle").textContent=((p.B&&p.B.name)||"Someone")+" invited you to play Go";
+      $("joinName").value=localStorage.getItem("baduk_name")||"";
+      setStatus("Join this game","Enter your name, then tap Join to play as White.");
+      showControls("play"); $("passBtn").disabled=true; $("resignBtn").disabled=true;
+    } else {                                    // both seats taken — watch only
+      G.phase="over"; setStatus("Spectating", p.B.name+" (Black) vs "+p.W.name+" (White).");
+      showControls("over"); $("newBtn").textContent="Back to menu ›";
+    }
+    return;
+  }
+  $("joinBanner").classList.add("hidden");
+  const moves=movesToArr(gameData.moves);
+  const rep=replay(moves);
+  G.board=rep.board; G.koKey=rep.koKey; G.caps=rep.caps; G.toMove=rep.toMove; G.last=rep.last;
+  // sound when a new move arrives from the opponent
+  if(prevMoveCount>=0 && moves.length>prevMoveCount){ const lm=moves[moves.length-1];
+    if(lm && !lm.pass) (G.caps[opp(G.toMove)]>0?sndCap:sndClack)(); }
+  prevMoveCount=moves.length;
+
+  const resign=gameData.resign, ended = !!resign || rep.ended || gameData.status==="ended";
+  // Share banner: show only while waiting for an opponent, to the creator
+  const waiting = !p.W;
+  $("shareBanner").classList.toggle("hidden", !(waiting && G.myColor===BLACK));
+  if(waiting && G.myColor===BLACK){ $("shareUrl").value=gameUrl(gameId); }
+
+  if(ended){ finishOnline(rep, resign); return; }
+  if(waiting){ G.phase="waiting"; G.showOwner=null; draw(); renderMeta();
+    setStatus("Waiting for an opponent","Send the link above. When they join and it's your turn, come back.");
+    showControls("play"); $("passBtn").disabled=true; $("resignBtn").disabled=true; return; }
+
+  // active
+  G.phase="play"; G.showOwner=null; draw(); renderMeta();
+  $("passBtn").disabled=false; $("resignBtn").disabled=false; showControls("play");
+  const opName=G.names[opp(G.myColor)];
+  if(myTurn()) setStatus("Your move", "You're "+(G.myColor===BLACK?"Black":"White")+". Tap to place — "+opName+" will see it next time they open this link.");
+  else setStatus("Waiting for "+opName+"…", "It's their move. This page updates when they play — leave it open or check back later.");
+}
+function finishOnline(rep, resign){
+  G.phase="over"; stopClock();
+  const sc=score(G.board); G.showOwner=sc.owner; G.last=null; draw();
+  let winner, detail;
+  if(resign){ winner=opp(resign.color===BLACK?BLACK:WHITE); detail=G.names[resign.color===BLACK?BLACK:WHITE]+" resigned"; }
+  else { winner = sc.blackTotal>sc.whiteTotal?BLACK:WHITE; detail="Black "+sc.blackTotal+" · White "+sc.whiteTotal.toFixed(1)+" ("+KOMI+" komi)"; }
+  renderMeta();
+  const iWon = winner===G.myColor;
+  setStatus(iWon?"You win":G.names[winner]+" wins", detail);
+  (iWon?sndWin:sndLose)(); flash(iWon?"You win":"You lose", iWon?"win":"lose");
+  showControls("over"); $("newBtn").textContent="Back to menu ›";
+}
+function onlineMove(mv){
+  if(G.phase!=="play" || !myTurn() || !gameRef) return;
+  // validate locally first (both sides run the same engine)
+  if(!mv.pass && !tryPlay(G.board,mv.c,mv.r,G.toMove,G.koKey).ok){ flash("Illegal","lose"); return; }
+  const myCol=G.myColor;
+  gameRef.child("moves").transaction(cur=>{
+    const arr=movesToArr(cur); const expect = arr.length%2===0?BLACK:WHITE;
+    if(expect!==myCol) return;                 // not my turn (raced) — abort
+    const obj = cur && !Array.isArray(cur) ? Object.assign({},cur) : Object.assign({}, arr);
+    obj[arr.length]=mv; return obj;
+  }).then(res=>{
+    if(res && res.committed){
+      // if this created a second consecutive pass, mark the game ended
+      const arr=movesToArr(res.snapshot.val());
+      if(replay(arr).ended) gameRef.child("status").set("ended");
+    }
+  }).catch(()=>flash("Move didn't save","lose"));
+}
+function onlinePass(){ if(myTurn()) onlineMove({pass:true}); }
+function onlineResign(){ if(!gameRef||G.myColor===0) return; gameRef.child("resign").set({color:G.myColor}); gameRef.child("status").set("ended"); }
+
+function menuNote(t){ $("menuNote").classList.remove("hidden"); $("menuNoteTxt").textContent=t; }
+
+/* ---------- Menu wiring ---------- */
+$("nameIn").value=localStorage.getItem("baduk_name")||"";
+$("nameIn").addEventListener("input",()=>localStorage.setItem("baduk_name",$("nameIn").value));
+$("mNew").onclick=()=>{ ac(); createOnlineGame(); };
+$("mAI").onclick=()=>{ ac(); resetLocal("ai"); };
+$("mLocal").onclick=()=>{ ac(); resetLocal("local"); };
+$("menuBtn").onclick=()=>{ teardownOnline(); stopClock(); showScreen("menu"); };
+$("joinBtn").onclick=()=>{ if(!gameRef) return; ac();
+  const nm=($("joinName").value||"Player").slice(0,14); localStorage.setItem("baduk_name",nm);
+  gameRef.child("players/W").set({uid, name:nm}); gameRef.child("status").set("active");
+  $("joinBanner").classList.add("hidden"); };
+$("shareBtn").onclick=()=>{ const url=gameUrl(gameId);
+  if(navigator.share){ navigator.share({title:"Baduk Blitz — let's play Go", text:"Open this to make your move:", url}).catch(()=>{}); }
+  else { try{ navigator.clipboard.writeText(url); }catch(e){} flash("Link copied","info"); } };
+$("passBtn").onclick=()=>{ if(G.phase!=="play"||!myTurn()) return; ac(); if(G.mode==="online") onlinePass(); else localApply({pass:true}); };
+$("resignBtn").onclick=()=>{ if(G.phase!=="play") return; ac();
+  if(G.mode==="online"){ onlineResign(); }
+  else { G.phase="over"; stopClock(); const won=false; sndLose();
+    if(G.mode==="ai"){ G.streak=0; localStorage.setItem("bb_streak",0);
+      setStatus("You resigned","White wins by resignation."); flash("Resigned","lose"); }
+    else { setStatus("Resigned", G.names[opp(G.toMove)]+" wins by resignation."); flash("Resigned","lose"); }
+    renderMeta(); showControls("over"); $("newBtn").textContent="Back to menu ›"; } };
+$("newBtn").onclick=()=>{ teardownOnline(); stopClock(); showScreen("menu"); };
 $("muteBtn").onclick=e=>{ muted=!muted; e.target.style.opacity=muted?.25:.6; e.target.textContent=muted?"♪̸":"♪"; if(!muted) ac(); };
-window.addEventListener("resize",resize);
+function teardownOnline(){ if(gameRef){ try{gameRef.off();}catch(e){} } if(connRef){ try{connRef.off();}catch(e){} }
+  gameRef=null; gameId=null; gameData=null; G.mode=null; }
+window.addEventListener("resize",()=>{ if(!$("gameView").classList.contains("hidden")) resize(); });
 
-newGame();
+/* ---------- Boot / deep link ---------- */
+(function boot(){
+  const params=new URLSearchParams(location.search), g=params.get("g");
+  if(g){ joinOrEnter(g.toUpperCase()); } else { showScreen("menu"); }
+})();
 </script>
 </body>
 </html>
