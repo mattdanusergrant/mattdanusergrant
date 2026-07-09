@@ -143,6 +143,7 @@
       <div class="rstat"><span class="rn" id="goods">0</span><span class="rl"><span class="dot" style="background:#7C6CB0"></span>Goods</span></div>
       <div class="rstat"><span class="rn" id="exp">0</span><span class="rl"><span class="dot" style="background:#5C8A55"></span>Exports</span></div>
       <div class="rstat" id="terrstat" title="Extra Materials per tick your Works earn from ore (+80%) and forest (+40%) terrain — put Works where the land favours them"><span class="rn" id="terrb">+0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Terrain</span></div>
+      <div class="rstat" id="pwrstat" title="City power — stations generate it, buildings draw it, roads carry it. A deficit browns out unpowered buildings until you add capacity."><span class="rn" id="pwr">0</span><span class="rl"><span class="dot" style="background:#E0A93E"></span>Power</span></div>
     </div>
     <div class="goal" id="goal" title="Your next milestone"><span class="gl" id="goal-label">Next: Hamlet</span><span class="gbar"><i id="goal-fill"></i></span></div>
     <div class="stat cash" title="Treasury — everything costs money. Taxes &amp; exports earn it; utilities &amp; roads cost upkeep; debt charges interest. Advancing tiers needs a cash reserve."><span class="n" id="cash">₵0</span><span class="l" id="cashrate">—</span></div>
@@ -235,7 +236,9 @@
   }catch(e){return [];}})();
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
   var ZONES={res:1,com:1,ind:1,fac:1,tower:1};
-  var RP=5, RW=5;                                  // power / water coverage radius (Chebyshev)
+  var POWER_OUT=1500;                              // each power station outputs a LOT (2×2 footprint)
+  var POWERUSE={res:2,com:2,ind:3,fac:4,tower:6,bank:2,port:3};   // power drawn per building level
+  var powerGen=0, powerUse=0, powerOK=true;        // city-wide power budget (generated vs consumed)
   var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
   var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
 
@@ -416,20 +419,35 @@
     var x=(e.clientX-rect.left)/rect.width*canvas.width/dpr, y=(e.clientY-rect.top)/rect.height*canvas.height/dpr;
     return {c:Math.floor(x/CELL+camX),r:Math.floor(y/CELL+camY)};   // screen → world cell, through the camera
   }
+  // power station is a 2×2 footprint
+  function isPower(c,r){return inB(c,r)&&grid[idx(c,r)].t==='power';}
+  function plantCells(c,r){return [[c,r],[c+1,r],[c,r+1],[c+1,r+1]];}
+  function plantFits(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var a=cs[i][0],b=cs[i][1];if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||noBuild(g.terr))return false;}return true;}
+  function layPlant(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var g=grid[idx(cs[i][0],cs[i][1])];g.t='power';g.lvl=1;g.grow=0;}}
+  function plantTopLeft(c,r){var tc=c,tr=r;if(isPower(tc-1,tr))tc--;if(isPower(tc,tr-1))tr--;return [tc,tr];}
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
-    if(noBuild(cell.terr)&&brush!=='bulldoze')return;     // can't build on water or mountains — route around them
-    if((cell.t==='road'||cell.t==='rail')&&brush!=='road'&&brush!=='rail'&&brush!=='bulldoze')return; // protect infrastructure — only Road/Rail/Clear change it
-    if(brush==='bulldoze'){if(cell.t==='empty')return;treasury+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;updateCashUI();}
-    else{
-      if(cell.t===brush)return;                           // already this type — no charge, no-op
-      if(!unlocked(brush))return;                          // locked tool (shouldn't be selectable — guard)
-      var cost=COST[brush]||0;
-      if(!canAfford(cost)){denyToast();return;}
-      spend(cost);
-      cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'||brush==='port'?1:0);cell.grow=0;
+    if(brush==='bulldoze'){
+      if(cell.t==='empty')return;
+      if(cell.t==='power'){var tl=plantTopLeft(c,r),cs=plantCells(tl[0],tl[1]),refunded=false;   // remove the whole 2×2 station
+        for(var b=0;b<4;b++){if(isPower(cs[b][0],cs[b][1])){var pg=grid[idx(cs[b][0],cs[b][1])];if(!refunded){treasury+=Math.round((COST.power||0)*REFUND);refunded=true;}pg.t='empty';pg.lvl=0;pg.grow=0;}}}
+      else{treasury+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;}
+      updateCashUI();dirty=true;svcDirty=true;scheduleSave();return;
     }
+    if(noBuild(cell.terr))return;                         // can't build on water or mountains
+    if((cell.t==='road'||cell.t==='rail')&&brush!=='road'&&brush!=='rail')return; // protect infrastructure
+    if(!unlocked(brush))return;
+    if(brush==='power'){                                  // 2×2 station: needs a clear 2×2, charged once
+      if(cell.t==='power')return;
+      if(!plantFits(c,r)){denyToast();return;}
+      if(!canAfford(COST.power||0)){denyToast();return;}
+      spend(COST.power||0);layPlant(c,r);dirty=true;svcDirty=true;scheduleSave();return;
+    }
+    if(cell.t===brush)return;                             // already this type — no-op
+    var cost=COST[brush]||0;
+    if(!canAfford(cost)){denyToast();return;}
+    spend(cost);cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'||brush==='port'?1:0);cell.grow=0;
     dirty=true;svcDirty=true;scheduleSave();
   }
   // ---- line tool (road / rail): click start → click end, snaps to a clean L-shape.
@@ -523,13 +541,23 @@
           else{connected[ni]=1;q.push(ni);}                                            // road→road: normal
         }}
     }
-    // coverage stamps
-    for(var r=0;r<rows;r++)for(var cx=0;cx<cols;cx++){
-      var g4=grid[idx(cx,r)],t=g4.t;
-      if(t==='power')stamp(powered,cx,r,RP);
-      else if(t==='water')stamp(watered,cx,r,RW);
-      if(g4.terr==='water')stamp(watered,cx,r,1);        // coasts/lakes are a natural water source
-    }
+    // utilities are delivered along the road/highway network from their sources — roads carry power & water
+    var pnet=new Uint8Array(n), wnet=new Uint8Array(n), pq=[], wq=[], gen=0;
+    function seedNet(i,net,que){net[i]=1;var c=i%cols,r=(i/cols)|0,nn=[[c-1,r],[c+1,r],[c,r-1],[c,r+1]];
+      for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb),tt=grid[ni].t;if((tt==='road'||tt==='highway')&&!net[ni]){net[ni]=1;que.push(ni);}}}
+    for(var si=0;si<n;si++){var gs=grid[si];if(!gs)continue;var stt=gs.t;
+      if(stt==='power'){gen+=POWER_OUT/4;seedNet(si,pnet,pq);}         // a 2×2 station = 4 cells → POWER_OUT total
+      if(stt==='water')seedNet(si,wnet,wq);
+      if(gs.terr==='water')seedNet(si,wnet,wq);}                       // natural water feeds the nearby road net
+    function flow(net,que){var h=0;while(h<que.length){var id=que[h++],c=id%cols,r=(id/cols)|0,nn=[[c-1,r],[c+1,r],[c,r-1],[c,r+1]];
+      for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb),tt=grid[ni].t;if((tt==='road'||tt==='highway')&&!net[ni]){net[ni]=1;que.push(ni);}}}}
+    flow(pnet,pq);flow(wnet,wq);
+    var use=0;for(var di=0;di<n;di++){var gd=grid[di];if(gd&&POWERUSE[gd.t])use+=POWERUSE[gd.t]*(gd.lvl||1);}
+    powerGen=Math.round(gen);powerUse=use;powerOK=(gen>=use);          // the city-wide power budget
+    function borders(net,c,r){return (inB(c-1,r)&&net[idx(c-1,r)])||(inB(c+1,r)&&net[idx(c+1,r)])||(inB(c,r-1)&&net[idx(c,r-1)])||(inB(c,r+1)&&net[idx(c,r+1)]);}
+    for(var r=0;r<rows;r++)for(var cx=0;cx<cols;cx++){var i2=idx(cx,r);   // served if bordering a live network (power also needs the city out of deficit)
+      if(powerOK&&borders(pnet,cx,r))powered[i2]=1;
+      if(borders(wnet,cx,r)||grid[i2].terr==='water')watered[i2]=1;}
     // rail network: BFS from highway through rail/highway → what's linked to the world for export
     railConn=new Uint8Array(n);connectedRailCount=0;railToWorld=false;
     var rq=[];for(var hj=0;hj<n;hj++){if(grid[hj]&&grid[hj].t==='highway'){railConn[hj]=1;rq.push(hj);}}  // seed rail from the corridor too
@@ -542,9 +570,6 @@
           else{railConn[ni2]=1;rq.push(ni2);}
         }}}
     for(var i3=0;i3<n;i3++){if(railConn[i3]&&grid[i3]&&grid[i3].t==='rail'){connectedRailCount++;railToWorld=true;}}
-  }
-  function stamp(arr,cx,cy,rad){
-    for(var dy=-rad;dy<=rad;dy++)for(var dx=-rad;dx<=rad;dx++){var a=cx+dx,b=cy+dy;if(inB(a,b))arr[idx(a,b)]=1;}
   }
   function nearConnected(c,r){
     return (inB(c-1,r)&&connected[idx(c-1,r)])||(inB(c+1,r)&&connected[idx(c+1,r)])||
@@ -632,9 +657,15 @@
     p+=Math.round(exportRate*35);                         // trade income from rail exports sustains extra population
     popTarget=p;}
   var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp'),terrEl=document.getElementById('terrb'),terrStat=document.getElementById('terrstat');
+  var pwrEl=document.getElementById('pwr'),pwrStat=document.getElementById('pwrstat');
   function updateResourceUI(){matEl.textContent=Math.round(matStock);goodsEl.textContent=Math.round(goodsStock);expEl.textContent=Math.round(exportRate);
     matEl.style.color=matHealthy?'':'#F0876A';goodsEl.style.color=goodsHealthy?'':'#F0876A';expEl.style.color=exportRate>0.5?'#5FBE6E':'';
-    terrEl.textContent='+'+Math.round(terrBonus);terrStat.style.opacity=terrBonus>0.5?1:0.38;}
+    terrEl.textContent='+'+Math.round(terrBonus);terrStat.style.opacity=terrBonus>0.5?1:0.38;
+    var net=powerGen-powerUse;                                       // city power budget: surplus (green) or deficit brownout (red)
+    pwrEl.textContent=(net>=0?'+':'−')+Math.abs(net).toLocaleString();
+    pwrEl.style.color=powerGen===0?'':(net>=0?'#5FBE6E':'#F0876A');
+    pwrStat.title='City power — generating '+powerGen.toLocaleString()+', using '+powerUse.toLocaleString()+(net<0?' · DEFICIT: unpowered buildings are browning out, add a station':' · surplus')+' . Roads carry power from your stations.';
+    pwrStat.style.opacity=(powerGen>0||powerUse>0)?1:0.38;}
   var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
   var demColor={res:'#63A05C',com:'#5589BB',ind:'#BF8F45'};
   function updateDemandUI(){['res','com','ind'].forEach(function(t){var el=demBars[t];el.style.height=(Math.max(0.08,Math.min(1,demand[t]/8))*100)+'%';el.style.background=demColor[t];el.style.opacity=demand[t]>0.3?1:0.35;});}
@@ -794,14 +825,16 @@
       ctx.fillStyle=pal.parkTrunk;ctx.fillRect(px(tx-1),px(ty+rad-1),2,px(3*s));
       ctx.fillStyle=(i%2)?pal.parkDark:pal.park;ctx.beginPath();ctx.arc(px(tx),py(ty),rad,0,6.2832);ctx.fill();}
   }
-  function drawPlant(x,y,cell){
-    var s=growScale(cell),w=px(22*s),h=px(14*s),bx=px(x+(CELL-w)/2),by=px(y+CELL-4-h);
+  function drawPlant(x,y,cell,span){
+    span=span||1;var W=CELL*span,s=growScale(cell);
+    var w=px((22+(span-1)*30)*s),h=px((14+(span-1)*22)*s),bx=px(x+(W-w)/2),by=px(y+W-4-h);
     ctx.fillStyle=pal.side;ctx.fillRect(bx+2,by+h,w,3);
     ctx.fillStyle=pal.plantBody;ctx.fillRect(bx,by,w,h);
     ctx.fillStyle=pal.plantRoof;ctx.fillRect(bx,by,w,3);
-    // two stacks with a warm glow band
-    ctx.fillStyle=pal.plantStack;ctx.fillRect(bx+3,by-8*s,4,px(8*s));ctx.fillRect(bx+w-7,by-8*s,4,px(8*s));
-    ctx.fillStyle=pal.plantGlow;ctx.fillRect(bx+3,by-2,4,2);ctx.fillRect(bx+w-7,by-2,4,2);
+    var stacks=span>1?3:2,gap=(w-8)/(stacks-1||1),sh=px((span>1?12:8)*s);   // more, taller stacks on the big plant
+    for(var k=0;k<stacks;k++){var sx=px(bx+4+k*gap);
+      ctx.fillStyle=pal.plantStack;ctx.fillRect(sx,by-sh,4,sh);
+      ctx.fillStyle=pal.plantGlow;ctx.fillRect(sx,by-2,4,2);}
     ctx.fillStyle=pal.side;ctx.fillRect(bx,by,w,1);ctx.fillRect(bx,by+h-1,w,1);
   }
   function drawTower(x,y,cell){
@@ -907,7 +940,8 @@
       cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway')continue;
       x=c*CELL;y=r*CELL;
       if(t==='park'){drawPark(x,y,cell);continue;}
-      if(t==='power'){drawPlant(x,y,cell);continue;}
+      if(t==='power'){if(isPower(c-1,r)||isPower(c,r-1))continue;    // draw the plant once, at the block's top-left anchor
+        var span=(isPower(c+1,r)&&isPower(c,r+1)&&isPower(c+1,r+1))?2:1;drawPlant(x,y,cell,span);continue;}
       if(t==='water'){drawTower(x,y,cell);continue;}
       if(t==='bank'){drawBank(x,y,cell);continue;}
       if(t==='port'){drawPort(x,y,cell);continue;}
@@ -960,7 +994,7 @@
     var dt=Math.min(0.05,(now-lastFrame)/1000);lastFrame=now;
     if(keys.u||keys.d||keys.l||keys.r){var sp=26*dt;                 // WASD / arrows glide the camera
       if(keys.u)camY-=sp;if(keys.d)camY+=sp;if(keys.l)camX-=sp;if(keys.r)camX+=sp;clampCam();dirty=true;}
-    if(svcDirty){computeServices();svcDirty=false;dirty=true;}
+    if(svcDirty){computeServices();updateResourceUI();svcDirty=false;dirty=true;}   // refresh power/supply readouts immediately on an edit
     if(popShown!==popTarget){var d=popTarget-popShown;popShown+=Math.abs(d)<=2?d:Math.ceil(d/8);popEl.textContent=popShown.toLocaleString();dirty=true;}
     if(cars.length)updateCars(dt);
     if(trains.length)updateTrains(dt);
@@ -1011,8 +1045,9 @@
         if(!made)for(var rc2=c0;rc2<=c1;rc2++){if(isHwy(rc2,HWROW)&&isRoadCell(rc2,st)&&!noBuild(grid[idx(rc2,fr)].terr)){placeAt(rc2,fr,'road',0);break;}}
       }
     }
-    var ur=Math.min(rows-2,CR+maxOff+1);                               // a little infrastructure past the built area
-    placeAt(c0,ur,'power',0);placeAt(c1,ur,'power',0);placeAt(Math.floor((c0+c1)/2),ur,'water',0);
+    var ur=Math.min(rows-3,CR+maxOff+1);                               // a little infrastructure past the built area
+    if(plantFits(c0,ur))layPlant(c0,ur);else placeAt(c0,ur,'power',0);  // a 2×2 power station
+    placeAt(Math.floor((c0+c1)/2),ur,'water',0);
     for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail spur: a short perpendicular line joining the corridor, so exports flow
       var hc=hi%cols,hr=(hi/cols)|0,dd=[[0,1],[0,-1],[1,0],[-1,0]],done=false;
       for(var d=0;d<4;d++){var a=hc+dd[d][0],bq=hr+dd[d][1],a2=hc+2*dd[d][0],b2=hr+2*dd[d][1];
