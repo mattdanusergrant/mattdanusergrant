@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Moon Druid Garrison</title>
-<meta name="description" content="A defensive grove-builder under the moon. Bud Glimmer spirits, grow a garrison in rings around the Elderbough, and hold the Lastlight Grove against the Gloam — night after night, for as long as you can last.">
+<meta name="description" content="A defensive grove-builder under the moon. Bud Glimmer spirits, grow a garrison around the Elderbough wherever you choose, and hold the Lastlight Grove against the Gloam — night after night, for as long as you can last. Built for keyboard-and-mouse play.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Moon Druid Garrison">
 <meta name="theme-color" content="#070a20">
@@ -28,7 +28,7 @@
   #ctl{display:flex;gap:6px;margin-top:5px;justify-content:flex-end}
   #ctl button{pointer-events:auto;background:rgba(20,28,60,.75);color:#cdd7f2;border:1px solid rgba(160,175,220,.3);
     border-radius:9px;font-size:12px;font-weight:600;padding:4px 10px;cursor:pointer}
-  #ebarw{margin-top:6px;font-size:10px;letter-spacing:.06em;opacity:.9}
+  #ebarw{margin-top:6px;font-size:10px;letter-spacing:.06em;opacity:.9;max-width:420px}
   #ebarw.hit{animation:barhit .4s ease}
   @keyframes barhit{0%{filter:brightness(2.4)}100%{filter:none}}
   #ebar{margin-top:2px;height:6px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
@@ -48,8 +48,10 @@
     -webkit-overflow-scrolling:touch;scrollbar-width:none}
   #bar::-webkit-scrollbar{display:none}
   .bb{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:64px;
-    background:rgba(22,30,64,.9);border:1px solid rgba(160,175,220,.28);border-radius:13px;
+    position:relative;background:rgba(22,30,64,.9);border:1px solid rgba(160,175,220,.28);border-radius:13px;
     color:#dbe3fa;padding:7px 8px 6px;cursor:pointer}
+  .bb .bk{position:absolute;top:3px;right:7px;font-size:9px;font-weight:700;opacity:.55}
+  @media (min-width:700px){#bar{justify-content:center}}
   .bb .be{font-size:22px;line-height:1.1}
   .bb .bn{font-size:10.5px;font-weight:600;letter-spacing:.02em}
   .bb .bc{font-size:10px;opacity:.85;white-space:nowrap}
@@ -283,7 +285,7 @@ function metaMods(){return {
 };}
 
 // ════════════════════════════ WORLD — space ═══════════════════════════════
-const WD=720,HT=1160,EX=360,EY=470;
+const WD=1600,HT=1000,EX=800,EY=470;
 let W,H,DPR,SC,OX,OY,dangerGrad=null;
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
   cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -293,15 +295,13 @@ function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=inne
   dangerGrad=dg;}
 addEventListener('resize',resize);resize();
 const s2w=(sx,sy)=>({x:(sx-OX)/SC,y:(sy-OY)/SC});
-const RINGS=[{r:130,n:8},{r:210,n:12},{r:290,n:16}];
-const SLOTS=[];
-RINGS.forEach((rg,ri)=>{for(let i=0;i<rg.n;i++){const a=-Math.PI/2+(i+(ri%2?0.5:0))/rg.n*TAU;
-  SLOTS.push({x:EX+rg.r*Math.cos(a),y:EY+rg.r*Math.sin(a),ring:ri,a});}});
+const BUILD_MAX=380; // free-form placement: anywhere inside this ring that doesn't overlap
+let MOUSE=null;      // last cursor position in world coords
 const NODES=[
-  {kind:'well',nm:'Lightwell',x:95,y:150},
-  {kind:'well',nm:'Lightwell',x:625,y:825},
-  {kind:'copse',nm:'Elderwood copse',x:625,y:150},
-  {kind:'copse',nm:'Elderwood copse',x:95,y:825},
+  {kind:'well',nm:'Lightwell',x:420,y:250},
+  {kind:'well',nm:'Lightwell',x:1180,y:690},
+  {kind:'copse',nm:'Elderwood copse',x:1180,y:250},
+  {kind:'copse',nm:'Elderwood copse',x:420,y:690},
 ];
 
 // ════════════════════════════ STATE — the run ═════════════════════════════
@@ -315,13 +315,21 @@ function vigilUsed(){let n=0;
   for(const u of R.units)n+=UNITS[u.type].vigil;
   for(const b of R.buildings)for(const q of b.q)n+=UNITS[q].vigil;
   return n;}
-function mkBuilding(id,slot){const d=BUILDS[id];
-  const p=slot<0?{x:EX,y:EY}:SLOTS[slot];
+function mkBuilding(id,x,y){const d=BUILDS[id];
   let hp=d.hp*(id==='elder'?1:R.mods.bldHp);
   if(id==='elder')hp+=R.mods.elderHp;
   if(id==='wall'&&R.mods.bark)hp*=2;
-  const b={uid:uid++,id,slot,x:p.x,y:p.y,hp,maxHp:hp,r:d.r,q:[],qt:0,cd:0,furyCd:0,rally:null,bld:true};
+  const b={uid:uid++,id,x,y,hp,maxHp:hp,r:d.r,q:[],qt:0,cd:0,furyCd:0,rally:null,bld:true};
   R.buildings.push(b);return b;}
+function canPlaceAt(id,x,y){
+  const d=BUILDS[id];
+  if(Math.hypot(x-EX,y-EY)>BUILD_MAX)return false;
+  if(x<20||x>WD-20||y<20||y>HT-20)return false;
+  for(const b of R.buildings){if(b.hp<=0)continue;
+    const gap=(id==='wall'&&b.id==='wall')?3:10; // walls may butt together into palisades
+    if(within({x,y},b,d.r+b.r+gap))return false;}
+  for(const nd of NODES)if(within({x,y},nd,d.r+52))return false;
+  return true;}
 function mkUnit(type,x,y,src){const d=UNITS[type];
   const u={uid:uid++,type,x,y,hp:d.hp,maxHp:d.hp,r:d.r,cd:0,tg:null,src:src?src.uid:0,
     jx:(Math.random()-0.5)*44,jy:(Math.random()-0.5)*44};
@@ -332,7 +340,6 @@ function postOf(b,u){if(!b)return{x:EX+u.jx,y:EY+u.jy};
   if(b.rally)return{x:b.rally.x+u.jx*0.6,y:b.rally.y+u.jy*0.6};
   const dx=b.x-EX,dy=b.y-EY,l=Math.hypot(dx,dy)||1;
   return{x:b.x+dx/l*46+u.jx*0.6,y:b.y+dy/l*46+u.jy*0.6};}
-function slotFree(i){return !R.buildings.some(b=>b.slot===i);}
 function arcCount(n){return n<=3?1:n<=7?2:3;}
 function pickArcs(k){const arcs=[];let guard=60;
   while(arcs.length<k&&guard--){const a=Math.random()*TAU;
@@ -351,8 +358,8 @@ function newRun(){
      dangerT:0,dangerHudT:0,shake:0,banner:null,nextQueue:null,previewStr:'',
      placing:null,rallyFor:null,hudT:0,tut:!meta.seen.tut,tutStep:0};
   R.phaseT=respLen(1);
-  mkBuilding('elder',-1);
-  if(mods.bloom)mkBuilding('font',2);
+  mkBuilding('elder',EX,EY);
+  if(mods.bloom)mkBuilding('font',EX,EY-135);
   // first three glimmers work the wells, the last two the copses
   for(let i=0;i<BAL.start.glim;i++){const g=mkUnit('glimmer',EX+(Math.random()-0.5)*60,EY+70);
     g.assign=i<3?[0,1,0][i]:[2,3][i-3];}
@@ -429,7 +436,7 @@ function spawnFoe(type){
   const d=FOES[type];
   const arc=R.arcs[Math.random()*R.arcs.length|0]||0;
   const a=arc+(Math.random()-0.5)*(Math.PI/2);
-  const dist=560+Math.random()*80;
+  const dist=660+Math.random()*80;
   const hp=d.hp*Math.pow(BAL.night.hpGrow,R.night-1);
   R.foes.push({uid:uid++,type,x:EX+Math.cos(a)*dist,y:EY+Math.sin(a)*dist,
     hp,maxHp:hp,r:d.r,cd:0,tg:null,ptg:null,tgT:0,last:null,aspd:1,hitT:0});}
@@ -622,17 +629,14 @@ function draw(t){
         shy=R.shake>0?R.shake*10*Math.sin(t/31+1.7):0;
   ctx.save();ctx.translate(OX+shx,OY+shy);ctx.scale(SC,SC);
   // moor
-  const mg=ctx.createRadialGradient(EX,EY,60,EX,EY,430);
+  const mg=ctx.createRadialGradient(EX,EY,60,EX,EY,560);
   mg.addColorStop(0,'rgba(38,52,66,.85)');mg.addColorStop(0.8,'rgba(22,30,48,.55)');mg.addColorStop(1,'rgba(22,30,48,0)');
-  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(EX,EY,440,0,TAU);ctx.fill();
-  // rings
-  ctx.strokeStyle='rgba(160,190,220,.10)';ctx.lineWidth=1.5;
-  for(const rg of RINGS){ctx.beginPath();ctx.arc(EX,EY,rg.r,0,TAU);ctx.stroke();}
+  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(EX,EY,570,0,TAU);ctx.fill();
   // arc telegraphs
   const arcs=R.phase==='respite'?R.nextArcs:R.arcs;
   const aAlpha=R.phase==='respite'?0.35+0.25*Math.sin(t/300):0.15;
   ctx.strokeStyle='rgba(176,109,240,'+aAlpha+')';ctx.lineWidth=7;ctx.lineCap='round';
-  for(const a of arcs){ctx.beginPath();ctx.arc(EX,EY,335,a-Math.PI/4,a+Math.PI/4);ctx.stroke();}
+  for(const a of arcs){ctx.beginPath();ctx.arc(EX,EY,460,a-Math.PI/4,a+Math.PI/4);ctx.stroke();}
   ctx.lineCap='butt';
   // harvest nodes
   for(const nd of NODES){
@@ -645,24 +649,25 @@ function draw(t){
     }else{
       ctx.font='30px serif';ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillText('🌲',nd.x-16,nd.y-8);ctx.fillText('🌲',nd.x+14,nd.y+2);ctx.font='24px serif';ctx.fillText('🌲',nd.x-2,nd.y+14);}}
-  // placement overlay
+  // placement (free-form): boundary ring + cursor ghost with validity color
   if(R.placing){
-    for(let i=0;i<SLOTS.length;i++){if(!slotFree(i))continue;const s=SLOTS[i];
-      const sel=R.placing.slot===i;
-      ctx.setLineDash(sel?[]:[4,6]);
-      ctx.strokeStyle=sel?'#9fd8a8':'rgba(200,214,255,.5)';ctx.lineWidth=sel?3:1.5;
-      ctx.beginPath();ctx.arc(s.x,s.y,26,0,TAU);ctx.stroke();ctx.setLineDash([]);
-      if(sel){const bd=BUILDS[R.placing.id];
-        ctx.globalAlpha=0.55;ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.fillText(bd.em,s.x,s.y);ctx.globalAlpha=1;
-        const rng=bd.atk?bd.atk.rng:(bd.heal?bd.heal.rng:0);
-        if(rng){ctx.strokeStyle='rgba(159,216,168,.5)';ctx.lineWidth=1.5;
-          ctx.beginPath();ctx.arc(s.x,s.y,rng,0,TAU);ctx.stroke();}
-        const lx=clamp(s.x,150,WD-150),ly=clamp(s.y+46,40,HT-56);
-        ctx.fillStyle='#dfe7ff';ctx.font='600 22px system-ui,sans-serif';
-        ctx.fillText(bd.nm+' · '+fmtCost(costOf(R.placing.id)),lx,ly);
-        ctx.fillStyle='rgba(223,231,255,.72)';ctx.font='16px system-ui,sans-serif';
-        ctx.fillText('tap again to grow',lx,ly+22);}}}
+    ctx.strokeStyle='rgba(159,216,168,.3)';ctx.lineWidth=1.5;ctx.setLineDash([6,9]);
+    ctx.beginPath();ctx.arc(EX,EY,BUILD_MAX,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    const bd=BUILDS[R.placing.id];
+    const m=MOUSE||{x:EX,y:EY-160};
+    const okP=canPlaceAt(R.placing.id,m.x,m.y)&&canPay(costOf(R.placing.id));
+    const rng=bd.atk?bd.atk.rng:(bd.heal?bd.heal.rng:0);
+    if(rng){ctx.strokeStyle=okP?'rgba(159,216,168,.45)':'rgba(255,142,142,.35)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(m.x,m.y,rng,0,TAU);ctx.stroke();}
+    ctx.strokeStyle=okP?'#9fd8a8':'#ff8e8e';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(m.x,m.y,bd.r,0,TAU);ctx.stroke();
+    ctx.globalAlpha=0.6;ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(bd.em,m.x,m.y);ctx.globalAlpha=1;
+    const lx=clamp(m.x,170,WD-170),ly=clamp(m.y+46,40,HT-56);
+    ctx.fillStyle='#dfe7ff';ctx.font='600 22px system-ui,sans-serif';
+    ctx.fillText(bd.nm+' · '+fmtCost(costOf(R.placing.id)),lx,ly);
+    ctx.fillStyle='rgba(223,231,255,.72)';ctx.font='16px system-ui,sans-serif';
+    ctx.fillText(okP?'click to grow · Shift keeps building · right-click cancels':'can’t grow here',lx,ly+22);}
   // buildings
   for(const b of R.buildings){
     const d=BUILDS[b.id];
@@ -711,6 +716,33 @@ function draw(t){
     else{ctx.fillStyle=x.col;ctx.globalAlpha=p*0.5;
       ctx.beginPath();ctx.arc(x.x,x.y,18*(1.5-p),0,TAU);ctx.fill();}}
   ctx.globalAlpha=1;
+  // hover tooltip (desktop)
+  let hovered=false;
+  if(MOUSE&&!R.placing&&!R.over&&!R.waiting){
+    let tip=null;
+    for(const b of R.buildings)if(within(MOUSE,b,b.r+10)){
+      tip=[BUILDS[b.id].em+' '+BUILDS[b.id].nm,
+        Math.round(b.hp)+'/'+Math.round(b.maxHp)+' HP'+(b.q.length?' · waking '+b.q.map(q=>UNITS[q].em).join(''):'')];break;}
+    if(!tip)for(let i=0;i<NODES.length;i++){const nd=NODES[i];if(within(MOUSE,nd,55)){
+      const w=R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length;
+      tip=[(nd.kind==='well'?'☾ ':'🌲 ')+nd.nm,w+' Glimmer'+(w===1?'':'s')+' at work — click to manage'];break;}}
+    if(!tip)for(const f of R.foes)if(f.hp>0&&within(MOUSE,f,f.r+8)){
+      tip=[FOES[f.type].em+' '+FOES[f.type].nm,Math.ceil(f.hp)+' HP'];break;}
+    if(!tip)for(const u of R.units)if(u.type!=='glimmer'&&within(MOUSE,u,u.r+8)){
+      tip=[UNITS[u.type].em+' '+UNITS[u.type].nm,Math.ceil(u.hp)+'/'+u.maxHp+' HP'];break;}
+    if(tip){hovered=true;
+      ctx.font='600 20px system-ui,sans-serif';const w1=ctx.measureText(tip[0]).width;
+      ctx.font='16px system-ui,sans-serif';const w2=ctx.measureText(tip[1]).width;
+      const tw=Math.max(w1,w2)+24,th=58;
+      const tx=clamp(MOUSE.x+18,10,WD-tw-10),ty=clamp(MOUSE.y-th-8,10,HT-th-10);
+      ctx.fillStyle='rgba(10,14,38,.92)';
+      ctx.beginPath();ctx.roundRect(tx,ty,tw,th,10);ctx.fill();
+      ctx.strokeStyle='rgba(160,175,220,.35)';ctx.lineWidth=1;ctx.stroke();
+      ctx.textAlign='left';ctx.textBaseline='middle';
+      ctx.fillStyle='#e7ecff';ctx.font='600 20px system-ui,sans-serif';ctx.fillText(tip[0],tx+12,ty+19);
+      ctx.fillStyle='rgba(231,236,255,.75)';ctx.font='16px system-ui,sans-serif';ctx.fillText(tip[1],tx+12,ty+42);
+      ctx.textAlign='center';}}
+  cv.style.cursor=R.placing?'crosshair':(hovered?'pointer':'default');
   // night tint
   if(R.phase==='night'){ctx.fillStyle='rgba(30,10,50,.14)';ctx.fillRect(-OX/SC,-OY/SC,W/SC,H/SC);}
   ctx.restore();
@@ -766,7 +798,9 @@ function rebuildBar(){
     const locked=d.lock&&!has(d.lock);
     const b=document.createElement('button');
     b.type='button';b.className='bb'+(locked?' lock':'');b.dataset.b=id;
-    b.innerHTML='<span class="be">'+(locked?'🔒':d.em)+'</span><span class="bn">'+d.nm.split(' ').pop()+'</span>'+
+    b.title=d.nm+' — '+d.desc;
+    b.innerHTML='<span class="bk">'+(BAR_ORDER.indexOf(id)+1)+'</span>'+
+      '<span class="be">'+(locked?'🔒':d.em)+'</span><span class="bn">'+d.nm.split(' ').pop()+'</span>'+
       '<span class="bc">'+(locked?lockReq(d.lock):fmtCost(d.cost))+'</span>';
     b.addEventListener('click',()=>tapBuild(id));
     bar.appendChild(b);}
@@ -787,13 +821,13 @@ function tapBuild(id){
     toast('🔒 '+(ms?ms.req:'Locked'));return;}
   if(R.placing&&R.placing.id===id){R.placing=null;refreshBar();return;}
   if(!canPay(costOf(id))){toast('Not enough — needs '+fmtCost(costOf(id)));return;}
-  R.placing={id,slot:null};R.rallyFor=null;closeSheet();refreshBar();
-  toast('Tap a ring slot, then tap again to grow the '+d.nm);}
-function place(id,slot){
-  pay(costOf(id));mkBuilding(id,slot);
-  poof(SLOTS[slot].x,SLOTS[slot].y,'#9fd8a8');
+  R.placing={id};R.rallyFor=null;closeSheet();refreshBar();
+  toast('Click the moor to grow the '+d.nm+' — Shift keeps building, right-click cancels');}
+function place(id,x,y){
+  pay(costOf(id));mkBuilding(id,x,y);
+  poof(x,y,'#9fd8a8');
   toast(BUILDS[id].em+' '+BUILDS[id].nm+' grown');
-  R.placing=null;uiDirty();syncHud(true);}
+  uiDirty();syncHud(true);}
 
 // ── sheets
 function openSheet(html){$('card').innerHTML=html;$('sheet').classList.add('on');}
@@ -825,8 +859,8 @@ function openBuilding(b){
       if(ud.lock&&!has(ud.lock))
         list.appendChild(sheetRow('🔒',ud.nm,MILES.find(m=>m.id===ud.lock).req,'',true,null));
       else list.appendChild(trainRow(b,t,ud.desc));}
-    list.appendChild(sheetRow('🚩','Set post','Where this hall’s druids stand watch','tap map',false,
-      ()=>{R.rallyFor=b;closeSheet();toast('Tap the moor to set the post');}));
+    list.appendChild(sheetRow('🚩','Set post','Where this hall’s druids stand watch','click map',false,
+      ()=>{R.rallyFor=b;closeSheet();toast('Click the moor to set the post');}));
     if(b.rally)list.appendChild(sheetRow('🍃','Clear post','Druids return to their bough','',false,
       ()=>{b.rally=null;
         for(const u of R.units)if(u.src===b.uid&&u.type!=='glimmer')u.post=postOf(b,u);
@@ -911,13 +945,13 @@ function setPaused(v){if(!R)return;R.paused=v;
 $('pauseb').addEventListener('click',()=>{if(!R||R.over||R.waiting)return;
   setPaused(!R.paused);});
 $('speedb').addEventListener('click',()=>{if(!R)return;
-  R.speed=R.speed>=2?1:2;$('speedb').textContent=R.speed+'×';});
+  R.speed=R.speed>=4?1:R.speed*2;$('speedb').textContent=R.speed+'×';});
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&R&&!R.over&&!R.waiting)setPaused(true);});
 const GOALS=[
-  {txt:'🛖 Grow a Bough Hall — tap it below, then a ring slot, tap again',
+  {txt:'🛖 Grow a Bough Hall — press 2 (or click it below), then click the moor',
    done:()=>R.buildings.some(b=>b.id!=='elder'&&BUILDS[b.id].trains)},
-  {txt:'🛡️ Wake a Thornguard — tap your new hall',
+  {txt:'🛡️ Wake a Thornguard — click your new hall',
    done:()=>R.units.some(u=>u.type!=='glimmer')||R.buildings.some(b=>b.q.some(t=>t!=='glimmer'))},
   {txt:'🌙 Hold night 1 — the Gloam comes from the violet arc',
    done:()=>R.done>=1},
@@ -933,22 +967,40 @@ function syncGoal(){
 // ════════════════════════════ MAIN — input + loop ═════════════════════════
 cv.addEventListener('click',e=>{
   if(!R||R.over||R.waiting)return;
-  const p=s2w(e.clientX,e.clientY);
+  const p=s2w(e.clientX,e.clientY);MOUSE=p;
   if(R.placing){
-    let bi=-1,bd=46*46;
-    for(let i=0;i<SLOTS.length;i++){if(!slotFree(i))continue;
-      const dd=d2(p,SLOTS[i]);if(dd<bd){bd=dd;bi=i;}}
-    if(bi>=0){
-      if(R.placing.slot===bi){if(canPay(costOf(R.placing.id)))place(R.placing.id,bi);
-        else{toast('Not enough — needs '+fmtCost(costOf(R.placing.id)));R.placing=null;}}
-      else R.placing.slot=bi;}
-    else{R.placing=null;toast('Growth set aside');}
+    const id=R.placing.id;
+    if(!canPay(costOf(id))){toast('Not enough — needs '+fmtCost(costOf(id)));
+      R.placing=null;refreshBar();return;}
+    if(canPlaceAt(id,p.x,p.y)){place(id,p.x,p.y);
+      if(!e.shiftKey||!canPay(costOf(id)))R.placing=null;}
+    else toast('Can’t grow there');
     refreshBar();return;}
   if(R.rallyFor){const b=R.rallyFor;b.rally={x:clamp(p.x,20,WD-20),y:clamp(p.y,20,HT-20)};
     for(const u of R.units)if(u.src===b.uid&&u.type!=='glimmer')u.post=postOf(b,u);
     R.rallyFor=null;toast('🚩 Post set');return;}
   for(const b of R.buildings){if(within(p,b,b.r+16)){openBuilding(b);return;}}
   for(let i=0;i<NODES.length;i++){if(within(p,NODES[i],55)){openNode(i);return;}}
+});
+cv.addEventListener('mousemove',e=>{MOUSE=s2w(e.clientX,e.clientY);});
+cv.addEventListener('contextmenu',e=>{e.preventDefault();
+  if(!R||R.over||R.waiting)return;
+  if(R.placing){R.placing=null;refreshBar();}
+  else if(R.rallyFor)R.rallyFor=null;
+  else closeSheet();});
+addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if($('death').classList.contains('on')){$('dret').click();return;}
+    if($('grove').classList.contains('on')){$('begin').click();return;}}
+  if(!R||R.over||R.waiting)return;
+  if(e.key==='Escape'){
+    if($('sheet').classList.contains('on'))closeSheet();
+    else if(R.placing){R.placing=null;refreshBar();}
+    else if(R.rallyFor)R.rallyFor=null;
+    return;}
+  if(e.key===' '){e.preventDefault();setPaused(!R.paused);return;}
+  if(e.key==='f'||e.key==='F'){$('speedb').click();return;}
+  if(/^[1-9]$/.test(e.key)){const id=BAR_ORDER[+e.key-1];if(id)tapBuild(id);}
 });
 
 let last=0,acc=0;
@@ -966,12 +1018,14 @@ function loop(t){
 function botTick(){
   const elder=R.buildings[0];if(!elder)return;
   const count=id=>R.buildings.filter(b=>b.id===id).length;
-  const botPlace=(id,ring)=>{let si=-1;
-    for(let i=0;i<SLOTS.length;i++)if(slotFree(i)&&SLOTS[i].ring===ring){si=i;break;}
-    if(si<0)for(let i=0;i<SLOTS.length;i++)if(slotFree(i)){si=i;break;}
-    if(si>=0)place(id,si);return si>=0;};
+  const RADII={font:130,hall:170,perch:210,totem:210,stones:220,shrine:220,wall:260};
+  const botPlace=id=>{const rad=RADII[id]||200;
+    for(let i=0;i<24;i++){const a=Math.random()*TAU,rr=rad+(Math.random()-0.5)*40;
+      const x=EX+Math.cos(a)*rr,y=EY+Math.sin(a)*rr;
+      if(canPlaceAt(id,x,y)){place(id,x,y);return true;}}
+    return false;};
   // 1. a Bough Hall before anything else
-  if(!count('hall')){if(canPay(costOf('hall')))botPlace('hall',0);return;}
+  if(!count('hall')){if(canPay(costOf('hall')))botPlace('hall');return;}
   // 2. keep every trainer's queue running (army first)
   for(const b of R.buildings){const d=BUILDS[b.id];
     if(!d.trains||b.q.length>=2)continue;
@@ -989,7 +1043,7 @@ function botTick(){
   for(const[id,n]of wants){const d=BUILDS[id];
     if(d.lock&&!has(d.lock))continue;
     if(count(id)<n&&canPay(costOf(id))){
-      botPlace(id,id==='font'?0:1);return;}}}
+      botPlace(id);return;}}}
 
 // ════════════════════════════ test surface ════════════════════════════════
 window.MDG={
@@ -999,9 +1053,9 @@ window.MDG={
     R.nextQueue=null;R.previewStr='';
     R.phase='respite';R.phaseT=0.001;R.nextArcs=pickArcs(arcCount(n));},
   give:(l,s)=>{R.light+=l;R.sap+=s||0;syncHud(true);},
-  build:(id,slot)=>{if(!slotFree(slot))return null;
+  build:(id,x,y)=>{if(!canPlaceAt(id,x,y))return null;
     if(canPay(costOf(id)))pay(costOf(id));
-    return mkBuilding(id,slot);},
+    return mkBuilding(id,x,y);},
   newRun,autoplay:()=>{R.bot=true;},
 };
 
