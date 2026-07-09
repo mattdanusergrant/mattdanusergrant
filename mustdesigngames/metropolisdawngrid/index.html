@@ -52,7 +52,11 @@
   @media(max-width:740px){.goal{display:none}}
   .stage{position:relative;flex:1;min-height:0}
   #minimap{position:absolute;right:14px;bottom:14px;width:176px;height:176px;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);z-index:5;cursor:pointer;image-rendering:pixelated;touch-action:none}
-  .inspect{position:absolute;left:14px;bottom:14px;z-index:6;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:10px 13px;font-size:12.5px;color:var(--ink);width:212px;pointer-events:none;line-height:1.5}
+  .inspect{position:absolute;left:14px;bottom:52px;z-index:6;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:10px 13px;font-size:12.5px;color:var(--ink);width:212px;pointer-events:none;line-height:1.5}
+  .zoomctl{position:absolute;left:14px;bottom:14px;z-index:6;display:flex;gap:0;background:var(--paper);border:1.5px solid var(--line-2);border-radius:9px;box-shadow:var(--shadow);overflow:hidden}
+  .zoomctl button{border:0;background:transparent;color:var(--ink-2);font-size:15px;font-weight:600;cursor:pointer;padding:5px 11px;font-family:inherit;line-height:1}
+  .zoomctl button:hover{background:var(--line)}
+  .zoomctl #zoompct{font-size:11px;min-width:46px;border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);color:var(--muted)}
   .inspect .it{font-family:'Fraunces',serif;font-weight:600;font-size:14px;letter-spacing:-.01em;margin-bottom:2px}
   .inspect .ik{color:var(--muted)} .inspect b{color:var(--ink-2)}
   .inspect .ok{color:#3E9E5E;font-weight:600} .inspect .no{color:#D0704A;font-weight:600}
@@ -178,6 +182,11 @@
     </div>
     <div class="obs" id="obs" hidden><b>👁 Observing an AI-run city</b> · read-only — <a href="world/">← back to the world</a></div>
     <div class="inspect" id="inspect" hidden></div>
+    <div class="zoomctl" id="zoomctl">
+      <button data-z="out" type="button" title="Zoom out (−)">−</button>
+      <button data-z="fit" type="button" title="Reset zoom" id="zoompct">100%</button>
+      <button data-z="in" type="button" title="Zoom in (+)">+</button>
+    </div>
   </div>
   <div id="worldfade"></div>
 
@@ -225,6 +234,7 @@
   var canvas=document.getElementById('city'), ctx=canvas.getContext('2d');
   var CELL=32, WORLD=256, cols=WORLD, rows=WORLD, dpr=1;   // fixed, standardized world; the view is a camera onto it
   var camX=0, camY=0, VCOLS=0, VROWS=0, keys={};           // camera (top-left world cell, float) + visible span + held keys
+  var zoom=1, ZMIN=0.5, ZMAX=3, stW=0, stH=0;              // mousewheel/UI zoom (screen scale) + stage size in CSS px
   var grid=[], brush='road', lastPaint=-1, dirty=true, svcDirty=false;
   var lineAnchor=null, hoverCell=null;                      // road/rail line-tool state
   var dragStart=null, panned=false;                         // pointer: distinguish a click (place one) from a drag (pan)
@@ -427,22 +437,26 @@
 
   // ---- sizing ----
   function initWorld(){grid=new Array(cols*rows);for(var r=0;r<rows;r++)for(var c=0;c<cols;c++)grid[idx(c,r)]=newCell(c,r);}
-  function clampCam(){camX=Math.max(0,Math.min(cols-VCOLS,camX));camY=Math.max(0,Math.min(rows-VROWS,camY));}
+  function clampCam(){camX=Math.max(0,Math.min(Math.max(0,cols-VCOLS),camX));camY=Math.max(0,Math.min(Math.max(0,rows-VROWS),camY));}
+  function recomputeView(){VCOLS=stW/(CELL*zoom);VROWS=stH/(CELL*zoom);clampCam();}   // visible cells shrink as you zoom in
   function centerCam(c,r){camX=c-VCOLS/2;camY=r-VROWS/2;clampCam();}
   function resize(){
     var st=canvas.parentNode.getBoundingClientRect();
     dpr=Math.min(window.devicePixelRatio||1,2);
     canvas.width=Math.round(st.width*dpr);canvas.height=Math.round(st.height*dpr);
-    VCOLS=st.width/CELL; VROWS=st.height/CELL;      // how many world cells fit in the view (the camera window)
-    clampCam();dirty=true;
+    stW=st.width;stH=st.height;recomputeView();dirty=true;
   }
-
+  function screenPx(e){var rect=canvas.getBoundingClientRect();return {x:(e.clientX-rect.left)/rect.width*canvas.width/dpr, y:(e.clientY-rect.top)/rect.height*canvas.height/dpr};}
+  function setZoom(nz,mx,my){                                   // zoom, keeping the world point under (mx,my) fixed
+    nz=Math.max(ZMIN,Math.min(ZMAX,nz)); if(nz===zoom)return;
+    if(mx===undefined){mx=stW/2;my=stH/2;}
+    var wx=camX+mx/(CELL*zoom), wy=camY+my/(CELL*zoom);
+    zoom=nz;recomputeView();
+    camX=wx-mx/(CELL*zoom);camY=wy-my/(CELL*zoom);clampCam();dirty=true;updateZoomUI();
+  }
   // ---- interaction ----
-  function cellFromEvent(e){
-    var rect=canvas.getBoundingClientRect();
-    var x=(e.clientX-rect.left)/rect.width*canvas.width/dpr, y=(e.clientY-rect.top)/rect.height*canvas.height/dpr;
-    return {c:Math.floor(x/CELL+camX),r:Math.floor(y/CELL+camY)};   // screen → world cell, through the camera
-  }
+  function cellFromEvent(e){var p=screenPx(e);
+    return {c:Math.floor(camX+p.x/(CELL*zoom)),r:Math.floor(camY+p.y/(CELL*zoom))};}   // screen → world cell, through camera + zoom
   // power station is a 2×2 footprint
   function isPower(c,r){return inB(c,r)&&grid[idx(c,r)].t==='power';}
   function plantCells(c,r){return [[c,r],[c+1,r],[c,r+1],[c+1,r+1]];}
@@ -513,7 +527,7 @@
     if(!hoverCell||p.c!==hoverCell.c||p.r!==hoverCell.r){hoverCell=p;dirty=true;updateInspect();}   // hover changed → redraw ghost/highlight + inspect
     if(dragStart){var dx=e.clientX-dragStart.sx,dy=e.clientY-dragStart.sy;
       if(!panned&&Math.abs(dx)+Math.abs(dy)>PAN_THRESH)panned=true;
-      if(panned){camX=dragStart.cx-dx/CELL;camY=dragStart.cy-dy/CELL;clampCam();dirty=true;}}}
+      if(panned){camX=dragStart.cx-dx/(CELL*zoom);camY=dragStart.cy-dy/(CELL*zoom);clampCam();dirty=true;}}}
   function up(e){
     if(!dragStart)return;var p=cellFromEvent(e),wasPan=panned;dragStart=null;panned=false;
     if(wasPan){dirty=true;return;}                                  // it was a pan — don't build
@@ -527,6 +541,11 @@
   canvas.addEventListener('pointerdown',down);
   canvas.addEventListener('pointermove',move);
   window.addEventListener('pointerup',up);
+  canvas.addEventListener('wheel',function(e){e.preventDefault();var p=screenPx(e);setZoom(zoom*(e.deltaY<0?1.15:1/1.15),p.x,p.y);},{passive:false});
+  var zoompctEl=document.getElementById('zoompct');
+  function updateZoomUI(){if(zoompctEl)zoompctEl.textContent=Math.round(zoom*100)+'%';}
+  document.getElementById('zoomctl').addEventListener('click',function(e){var btn=e.target.closest('button');if(!btn)return;var z=btn.getAttribute('data-z');
+    if(z==='in')setZoom(zoom*1.25);else if(z==='out')setZoom(zoom/1.25);else setZoom(1);});
   canvas.addEventListener('contextmenu',function(e){e.preventDefault();cancelLine();});   // right-click cancels a pending line
 
   var tools=document.getElementById('tools');
@@ -548,6 +567,8 @@
     var lk=e.key.toLowerCase();
     if(PANKEY[lk]){keys[PANKEY[lk]]=1;e.preventDefault();return;}
     if(e.key==='i'||e.key==='I'){selectBrush('inspect');return;}    // inspect works in observe mode too
+    if(e.key==='+'||e.key==='='){setZoom(zoom*1.2);return;}         // keyboard zoom
+    if(e.key==='-'||e.key==='_'){setZoom(zoom/1.2);return;}
     if(OBSERVE)return;if(e.key==='Escape'){cancelLine();return;}
     var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank','p':'port','P':'port','t':'tower','T':'tower'}[e.key];if(m)selectBrush(m);});
   window.addEventListener('keyup',function(e){var lk=e.key.toLowerCase();if(PANKEY[lk])keys[PANKEY[lk]]=0;});
@@ -1030,7 +1051,7 @@
   function draw(){
     if(!cols)return;
     ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;
-    ctx.translate(-Math.round(camX*CELL),-Math.round(camY*CELL));    // camera: shift the world under the fixed view
+    ctx.scale(zoom,zoom);ctx.translate(-camX*CELL,-camY*CELL);       // camera: zoom, then shift the world under the fixed view
     var vx0=Math.max(0,Math.floor(camX)),vy0=Math.max(0,Math.floor(camY));   // only iterate the visible window
     var vx1=Math.min(cols,Math.ceil(camX+VCOLS)+1),vy1=Math.min(rows,Math.ceil(camY+VROWS)+1);
     drawGridPaper(vx0,vy0,vx1,vy1);
