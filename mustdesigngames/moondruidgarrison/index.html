@@ -42,6 +42,27 @@
     font:600 15px system-ui,sans-serif;text-shadow:0 1px 4px rgba(0,0,0,.7);letter-spacing:.03em}
   #pausedov.on{display:flex}
 
+  /* ── elder action bar (beneath the tree) ── */
+  #elderbar{position:fixed;z-index:8;display:none;flex-direction:column;align-items:center;gap:4px;
+    transform:translateX(-50%)}
+  #ebrow{display:flex;gap:6px}
+  #elderbar button{display:flex;align-items:center;gap:6px;background:rgba(14,22,50,.88);
+    border:1px solid rgba(159,216,168,.4);border-radius:11px;color:#dbe3fa;cursor:pointer;
+    font:600 12.5px system-ui,sans-serif;padding:7px 11px;white-space:nowrap}
+  #elderbar button .ec{font-size:10.5px;opacity:.8;font-weight:500}
+  #elderbar button .eq{font-size:10.5px;color:#9fd8a8}
+  #elderbar button:disabled{opacity:.45;cursor:default}
+  #elderbar button.done{border-color:rgba(159,216,168,.7);color:#9fd8a8;opacity:.7}
+  #eb-q{display:none;width:120px;height:4px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
+  .ebqf{height:100%;background:#8ea6ff;border-radius:99px}
+
+  /* ── rich hover tooltip ── */
+  #tip{position:fixed;z-index:60;display:none;max-width:300px;background:rgba(10,14,38,.97);
+    border:1px solid rgba(160,175,220,.4);border-radius:11px;padding:10px 13px;color:#e7ecff;
+    font:12.5px/1.5 system-ui,sans-serif;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #tip b{font-size:13.5px}
+  #tip .tc{opacity:.72}
+
   /* ── build bar ── */
   #bar{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;gap:7px;overflow-x:auto;
     padding:8px 10px calc(env(safe-area-inset-bottom) + 10px);background:linear-gradient(rgba(7,10,32,0),rgba(7,10,32,.92) 40%);
@@ -134,6 +155,15 @@
   <div id="goal"></div>
 </div>
 <div id="pausedov">⏸ paused — you may still build</div>
+<div id="elderbar">
+  <div id="ebrow">
+    <button id="eb-glim" type="button">✨ Bud Glimmer <span class="ec">25☾ ✦1</span><span class="eq"></span></button>
+    <button id="eb-wings" type="button">🦋 Wings <span class="ec">75☾ 25⬡</span></button>
+    <button id="eb-roots" type="button">🌱 Taproots <span class="ec">50☾ 50⬡</span></button>
+  </div>
+  <div id="eb-q"><div class="ebqf" style="width:0%"></div></div>
+</div>
+<div id="tip"></div>
 
 <div id="bar"></div>
 <div id="sheet"><div id="card"></div></div>
@@ -292,7 +322,8 @@ function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=inne
   SC=Math.min(W/WD,H/HT);OX=(W-WD*SC)/2;OY=(H-HT*SC)/2;
   const dg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.75);
   dg.addColorStop(0,'rgba(255,60,60,0)');dg.addColorStop(1,'rgba(255,60,60,.85)');
-  dangerGrad=dg;}
+  dangerGrad=dg;
+  posElderBar();}
 addEventListener('resize',resize);resize();
 const s2w=(sx,sy)=>({x:(sx-OX)/SC,y:(sy-OY)/SC});
 const BUILD_MAX=380; // free-form placement: anywhere inside this ring that doesn't overlap
@@ -791,6 +822,7 @@ function syncHud(force){
     $('ebfill').style.width=(f*100)+'%';
     $('ebfill').style.background=f<0.35?'linear-gradient(90deg,#ff8e8e,#ffd0d0)':'linear-gradient(90deg,#8fd8a8,#e6ffee)';}
   $('ebarw').classList.toggle('hit',R.dangerHudT>0);
+  syncElderBar();
   if(uiFlag||force){uiFlag=false;refreshBar();}}
 function rebuildBar(){
   const bar=$('bar');bar.innerHTML='';
@@ -798,11 +830,11 @@ function rebuildBar(){
     const locked=d.lock&&!has(d.lock);
     const b=document.createElement('button');
     b.type='button';b.className='bb'+(locked?' lock':'');b.dataset.b=id;
-    b.title=d.nm+' — '+d.desc;
     b.innerHTML='<span class="bk">'+(BAR_ORDER.indexOf(id)+1)+'</span>'+
       '<span class="be">'+(locked?'🔒':d.em)+'</span><span class="bn">'+d.nm.split(' ').pop()+'</span>'+
       '<span class="bc">'+(locked?lockReq(d.lock):fmtCost(d.cost))+'</span>';
     b.addEventListener('click',()=>tapBuild(id));
+    bindTip(b,()=>buildTipHtml(id));
     bar.appendChild(b);}
   refreshBar();}
 function lockReq(id){const ms=MILES.find(m=>m.id===id);return ms?ms.req.replace('Hold to ',''):'locked';}
@@ -833,44 +865,39 @@ function place(id,x,y){
 function openSheet(html){$('card').innerHTML=html;$('sheet').classList.add('on');}
 function closeSheet(){$('sheet').classList.remove('on');}
 $('sheet').addEventListener('click',e=>{if(e.target===$('sheet'))closeSheet();});
-function sheetRow(em,nm,metaTxt,tag,dim,fn){
+function sheetRow(em,nm,metaTxt,tag,dim,fn,tipFn){
   const r=document.createElement('div');r.className='row'+(dim?' dim':'');
   r.innerHTML='<div class="em">'+em+'</div><div class="mid"><div class="nm">'+nm+'</div>'+
     '<div class="meta">'+metaTxt+'</div></div><div class="tag">'+tag+'</div>';
   if(!dim&&fn)r.addEventListener('click',fn);
+  if(tipFn)bindTip(r,tipFn);
   return r;}
 function openBuilding(b){
   const d=BUILDS[b.id];
   openSheet('<h2>'+d.em+' '+d.nm+'</h2><p class="sub">'+d.desc+' · '+Math.round(b.hp)+'/'+Math.round(b.maxHp)+' HP</p><div id="list"></div>');
   const list=$('list');
-  if(b.id==='elder'){
-    const gc=R.units.filter(u=>u.type==='glimmer').length;
-    list.appendChild(trainRow(b,'glimmer','You tend '+gc+' Glimmers'));
-    for(const k of ['wings','roots']){const up=BAL.ecoUp[k];
-      const done=R.eco[k]>0;
-      const nm=k==='wings'?'Brighter Wings':'Deep Taproots';
-      const dd=k==='wings'?'Glimmers carry +25% moonlight':'Sap flows +25% faster';
-      list.appendChild(sheetRow(k==='wings'?'🦋':'🌱',nm,dd,
-        done?'✓':fmtCost(up.cost),done||!canPay(up.cost),
-        ()=>{pay(up.cost);R.eco[k]=1;toast(nm+' — the grove grows wiser');openBuilding(b);syncHud(true);}));}
-  }else if(d.trains){
+  if(d.trains){
     for(const t of d.trains){
       const ud=UNITS[t];
       if(ud.lock&&!has(ud.lock))
-        list.appendChild(sheetRow('🔒',ud.nm,MILES.find(m=>m.id===ud.lock).req,'',true,null));
+        list.appendChild(sheetRow('🔒',ud.nm,MILES.find(m=>m.id===ud.lock).req,'',true,null,
+          ()=>unitTipHtml(t)+'<br>🔒 '+MILES.find(m=>m.id===ud.lock).req));
       else list.appendChild(trainRow(b,t,ud.desc));}
     list.appendChild(sheetRow('🚩','Set post','Where this hall’s druids stand watch','click map',false,
-      ()=>{R.rallyFor=b;closeSheet();toast('Click the moor to set the post');}));
+      ()=>{R.rallyFor=b;closeSheet();toast('Click the moor to set the post');},
+      ()=>'<b>🚩 Set post</b><br>Choose where this building’s druids stand watch. They fight what comes near their post and return to it when idle — but any threat to the Elderbough calls every druid home.'));
     if(b.rally)list.appendChild(sheetRow('🍃','Clear post','Druids return to their bough','',false,
       ()=>{b.rally=null;
         for(const u of R.units)if(u.src===b.uid&&u.type!=='glimmer')u.post=postOf(b,u);
-        toast('Post cleared');openBuilding(b);}));}
+        toast('Post cleared');openBuilding(b);},
+      ()=>'<b>🍃 Clear post</b><br>Druids return to standing watch beside their own bough.'));}
   if(b.id!=='elder'){
     const back=Math.floor(costOf(b.id)[0]*BAL.sellBack)+'☾ '+Math.floor(costOf(b.id)[1]*BAL.sellBack)+'⬡';
     list.appendChild(sheetRow('🍂','Unroot','Reclaim '+back,'sell',false,
       ()=>{R.light+=costOf(b.id)[0]*BAL.sellBack;R.sap+=costOf(b.id)[1]*BAL.sellBack;
         for(const q of b.q){R.light+=UNITS[q].cost[0];R.sap+=UNITS[q].cost[1];}
-        b.hp=0;closeSheet();toast(d.nm+' unrooted');}));}
+        b.hp=0;closeSheet();toast(d.nm+' unrooted');},
+      ()=>'<b>🍂 Unroot</b><br>Reclaim '+Math.round(BAL.sellBack*100)+'% of this bough’s cost. Druids still waking inside are refunded in full. The building is gone; its druids remain.'));}
   if(b.q.length){const p=Math.round((1-b.qt/UNITS[b.q[0]].tt)*100);
     const div=document.createElement('div');
     div.innerHTML='<p class="sub" style="margin-top:10px">Waking: '+
@@ -884,7 +911,8 @@ function trainRow(b,t,desc){
   const tag=full?'queue full':noVig?'needs ✦ — grow a ⛲ Font':fmtCost(ud.cost)+' · ✦'+ud.vigil;
   return sheetRow(ud.em,ud.nm,desc+' · '+ud.tt+'s',tag,dim,()=>{
     pay(ud.cost);if(!b.q.length)b.qt=ud.tt;b.q.push(t);
-    toast(ud.em+' '+ud.nm+' waking…');openBuilding(b);syncHud(true);});}
+    toast(ud.em+' '+ud.nm+' waking…');openBuilding(b);syncHud(true);},
+    ()=>unitTipHtml(t));}
 function openNode(i){
   const nd=NODES[i];
   const workers=R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length;
@@ -921,6 +949,9 @@ function showGrove(){
     btn.disabled=done||meta.dew<nd.costs[r];
     if(!btn.disabled)btn.addEventListener('click',()=>{
       meta.dew-=nd.costs[r];meta.spent[nd.id]=r+1;saveMeta();showGrove();});
+    bindTip(btn,()=>'<b>'+nd.em+' '+nd.nm+'</b> — rank '+r+' of '+max+
+      (done?'':' · next rank ✧ '+nd.costs[r])+'<br>'+nd.d+
+      '<br><span class="tc">Permanent — applies to every future vigil.</span>');
     row.appendChild(btn);tree.appendChild(row);}
   const ml=$('miles');ml.innerHTML='';
   for(const ms of MILES){
@@ -930,11 +961,85 @@ function showGrove(){
       (done?' <span class="pips">●</span>':'')+'</div><div class="meta">'+(done?ms.d:ms.req+' — '+ms.d)+'</div></div>';
     ml.appendChild(row);}
   $('grove').classList.add('on');$('bar').style.display='none';
-  if(R)R.waiting=true;}
+  if(R)R.waiting=true;
+  syncElderBar();}
 $('begin').addEventListener('click',()=>{
   $('grove').classList.remove('on');$('bar').style.display='flex';
   newRun();});
 $('dret').addEventListener('click',showGrove);
+
+// ── rich hover tooltips ──────────────────────────────────────────────────
+function bindTip(el,fn){
+  el.addEventListener('mouseenter',()=>{const h=fn();if(!h)return;
+    const tip=$('tip');tip.innerHTML=h;tip.style.display='block';
+    const r=el.getBoundingClientRect(),tr=tip.getBoundingClientRect();
+    const x=clamp(r.left+r.width/2-tr.width/2,8,W-tr.width-8);
+    let y=r.top-tr.height-10;if(y<8)y=r.bottom+10;
+    tip.style.left=x+'px';tip.style.top=y+'px';});
+  el.addEventListener('mouseleave',()=>{$('tip').style.display='none';});}
+function unitTipHtml(t){const u=UNITS[t];
+  let h='<b>'+u.em+' '+u.nm+'</b> — '+fmtCost(u.cost)+' · ✦'+u.vigil+' vigil · wakes in '+u.tt+'s<br>';
+  h+=u.hp+' HP';
+  if(u.atk){h+=' · '+u.atk.dmg+' dmg every '+u.atk.cd+'s'+(u.atk.rng>=40?' · range '+u.atk.rng:' · melee');
+    if(u.atk.aoe)h+=' · bursts in a '+u.atk.aoe+'u circle';
+    if(u.atk.cleave)h+=' · cleaves adjacent Gloam';
+    h+=u.atk.air?' · strikes flyers':' · cannot reach flyers';}
+  if(u.heal)h+=' · mends the most wounded druid '+u.heal.hps+' HP/s within '+u.heal.rng+'u';
+  if(t==='glimmer')h+=' · no attack — flees home when hurt';
+  return h+'<br><span class="tc">'+u.desc+'</span>';}
+function buildTipHtml(id){const d=BUILDS[id];
+  const locked=d.lock&&!has(d.lock);
+  let h='<b>'+d.em+' '+d.nm+'</b>'+(d.cost?' — '+fmtCost(R?costOf(id):d.cost):'')+'<br>';
+  h+=Math.round(d.hp*(R&&id!=='elder'?R.mods.bldHp:1))+' HP';
+  if(d.vigil)h+=' · +'+d.vigil+' ✦ vigil';
+  if(d.heal)h+=' · mends druids and boughs '+d.heal.hps+' HP/s within '+d.heal.rng+'u — inner fonts sustain the Elderbough';
+  if(d.atk)h+=' · '+d.atk.dmg+' dmg every '+d.atk.cd+'s · range '+d.atk.rng+(d.atk.air?' · strikes flyers':'');
+  if(id==='wall')h+=' · no attack — the Gloam must gnaw through it (flyers pass over)';
+  if(d.trains)h+='<br>Wakes: '+d.trains.map(t=>UNITS[t].em+' '+UNITS[t].nm+(UNITS[t].lock&&!has(UNITS[t].lock)?' 🔒':'')).join(' · ');
+  else h+='<br><span class="tc">'+d.desc+'</span>';
+  if(locked){const ms=MILES.find(m=>m.id===d.lock);h+='<br>🔒 '+(ms?ms.req:'Locked');}
+  const k=BAR_ORDER.indexOf(id);if(k>=0)h+='<br><span class="tc">Hotkey '+(k+1)+'</span>';
+  return h;}
+
+// ── elder action bar (beneath the tree) ─────────────────────────────────
+function posElderBar(){const el=$('elderbar');
+  el.style.left=(OX+EX*SC)+'px';el.style.top=(OY+(EY+64)*SC)+'px';}
+function syncElderBar(){
+  const bar=$('elderbar');
+  const on=!!(R&&!R.over&&!R.waiting);
+  bar.style.display=on?'flex':'none';
+  if(!on)return;
+  const elder=R.buildings[0];if(!elder||elder.id!=='elder')return;
+  $('eb-glim').disabled=!canPay(UNITS.glimmer.cost)||vigilUsed()+1>vigilCap()||elder.q.length>=BAL.queueMax;
+  for(const k of ['wings','roots']){const btn=$('eb-'+(k==='wings'?'wings':'roots'));
+    if(R.eco[k]){btn.classList.add('done');btn.disabled=true;btn.querySelector('.ec').textContent='✓';}
+    else{btn.classList.remove('done');btn.disabled=!canPay(BAL.ecoUp[k].cost);
+      btn.querySelector('.ec').textContent=fmtCost(BAL.ecoUp[k].cost);}}
+  const q=$('eb-q');
+  if(elder.q.length){q.style.display='block';
+    q.firstElementChild.style.width=Math.round((1-elder.qt/UNITS[elder.q[0]].tt)*100)+'%';
+    $('eb-glim').querySelector('.eq').textContent='×'+elder.q.length;}
+  else{q.style.display='none';$('eb-glim').querySelector('.eq').textContent='';}}
+$('eb-glim').addEventListener('click',()=>{
+  if(!R||R.over||R.waiting)return;
+  const elder=R.buildings[0];if(!elder||elder.id!=='elder')return;
+  const c=UNITS.glimmer.cost;
+  if(!canPay(c)||vigilUsed()+1>vigilCap()||elder.q.length>=BAL.queueMax)return;
+  pay(c);if(!elder.q.length)elder.qt=UNITS.glimmer.tt;elder.q.push('glimmer');
+  toast('✨ Glimmer budding…');syncHud(true);});
+for(const k of ['wings','roots'])$('eb-'+k).addEventListener('click',()=>{
+  if(!R||R.over||R.waiting||R.eco[k])return;
+  const up=BAL.ecoUp[k];if(!canPay(up.cost))return;
+  pay(up.cost);R.eco[k]=1;
+  toast(k==='wings'?'🦋 Brighter Wings — Glimmers carry more moonlight':'🌱 Deep Taproots — sap flows faster');
+  syncHud(true);});
+bindTip($('eb-glim'),()=>unitTipHtml('glimmer')+'<br><span class="tc">New Glimmers join the emptiest harvest node. Hotkey G</span>');
+bindTip($('eb-wings'),()=>'<b>🦋 Brighter Wings</b> — '+fmtCost(BAL.ecoUp.wings.cost)+' · one-time<br>Glimmers carry +25% moonlight per Lightwell trip.'+(R&&R.eco.wings?'<br><span class="tc">Already flowing.</span>':''));
+bindTip($('eb-roots'),()=>'<b>🌱 Deep Taproots</b> — '+fmtCost(BAL.ecoUp.roots.cost)+' · one-time<br>Sap trickles +25% faster from the elderwood copses.'+(R&&R.eco.roots?'<br><span class="tc">Already flowing.</span>':''));
+bindTip($('pauseb'),()=>'<b>⏸ Pause</b> — Space<br>Time stops but your hands don’t: you may still build, train, and shift posts while paused.');
+bindTip($('speedb'),()=>'<b>Game speed</b> — F<br>Cycles 1× → 2× → 4×.');
+bindTip($('begin'),()=>'<b>Begin the Vigil</b> — Enter<br>Start a fresh run with every Vigil Tree rank and milestone applied. The vigil ends only when the Elderbough falls.');
+bindTip($('dret'),()=>'<b>Return to the Grove</b> — Enter<br>Spend the Lunar Dew ✧ you gathered on permanent growth, then go again.');
 
 // ── toasts / pause / speed / objective chip
 let tT;function toast(m){$('toast').textContent=m;$('toast').classList.add('on');
@@ -979,7 +1084,8 @@ cv.addEventListener('click',e=>{
   if(R.rallyFor){const b=R.rallyFor;b.rally={x:clamp(p.x,20,WD-20),y:clamp(p.y,20,HT-20)};
     for(const u of R.units)if(u.src===b.uid&&u.type!=='glimmer')u.post=postOf(b,u);
     R.rallyFor=null;toast('🚩 Post set');return;}
-  for(const b of R.buildings){if(within(p,b,b.r+16)){openBuilding(b);return;}}
+  for(const b of R.buildings){if(b.id==='elder')continue; // elder actions live on the elder bar
+    if(within(p,b,b.r+16)){openBuilding(b);return;}}
   for(let i=0;i<NODES.length;i++){if(within(p,NODES[i],55)){openNode(i);return;}}
 });
 cv.addEventListener('mousemove',e=>{MOUSE=s2w(e.clientX,e.clientY);});
@@ -1000,6 +1106,7 @@ addEventListener('keydown',e=>{
     return;}
   if(e.key===' '){e.preventDefault();setPaused(!R.paused);return;}
   if(e.key==='f'||e.key==='F'){$('speedb').click();return;}
+  if(e.key==='g'||e.key==='G'){$('eb-glim').click();return;}
   if(/^[1-9]$/.test(e.key)){const id=BAR_ORDER[+e.key-1];if(id)tapBuild(id);}
 });
 
