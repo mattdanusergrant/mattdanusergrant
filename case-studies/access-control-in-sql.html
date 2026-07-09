@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Access control, built twice, in SQL · Case Study · Matt Danuser-Grant</title>
+<meta name="description" content="Engineering case study: designing the same data access-control discipline — row-level security, security-invoker views, column-level grants, provisioning triggers — from scratch across two multi-tenant products on Neon Postgres, and the identity bug found once and never re-debugged." />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/site.css" />
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:17px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;
+  }
+  a{color:inherit;text-decoration:none}
+
+  .wrap{max-width:768px;margin:0 auto;padding:0 28px 80px}
+
+  /* ── Top nav ───────────────────────────── */
+  .nav{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:24px 0 0;font-size:14px;color:var(--muted);
+    letter-spacing:.04em;
+  }
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink);letter-spacing:-0.01em}
+  .nav .links a{margin-left:22px;transition:color .15s}
+  .nav .links a:hover{color:var(--ink)}
+  .nav .links a.active{color:var(--ink);font-weight:600}
+
+  /* ── Header ───────────────────────────── */
+  .head{padding:60px 0 28px;max-width:660px}
+  .head .eyebrow{
+    font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 18px;font-weight:500;
+  }
+  .head h1{
+    font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(34px,6vw,50px);
+    line-height:1.1;letter-spacing:-0.02em;margin:0 0 18px;
+  }
+  .head h1 em{font-style:italic;font-weight:500;color:var(--ink-2)}
+  .head .lede{color:var(--ink-2);font-size:18.5px;line-height:1.6;margin:0}
+
+  /* ── Meta row ───────────────────────────── */
+  .meta{
+    display:flex;flex-wrap:wrap;gap:26px;
+    margin:8px 0 4px;padding:20px 0;
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .meta div{display:flex;flex-direction:column;gap:3px}
+  .meta dt{
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  .meta dd{margin:0;font-size:14.5px;color:var(--ink-2);font-weight:500}
+
+  /* ── Prose body ───────────────────────────── */
+  .prose{padding:36px 0 0;max-width:680px}
+  .prose section{margin:0 0 40px}
+  .prose h2{
+    font-family:'Fraunces',serif;font-weight:500;font-size:26px;
+    letter-spacing:-0.01em;line-height:1.2;margin:0 0 14px;
+  }
+  .prose h3{
+    font-family:'Fraunces',serif;font-weight:500;font-size:19px;
+    margin:26px 0 8px;letter-spacing:-0.005em;
+  }
+  .prose p{margin:0 0 16px;color:var(--ink-2)}
+  .prose ul,.prose ol{margin:0 0 16px;padding-left:22px;color:var(--ink-2)}
+  .prose li{margin:0 0 8px}
+  .prose strong{font-weight:600;color:var(--ink)}
+  .prose code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:0.86em;background:var(--code-bg);border-radius:5px;padding:1px 6px;
+    color:var(--ink);
+  }
+
+  /* ── Architecture figure ───────────────────────────── */
+  .arch{margin:26px 0}
+  .diagram{
+    border:1.5px solid var(--line);border-radius:14px;
+    overflow:hidden;background:var(--paper);box-shadow:var(--shadow);
+  }
+  .diagram svg{display:block;width:100%;height:auto}
+  figcaption{
+    font-size:12.5px;color:var(--muted);margin:10px 2px 0;text-align:center;
+  }
+
+  /* ── Pull quote ───────────────────────────── */
+  .pull{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:400;
+    font-size:23px;line-height:1.4;color:var(--ink);
+    margin:30px 0;padding:4px 0 4px 24px;
+    border-left:2px solid var(--line-2);
+  }
+
+  /* ── Callout ───────────────────────────── */
+  .callout{
+    background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
+    padding:22px 24px;margin:26px 0;box-shadow:var(--shadow);
+  }
+  .callout .label{
+    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin:0 0 10px;
+  }
+  .callout ul{margin:0;padding-left:20px}
+  .callout li:last-child{margin-bottom:0}
+
+  /* ── Tags ───────────────────────────── */
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}
+  .tag{
+    font-size:12.5px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;
+    padding:4px 12px;background:var(--paper);
+  }
+
+  /* ── Footer ───────────────────────────── */
+  .foot{
+    margin:64px 0 0;padding-top:28px;
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    color:var(--muted);font-size:14px;
+  }
+  .foot a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot a:hover{border-color:var(--ink-2)}
+
+  .note{
+    max-width:680px;margin:30px auto 0;font-size:12.5px;color:var(--muted);
+    text-align:center;font-style:italic;
+  }
+
+  @media (max-width:480px){
+    .wrap{padding:0 22px 60px}
+    .head{padding:40px 0 24px}
+    .meta{gap:18px}
+    .nav .links a{margin-left:14px;font-size:13px}
+    .theme-toggle{margin-left:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav">
+    <a class="brand" href="/">Matt Danuser-Grant</a>
+    <div class="links" id="nav-links">
+      <a href="/consulting.html">Consulting</a>
+      <a href="/resume.html">Resume</a>
+    </div>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-controls="nav-links" aria-expanded="false"><svg class="i-bars" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="i-x" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light / dark mode" title="Toggle light / dark"><span class="toggle-track"><span class="toggle-thumb"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span></button>
+  </nav>
+
+  <header class="head">
+    <p class="eyebrow">Case Study · Data Access Control</p>
+    <h1>Access control as architecture, <em>built twice.</em></h1>
+    <p class="lede">Two different products &mdash; a team-scheduling SaaS and an art-consignment portal &mdash; needed the same thing: real per-tenant data isolation, financial-field write restrictions, and gated onboarding, with <strong>no application server</strong> sitting in front of Postgres to enforce any of it. I designed that access-control layer twice, in SQL, on Neon: row filters, view-level security, column-level grants, and provisioning triggers. I also hit the same identity bug on both &mdash; and only had to debug it once. Here is the stack, and what building it a second time taught me that the first time didn&rsquo;t.</p>
+  </header>
+
+  <dl class="meta">
+    <div><dt>What</dt><dd>Access-control layer for two multi-tenant products</dd></div>
+    <div><dt>Stack</dt><dd>Neon Postgres · Row-Level Security · Data API (PostgREST) · Neon Auth</dd></div>
+    <div><dt>Role</dt><dd>Solo &mdash; schema, policy design, security review</dd></div>
+    <div><dt>Status</dt><dd>Keeping Cadence live &middot; Dank Omphalos schema shipped, backend wiring in progress</dd></div>
+  </dl>
+
+  <article class="prose">
+
+    <section>
+      <h2>Two products, one hard requirement</h2>
+      <p>Both apps are static front ends with no server of their own &mdash; a deliberate cost and complexity constraint, not a limitation I was working around. <strong>Keeping Cadence</strong> is a live scheduling SaaS: teams, invites, and a plan-vs-actual-hours permission model. <strong>Dank Omphalos</strong> is an art-consignment portal: artists need to see their own inventory and payout math, and absolutely nothing else &mdash; including each other&rsquo;s numbers, and including their <em>own</em> payout percentage as a writable field.</p>
+      <p>Different domains, same non-negotiable requirement: with no middle tier to check a permission, <strong>every access rule has to live in the database and the database has to enforce it whether or not the client bothers to ask nicely.</strong> That is the same discipline a governed data platform has to guarantee at every layer &mdash; here it&rsquo;s hand-built in SQL instead of bought off a shelf, which meant designing (and re-deriving) each guarantee myself.</p>
+    </section>
+
+    <section>
+      <h2>The stack, four layers deep</h2>
+      <p>The same four Postgres primitives recur on both products, stacked as defense in depth: a row filter first, a view that can&rsquo;t quietly outrun that filter, a column-level restriction on top of the row-level one, and a provisioning gate that decides who gets a row at all.</p>
+
+      <figure class="arch">
+        <div class="diagram">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 580" font-family="'Inter',system-ui,-apple-system,sans-serif" role="img" aria-label="A four-layer access-control stack in Postgres: identity resolved once from the JWT sub claim, then row-level security, security-invoker views, column-level grants, and provisioning triggers, applied identically across two products.">
+          <defs>
+            <marker id="ac-arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6A6A6A"/></marker>
+          </defs>
+          <rect x="1" y="1" width="958" height="578" rx="16" fill="#FBF8F2" stroke="#CBC4B2"/>
+          <text x="32" y="34" font-size="20" font-weight="700" fill="#15161C">Access control &mdash; four layers, two products</text>
+          <text x="32" y="55" font-size="13" fill="#6A6A6A">Every layer is a Postgres primitive, not an application check. No server sits between the request and this stack.</text>
+
+          <rect x="340" y="70" width="280" height="42" rx="9" fill="#FFFFFF" stroke="#6A6A6A" stroke-width="1.5"/>
+          <text x="480" y="88" font-size="12.5" font-weight="600" fill="#15161C" text-anchor="middle">Identity &mdash; JWT <tspan font-family="ui-monospace,Menlo,monospace">sub</tspan> claim</text>
+          <text x="480" y="104" font-size="10.5" fill="#6A6A6A" text-anchor="middle">read once, per request, via <tspan font-family="ui-monospace,Menlo,monospace">app_uid()</tspan></text>
+          <line x1="480" y1="112" x2="480" y2="136" stroke="#6A6A6A" marker-end="url(#ac-arw)"/>
+
+          <rect x="140" y="138" width="680" height="76" rx="12" fill="#FFFFFF" stroke="#0072B2" stroke-width="2"/>
+          <text x="170" y="164" font-size="13.5" font-weight="700" fill="#15161C">1 &middot; Row-level security</text>
+          <text x="170" y="184" font-size="11.5" fill="#6A6A6A">A policy on every table filters which rows a caller can even see</text>
+          <text x="792" y="164" font-size="10.5" fill="#0072B2" text-anchor="end" font-weight="600">both products</text>
+          <line x1="480" y1="214" x2="480" y2="236" stroke="#6A6A6A" marker-end="url(#ac-arw)"/>
+
+          <rect x="140" y="238" width="680" height="76" rx="12" fill="#FFFFFF" stroke="#009E73" stroke-width="2"/>
+          <text x="170" y="264" font-size="13.5" font-weight="700" fill="#15161C">2 &middot; security_invoker views</text>
+          <text x="170" y="284" font-size="11.5" fill="#6A6A6A">Views run under the caller&rsquo;s RLS &mdash; a plain view runs as owner and leaks</text>
+          <text x="792" y="264" font-size="10.5" fill="#009E73" text-anchor="end" font-weight="600">Dank Omphalos</text>
+          <line x1="480" y1="314" x2="480" y2="336" stroke="#6A6A6A" marker-end="url(#ac-arw)"/>
+
+          <rect x="140" y="338" width="680" height="76" rx="12" fill="#FFFFFF" stroke="#D55E00" stroke-width="2"/>
+          <text x="170" y="364" font-size="13.5" font-weight="700" fill="#15161C">3 &middot; Column-level grants</text>
+          <text x="170" y="384" font-size="11.5" fill="#6A6A6A">Revoke every write, grant back only the columns that are safe to touch</text>
+          <text x="792" y="364" font-size="10.5" fill="#D55E00" text-anchor="end" font-weight="600">both products</text>
+          <line x1="480" y1="414" x2="480" y2="436" stroke="#6A6A6A" marker-end="url(#ac-arw)"/>
+
+          <rect x="140" y="438" width="680" height="76" rx="12" fill="#FFFFFF" stroke="#CC79A7" stroke-width="2"/>
+          <text x="170" y="464" font-size="13.5" font-weight="700" fill="#15161C">4 &middot; Provisioning triggers</text>
+          <text x="170" y="484" font-size="11.5" fill="#6A6A6A">Access is granted at the row level before a login even exists</text>
+          <text x="792" y="464" font-size="10.5" fill="#CC79A7" text-anchor="end" font-weight="600">Dank Omphalos</text>
+
+          <text x="480" y="546" font-size="12" fill="#6A6A6A" text-anchor="middle" font-style="italic">Same four layers &mdash; applied once to team schedules, again to artist payouts.</text>
+        </svg>
+        </div>
+        <figcaption>No box in this stack is an application check. Every guarantee is enforced by Postgres itself.</figcaption>
+      </figure>
+    </section>
+
+    <section>
+      <h2>Layer 1 &mdash; row filters: who can see a row at all</h2>
+      <p>On Keeping Cadence, a policy decides what the signed-in user can see: their own profile, teams they own or joined, schedules assigned to them. On Dank Omphalos it&rsquo;s narrower and higher-stakes &mdash; an artist&rsquo;s policy is one line:</p>
+      <p><code>create policy artist_self on artists for select using (user_id = app_uid());</code></p>
+      <p>Same shape, different blast radius. On the scheduling app, a leak means someone sees a colleague&rsquo;s hours. On the consignment portal, a leak means one artist sees another&rsquo;s advances and payout math &mdash; a much less forgivable failure. The policy is trivial to write; the discipline is remembering that <strong>every table needs one</strong>, including the ones added six weeks later that don&rsquo;t feel like they hold anything sensitive.</p>
+    </section>
+
+    <section>
+      <h2>Layer 2 &mdash; the view that can&rsquo;t quietly bypass the filter</h2>
+      <p>The artist dashboard reads from a view that joins pieces to artists and derives the owed-on-sale figure. Views in Postgres default to running as their <em>owner</em>, not the caller &mdash; which means a plain view over an RLS-protected table silently bypasses the policy that protects it. The fix is one clause, easy to forget and expensive to skip:</p>
+      <p><code>create view artist_pieces with (security_invoker = true) as select &hellip;</code></p>
+      <p>Without it, every artist&rsquo;s dashboard would quietly serve every artist&rsquo;s numbers, and nothing in the RLS policy would catch it &mdash; the leak happens one layer above where you&rsquo;d think to look for it.</p>
+    </section>
+
+    <section>
+      <h2>Layer 3 &mdash; column grants: restrict the write, not just the row</h2>
+      <p>Row-level security answers &ldquo;which rows,&rdquo; not &ldquo;which fields.&rdquo; An artist is allowed to update their own row &mdash; name, bio, socials, which fields show on the public gallery &mdash; but never their own <code>share</code>, the payout percentage that Dank Omphalos owes them. RLS alone can&rsquo;t express that distinction, so the fix drops down a level, to grants:</p>
+      <p><code>revoke insert, update, delete on artists from authenticated;<br />grant update (name, location, instagram, website, bio, visibility, onboarded_at) on artists to authenticated;</code></p>
+      <p>Revoke everything, then grant back exactly the safe subset. The same pattern runs in reverse on Keeping Cadence, hiding a team&rsquo;s secret invite token from an ordinary <code>SELECT</code> a member shouldn&rsquo;t be able to read. It&rsquo;s the same primitive solving two different problems &mdash; write restriction on one product, read restriction on the other &mdash; because the underlying question is always &ldquo;which columns, not just which rows.&rdquo;</p>
+      <p class="pull">Row-level security answers who can see a row. It never answers which of its fields they should be allowed to touch.</p>
+    </section>
+
+    <section>
+      <h2>Layer 4 &mdash; the trigger as the gate before login exists</h2>
+      <p>Dank Omphalos is invite-only, and I didn&rsquo;t want a separate admin flow for granting access. Instead, adding an artist row <em>with their email</em> IS the invite. A trigger on Neon Auth&rsquo;s own <code>neon_auth."user"</code> table blocks any signup whose email isn&rsquo;t already on an artist row; a second trigger auto-links a successful signup to that row &mdash; and self-heals a stale link left over from a deleted-and-recreated test account, so re-invites never need a manual fix:</p>
+      <p><code>if not exists (select 1 from artists a where lower(a.email) = lower(NEW.email)) then raise exception 'Not invited';</code></p>
+      <p>Access control here starts before the account does. There is no toggle to misconfigure and no admin panel that could grant the wrong thing &mdash; the row is the permission.</p>
+    </section>
+
+    <section>
+      <h2>The bug I found twice &mdash; and only had to debug once</h2>
+      <p>Building this stack the first time, on Keeping Cadence, Postgres&rsquo;s built-in <code>auth.uid()</code> came back <code>NULL</code> inside every policy and function &mdash; on Neon, identity only resolves under a session mechanism the Data API path never initializes. Every &ldquo;who am I&rdquo; check silently failed closed: a brand-new signup couldn&rsquo;t even create its own profile row. Root cause took real digging &mdash; the failure mode looks identical to a policy that&rsquo;s simply wrong, not one that&rsquo;s reading a NULL identity.</p>
+      <p>The fix is a two-line helper that reads the verified <code>sub</code> claim straight from the JWT that PostgREST <em>does</em> populate, instead of the built-in function that doesn&rsquo;t resolve:</p>
+      <p><code>create function app_uid() returns text language sql stable as $$ select current_setting('request.jwt.claims', true)::jsonb ->> 'sub' $$;</code></p>
+      <p>When the same platform quirk showed up building Dank Omphalos&rsquo;s policies weeks later, I didn&rsquo;t re-debug it. I wrote <code>app_uid()</code> into the schema on day one, with the failure mode documented inline as a comment so the next reader doesn&rsquo;t lose the same afternoon I did. The interesting part isn&rsquo;t finding a platform gotcha &mdash; it&rsquo;s that the second project shipped with the fix already built in, because the first one turned a live incident into a reusable piece of institutional knowledge instead of a war story nobody could act on.</p>
+    </section>
+
+    <section>
+      <h2>What this demonstrates</h2>
+      <ul>
+        <li><strong>Fine-grained access control as a first-class design problem</strong> &mdash; row filters, column-level grants, and view-level security boundaries, reasoned about independently rather than treated as one setting to flip.</li>
+        <li><strong>Root-cause debugging that compounds</strong> &mdash; a platform-level identity bug, diagnosed once under real production pressure, encoded into a reusable helper and carried into the next project instead of re-discovered.</li>
+        <li><strong>Designing for the failure that costs the most</strong> &mdash; the effort scaled with the stakes: a scheduling leak is embarrassing, a payout-field leak is a business problem, and the schema reflects that difference in where the hardening went.</li>
+        <li><strong>Security as something written down, not assumed</strong> &mdash; every non-obvious guarantee (the <code>security_invoker</code> requirement, the <code>auth.uid()</code> gotcha, the invite-gate rationale) lives as a comment in the schema next to the code it protects, not in a doc that drifts away from it.</li>
+      </ul>
+    </section>
+
+    <div class="tags">
+      <span class="tag">Postgres / RLS</span>
+      <span class="tag">Row &amp; Column Security</span>
+      <span class="tag">Data Access Control</span>
+      <span class="tag">Neon</span>
+      <span class="tag">Multi-Tenant Architecture</span>
+    </div>
+
+  </article>
+
+  <p class="note">Keeping Cadence is live at <a href="https://app.keepingcadence.com">app.keepingcadence.com</a>. Dank Omphalos&rsquo;s portal schema is built and tested against live data; the artist-facing app is still being wired to production. This writeup describes my own projects; nothing here is confidential, and specific business figures have been omitted.</p>
+
+  <footer class="foot">
+    <div><a href="/#case-studies">&larr; Case Studies</a></div>
+    <div><a href="/">&larr; Home</a></div>
+  </footer>
+
+</div>
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
