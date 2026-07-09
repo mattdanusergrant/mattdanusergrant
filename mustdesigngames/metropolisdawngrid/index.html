@@ -319,7 +319,7 @@
 
   function idx(c,r){return r*cols+c;}
   function inB(c,r){return c>=0&&r>=0&&c<cols&&r<rows;}
-  function newCell(c,r){return {t:'empty',lvl:0,grow:0,seed:((c*73856)^(r*19349))>>>0,pulse:-9999,terr:terrainAt(c,r)};}
+  function newCell(c,r){return {t:'empty',lvl:0,grow:0,seed:((c*73856)^(r*19349))>>>0,pulse:-9999,terr:terrainAt(c,r),rail:false};}   // rail is an OVERLAY (can share a cell with a road → level crossing)
   // ---- terrain / biomes: deterministic (same every load), drives specialisation ----
   function hash2(a,b){var h=((a|0)*374761393+(b|0)*668265263)>>>0;h=((h^(h>>>13))*1274126177)>>>0;return h/4294967295;}
   function vnoise(c,r,s){var x=c/s,y=r/s,xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
@@ -460,21 +460,22 @@
   // power station is a 2×2 footprint
   function isPower(c,r){return inB(c,r)&&grid[idx(c,r)].t==='power';}
   function plantCells(c,r){return [[c,r],[c+1,r],[c,r+1],[c+1,r+1]];}
-  function plantFits(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var a=cs[i][0],b=cs[i][1];if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||noBuild(g.terr))return false;}return true;}
+  function plantFits(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var a=cs[i][0],b=cs[i][1];if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;}return true;}
   function layPlant(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var g=grid[idx(cs[i][0],cs[i][1])];g.t='power';g.lvl=1;g.grow=0;}}
   function plantTopLeft(c,r){var tc=c,tr=r;if(isPower(tc-1,tr))tc--;if(isPower(tc,tr-1))tr--;return [tc,tr];}
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
     if(brush==='bulldoze'){
-      if(cell.t==='empty')return;
+      if(cell.t==='empty'&&!cell.rail)return;
       if(cell.t==='power'){var tl=plantTopLeft(c,r),cs=plantCells(tl[0],tl[1]),refunded=false;   // remove the whole 2×2 station
         for(var b=0;b<4;b++){if(isPower(cs[b][0],cs[b][1])){var pg=grid[idx(cs[b][0],cs[b][1])];if(!refunded){treasury+=Math.round((COST.power||0)*REFUND);refunded=true;}pg.t='empty';pg.lvl=0;pg.grow=0;}}}
-      else{treasury+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;}
+      else{var ref=0;if(cell.rail){ref+=Math.round((COST.rail||0)*REFUND);cell.rail=false;}   // clears the whole cell (rail overlay + whatever's under it)
+        if(cell.t!=='empty'){ref+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;}treasury+=ref;}
       updateCashUI();dirty=true;svcDirty=true;scheduleSave();return;
     }
-    if(noBuild(cell.terr))return;                         // can't build on water or mountains
-    if((cell.t==='road'||cell.t==='rail')&&brush!=='road'&&brush!=='rail')return; // protect infrastructure
+    if(noBuild(cell.terr))return;                         // buildings can't sit on water or mountains
+    if(cell.t==='road'||cell.rail)return;                 // can't build over a road or rail (they're infrastructure)
     if(!unlocked(brush))return;
     if(brush==='power'){                                  // 2×2 station: needs a clear 2×2, charged once
       if(cell.t==='power')return;
@@ -509,9 +510,12 @@
     return cells;
   }
   function placeLineCell(c,r){if(!inB(c,r))return false;var cell=grid[idx(c,r)];
-    if(cell.t==='highway'||noBuild(cell.terr)||cell.t===brush)return false;   // highway fixed, route around water/mountains, skip no-ops
-    if(!canAfford(COST[brush]||0))return null;                                 // out of credit → signal to stop the line
-    spend(COST[brush]||0);cell.t=brush;cell.lvl=0;cell.grow=0;return true;}
+    if(cell.t==='highway'||cell.terr==='mountain')return false;                 // freeway fixed; mountains block (route around)
+    if(brush==='rail'){                                                         // rail is an overlay — can cross a road (level crossing); water = a bridge
+      if(cell.rail||(cell.t!=='empty'&&cell.t!=='road'))return false;           // already railed, or a building is here
+      if(!canAfford(COST.rail))return null;spend(COST.rail);cell.rail=true;return true;}
+    if(cell.t==='road'||cell.t!=='empty')return false;                          // road only on open ground (a rail-only cell is still 'empty' → crossing)
+    if(!canAfford(COST.road))return null;spend(COST.road);cell.t='road';cell.lvl=0;cell.grow=0;return true;}
   function commitLine(a,b){var path=linePath(a,b),any=false,broke=false;
     for(var i=0;i<path.length;i++){var r=placeLineCell(path[i][0],path[i][1]);if(r===null){broke=true;break;}if(r)any=true;}
     if(any){dirty=true;svcDirty=true;scheduleSave();}
@@ -652,13 +656,13 @@
     var rq=[];for(var hj=0;hj<n;hj++){if(grid[hj]&&grid[hj].t==='highway'){railConn[hj]=1;rq.push(hj);}}  // seed rail from the corridor too
     var rhd=0;
     while(rhd<rq.length){var id2=rq[rhd++],cc2=id2%cols,cr2=(id2/cols)|0,curHw2=grid[id2].t==='highway',nb2=[[cc2-1,cr2],[cc2+1,cr2],[cc2,cr2-1],[cc2,cr2+1]];
-      for(var k2=0;k2<4;k2++){var a2=nb2[k2][0],b2=nb2[k2][1];if(!inB(a2,b2))continue;var ni2=idx(a2,b2),t2=grid[ni2].t;if(railConn[ni2])continue;
-        if(t2==='highway'){railConn[ni2]=1;rq.push(ni2);}
-        else if(t2==='rail'){
-          if(curHw2){var bx=a2+(a2-cc2),by=b2+(b2-cr2);if(inB(bx,by)&&grid[idx(bx,by)].t==='rail'){railConn[ni2]=1;rq.push(ni2);}}  // rail joins the freeway only via a perpendicular spur
+      for(var k2=0;k2<4;k2++){var a2=nb2[k2][0],b2=nb2[k2][1];if(!inB(a2,b2))continue;var ni2=idx(a2,b2),g2=grid[ni2];if(railConn[ni2])continue;
+        if(g2.t==='highway'){railConn[ni2]=1;rq.push(ni2);}
+        else if(g2.rail){
+          if(curHw2){var bx=a2+(a2-cc2),by=b2+(b2-cr2);if(inB(bx,by)&&grid[idx(bx,by)].rail){railConn[ni2]=1;rq.push(ni2);}}  // rail joins the freeway only via a perpendicular spur
           else{railConn[ni2]=1;rq.push(ni2);}
         }}}
-    for(var i3=0;i3<n;i3++){if(railConn[i3]&&grid[i3]&&grid[i3].t==='rail'){connectedRailCount++;railToWorld=true;}}
+    for(var i3=0;i3<n;i3++){if(railConn[i3]&&grid[i3]&&grid[i3].rail){connectedRailCount++;railToWorld=true;}}
   }
   function nearConnected(c,r){
     return (inB(c-1,r)&&connected[idx(c-1,r)])||(inB(c+1,r)&&connected[idx(c+1,r)])||
@@ -727,7 +731,7 @@
     for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
       var cell=grid[idx(c,r)];
       if(cell.t==='road'||cell.t==='highway')roadList.push([c,r]);
-      if(cell.t==='rail'||cell.t==='highway')railList.push([c,r]);
+      if(cell.rail||cell.t==='highway')railList.push([c,r]);
       if(!ZONES[cell.t]||cell.lvl>=MAXLVL)continue;
       if(blocker(c,r))continue;                          // connection + power + water + supply chain
       var rate=demand[cell.t]>0?1:0.28;
@@ -833,7 +837,7 @@
   }
 
   // ---- freight trains (run the rail network + highway) ----
-  function isRail(c,r){if(!inB(c,r))return false;var t=grid[idx(c,r)].t;return t==='rail'||t==='highway';}
+  function isRail(c,r){if(!inB(c,r))return false;var g=grid[idx(c,r)];return g.rail||g.t==='highway';}
   function adjRail(c,r){var o=[];if(isRail(c-1,r))o.push([c-1,r]);if(isRail(c+1,r))o.push([c+1,r]);if(isRail(c,r-1))o.push([c,r-1]);if(isRail(c,r+1))o.push([c,r+1]);return o;}
   function spawnTrain(){if(!railList.length)return null;var s=railList[(Math.random()*railList.length)|0],a=adjRail(s[0],s[1]);var t=a.length?a[(Math.random()*a.length)|0]:[s[0],s[1]];
     return {trail:[[s[0],s[1]],[s[0],s[1]],[s[0],s[1]]],tgt:t,p:Math.random()};}
@@ -890,8 +894,13 @@
     ctx.fillRect(x+m-h,y+m-h,h*2,h*2);
     if(N)ctx.fillRect(x+m-h,y,h*2,m);if(S)ctx.fillRect(x+m-h,y+m,h*2,m);
     if(E)ctx.fillRect(x+m,y+m-h,m,h*2);if(W)ctx.fillRect(x,y+m-h,m,h*2);}
+  function drawDeck(x,y,c,r,N,S,E,W){                    // a bridge deck under road/rail when the cell is water
+    if(grid[idx(c,r)].terr!=='water')return;
+    ctx.fillStyle='#8a7f6a';roadCross(x,y,12,N,S,E,W);   // deck edge / shadow
+    ctx.fillStyle='#b0a58d';roadCross(x,y,11,N,S,E,W);}  // deck planks
   function drawRoad(x,y,c,r){
     var N=drivable(c,r-1),S=drivable(c,r+1),E=drivable(c+1,r),W=drivable(c-1,r),m=CELL/2;
+    drawDeck(x,y,c,r,N,S,E,W);
     ctx.fillStyle=pal.curb;roadCross(x,y,9,N,S,E,W);      // slim sidewalk shoulder
     ctx.fillStyle=pal.road;roadCross(x,y,7,N,S,E,W);      // road surface (~half the cell wide)
     ctx.fillStyle=pal.lane;                               // centre dashes along a straight run
@@ -900,6 +909,7 @@
   }
   function drawRail(x,y,c,r){
     var N=isRail(c,r-1),S=isRail(c,r+1),E=isRail(c+1,r),W=isRail(c-1,r),m=CELL/2;
+    if(grid[idx(c,r)].t!=='road')drawDeck(x,y,c,r,N,S,E,W);          // deck if a rail-only bridge (a crossing already has the road's deck)
     ctx.fillStyle=pal.railBed;roadCross(x,y,7,N,S,E,W);              // thin ballast bed (matches the road width)
     var h=E||W||(!N&&!S), v=N||S;
     ctx.fillStyle=pal.tie;
@@ -1016,7 +1026,7 @@
     if(t==='res')return drawHome(x,y,cell); if(t==='tower')return drawHighrise(x,y,cell);
     if(t==='com')return drawShop(x,y,cell); if(t==='ind')return drawWorks(x,y,cell); if(t==='fac')return drawFactory(x,y,cell);}
   function canPlaceBrushHere(c,r){if(!inB(c,r))return false;var g=grid[idx(c,r)];
-    if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.t==='rail')return false;
+    if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.rail)return false;
     if(!unlocked(brush))return false;
     if(brush==='power')return plantFits(c,r)&&canAfford(COST.power||0);
     if(g.t===brush)return false; return canAfford(COST[brush]||0);}
@@ -1026,12 +1036,16 @@
   function yn(v){return v?'<span class="ok">yes</span>':'<span class="no">no</span>';}
   function tileInfo(c,r){if(!inB(c,r))return '';
     var g=grid[idx(c,r)],i=idx(c,r),t=g.t;
-    var h='<div class="it">'+(TYPELABEL[t]||t)+'</div>';
+    var name=(t==='road'&&g.rail)?'Road + rail crossing':g.rail&&t==='empty'?'Rail':(TYPELABEL[t]||t);
+    var bridge=(g.terr==='water'&&(t==='road'||g.rail))?' <span class="ik">(bridge)</span>':'';
+    var h='<div class="it">'+name+bridge+'</div>';
     h+='<div><span class="ik">Terrain</span> <b>'+(TERRLABEL[g.terr]||g.terr)+'</b> <span class="ik">· ('+c+','+r+')</span></div>';
-    if(t==='empty'){h+='<div class="ik">'+(g.terr==='water'?'Water — can’t build':g.terr==='mountain'?'Mountain — can’t build; mine ore from an adjacent Works':'Open ground — buildable')+'</div>';}
+    if(t==='road'||g.rail){
+      if(t==='road')h+='<div><span class="ik">Road → freeway</span> '+yn(connected&&connected[i])+'</div>';
+      if(g.rail)h+='<div><span class="ik">Rail → freeway</span> '+yn(railConn&&railConn[i])+'</div>';
+    }
+    else if(t==='empty'){h+='<div class="ik">'+(g.terr==='water'?'Water — bridge it with road or rail':g.terr==='mountain'?'Mountain — can’t build; mine ore from an adjacent Works':'Open ground — buildable')+'</div>';}
     else if(t==='highway'){h+='<div class="ik">The freeway — your link to the world. Join it with a road/rail ramp.</div>';}
-    else if(t==='road'){h+='<div><span class="ik">Linked to the freeway</span> '+yn(connected&&connected[i])+'</div>';}
-    else if(t==='rail'){h+='<div><span class="ik">Linked to the freeway</span> '+yn(railConn&&railConn[i])+'</div>';}
     else if(ZONEK[t]){
       h+='<div><span class="ik">Level</span> <b>'+g.lvl+' / '+MAXLVL+'</b></div>';
       h+='<div><span class="ik">Road</span> '+yn(nearConnected(c,r))+' <span class="ik">Power</span> '+yn(powered&&powered[i])+' <span class="ik">Water</span> '+yn(watered&&watered[i])+'</div>';
@@ -1061,10 +1075,10 @@
       ctx.fillStyle=brush==='power'?'rgba(224,169,62,.15)':'rgba(76,154,209,.15)';
       for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++)if(arr[idx(c,r)])ctx.fillRect(c*CELL+1,r*CELL+1,CELL-2,CELL-2);
     }
-    // rail (under roads so a road crossing reads on top), then roads + highway
-    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(cell&&cell.t==='rail')drawRail(c*CELL,r*CELL,c,r);}
+    // roads + highway first, then rail on top (so a level crossing shows the track over the road)
     for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(!cell)continue;x=c*CELL;y=r*CELL;
       if(cell.t==='highway')drawHighway(x,y,c,r);else if(cell.t==='road')drawRoad(x,y,c,r);}
+    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(cell&&cell.rail)drawRail(c*CELL,r*CELL,c,r);}
     // structures
     for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){
       cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway')continue;
@@ -1093,10 +1107,10 @@
     if(isLineBrush()&&hoverCell){
       var ps=lineAnchor;
       if(ps){var pp=linePath(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
-        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway'||noBuild(qcl.terr))continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
+        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway'||qcl.terr==='mountain')continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
         ctx.globalAlpha=1;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(ps.c*CELL+2.5,ps.r*CELL+2.5,CELL-5,CELL-5);
       } else if(inB(hoverCell.c,hoverCell.r)){var hcl=grid[idx(hoverCell.c,hoverCell.r)];
-        if(hcl&&hcl.t!=='highway'&&!noBuild(hcl.terr)){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
+        if(hcl&&hcl.t!=='highway'&&hcl.terr!=='mountain'){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
     }
     // building placement ghost — preview every build tool before you click; over an existing same-type
     // building it previews the NEXT level (upgrade); red X where nothing can go.
@@ -1132,12 +1146,12 @@
   // ---- save / load ----
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
-  function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];if(g&&g.t!=='empty'&&g.t!=='highway')out.push([c,r,g.t,g.lvl]);}
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:6,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out}));}catch(e){}}
+  function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0]);}
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:7,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;}
-    list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway'||noBuild(g.terr))return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;}});
+    list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway')return;if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];}});
     dirty=true;}catch(e){}}
 
   // ---- animation loop ----
@@ -1158,7 +1172,9 @@
   }
 
   // ---- AI city planner: lay a real, terrain-aware city on this patch (observe mode) ----
-  function placeAt(c,r,t,lvl){if(!inB(c,r))return false;var g=grid[idx(c,r)];if(g.t==='highway'||noBuild(g.terr))return false;g.t=t;g.lvl=lvl||0;g.grow=0;return true;}
+  function placeAt(c,r,t,lvl){if(!inB(c,r))return false;var g=grid[idx(c,r)];if(g.t==='highway'||noBuild(g.terr))return false;
+    if(t==='rail'){g.rail=true;return true;}          // rail is an overlay flag, not a cell type
+    g.t=t;g.lvl=lvl||0;g.grow=0;return true;}
   function planCity(tier){
     // target-driven so the city size reliably tracks the tier (not local terrain / screen size).
     // All buildings lvl 3 (established, no "needs X" cues). The city is a block CENTRED ON the
@@ -1220,7 +1236,7 @@
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
   else { load(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();
-  roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var tt=grid[idx(c0,r0)].t;if(tt==='road'||tt==='highway')roadList.push([c0,r0]);if(tt==='rail'||tt==='highway')railList.push([c0,r0]);}
+  roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var gg0=grid[idx(c0,r0)];if(gg0.t==='road'||gg0.t==='highway')roadList.push([c0,r0]);if(gg0.rail||gg0.t==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
   if(!AI&&tutorActive)showTutor();
   if(OBSERVE){var tb=document.getElementById('tools');if(tb)tb.style.display='none';var ob=document.getElementById('obs');if(ob)ob.hidden=false;document.body.classList.add('observing');}
