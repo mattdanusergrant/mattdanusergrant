@@ -19,7 +19,6 @@ served at its own sub-path.
 | Groundwork | [`/groundwork/`](groundwork/) |
 | Keep Ripping Packs | [`/keeprippingpacks/`](keeprippingpacks/) |
 | Matgo | [`/matgo/`](matgo/) |
-| Moss Dapple Grove | [`/mossdapplegrove/`](mossdapplegrove/) |
 | Mosslings | [`/mosslings/`](mosslings/) |
 | Prism Pond | [`/prism-pond/`](prism-pond/) |
 | Rolls Per Groove | [`/rhythm-rpg/`](rhythm-rpg/) |
