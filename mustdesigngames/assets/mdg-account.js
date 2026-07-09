@@ -87,7 +87,13 @@
   async function guard(fn, okMsg, keepOpen){
     msg("…"); try{ const r=await fn(); if(r&&r.error) throw r.error; if(okMsg) msg(okMsg,"ok");
       if(!keepOpen && okMsg==null){} await refresh(); }
-    catch(e){ msg((e&&e.message)||"Something went wrong.","err"); }
+    catch(e){
+      try{ console.error("[MDGAccount] auth error:", e); }catch(_){}
+      let t = e && (e.message || e.error_description || e.msg || e.error);
+      if(!t || t==="{}"){ t = "Couldn't send the email"+((e&&e.status)?(" (status "+e.status+")"):"")+
+        " — check Supabase → Logs → Auth (usually SMTP/sender)"; }
+      msg(t,"err");
+    }
   }
 
   async function refresh(){
