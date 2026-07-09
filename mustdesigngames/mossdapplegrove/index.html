@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Moss Dapple Grove</title>
+<meta name="description" content="A cozy gardening game — you're a Moss Druid waking a forgotten grove back to life. Read the light, sow the right plant, watch it awaken.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Moss Dapple Grove">
+<meta name="theme-color" content="#243318">
+<link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/mossdapplegrove/">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#243318;
+    font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none}
+  #scene{display:block;width:100vw;height:100vh;touch-action:manipulation}
+  /* ── HUD ── */
+  #hud{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 10px) 14px 8px;
+    pointer-events:none;color:#eaf3da;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+  .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  #rank{font-size:16px;font-weight:600;letter-spacing:.3px}
+  #rank small{display:block;font-size:11px;font-weight:400;opacity:.72;letter-spacing:.06em;text-transform:uppercase;font-family:system-ui,sans-serif}
+  #light{font-size:17px;font-weight:600;white-space:nowrap;font-family:system-ui,sans-serif}
+  #lifebar{margin-top:9px;height:5px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
+  #lifefill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#8fd06a,#e9d27a);transition:width .5s ease}
+  #legend{margin-top:7px;font-size:11px;opacity:.8;font-family:system-ui,sans-serif;letter-spacing:.02em}
+  .ld{display:inline-block;width:8px;height:8px;border-radius:99px;vertical-align:middle;margin:0 3px 2px 9px}
+  .ld:first-child{margin-left:0}
+  /* ── plant sheet ── */
+  #sheet{position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;background:rgba(20,28,12,.55);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  #sheet.on{display:flex}
+  #card{width:100%;max-width:520px;margin:0 auto;background:linear-gradient(#f3efe0,#e7e2cf);
+    border-radius:20px 20px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);
+    box-shadow:0 -10px 40px rgba(0,0,0,.35);max-height:78vh;overflow:auto;animation:rise .22s ease}
+  @keyframes rise{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+  #card h2{margin:2px 0 2px;font-size:19px;color:#33402a}
+  #card .sub{margin:0 0 12px;font-size:13px;color:#6a7358;font-family:system-ui,sans-serif}
+  .row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:12px;cursor:pointer}
+  .row+.row{border-top:1px solid #ded8c4}
+  .row .em{font-size:30px;width:38px;text-align:center}
+  .row .mid{flex:1;min-width:0}
+  .row .nm{font-size:16px;color:#33402a;font-weight:600}
+  .row .meta{font-size:12px;color:#6a7358;font-family:system-ui,sans-serif;margin-top:1px}
+  .fit{font-weight:600}
+  .fit.love{color:#3f8f3a}.fit.ok{color:#b98328}.fit.bad{color:#b25b4a}
+  .row .cost{font-size:15px;font-weight:700;color:#4a5b38;white-space:nowrap;font-family:system-ui,sans-serif}
+  .row.dim{opacity:.42;cursor:default}
+  .row:not(.dim):active{background:#e4dcc2}
+  /* ── toast ── */
+  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 26px);transform:translateX(-50%) translateY(12px);
+    z-index:30;background:rgba(28,38,18,.94);color:#eef4e2;padding:10px 18px;border-radius:99px;font-size:14px;
+    font-family:system-ui,sans-serif;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;text-align:center}
+  #toast.on{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hud">
+  <div class="hrow">
+    <div id="rank">Sprout-tender<small>Moss Druid path</small></div>
+    <div id="light">✦ 0</div>
+  </div>
+  <div id="lifebar"><div id="lifefill"></div></div>
+  <div id="legend">Light:<span class="ld" style="background:#f2c14e"></span>sun<span class="ld" style="background:#89bf5e"></span>dapple<span class="ld" style="background:#5f86a0"></span>shade</div>
+</div>
+<div id="sheet"><div id="card"><h2>Sow a plant</h2><p class="sub" id="cardSub"></p><div id="list"></div></div></div>
+<div id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('scene'), ctx=cv.getContext('2d');
+
+// ── content ───────────────────────────────────────────────────────────────
+const LIGHTS={sun:0,dapple:1,shade:2};
+const LCOL={sun:'#f2c14e',dapple:'#89bf5e',shade:'#5f86a0'};
+const LNAME={sun:'full sun',dapple:'dappled shade',shade:'deep shade'};
+const MULT=[1,1.9,3.4];               // grow-time multiplier by light mismatch (0/1/2)
+const FIT=[['love','loves it here'],['ok','ok here'],['bad','struggles here']];
+const PLANTS=[
+  {id:'moss',     nm:'Moss',      em:'🌱', light:'shade',  cost:8,  grow:30, reward:12},
+  {id:'toadstool',nm:'Toadstool', em:'🍄', light:'shade',  cost:12, grow:45, reward:18},
+  {id:'fern',     nm:'Fern',      em:'🌿', light:'dapple', cost:10, grow:40, reward:15},
+  {id:'bluebell', nm:'Bluebell',  em:'🌷', light:'dapple', cost:14, grow:55, reward:20},
+  {id:'daisy',    nm:'Daisy',     em:'🌼', light:'sun',    cost:8,  grow:35, reward:13},
+  {id:'sunflower',nm:'Sunflower', em:'🌻', light:'sun',    cost:16, grow:65, reward:24},
+];
+const P=Object.fromEntries(PLANTS.map(p=>[p.id,p]));
+const SPOTS=[
+  {x:.22,y:.50,light:'shade', zone:0},{x:.50,y:.46,light:'dapple',zone:0},{x:.78,y:.50,light:'shade', zone:0},
+  {x:.24,y:.66,light:'sun',   zone:1},{x:.52,y:.63,light:'dapple',zone:1},{x:.80,y:.66,light:'sun',   zone:1},
+  {x:.30,y:.82,light:'dapple',zone:2},{x:.55,y:.80,light:'shade', zone:2},{x:.80,y:.83,light:'sun',   zone:2},
+];
+const ZONE_NM=['the Hollow','the Glade','the Edge'];
+const RANKS=[[0,'Sprout-tender'],[3,'Grovekeeper'],[6,'Grove Warden'],[9,'Moss Druid']];
+
+// ── state ─────────────────────────────────────────────────────────────────
+const KEY='mossdapplegrove.save.v1';
+let S=load();
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(KEY));
+    if(s&&s.spots&&s.spots.length===SPOTS.length) return s;}catch(e){}
+  return {light:40, spots:SPOTS.map(()=>null), hint:false};
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+const blessedCount=()=>S.spots.filter(s=>s&&s.blessed).length;
+const unlockLvl=()=>{const b=blessedCount();return b>=6?2:b>=3?1:0;};
+const rankTitle=()=>{const b=blessedCount();let t=RANKS[0][1];for(const[n,x]of RANKS)if(b>=n)t=x;return t;};
+const groveLife=()=>blessedCount()/SPOTS.length;
+function mismatch(pl,spot){return Math.abs(LIGHTS[pl.light]-LIGHTS[spot.light]);}
+function growMs(cell){return P[cell.plant].grow*MULT[mismatch(P[cell.plant],SPOTS[cell.si])]*1000;}
+function progress(cell){return Math.min(1,(Date.now()-cell.at)/growMs(cell));}
+
+// ── layout / hit ────────────────────────────────────────────────────────────
+let W,H,DPR,RAD;
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  W=window.innerWidth;H=window.innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+  RAD=Math.max(26,Math.min(W,H)*0.072);
+}
+window.addEventListener('resize',resize);resize();
+const spotPos=i=>({x:SPOTS[i].x*W, y:SPOTS[i].y*H});
+
+// ── rendering ───────────────────────────────────────────────────────────────
+function draw(t){
+  const life=groveLife();
+  // sky / canopy — brightens & warms as the grove wakes
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,mix('#3b4a24','#6f8a3e',life*0.5));
+  g.addColorStop(.45,mix('#4a6030','#89ab55',life*0.5));
+  g.addColorStop(1,mix('#33482a','#4d6b38',life*0.4));
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // dappled light shafts from the canopy
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<5;i++){
+    const sx=W*(0.12+i*0.19)+Math.sin(t/3000+i)*14;
+    const a=0.05+0.05*life+0.02*Math.sin(t/1700+i*2);
+    const gr=ctx.createLinearGradient(sx,0,sx-70,H);
+    gr.addColorStop(0,`rgba(255,246,200,${a})`);gr.addColorStop(1,'rgba(255,246,200,0)');
+    ctx.fillStyle=gr;ctx.beginPath();ctx.moveTo(sx-26,0);ctx.lineTo(sx+26,0);ctx.lineTo(sx-40,H);ctx.lineTo(sx-92,H);ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+  // soft ground band
+  ctx.fillStyle='rgba(30,44,22,.35)';ctx.fillRect(0,H*0.40,W,H*0.6);
+  // spots
+  const lvl=unlockLvl();
+  SPOTS.forEach((sp,i)=>{
+    const {x,y}=spotPos(i), cell=S.spots[i], locked=sp.zone>lvl;
+    // shadow pad
+    ctx.fillStyle='rgba(0,0,0,.16)';ctx.beginPath();ctx.ellipse(x,y+RAD*0.34,RAD*0.82,RAD*0.30,0,0,7);ctx.fill();
+    if(locked){
+      ctx.globalAlpha=.5;ctx.font=`${RAD*0.7}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('🔒',x,y);ctx.globalAlpha=1;
+      ctx.fillStyle='rgba(234,243,218,.6)';ctx.font=`600 ${Math.max(10,RAD*0.26)}px system-ui`;
+      ctx.fillText('awaken '+(sp.zone===1?3:6),x,y+RAD*0.75);
+      return;
+    }
+    if(!cell){ // empty — dashed ring + light dot
+      ctx.strokeStyle='rgba(240,246,225,.5)';ctx.lineWidth=2;ctx.setLineDash([5,6]);
+      ctx.beginPath();ctx.arc(x,y,RAD*0.72,0,7);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle=LCOL[sp.light];ctx.beginPath();ctx.arc(x,y,RAD*0.2,0,7);ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,RAD*0.2,0,7);ctx.stroke();
+      return;
+    }
+    const pl=P[cell.plant], fr=progress(cell), ready=fr>=1&&!cell.blessed;
+    // little light dot tucked at base so the match stays readable
+    ctx.fillStyle=LCOL[sp.light];ctx.beginPath();ctx.arc(x-RAD*0.6,y+RAD*0.5,RAD*0.12,0,7);ctx.fill();
+    // glow for ready / established
+    if(ready||cell.blessed){
+      const pulse=ready?0.5+0.5*Math.sin(t/300):0.42;
+      const thrive=mismatch(pl,sp)===0;
+      const gg=ctx.createRadialGradient(x,y,0,x,y,RAD*1.5);
+      const col=thrive?'255,238,150':'190,215,170';
+      gg.addColorStop(0,`rgba(${col},${(cell.blessed?0.34:0.5)*pulse+0.12})`);gg.addColorStop(1,`rgba(${col},0)`);
+      ctx.fillStyle=gg;ctx.beginPath();ctx.arc(x,y,RAD*1.5,0,7);ctx.fill();
+    }
+    // the plant: scale up through growth; emoji at bud/bloom, stem before
+    ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    if(fr<0.35){
+      ctx.strokeStyle='#6ea24e';ctx.lineWidth=Math.max(2,RAD*0.08);ctx.lineCap='round';
+      const h=RAD*(0.2+fr*1.4);ctx.beginPath();ctx.moveTo(x,y+RAD*0.35);ctx.lineTo(x,y+RAD*0.35-h);ctx.stroke();
+      ctx.font=`${RAD*0.5}px serif`;ctx.textBaseline='middle';ctx.fillText('🌱',x,y+RAD*0.35-h);
+    }else{
+      const sc=0.5+0.5*Math.min(1,(fr-0.35)/0.65);
+      ctx.font=`${RAD*1.15*sc}px serif`;ctx.textBaseline='alphabetic';
+      ctx.fillText(pl.em,x,y+RAD*0.5);
+      if(ready){ // sparkles
+        ctx.font=`${RAD*0.34}px serif`;ctx.globalAlpha=0.6+0.4*Math.sin(t/220);
+        ctx.fillText('✨',x+RAD*0.7,y-RAD*0.5);ctx.globalAlpha=1;
+      }
+    }
+  });
+  // grove-spirits (wandering wisps) once life is flowing
+  const spirits=blessedThriving();
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<spirits;i++){
+    const px=W*(0.15+0.7*fract(i*0.37))+Math.sin(t/1400+i*2)*W*0.06;
+    const py=H*(0.42+0.42*fract(i*0.61))+Math.cos(t/1100+i)*H*0.03;
+    const r=6+2*Math.sin(t/500+i);
+    const gr=ctx.createRadialGradient(px,py,0,px,py,r*2.4);
+    gr.addColorStop(0,'rgba(255,247,196,.9)');gr.addColorStop(1,'rgba(255,247,196,0)');
+    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(px,py,r*2.4,0,7);ctx.fill();
+  }
+  ctx.restore();
+  requestAnimationFrame(draw);
+}
+const fract=x=>x-Math.floor(x);
+function mix(a,b,t){t=Math.max(0,Math.min(1,t));const pa=hx(a),pb=hx(b);
+  return `rgb(${pa.map((v,i)=>Math.round(v+(pb[i]-v)*t)).join(',')})`;}
+const hx=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+function blessedThriving(){return S.spots.filter((s,i)=>s&&s.blessed&&mismatch(P[s.plant],SPOTS[i])===0).length;}
+
+// ── HUD sync ─────────────────────────────────────────────────────────────────
+function sync(){
+  $('rank').innerHTML=rankTitle()+'<small>Moss Druid path</small>';
+  $('light').textContent='✦ '+S.light;
+  $('lifefill').style.width=(groveLife()*100)+'%';
+  save();
+}
+
+// ── interaction ──────────────────────────────────────────────────────────────
+cv.addEventListener('click',e=>{
+  const mx=e.clientX,my=e.clientY, lvl=unlockLvl();
+  for(let i=0;i<SPOTS.length;i++){
+    const {x,y}=spotPos(i);
+    if(Math.hypot(mx-x,my-y)<=RAD*0.95){
+      const sp=SPOTS[i],cell=S.spots[i];
+      if(sp.zone>lvl){toast('Locked — awaken '+(sp.zone===1?3:6)+' plants to open '+ZONE_NM[sp.zone]);return;}
+      if(!cell){openSheet(i);return;}
+      const fr=progress(cell),pl=P[cell.plant];
+      if(cell.blessed){toast(pl.em+' '+pl.nm+' — thriving in '+ZONE_NM[sp.zone]);return;}
+      if(fr>=1){bless(i);return;}
+      const left=Math.ceil((growMs(cell)-(Date.now()-cell.at))/1000);
+      const m=mismatch(pl,sp),f=m===0?'loving the '+LNAME[sp.light]:m===1?'coping':'struggling in the '+LNAME[sp.light];
+      toast(pl.em+' '+pl.nm+' — '+f+' · ~'+fmt(left)+' to awaken');return;
+    }
+  }
+});
+function bless(i){
+  const cell=S.spots[i],pl=P[cell.plant],sp=SPOTS[i],thrive=mismatch(pl,sp)===0;
+  cell.blessed=true;
+  const gain=pl.reward+(thrive?6:0);
+  S.light+=gain;
+  toast('✦ Awakened! +'+gain+' grove-light'+(thrive?' · a grove-spirit moves in ✨':''));
+  const beforeLvl=i; // (unused) — check zone unlock transitions
+  sync();
+  const b=blessedCount();
+  if(b===3)setTimeout(()=>toast('🔓 '+ZONE_NM[1]+' awakens — new ground to plant'),1400);
+  if(b===6)setTimeout(()=>toast('🔓 '+ZONE_NM[2]+' awakens'),1400);
+  if(b===9)setTimeout(()=>toast('🌙 The grove is whole. You are a Moss Druid.'),1400);
+}
+function openSheet(i){
+  const sp=SPOTS[i];
+  $('cardSub').textContent='This spot is '+LNAME[sp.light]+'. Match a plant to its light and it thrives.';
+  const list=$('list');list.innerHTML='';
+  PLANTS.forEach(pl=>{
+    const m=Math.abs(LIGHTS[pl.light]-LIGHTS[sp.light]),[cls,txt]=FIT[m],afford=S.light>=pl.cost;
+    const row=document.createElement('div');row.className='row'+(afford?'':' dim');
+    row.innerHTML=`<div class="em">${pl.em}</div><div class="mid"><div class="nm">${pl.nm}</div>`+
+      `<div class="meta">likes ${LNAME[pl.light]} · <span class="fit ${cls}">${txt}</span></div></div>`+
+      `<div class="cost">✦ ${pl.cost}</div>`;
+    if(afford)row.onclick=()=>{plant(i,pl.id);closeSheet();};
+    list.appendChild(row);
+  });
+  $('sheet').classList.add('on');
+}
+function closeSheet(){$('sheet').classList.remove('on');}
+$('sheet').addEventListener('click',e=>{if(e.target===$('sheet'))closeSheet();});
+function plant(i,id){
+  const pl=P[id];if(S.light<pl.cost)return;
+  S.light-=pl.cost;S.spots[i]={plant:id,si:i,at:Date.now(),blessed:false};
+  const m=mismatch(pl,SPOTS[i]);
+  toast(pl.em+' '+pl.nm+' sown'+(m===0?' — perfect light, it will thrive':m===2?' — wrong light, it will grow slowly':''));
+  sync();
+}
+let tT;
+function toast(msg){$('toast').textContent=msg;$('toast').classList.add('on');clearTimeout(tT);tT=setTimeout(()=>$('toast').classList.remove('on'),2600);}
+function fmt(s){return s>=60?Math.round(s/60)+'m':s+'s';}
+
+// ── go ───────────────────────────────────────────────────────────────────────
+sync();
+if(!S.hint){S.hint=true;save();setTimeout(()=>toast('You are a Moss Druid. Tap a glowing ring to sow — match the plant to the light.'),500);}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

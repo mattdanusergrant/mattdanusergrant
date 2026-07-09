@@ -2,8 +2,6 @@
 /games/municipal-development-globe/*  https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/world/:splat 301
 /games/metropolis-dawn-grid-world/*   https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/world/:splat 301
 /games/metropolis-dawn-grid/*         https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/:splat 301
-# Moss Dew Garden (formerly Mosslings) — kept local, actively developed
-/games/mosslings/*                    /games/mossdewgarden/:splat 301
 
 # Games consolidated to the mustdesigngames subdomain (canonical home)
 /games/keeprippingpacks/*  https://mustdesigngames.mattdanusergrant.com/keeprippingpacks/:splat 301

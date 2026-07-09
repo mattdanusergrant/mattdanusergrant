@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Moon Druid Garrison</title>
+<meta name="description" content="A team of druids defending the moon. Place your Moon Druids, wild-shape them to counter the dark, and hold the moon through the lunar phases until dawn.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Moon Druid Garrison">
+<meta name="theme-color" content="#0b1030">
+<link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/moondruidgarrison/">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#0b1030;
+    font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none}
+  #scene{display:block;width:100vw;height:100vh;touch-action:manipulation}
+  #hud{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 10px) 14px 8px;
+    pointer-events:none;color:#e7ecff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:system-ui,sans-serif}
+  #phase{font-size:15px;font-weight:600;letter-spacing:.3px}
+  #phase small{display:block;font-size:11px;font-weight:400;opacity:.7;letter-spacing:.08em;text-transform:uppercase}
+  #coins{font-size:17px;font-weight:600;white-space:nowrap}
+  #lightwrap{margin-top:9px;font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.05em;opacity:.85}
+  #lightbar{margin-top:3px;height:6px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
+  #lightfill{height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,#8ea6ff,#eef3ff);transition:width .25s}
+  /* form sheet */
+  #sheet{position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;background:rgba(6,10,30,.6);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  #sheet.on{display:flex}
+  #card{width:100%;max-width:520px;margin:0 auto;background:linear-gradient(#eef1fb,#dfe4f4);
+    border-radius:20px 20px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);
+    box-shadow:0 -10px 40px rgba(0,0,0,.45);animation:rise .2s ease}
+  @keyframes rise{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+  #card h2{margin:2px 0 1px;font-size:18px;color:#26305a}
+  #card .sub{margin:0 0 12px;font-size:13px;color:#5b657b;font-family:system-ui,sans-serif}
+  .row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:12px;cursor:pointer}
+  .row+.row{border-top:1px solid #d3d9ec}
+  .row .em{font-size:28px;width:36px;text-align:center}
+  .row .mid{flex:1;min-width:0}
+  .row .nm{font-size:16px;color:#26305a;font-weight:600}
+  .row .meta{font-size:12px;color:#5b657b;font-family:system-ui,sans-serif;margin-top:1px}
+  .row .tag{font-size:13px;font-weight:700;color:#4a5788;white-space:nowrap;font-family:system-ui,sans-serif}
+  .row.dim{opacity:.4;cursor:default}
+  .row:not(.dim):active{background:#d7ddf0}
+  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(12px);
+    z-index:15;background:rgba(12,18,44,.94);color:#e7ecff;padding:10px 18px;border-radius:99px;font-size:14px;
+    font-family:system-ui,sans-serif;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;text-align:center}
+  #toast.on{opacity:1;transform:translateX(-50%)}
+  #over{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(6,10,30,.82);color:#eef3ff;text-align:center;padding:32px;font-family:system-ui,sans-serif}
+  #over.on{display:flex}
+  #over h1{font-family:'Iowan Old Style',Georgia,serif;font-size:34px;margin:.1em 0}
+  #over p{opacity:.82;max-width:34ch;line-height:1.5}
+  #over button{margin-top:22px;font:600 15px system-ui;color:#0b1030;background:#e7ecff;border:0;border-radius:99px;padding:12px 26px;cursor:pointer}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hud">
+  <div class="hrow">
+    <div id="phase">The night begins<small>Moon Druid Garrison</small></div>
+    <div id="coins">✦ 0</div>
+  </div>
+  <div id="lightwrap">MOON LIGHT<div id="lightbar"><div id="lightfill"></div></div></div>
+</div>
+<div id="sheet"><div id="card"><h2 id="cardh">Wild-shape</h2><p class="sub" id="cardsub"></p><div id="list"></div></div></div>
+<div id="toast"></div>
+<div id="over"><h1 id="oh"></h1><p id="op"></p><button id="ob">Defend again</button></div>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('scene'),ctx=cv.getContext('2d');
+let W,H,DPR,cx,cy,R,slotR;
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+  cx=W/2;cy=H*0.44;R=Math.min(W,H)*0.13;slotR=R*2.05;}
+addEventListener('resize',resize);resize();
+
+// ── content ──────────────────────────────────────────────────────────────
+const FORMS={
+  bear:  {nm:'Bear',   em:'🐻', range:82,  dmg:24, cd:.9,  slow:0,  col:'#c79b6e', role:'bruiser — big hits up close'},
+  owl:   {nm:'Owl',    em:'🦉', range:210, dmg:11, cd:.52, slow:0,  col:'#dfe6f2', role:'ranged — picks off distant threats'},
+  wolf:  {nm:'Wolf',   em:'🐺', range:125, dmg:7,  cd:.24, slow:0,  col:'#b9c0cc', role:'swift — rapid hits vs fast Shades'},
+  treant:{nm:'Treant', em:'🌳', range:135, dmg:5,  cd:.7,  slow:.5, col:'#8fca7a', role:'warden — roots & slows nearby'},
+};
+const FIDS=['bear','owl','wolf','treant'];
+const THREATS={
+  wisp:    {nm:'Wisp',    hp:30, spd:24, rw:8,  dmg:8,  col:'#9fb7e0', r:11},
+  shade:   {nm:'Shade',   hp:16, spd:50, rw:6,  dmg:5,  col:'#8f79c8', r:9},
+  devourer:{nm:'Devourer',hp:95, spd:13, rw:18, dmg:16, col:'#43356b', r:18},
+};
+const WAVES=[
+  {phase:'Waxing crescent',ph:'🌒',buff:1.0, spawn:[['wisp',6]]},
+  {phase:'Waxing gibbous', ph:'🌔',buff:1.25,spawn:[['wisp',6],['shade',3]]},
+  {phase:'Full moon',      ph:'🌕',buff:1.5, spawn:[['wisp',6],['shade',3],['devourer',1]]},
+  {phase:'The waning dark',ph:'🌘',buff:1.0, spawn:[['shade',7],['wisp',4],['devourer',2]]},
+];
+const COST=30, NSLOTS=8;
+
+// ── state ────────────────────────────────────────────────────────────────
+let S,last;
+function reset(){
+  S={light:100,coins:100,slots:[],threats:[],beams:[],wave:-1,queue:[],spawnT:0,betweenT:4,status:'play',flash:0};
+  for(let i=0;i<NSLOTS;i++)S.slots.push({a:-Math.PI/2+i/NSLOTS*Math.PI*2,form:null,cd:0});
+  $('over').classList.remove('on');closeSheet();
+  if(!localStorage.getItem('mdgar.seen')){localStorage.setItem('mdgar.seen','1');
+    setTimeout(()=>toast('Tap a ring to post a druid. Tap a druid to wild-shape. Hold the moon till dawn.'),400);}
+}
+const slotPos=s=>({x:cx+slotR*Math.cos(s.a),y:cy+slotR*Math.sin(s.a)});
+const thPos=t=>({x:cx+t.d*Math.cos(t.a),y:cy+t.d*Math.sin(t.a)});
+const curBuff=()=>S.wave>=0?WAVES[S.wave].buff:1;
+
+function startWave(i){S.wave=i;S.queue=[];WAVES[i].spawn.forEach(([t,n])=>{for(let k=0;k<n;k++)S.queue.push(t);});
+  S.spawnT=0;const w=WAVES[i];toast(w.ph+' '+w.phase+(w.buff>1?' — wild-shapes empowered':''));}
+
+// ── update ───────────────────────────────────────────────────────────────
+function update(dt){
+  if(S.status!=='play')return;
+  S.flash=Math.max(0,S.flash-dt);
+  // wave flow
+  if(S.queue.length===0 && S.threats.length===0){
+    S.betweenT-=dt;
+    if(S.betweenT<=0){ if(S.wave<WAVES.length-1){S.betweenT=3.2;startWave(S.wave+1);} else {S.status='won';return over();} }
+  }
+  // spawn
+  if(S.queue.length){S.spawnT-=dt;if(S.spawnT<=0){const t=S.queue.shift();const d=THREATS[t];
+    S.threats.push({t,a:Math.random()*Math.PI*2,d:Math.hypot(W,H)*0.5,hp:d.hp});S.spawnT=0.55;}}
+  // treant slow field: mark threats
+  for(const th of S.threats)th.slow=1;
+  for(const s of S.slots){if(s.form==='treant'){const p=slotPos(s);for(const th of S.threats){const q=thPos(th);
+    if(Math.hypot(q.x-p.x,q.y-p.y)<=FORMS.treant.range)th.slow=Math.min(th.slow,1-FORMS.treant.slow);}}}
+  // move threats inward
+  for(const th of S.threats){const d=THREATS[th.t];th.d-=d.spd*th.slow*dt;
+    if(th.d<=R+6){S.light-=d.dmg;S.flash=.3;th.dead=true;}}
+  // druids attack
+  const buff=curBuff();
+  for(const s of S.slots){ if(!s.form){continue;} s.cd-=dt; if(s.cd>0)continue;
+    const f=FORMS[s.form],p=slotPos(s); let best=null,bd=1e9;
+    for(const th of S.threats){if(th.dead)continue;const q=thPos(th);const dist=Math.hypot(q.x-p.x,q.y-p.y);
+      if(dist<=f.range && th.d<bd){bd=th.d;best=th;}}
+    if(best){best.hp-=f.dmg*buff;s.cd=f.cd;const q=thPos(best);S.beams.push({x1:p.x,y1:p.y,x2:q.x,y2:q.y,t:.14,col:f.col});} }
+  // resolve deaths
+  S.threats=S.threats.filter(th=>{ if(th.hp<=0){S.coins+=THREATS[th.t].rw;return false;} return !th.dead; });
+  // beams fade
+  for(const b of S.beams)b.t-=dt; S.beams=S.beams.filter(b=>b.t>0);
+  if(S.light<=0){S.light=0;S.status='lost';return over();}
+}
+
+// ── draw ─────────────────────────────────────────────────────────────────
+function draw(t){
+  // sky
+  const g=ctx.createRadialGradient(cx,cy,R*0.5,cx,cy,Math.max(W,H)*0.8);
+  g.addColorStop(0,'#1a2350');g.addColorStop(.6,'#0d1236');g.addColorStop(1,'#070a20');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // stars
+  ctx.fillStyle='rgba(255,255,255,.6)';for(let i=0;i<40;i++){const sx=(i*97%W),sy=(i*57%H);
+    if(Math.hypot(sx-cx,sy-cy)>R*2.4){ctx.globalAlpha=.3+.3*Math.sin(t/900+i);ctx.fillRect(sx,sy,1.6,1.6);}}
+  ctx.globalAlpha=1;
+  // encroaching dark (the Waning)
+  const buff=curBuff();
+  ctx.save();ctx.globalCompositeOperation='multiply';
+  const vg=ctx.createRadialGradient(cx,cy,R*3,cx,cy,Math.max(W,H)*0.6);
+  vg.addColorStop(0,'rgba(255,255,255,1)');vg.addColorStop(1,`rgba(20,10,40,${0.55+0.12*Math.sin(t/1200)})`);
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);ctx.restore();
+  // moon glow (brighter at full)
+  const glow=ctx.createRadialGradient(cx,cy,R*0.4,cx,cy,R*(buff>1?2.6:2));
+  glow.addColorStop(0,`rgba(226,234,255,${buff>1?.5:.32})`);glow.addColorStop(1,'rgba(226,234,255,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(cx,cy,R*2.6,0,7);ctx.fill();
+  // moon body
+  const mg=ctx.createRadialGradient(cx-R*.3,cy-R*.3,R*.2,cx,cy,R);
+  mg.addColorStop(0,'#f5f7ff');mg.addColorStop(1,'#b9c4e6');
+  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill();
+  ctx.fillStyle='rgba(150,165,205,.5)';[[.3,-.2,.16],[-.25,.28,.12],[.1,.4,.09],[-.4,-.1,.08]].forEach(([dx,dy,rr])=>{
+    ctx.beginPath();ctx.arc(cx+dx*R,cy+dy*R,rr*R,0,7);ctx.fill();});
+  if(S.flash>0){ctx.fillStyle=`rgba(255,120,120,${S.flash})`;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill();}
+  // threats
+  for(const th of S.threats){const d=THREATS[th.t],p=thPos(th);
+    const gg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,d.r*1.8);
+    gg.addColorStop(0,d.col);gg.addColorStop(1,'rgba(10,6,24,0)');
+    ctx.fillStyle=gg;ctx.beginPath();ctx.arc(p.x,p.y,d.r*1.8,0,7);ctx.fill();
+    ctx.fillStyle=d.col;ctx.beginPath();ctx.arc(p.x,p.y,d.r,0,7);ctx.fill();
+    if(th.t==='devourer'){ctx.fillStyle='#e8b0ff';ctx.beginPath();ctx.arc(p.x,p.y,d.r*.32,0,7);ctx.fill();}
+    // hp pip
+    const d0=d.hp;if(th.hp<d0){ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(p.x-d.r,p.y-d.r-6,d.r*2,3);
+      ctx.fillStyle='#b0f0c0';ctx.fillRect(p.x-d.r,p.y-d.r-6,d.r*2*(th.hp/d0),3);}}
+  // beams
+  for(const b of S.beams){ctx.strokeStyle=b.col;ctx.globalAlpha=Math.min(1,b.t/.14);ctx.lineWidth=2.4;
+    ctx.beginPath();ctx.moveTo(b.x1,b.y1);ctx.lineTo(b.x2,b.y2);ctx.stroke();}ctx.globalAlpha=1;
+  // slots / druids
+  for(const s of S.slots){const p=slotPos(s);
+    if(!s.form){ctx.strokeStyle='rgba(200,214,255,.4)';ctx.lineWidth=2;ctx.setLineDash([4,6]);
+      ctx.beginPath();ctx.arc(p.x,p.y,R*0.34,0,7);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='rgba(200,214,255,.55)';ctx.font=`${R*0.34}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('+',p.x,p.y);continue;}
+    const f=FORMS[s.form];
+    ctx.strokeStyle=f.col+'55';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,f.range,0,7);ctx.stroke();
+    const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R*0.5);rg.addColorStop(0,f.col+'cc');rg.addColorStop(1,f.col+'00');
+    ctx.fillStyle=rg;ctx.beginPath();ctx.arc(p.x,p.y,R*0.5,0,7);ctx.fill();
+    ctx.font=`${R*0.5}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(f.em,p.x,p.y);}
+  requestAnimationFrame(loop);
+}
+function loop(t){if(!last)last=t;let dt=(t-last)/1000;last=t;if(dt>0.05)dt=0.05;update(dt);sync();draw(t);}
+
+// ── HUD / input ──────────────────────────────────────────────────────────
+function sync(){
+  const w=S.wave>=0?WAVES[S.wave]:null;
+  $('phase').innerHTML=(w?w.ph+' '+w.phase:'The night begins')+'<small>Moon Druid Garrison</small>';
+  $('coins').textContent='✦ '+S.coins;
+  $('lightfill').style.width=S.light+'%';
+  $('lightfill').style.background=S.light<35?'linear-gradient(90deg,#ff8e8e,#ffd0d0)':'linear-gradient(90deg,#8ea6ff,#eef3ff)';
+}
+cv.addEventListener('click',e=>{
+  if(S.status!=='play')return;
+  for(const s of S.slots){const p=slotPos(s);if(Math.hypot(e.clientX-p.x,e.clientY-p.y)<=R*0.5){openSheet(s);return;}}
+});
+let sheetSlot=null;
+function openSheet(s){sheetSlot=s;
+  $('cardh').textContent=s.form?'Wild-shape':'Post a druid';
+  $('cardsub').textContent=s.form?'Shift this druid’s form — free, any time.':'Costs ✦'+COST+'. You have ✦'+S.coins+'.';
+  const list=$('list');list.innerHTML='';
+  FIDS.forEach(id=>{const f=FORMS[id];const isPlace=!s.form;const afford=s.form||S.coins>=COST;const cur=s.form===id;
+    const row=document.createElement('div');row.className='row'+(afford&&!cur?'':' dim');
+    row.innerHTML=`<div class="em">${f.em}</div><div class="mid"><div class="nm">${f.nm}${cur?' · current':''}</div>`+
+      `<div class="meta">${f.role} · rng ${f.range} · dmg ${f.dmg}</div></div>`+
+      `<div class="tag">${isPlace?'✦'+COST:'shift'}</div>`;
+    if(afford&&!cur)row.onclick=()=>{setForm(s,id);closeSheet();};
+    list.appendChild(row);});
+  $('sheet').classList.add('on');
+}
+function setForm(s,id){if(!s.form){if(S.coins<COST)return;S.coins-=COST;toast(FORMS[id].em+' '+FORMS[id].nm+' posted');}
+  else toast('Wild-shape → '+FORMS[id].em+' '+FORMS[id].nm);
+  s.form=id;s.cd=0;}
+function closeSheet(){$('sheet').classList.remove('on');sheetSlot=null;}
+$('sheet').addEventListener('click',e=>{if(e.target===$('sheet'))closeSheet();});
+let tT;function toast(m){$('toast').textContent=m;$('toast').classList.add('on');clearTimeout(tT);tT=setTimeout(()=>$('toast').classList.remove('on'),2600);}
+function over(){const won=S.status==='won';$('oh').textContent=won?'🌅 Dawn holds':'🌑 The moon goes dark';
+  $('op').textContent=won?'The garrison stood through every phase. The moon endures — because you held.':'The Waning swallowed the light. Rally the garrison and hold again.';
+  $('over').classList.add('on');}
+$('ob').onclick=()=>{reset();last=0;};
+
+reset();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
