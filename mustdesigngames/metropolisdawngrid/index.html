@@ -354,14 +354,24 @@
   var pal,C={};
   function readTheme(){pal=PAL[themeName()];C.bg=cssVar('--bg');C.line=cssVar('--line');C.line2=cssVar('--line-2');dirty=true;}
 
-  // ---- highway (fixed world connection along the top row) ----
-  function ensureHighway(){for(var c=0;c<cols;c++){var g=grid[idx(c,0)];g.t='highway';g.lvl=0;g.grow=0;}}
+  // ---- highway (a real freeway corridor threading the tile — the connection to the wider world) ----
+  // The corridor's row is derived from the region's lat/lon (a windowed slice of the planet's road
+  // network), sits in the upper-middle band, and is rows-independent so a resize won't move it onto
+  // your buildings. It's laid clear across — bridging water, cutting through mountains — so it reads
+  // as continuous, the way a highway would run through the many tiles of the world.
+  var HWROW=0;
+  function hwRowFor(){var f=vnoise(WOX+13,WOY+29,7);return Math.max(3,Math.min(rows-4,9+Math.round(f*9)));}
+  function ensureHighway(){
+    HWROW=hwRowFor();
+    for(var i=0;i<grid.length;i++){if(grid[i]&&grid[i].t==='highway'){grid[i].t='empty';grid[i].lvl=0;grid[i].grow=0;}}  // clear a stale corridor (row may shift on resize)
+    for(var c=0;c<cols;c++){var g=grid[idx(c,HWROW)];g.t='highway';g.lvl=0;g.grow=0;}
+  }
   function seedRampIfEmpty(){
-    // if there are no roads yet, drop a short on-ramp so the player has an obvious place to begin
+    // if there are no roads yet, drop a short on-ramp beside the freeway so the player has an obvious start
     for(var i=0;i<grid.length;i++)if(grid[i]&&grid[i].t==='road')return;
-    var mid=Math.floor(cols/2);
+    var mid=Math.floor(cols/2), r1=Math.min(rows-2,HWROW+1), r2=Math.min(rows-2,HWROW+2);
     for(var off=0;off<cols;off++){var cc=mid+(off%2?-1:1)*Math.ceil(off/2);
-      if(inB(cc,1)&&!noBuild(grid[idx(cc,1)].terr)){grid[idx(cc,1)].t='road';if(inB(cc,2)&&!noBuild(grid[idx(cc,2)].terr))grid[idx(cc,2)].t='road';break;}}
+      if(inB(cc,r1)&&!noBuild(grid[idx(cc,r1)].terr)){grid[idx(cc,r1)].t='road';if(r2!==r1&&!noBuild(grid[idx(cc,r2)].terr))grid[idx(cc,r2)].t='road';break;}}
     dirty=true;
   }
 
@@ -469,7 +479,7 @@
   function computeServices(){
     var n=cols*rows;connected=new Uint8Array(n);powered=new Uint8Array(n);watered=new Uint8Array(n);
     // BFS from highway through drivable cells → connected road network
-    var q=[];for(var c=0;c<cols;c++){if(grid[idx(c,0)].t==='highway'){connected[idx(c,0)]=1;q.push(c);}} // row 0
+    var q=[];for(var hi=0;hi<n;hi++){if(grid[hi]&&grid[hi].t==='highway'){connected[hi]=1;q.push(hi);}} // seed from the corridor, wherever it runs
     var head=0;
     while(head<q.length){
       var id=q[head++],cc=id%cols,cr=(id/cols)|0;
@@ -485,7 +495,7 @@
     }
     // rail network: BFS from highway through rail/highway → what's linked to the world for export
     railConn=new Uint8Array(n);connectedRailCount=0;railToWorld=false;
-    var rq=[];for(var c3=0;c3<cols;c3++){if(grid[idx(c3,0)].t==='highway'){railConn[idx(c3,0)]=1;rq.push(idx(c3,0));}}
+    var rq=[];for(var hj=0;hj<n;hj++){if(grid[hj]&&grid[hj].t==='highway'){railConn[hj]=1;rq.push(hj);}}  // seed rail from the corridor too
     var rhd=0;
     while(rhd<rq.length){var id2=rq[rhd++],cc2=id2%cols,cr2=(id2/cols)|0,nb2=[[cc2-1,cr2],[cc2+1,cr2],[cc2,cr2-1],[cc2,cr2+1]];
       for(var k2=0;k2<4;k2++){var a2=nb2[k2][0],b2=nb2[k2][1];if(inB(a2,b2)){var t2=grid[idx(a2,b2)].t;if((t2==='rail'||t2==='highway')&&!railConn[idx(a2,b2)]){railConn[idx(a2,b2)]=1;rq.push(idx(a2,b2));}}}}
@@ -694,11 +704,13 @@
     for(var c=0;c<=cols;c++){ctx.strokeStyle=(c%5===0)?C.line2:C.line;ctx.beginPath();ctx.moveTo(px(c*CELL)+0.5,0);ctx.lineTo(px(c*CELL)+0.5,rows*CELL);ctx.stroke();}
     for(var r=0;r<=rows;r++){ctx.strokeStyle=(r%5===0)?C.line2:C.line;ctx.beginPath();ctx.moveTo(0,px(r*CELL)+0.5);ctx.lineTo(cols*CELL,px(r*CELL)+0.5);ctx.stroke();}
   }
-  function drawHighway(x,y,c){
+  function drawHighway(x,y,c,r){
     ctx.fillStyle=pal.hw;ctx.fillRect(x,y,CELL,CELL);
     ctx.fillStyle=pal.hwLane;ctx.fillRect(x,y+3,CELL,1);ctx.fillRect(x,y+CELL-4,CELL,1);
     ctx.fillStyle=pal.hwMed;for(var dx=1;dx<CELL-2;dx+=8)ctx.fillRect(x+dx,y+CELL/2-1,5,2);
-    if(drivable(c,1)){ctx.fillStyle=pal.hw;ctx.fillRect(x+CELL/2-4,y+CELL-3,8,3);} // on-ramp blend downward
+    ctx.fillStyle=pal.hw;                                                     // on-ramp: blend toward an adjoining city road
+    if(drivable(c,r+1))ctx.fillRect(x+CELL/2-4,y+CELL-3,8,3);
+    if(drivable(c,r-1))ctx.fillRect(x+CELL/2-4,y,8,3);
   }
   function drawRoad(x,y,c,r){
     var N=drivable(c,r-1),S=drivable(c,r+1),E=drivable(c+1,r),W=drivable(c-1,r);
@@ -836,7 +848,7 @@
     // rail (under roads so a road crossing reads on top), then roads + highway
     for(r=0;r<rows;r++)for(c=0;c<cols;c++){cell=grid[idx(c,r)];if(cell&&cell.t==='rail')drawRail(c*CELL,r*CELL,c,r);}
     for(r=0;r<rows;r++)for(c=0;c<cols;c++){cell=grid[idx(c,r)];if(!cell)continue;x=c*CELL;y=r*CELL;
-      if(cell.t==='highway')drawHighway(x,y,c);else if(cell.t==='road')drawRoad(x,y,c,r);}
+      if(cell.t==='highway')drawHighway(x,y,c,r);else if(cell.t==='road')drawRoad(x,y,c,r);}
     // structures
     for(r=0;r<rows;r++)for(c=0;c<cols;c++){
       cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway')continue;
@@ -907,19 +919,23 @@
   function planCity(tier){
     // target-driven so the city size reliably tracks the tier (not local terrain / screen size).
     // All buildings lvl 3 (established, no "needs X" cues); ~half are homes → pop ≈ TARGET/2 × 405.
+    // The city STRADDLES the freeway (HWROW): streets on rows adjacent to it (the on-ramps), building
+    // rows further out on both sides — cities grow at the highway, not clinging to an edge.
     var TARGET=[4,6,10,30,64,92][tier], half=Math.min((cols>>1)-2, 7+tier*2), mid=Math.floor(cols/2);
-    var c0=Math.max(1,mid-half), c1=Math.min(cols-2,mid+half), c, r, placed=0, lastR=2;
-    for(c=c0;c<=c1;c++)placeAt(c,1,'road',0);                          // main street on the highway
-    for(r=2;r<rows-1&&placed<TARGET;r++){
-      if(r%2===1){for(c=c0;c<=c1;c++)placeAt(c,r,'road',0);continue;}  // a street between each building row
-      for(c=c0;c<=c1&&placed<TARGET;c++){var g=grid[idx(c,r)];if(g.t!=='empty'||noBuild(g.terr))continue;
-        var t; if(nearMountain(c,r))t='ind';                          // Works hug the peaks (mine ore)
-        else{var m=placed%6;t=m<3?'res':m<4?'com':m<5?'ind':'fac';}   // homes-heavy mix + shops/works/factory
-        placeAt(c,r,t,3);placed++;lastR=r;}
+    var c0=Math.max(1,mid-half), c1=Math.min(cols-2,mid+half), c, placed=0, maxOff=1;
+    for(var off=1;off<rows&&placed<TARGET;off++){
+      for(var s=0;s<2;s++){var r=HWROW+(s?-1:1)*off; if(r<1||r>rows-2)continue;
+        if(off%2===1){for(c=c0;c<=c1;c++)placeAt(c,r,'road',0);continue;}  // street row (odd offset; ±1 is the on-ramp street)
+        for(c=c0;c<=c1&&placed<TARGET;c++){var g=grid[idx(c,r)];if(g.t!=='empty'||noBuild(g.terr))continue;
+          var t; if(nearMountain(c,r))t='ind';                          // Works hug the peaks (mine ore)
+          else{var m=placed%6;t=m<3?'res':m<4?'com':m<5?'ind':'fac';}   // homes-heavy mix + shops/works/factory
+          placeAt(c,r,t,3);placed++;if(off>maxOff)maxOff=off;}
+      }
     }
-    var ur=Math.min(rows-2,lastR+2);                                  // a little infrastructure below
+    var ur=Math.min(rows-2,HWROW+maxOff+1);                            // a little infrastructure past the built area
     placeAt(c0,ur,'power',0);placeAt(c1,ur,'power',0);placeAt(mid,ur,'water',0);
-    for(var rc=c1+2;rc<cols-1;rc++){if(!noBuild(grid[idx(rc,1)].terr)){for(r=1;r<=3;r++)placeAt(rc,r,'rail',0);break;}} // rail out to the highway
+    for(var rc=c1+2;rc<cols-1;rc++){var rr1=Math.min(rows-2,HWROW+1);   // rail spur beside the city, down from the freeway
+      if(!noBuild(grid[idx(rc,rr1)].terr)){for(var rr=rr1;rr<=Math.min(rows-2,HWROW+3);rr++)placeAt(rc,rr,'rail',0);break;}}
   }
 
   // ---- boot ----
