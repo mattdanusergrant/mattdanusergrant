@@ -561,6 +561,7 @@ function enterMatch(m){
   G.mode="online"; match=m; prevMoveCount=-1;
   showScreen("game"); watchConnection();
   $("clocks").classList.remove("hidden"); $("clocks").classList.add("noclock");
+  resize();                                     // compute board geometry (else draw() bails → blank board)
   m.on(state=>onState(state, m));
 }
 function renderBoardFrom(rep){ G.board=rep.board; G.koKey=rep.koKey; G.caps=rep.caps; G.toMove=rep.toMove; G.last=rep.last; draw(); renderMeta(); }
