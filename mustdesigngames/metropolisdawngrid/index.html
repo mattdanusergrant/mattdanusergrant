@@ -378,15 +378,21 @@
   function isHwy(c,r){return inB(c,r)&&grid[idx(c,r)].t==='highway';}
   function isRoadCell(c,r){return inB(c,r)&&grid[idx(c,r)].t==='road';}
   function seedRampIfEmpty(){
-    // if there are no roads yet, drop a short on-ramp against the corridor so the player has an obvious start
+    // if there are no roads yet, drop a short on-ramp against the corridor — a 2-cell stub running
+    // PERPENDICULAR away from the freeway (a real ramp), so the player starts correctly connected.
     for(var i=0;i<grid.length;i++)if(grid[i]&&grid[i].t==='road')return;
-    var mid=Math.floor(cols/2), midr=Math.floor(rows/2), best=-1, bestD=1e9;
+    var mid=Math.floor(cols/2), midr=Math.floor(rows/2), dirs=[[1,0],[-1,0],[0,1],[0,-1]], cand=[];
     for(var r=1;r<rows-1;r++)for(var c=1;c<cols-1;c++){var g=grid[idx(c,r)];
       if(g.t!=='empty'||noBuild(g.terr))continue;
-      if(!(isHwy(c-1,r)||isHwy(c+1,r)||isHwy(c,r-1)||isHwy(c,r+1)))continue;      // must touch the corridor (be an on-ramp)
-      var d=Math.abs(c-mid)+Math.abs(r-midr);if(d<bestD){bestD=d;best=idx(c,r);}}
-    if(best>=0){var bc=best%cols,br=(best/cols)|0;grid[best].t='road';
-      var er=br<rows-2?br+1:br-1;if(inB(bc,er)&&grid[idx(bc,er)].t==='empty'&&!noBuild(grid[idx(bc,er)].terr))grid[idx(bc,er)].t='road';}
+      if(!(isHwy(c-1,r)||isHwy(c+1,r)||isHwy(c,r-1)||isHwy(c,r+1)))continue;      // must touch the corridor
+      cand.push([c,r,Math.abs(c-mid)+Math.abs(r-midr)]);}
+    cand.sort(function(a,b){return a[2]-b[2];});                                  // nearest the middle first
+    for(var ci=0;ci<cand.length;ci++){var bc=cand[ci][0],br=cand[ci][1],fd=null;
+      for(var k=0;k<4;k++)if(isHwy(bc+dirs[k][0],br+dirs[k][1])){fd=dirs[k];break;}
+      if(!fd)continue; var ec=bc-fd[0],er=br-fd[1];                              // the cell one step AWAY from the freeway
+      if(inB(ec,er)&&grid[idx(ec,er)].t==='empty'&&!noBuild(grid[idx(ec,er)].terr)){
+        grid[idx(bc,br)].t='road';grid[idx(ec,er)].t='road';break;}             // commit only a full 2-cell ramp
+    }
     dirty=true;
   }
 
@@ -494,12 +500,19 @@
   function computeServices(){
     var n=cols*rows;connected=new Uint8Array(n);powered=new Uint8Array(n);watered=new Uint8Array(n);
     // BFS from highway through drivable cells → connected road network
-    var q=[];for(var hi=0;hi<n;hi++){if(grid[hi]&&grid[hi].t==='highway'){connected[hi]=1;q.push(hi);}} // seed from the corridor, wherever it runs
+    // A surface road may only ENTER the freeway through a proper on/off-ramp — a road that meets the
+    // freeway perpendicular (continues away from it). A road running alongside the freeway can't merge.
+    var q=[];for(var hi=0;hi<n;hi++){if(grid[hi]&&grid[hi].t==='highway'){connected[hi]=1;q.push(hi);}}
     var head=0;
     while(head<q.length){
-      var id=q[head++],cc=id%cols,cr=(id/cols)|0;
+      var id=q[head++],cc=id%cols,cr=(id/cols)|0,curHw=grid[id].t==='highway';
       var nb=[[cc-1,cr],[cc+1,cr],[cc,cr-1],[cc,cr+1]];
-      for(var k=0;k<4;k++){var a=nb[k][0],bb=nb[k][1];if(drivable(a,bb)){var ni=idx(a,bb);if(!connected[ni]){connected[ni]=1;q.push(ni);}}}
+      for(var k=0;k<4;k++){var a=nb[k][0],bb=nb[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb),nt=grid[ni].t;if(connected[ni])continue;
+        if(nt==='highway'){connected[ni]=1;q.push(ni);}
+        else if(nt==='road'){
+          if(curHw){if(isRoadCell(a+(a-cc),bb+(bb-cr))){connected[ni]=1;q.push(ni);}}  // freeway→road only via a perpendicular ramp
+          else{connected[ni]=1;q.push(ni);}                                            // road→road: normal
+        }}
     }
     // coverage stamps
     for(var r=0;r<rows;r++)for(var cx=0;cx<cols;cx++){
@@ -512,8 +525,13 @@
     railConn=new Uint8Array(n);connectedRailCount=0;railToWorld=false;
     var rq=[];for(var hj=0;hj<n;hj++){if(grid[hj]&&grid[hj].t==='highway'){railConn[hj]=1;rq.push(hj);}}  // seed rail from the corridor too
     var rhd=0;
-    while(rhd<rq.length){var id2=rq[rhd++],cc2=id2%cols,cr2=(id2/cols)|0,nb2=[[cc2-1,cr2],[cc2+1,cr2],[cc2,cr2-1],[cc2,cr2+1]];
-      for(var k2=0;k2<4;k2++){var a2=nb2[k2][0],b2=nb2[k2][1];if(inB(a2,b2)){var t2=grid[idx(a2,b2)].t;if((t2==='rail'||t2==='highway')&&!railConn[idx(a2,b2)]){railConn[idx(a2,b2)]=1;rq.push(idx(a2,b2));}}}}
+    while(rhd<rq.length){var id2=rq[rhd++],cc2=id2%cols,cr2=(id2/cols)|0,curHw2=grid[id2].t==='highway',nb2=[[cc2-1,cr2],[cc2+1,cr2],[cc2,cr2-1],[cc2,cr2+1]];
+      for(var k2=0;k2<4;k2++){var a2=nb2[k2][0],b2=nb2[k2][1];if(!inB(a2,b2))continue;var ni2=idx(a2,b2),t2=grid[ni2].t;if(railConn[ni2])continue;
+        if(t2==='highway'){railConn[ni2]=1;rq.push(ni2);}
+        else if(t2==='rail'){
+          if(curHw2){var bx=a2+(a2-cc2),by=b2+(b2-cr2);if(inB(bx,by)&&grid[idx(bx,by)].t==='rail'){railConn[ni2]=1;rq.push(ni2);}}  // rail joins the freeway only via a perpendicular spur
+          else{railConn[ni2]=1;rq.push(ni2);}
+        }}}
     for(var i3=0;i3<n;i3++){if(railConn[i3]&&grid[i3]&&grid[i3].t==='rail'){connectedRailCount++;railToWorld=true;}}
   }
   function stamp(arr,cx,cy,rad){
@@ -958,16 +976,30 @@
       for(var i=0;i<order.length;i++){var k=order[i],g=want[k]-cnt[k];if(g>gap){gap=g;best=k;}}
       return best;
     }
+    // On a horizontal freeway arm, set the streets BACK one row (buildings abut the freeway, streets
+    // beyond) so no road runs alongside it; the city joins the freeway only at a few punched ramps.
+    // Vertical arms need no setback — the cross-streets meet them perpendicular already.
+    var hArm=(HWSHAPE==='H'||HWSHAPE==='X'||HWSHAPE==='L');
     for(var off=1;off<Math.max(rows,cols)&&placed<TARGET;off++){
+      var street = hArm ? (off%2===0) : (off%2===1);
       for(var s=0;s<2;s++){var r=CR+(s?-1:1)*off; if(r<1||r>rows-2)continue;
-        if(off%2===1){for(c=c0;c<=c1;c++)placeAt(c,r,'road',0);continue;}  // street row (odd offset)
+        if(street){for(c=c0;c<=c1;c++)placeAt(c,r,'road',0);continue;}
         for(c=c0;c<=c1&&placed<TARGET;c++){var g=grid[idx(c,r)];if(g.t!=='empty'||noBuild(g.terr))continue;
           var t=pick(nearMountain(c,r));placeAt(c,r,t,3);cnt[t]++;placed++;if(off>maxOff)maxOff=off;}
       }
     }
+    if(hArm){                                                          // punch discrete perpendicular on/off-ramps through to the setback street
+      for(var s2=-1;s2<=1;s2+=2){var fr=HWROW+s2, st=HWROW+2*s2;
+        if(fr<1||fr>rows-2||st<1||st>rows-2)continue;
+        var step=Math.max(5,Math.round((c1-c0)/2)), made=0;
+        for(var rc=c0+Math.floor(step/2);rc<=c1;rc+=step){
+          if(isHwy(rc,HWROW)&&isRoadCell(rc,st)&&!noBuild(grid[idx(rc,fr)].terr)){placeAt(rc,fr,'road',0);made++;}}
+        if(!made)for(var rc2=c0;rc2<=c1;rc2++){if(isHwy(rc2,HWROW)&&isRoadCell(rc2,st)&&!noBuild(grid[idx(rc2,fr)].terr)){placeAt(rc2,fr,'road',0);break;}}
+      }
+    }
     var ur=Math.min(rows-2,CR+maxOff+1);                               // a little infrastructure past the built area
     placeAt(c0,ur,'power',0);placeAt(c1,ur,'power',0);placeAt(Math.floor((c0+c1)/2),ur,'water',0);
-    for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail spur: a short line touching the corridor, so exports flow
+    for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail spur: a short perpendicular line joining the corridor, so exports flow
       var hc=hi%cols,hr=(hi/cols)|0,dd=[[0,1],[0,-1],[1,0],[-1,0]],done=false;
       for(var d=0;d<4;d++){var a=hc+dd[d][0],bq=hr+dd[d][1],a2=hc+2*dd[d][0],b2=hr+2*dd[d][1];
         if(inB(a,bq)&&inB(a2,b2)&&grid[idx(a,bq)].t==='empty'&&!noBuild(grid[idx(a,bq)].terr)&&grid[idx(a2,b2)].t==='empty'&&!noBuild(grid[idx(a2,b2)].terr)){placeAt(a,bq,'rail',0);placeAt(a2,b2,'rail',0);done=true;break;}}
