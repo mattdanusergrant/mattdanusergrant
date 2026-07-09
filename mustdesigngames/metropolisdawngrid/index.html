@@ -900,15 +900,14 @@
   }
   function drawRail(x,y,c,r){
     var N=isRail(c,r-1),S=isRail(c,r+1),E=isRail(c+1,r),W=isRail(c-1,r),m=CELL/2;
-    ctx.fillStyle=pal.railBed;ctx.fillRect(x+3,y+3,CELL-6,CELL-6);
-    if(E||W||(!N&&!S)){ // horizontal ties + two rails
-      ctx.fillStyle=pal.tie;for(var tx=x+3;tx<x+CELL-3;tx+=5)ctx.fillRect(tx,y+m-5,2,10);
-      ctx.fillStyle=pal.rail;ctx.fillRect(x,y+m-3,CELL,2);ctx.fillRect(x,y+m+2,CELL,2);
-    }
-    if(N||S){ // vertical ties + two rails
-      ctx.fillStyle=pal.tie;for(var ty=y+3;ty<y+CELL-3;ty+=5)ctx.fillRect(x+m-5,ty,10,2);
-      ctx.fillStyle=pal.rail;ctx.fillRect(x+m-3,y,2,CELL);ctx.fillRect(x+m+2,y,2,CELL);
-    }
+    ctx.fillStyle=pal.railBed;roadCross(x,y,7,N,S,E,W);              // thin ballast bed (matches the road width)
+    var h=E||W||(!N&&!S), v=N||S;
+    ctx.fillStyle=pal.tie;
+    if(h)for(var tx=x+2;tx<x+CELL-2;tx+=5)ctx.fillRect(tx,y+m-5,2,10);
+    if(v)for(var ty=y+2;ty<y+CELL-2;ty+=5)ctx.fillRect(x+m-5,ty,10,2);
+    ctx.fillStyle=pal.rail;
+    if(h){ctx.fillRect(x,y+m-4,CELL,1.5);ctx.fillRect(x,y+m+3,CELL,1.5);}
+    if(v){ctx.fillRect(x+m-4,y,1.5,CELL);ctx.fillRect(x+m+3,y,1.5,CELL);}
   }
   function py(v){return Math.round(v);}
   function drawPark(x,y,cell){
