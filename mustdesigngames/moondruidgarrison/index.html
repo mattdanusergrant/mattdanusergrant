@@ -4,241 +4,1011 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Moon Druid Garrison</title>
-<meta name="description" content="A team of druids defending the moon. Place your Moon Druids, wild-shape them to counter the dark, and hold the moon through the lunar phases until dawn.">
+<meta name="description" content="A defensive grove-builder under the moon. Bud Glimmer spirits, grow a garrison in rings around the Elderbough, and hold the Lastlight Grove against the Gloam — night after night, for as long as you can last.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Moon Druid Garrison">
-<meta name="theme-color" content="#0b1030">
+<meta name="theme-color" content="#070a20">
 <link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/moondruidgarrison/">
 <style>
   *,*::before,*::after{box-sizing:border-box}
-  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#0b1030;
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#070a20;
     font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
     -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none}
   #scene{display:block;width:100vw;height:100vh;touch-action:manipulation}
-  #hud{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 10px) 14px 8px;
-    pointer-events:none;color:#e7ecff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-  .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:system-ui,sans-serif}
-  #phase{font-size:15px;font-weight:600;letter-spacing:.3px}
-  #phase small{display:block;font-size:11px;font-weight:400;opacity:.7;letter-spacing:.08em;text-transform:uppercase}
-  #coins{font-size:17px;font-weight:600;white-space:nowrap}
-  #lightwrap{margin-top:9px;font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.05em;opacity:.85}
-  #lightbar{margin-top:3px;height:6px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
-  #lightfill{height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,#8ea6ff,#eef3ff);transition:width .25s}
-  /* form sheet */
-  #sheet{position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;background:rgba(6,10,30,.6);
+  button{font-family:system-ui,sans-serif}
+
+  /* ── HUD ── */
+  #hud{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 8px) 12px 6px;
+    pointer-events:none;color:#e7ecff;text-shadow:0 1px 3px rgba(0,0,0,.6);font-family:system-ui,sans-serif}
+  .hrow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  #phase{font-size:14px;font-weight:600;letter-spacing:.2px;line-height:1.25}
+  #phase small{display:block;font-size:10px;font-weight:400;opacity:.65;letter-spacing:.08em;text-transform:uppercase}
+  #res{font-size:15px;font-weight:600;white-space:nowrap;text-align:right;line-height:1.3}
+  #res .vig{font-size:12px;opacity:.85;font-weight:500}
+  #ctl{display:flex;gap:6px;margin-top:5px;justify-content:flex-end}
+  #ctl button{pointer-events:auto;background:rgba(20,28,60,.75);color:#cdd7f2;border:1px solid rgba(160,175,220,.3);
+    border-radius:9px;font-size:12px;font-weight:600;padding:4px 10px;cursor:pointer}
+  #ebarw{margin-top:6px;font-size:10px;letter-spacing:.06em;opacity:.9}
+  #ebarw.hit{animation:barhit .4s ease}
+  @keyframes barhit{0%{filter:brightness(2.4)}100%{filter:none}}
+  #ebar{margin-top:2px;height:6px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
+  #ebfill{height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,#8fd8a8,#e6ffee);transition:width .25s}
+  #goal{margin-top:8px;display:none;font-size:11.5px;font-weight:600;letter-spacing:.02em;
+    background:rgba(20,28,60,.82);border:1px solid rgba(159,216,168,.4);color:#cdeed6;
+    border-radius:99px;padding:5px 12px;width:fit-content;max-width:92vw}
+  #goal.on{display:block}
+  #pausedov{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;
+    background:rgba(5,7,26,.35);pointer-events:none;color:#e7ecff;
+    font:600 15px system-ui,sans-serif;text-shadow:0 1px 4px rgba(0,0,0,.7);letter-spacing:.03em}
+  #pausedov.on{display:flex}
+
+  /* ── build bar ── */
+  #bar{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;gap:7px;overflow-x:auto;
+    padding:8px 10px calc(env(safe-area-inset-bottom) + 10px);background:linear-gradient(rgba(7,10,32,0),rgba(7,10,32,.92) 40%);
+    -webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #bar::-webkit-scrollbar{display:none}
+  .bb{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:64px;
+    background:rgba(22,30,64,.9);border:1px solid rgba(160,175,220,.28);border-radius:13px;
+    color:#dbe3fa;padding:7px 8px 6px;cursor:pointer}
+  .bb .be{font-size:22px;line-height:1.1}
+  .bb .bn{font-size:10.5px;font-weight:600;letter-spacing:.02em}
+  .bb .bc{font-size:10px;opacity:.85;white-space:nowrap}
+  .bb.dim{opacity:.42}
+  .bb.lock{opacity:.38}
+  .bb.sel{background:#3a4a8a;border-color:#9fb4ee;box-shadow:0 0 14px rgba(140,165,255,.4)}
+
+  /* ── bottom sheet ── */
+  #sheet{position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;background:rgba(6,10,30,.55);
     -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
   #sheet.on{display:flex}
   #card{width:100%;max-width:520px;margin:0 auto;background:linear-gradient(#eef1fb,#dfe4f4);
     border-radius:20px 20px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);
-    box-shadow:0 -10px 40px rgba(0,0,0,.45);animation:rise .2s ease}
+    box-shadow:0 -10px 40px rgba(0,0,0,.45);animation:rise .2s ease;max-height:70vh;overflow-y:auto}
   @keyframes rise{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
   #card h2{margin:2px 0 1px;font-size:18px;color:#26305a}
-  #card .sub{margin:0 0 12px;font-size:13px;color:#5b657b;font-family:system-ui,sans-serif}
-  .row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:12px;cursor:pointer}
+  #card .sub{margin:0 0 10px;font-size:13px;color:#5b657b;font-family:system-ui,sans-serif}
+  .row{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:12px;cursor:pointer}
   .row+.row{border-top:1px solid #d3d9ec}
-  .row .em{font-size:28px;width:36px;text-align:center}
+  .row .em{font-size:26px;width:34px;text-align:center}
   .row .mid{flex:1;min-width:0}
-  .row .nm{font-size:16px;color:#26305a;font-weight:600}
+  .row .nm{font-size:15px;color:#26305a;font-weight:600}
   .row .meta{font-size:12px;color:#5b657b;font-family:system-ui,sans-serif;margin-top:1px}
-  .row .tag{font-size:13px;font-weight:700;color:#4a5788;white-space:nowrap;font-family:system-ui,sans-serif}
+  .row .tag{font-size:13px;font-weight:700;color:#4a5788;white-space:nowrap;font-family:system-ui,sans-serif;text-align:right}
   .row.dim{opacity:.4;cursor:default}
   .row:not(.dim):active{background:#d7ddf0}
-  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(12px);
-    z-index:15;background:rgba(12,18,44,.94);color:#e7ecff;padding:10px 18px;border-radius:99px;font-size:14px;
+  .qbar{height:4px;border-radius:99px;background:#c3cbe4;margin-top:4px;overflow:hidden}
+  .qfill{height:100%;background:#5c74c8;border-radius:99px}
+
+  /* ── overlays: grove + death ── */
+  .ov{position:fixed;inset:0;z-index:30;display:none;overflow-y:auto;background:#0a0e28;color:#e7ecff;
+    padding:calc(env(safe-area-inset-top) + 26px) 20px calc(env(safe-area-inset-bottom) + 30px)}
+  .ov.on{display:block}
+  .ovwrap{max-width:480px;margin:0 auto}
+  .ov h1{font-size:30px;margin:.1em 0;text-align:center}
+  .ov h2{font-size:16px;margin:26px 0 8px;color:#b9c6ee;letter-spacing:.04em}
+  .ov .tag{text-align:center;opacity:.75;margin:0 0 14px;font-size:14px}
+  .lore{font-size:14px;line-height:1.55;opacity:.85;background:rgba(255,255,255,.05);border:1px solid rgba(160,175,220,.2);
+    border-radius:14px;padding:12px 14px;margin:0 0 16px}
+  .gstats{display:flex;justify-content:center;gap:18px;font-family:system-ui,sans-serif;font-size:13px;opacity:.9;margin:0 0 18px}
+  .gstats b{font-size:17px;display:block;text-align:center}
+  .big{display:block;width:100%;font:700 17px system-ui,sans-serif;color:#0b1030;background:linear-gradient(#eef3ff,#c9d6ff);
+    border:0;border-radius:99px;padding:14px 26px;cursor:pointer;margin:4px 0 6px}
+  .trow{display:flex;align-items:center;gap:11px;padding:10px 10px;border-radius:13px;background:rgba(255,255,255,.045);
+    border:1px solid rgba(160,175,220,.16);margin-bottom:7px;font-family:system-ui,sans-serif}
+  .trow .em{font-size:22px;width:30px;text-align:center}
+  .trow .mid{flex:1;min-width:0}
+  .trow .nm{font-size:14px;font-weight:600}
+  .trow .meta{font-size:11.5px;opacity:.72;margin-top:1px}
+  .trow button{background:#2c3a74;color:#dbe6ff;border:1px solid rgba(160,175,220,.35);border-radius:99px;
+    font-size:12.5px;font-weight:700;padding:7px 13px;cursor:pointer;white-space:nowrap}
+  .trow button:disabled{opacity:.38}
+  .trow.done{opacity:.6}
+  .pips{letter-spacing:2px;font-size:10px;color:#9fd8a8}
+  #dbreak{font-family:system-ui,sans-serif;font-size:14px;line-height:1.9;background:rgba(255,255,255,.05);
+    border:1px solid rgba(160,175,220,.2);border-radius:14px;padding:12px 16px;margin:14px 0 18px}
+  #dbreak .tot{font-weight:700;font-size:16px;border-top:1px solid rgba(160,175,220,.3);margin-top:6px;padding-top:8px}
+
+  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 84px);transform:translateX(-50%) translateY(12px);
+    z-index:25;background:rgba(12,18,44,.94);color:#e7ecff;padding:10px 18px;border-radius:99px;font-size:13.5px;
     font-family:system-ui,sans-serif;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;text-align:center}
   #toast.on{opacity:1;transform:translateX(-50%)}
-  #over{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;
-    background:rgba(6,10,30,.82);color:#eef3ff;text-align:center;padding:32px;font-family:system-ui,sans-serif}
-  #over.on{display:flex}
-  #over h1{font-family:'Iowan Old Style',Georgia,serif;font-size:34px;margin:.1em 0}
-  #over p{opacity:.82;max-width:34ch;line-height:1.5}
-  #over button{margin-top:22px;font:600 15px system-ui;color:#0b1030;background:#e7ecff;border:0;border-radius:99px;padding:12px 26px;cursor:pointer}
 </style>
 </head>
 <body>
 <canvas id="scene"></canvas>
+
 <div id="hud">
   <div class="hrow">
-    <div id="phase">The night begins<small>Moon Druid Garrison</small></div>
-    <div id="coins">✦ 0</div>
+    <div id="phase">The grove sleeps<small>Moon Druid Garrison</small></div>
+    <div>
+      <div id="res">☾ 0 · ⬡ 0 <span class="vig">✦ 0/10</span></div>
+      <div id="ctl">
+        <button id="pauseb" type="button">⏸</button>
+        <button id="speedb" type="button">1×</button>
+      </div>
+    </div>
   </div>
-  <div id="lightwrap">MOON LIGHT<div id="lightbar"><div id="lightfill"></div></div></div>
+  <div id="ebarw">🌳 ELDERBOUGH<div id="ebar"><div id="ebfill"></div></div></div>
+  <div id="goal"></div>
 </div>
-<div id="sheet"><div id="card"><h2 id="cardh">Wild-shape</h2><p class="sub" id="cardsub"></p><div id="list"></div></div></div>
+<div id="pausedov">⏸ paused — you may still build</div>
+
+<div id="bar"></div>
+<div id="sheet"><div id="card"></div></div>
+
+<div id="grove" class="ov"><div class="ovwrap">
+  <h1>Moon Druid Garrison</h1>
+  <p class="tag">The vigil of the Lastlight Grove</p>
+  <div class="lore" id="lore">High on the Vigil Moor stands the <b>Lastlight Grove</b> — last garrison of the
+    Circle of the Waking Moon, druids who bound themselves into living wood to keep one light burning.
+    At its heart roots the <b>Elderbough</b>. Each night it buds <b>Glimmers</b> — moth-bright spirits that
+    drink <b>moonlight ☾</b> from the Lightwells and tap <b>sap ⬡</b> from the elderwood copses. And each
+    night the <b>Gloam</b> climbs the moor to gnaw out the light. Wake the druids. Grow the garrison.
+    Hold — as long as you can.</div>
+  <div class="gstats">
+    <span><b id="gdew">✧ 0</b>lunar dew</span>
+    <span><b id="gbest">0</b>best night</span>
+    <span><b id="gruns">0</b>vigils held</span>
+  </div>
+  <button id="begin" class="big" type="button">Begin the Vigil</button>
+  <h2>THE VIGIL TREE — spend ✧ on lasting growth</h2>
+  <div id="tree"></div>
+  <h2>MILESTONES</h2>
+  <div id="miles"></div>
+</div></div>
+
+<div id="death" class="ov"><div class="ovwrap">
+  <h1>🌑 The Elderbough falls</h1>
+  <p class="tag" id="dsum"></p>
+  <div id="dbreak"></div>
+  <p class="tag" id="dnext"></p>
+  <button id="dret" class="big" type="button">Return to the Grove</button>
+</div></div>
+
 <div id="toast"></div>
-<div id="over"><h1 id="oh"></h1><p id="op"></p><button id="ob">Defend again</button></div>
+
 <script>
+'use strict';
 const $=id=>document.getElementById(id);
 const cv=$('scene'),ctx=cv.getContext('2d');
-let W,H,DPR,cx,cy,R,slotR;
+const FAST=/[?&]fast=1/.test(location.search);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const d2=(a,b)=>{const dx=a.x-b.x,dy=a.y-b.y;return dx*dx+dy*dy};
+const within=(a,b,r)=>d2(a,b)<=r*r;
+const TAU=Math.PI*2;
+
+// ════════════════════════════ BAL — all tuning ════════════════════════════
+const BAL={
+  start:{light:100,sap:30,glim:5},
+  glim:{spd:110,carry:14,chan:2,sapRate:0.6,flee:3},
+  ecoUp:{wings:{cost:[75,25],mul:1.25},roots:{cost:[50,50],mul:1.25}},
+  vigilBase:10,
+  resp:{first:45,base:24,decay:0.8,floor:12},
+  night:{budBase:6,budGrow:1.18,hpGrow:1.06,spawnGap:0.85,bossEvery:5,bossEscort:0.45},
+  aggro:250,acquire:60,leash:320,sellBack:0.6,queueMax:3,
+  dew:{night:5,killDiv:2,boss:15},
+  bounty:{perBud:2,boss:30},
+  caps:{foes:160,queue:140},
+  fury:{dmg:20,cd:3,rng:120},
+};
+
+// ════════════════════════════ DATA — content ══════════════════════════════
+const BUILDS={
+  elder :{nm:'Elderbough',em:'🌳',hp:1500,r:50,regen:1,desc:'The heartwood. If it falls, the vigil ends.'},
+  font  :{nm:'Moon Font',em:'⛲',cost:[60,0],hp:400,r:28,vigil:6,heal:{hps:2,rng:120},desc:'+6 vigil · mends druids and boughs nearby'},
+  hall  :{nm:'Bough Hall',em:'🛖',cost:[80,40],hp:500,r:32,trains:['thorn','bear'],desc:'Wakes Thornguards'},
+  perch :{nm:'Moongrove Perch',em:'🦉',cost:[100,60],hp:450,r:32,trains:['bow'],desc:'Wakes Moonbows'},
+  wall  :{nm:'Briar Wall',em:'🪵',cost:[15,10],hp:250,r:24,desc:'A bramble blocker — plugs a gap'},
+  totem :{nm:'Thorn Totem',em:'🌵',cost:[60,30],hp:300,r:24,atk:{dmg:15,cd:1,rng:180,air:true},desc:'Flings thorns · strikes flyers'},
+  stones:{nm:'Starcaller Stones',em:'🗿',cost:[140,90],hp:450,r:32,trains:['star'],lock:'starcaller',desc:'Wakes Starcallers'},
+  shrine:{nm:'Grove Shrine',em:'⛩️',cost:[120,80],hp:450,r:32,trains:['mend'],lock:'dewmender',desc:'Wakes Dewmenders'},
+};
+const BAR_ORDER=['font','hall','perch','wall','totem','stones','shrine'];
+const UNITS={
+  glimmer:{nm:'Glimmer',em:'✨',cost:[25,0],vigil:1,tt:8,hp:40,spd:110,r:9,desc:'Servitor spirit — harvests light and sap'},
+  thorn:{nm:'Thornguard',em:'🛡️',cost:[60,10],vigil:2,tt:12,hp:220,spd:70,r:13,atk:{dmg:12,cd:1,rng:0,air:false},desc:'Holds the line up close'},
+  bow:{nm:'Moonbow',em:'🏹',cost:[90,30],vigil:2,tt:14,hp:90,spd:75,r:11,atk:{dmg:14,cd:0.9,rng:200,air:true},desc:'Silver arrows · strikes flyers'},
+  star:{nm:'Starcaller',em:'🌟',cost:[130,50],vigil:3,tt:18,hp:80,spd:65,r:11,atk:{dmg:18,cd:2.2,rng:220,air:true,aoe:60,lob:true},lock:'starcaller',desc:'Starbursts scour the swarm'},
+  mend:{nm:'Dewmender',em:'💧',cost:[110,40],vigil:2,tt:16,hp:70,spd:75,r:11,heal:{hps:8,rng:160},lock:'dewmender',desc:'Mends the wounded'},
+  bear:{nm:'Bearform Warden',em:'🐻',cost:[200,80],vigil:4,tt:22,hp:500,spd:60,r:17,atk:{dmg:30,cd:1.4,rng:0,air:false,cleave:50},lock:'bearform',desc:'Elder bruiser · cleaves'},
+};
+const FOES={
+  shamble:{nm:'Shamble',em:'🐌',bud:1,hp:60,dmg:8,cd:1,spd:34,r:13,n:1,col:'#4a3d6e'},
+  prowler:{nm:'Prowler',em:'🐺',bud:1.5,hp:35,dmg:6,cd:0.7,spd:78,r:10,n:2,hunts:150,col:'#6e5a9e'},
+  hulk:{nm:'Gloamhulk',em:'🪨',bud:6,hp:400,dmg:30,cd:1.6,spd:26,r:22,n:4,razer:2,col:'#2c2247'},
+  moth:{nm:'Motheater',em:'🦇',bud:3,hp:50,dmg:10,cd:1.1,spd:48,r:11,n:4,fly:true,rng:140,col:'#8a7ab8'},
+  spore:{nm:'Sporecaller',em:'🍄',bud:4,hp:90,dmg:8,cd:1.4,spd:30,r:14,n:7,rng:160,aura:{mul:1.3,rng:150},col:'#57724c'},
+  maw:{nm:'Dreadmoon Maw',em:'🌑',bud:0,hp:1200,dmg:40,cd:2.4,spd:20,r:32,boss:true,aoe:100,col:'#1c1030'},
+};
+const CODEX={
+  shamble:'shuffles for the Elderbough — slow, stubborn',
+  prowler:'hunts your Glimmers on the harvest lines',
+  hulk:'gnaws boughs hungrily — walls barely slow it',
+  moth:'flies over walls; only arrows and totems reach it',
+  spore:'its spores quicken nearby Gloam — fell it first',
+  maw:'the full moon’s champion — its slam crushes all',
+};
+const TREE=[
+  {id:'heart',nm:'Heartwood',em:'💗',costs:[30,60,120],d:'Elderbough +300 HP per rank'},
+  {id:'wings',nm:'Swift Wings',em:'🦋',costs:[25,50],d:'Glimmers harvest +10% per rank'},
+  {id:'coffer',nm:'Moonlit Coffers',em:'💰',costs:[40,80],d:'Begin with +50☾ +25⬡ per rank'},
+  {id:'bloom',nm:'First Bloom',em:'🌸',costs:[40],d:'Begin with a Moon Font already grown'},
+  {id:'growth',nm:'Old Growth',em:'🌲',costs:[30,60],d:'Buildings +15% HP per rank'},
+  {id:'thorns',nm:'Sharpened Thorns',em:'🌹',costs:[35,70,140],d:'Defenders +8% damage per rank'},
+  {id:'roots',nm:'Deep Roots',em:'🌱',costs:[50],d:'Elderbough regen 1 → 3 HP per second'},
+  {id:'respite',nm:'Long Respite',em:'🌙',costs:[45],d:'Respites last +6 seconds'},
+  {id:'bark',nm:'Silver Bark',em:'🪵',costs:[60],d:'Briar Walls twice as tough, −5☾'},
+  {id:'fury',nm:'Waking Fury',em:'⚡',costs:[100],d:'The Elderbough lashes back at nearby Gloam'},
+];
+const MILES=[
+  {id:'starcaller',nm:'Starcaller Stones',em:'🌟',req:'Hold to night 5',d:'Unlocks Starcaller Stones and the Starcaller',test:m=>m.milestones.bestNight>=5},
+  {id:'dewmender',nm:'Grove Shrine',em:'💧',req:'Hold to night 8',d:'Unlocks the Grove Shrine and the Dewmender',test:m=>m.milestones.bestNight>=8},
+  {id:'bearform',nm:'Bearform Warden',em:'🐻',req:'Hold to night 12',d:'The Bough Hall may wake Bearform Wardens',test:m=>m.milestones.bestNight>=12},
+  {id:'rites',nm:'Full Moon Rites',em:'🌕',req:'Slay 5 full-moon bosses',d:'Defenders +25% damage on full-moon nights',test:m=>m.milestones.bossKills>=5},
+];
+
+// ════════════════════════════ META — persistence ══════════════════════════
+const SAVE_KEY='mdgar2.meta';
+function defaultMeta(){return {v:1,dew:0,spent:{},milestones:{bestNight:0,bossKills:0,unlocked:[]},stats:{runs:0,kills:0},seen:{}};}
+let meta=defaultMeta();
+function loadMeta(){
+  try{const raw=localStorage.getItem(SAVE_KEY);if(raw){const m=JSON.parse(raw);
+    if(m&&m.v===1){meta=Object.assign(defaultMeta(),m);
+      meta.milestones=Object.assign(defaultMeta().milestones,m.milestones);
+      meta.stats=Object.assign(defaultMeta().stats,m.stats);}}
+  }catch(e){meta=defaultMeta();}
+  try{localStorage.removeItem('mdgar.seen');}catch(e){}
+}
+function saveMeta(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(meta));}catch(e){}}
+const rank=id=>meta.spent[id]||0;
+const has=id=>meta.milestones.unlocked.indexOf(id)>=0;
+function refreshUnlocks(inRun){
+  let changed=false;
+  for(const ms of MILES){if(!has(ms.id)&&ms.test(meta)){meta.milestones.unlocked.push(ms.id);changed=true;
+    if(inRun)toast(ms.em+' Milestone — '+ms.nm+' unlocked');}}
+  if(changed){saveMeta();rebuildBar();}
+  return changed;
+}
+function metaMods(){return {
+  elderHp:300*rank('heart'),
+  harv:1+0.1*rank('wings'),
+  startL:50*rank('coffer'),startS:25*rank('coffer'),
+  bloom:rank('bloom')>0,
+  bldHp:1+0.15*rank('growth'),
+  dmg:1+0.08*rank('thorns'),
+  regen:rank('roots')>0?3:1,
+  resp:rank('respite')>0?6:0,
+  bark:rank('bark')>0,
+  fury:rank('fury')>0,
+};}
+
+// ════════════════════════════ WORLD — space ═══════════════════════════════
+const WD=720,HT=1160,EX=360,EY=470;
+let W,H,DPR,SC,OX,OY,dangerGrad=null;
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
   cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
-  cx=W/2;cy=H*0.44;R=Math.min(W,H)*0.13;slotR=R*2.05;}
+  SC=Math.min(W/WD,H/HT);OX=(W-WD*SC)/2;OY=(H-HT*SC)/2;
+  const dg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.75);
+  dg.addColorStop(0,'rgba(255,60,60,0)');dg.addColorStop(1,'rgba(255,60,60,.85)');
+  dangerGrad=dg;}
 addEventListener('resize',resize);resize();
-
-// ── content ──────────────────────────────────────────────────────────────
-const FORMS={
-  bear:  {nm:'Bear',   em:'🐻', range:82,  dmg:24, cd:.9,  slow:0,  col:'#c79b6e', role:'bruiser — big hits up close'},
-  owl:   {nm:'Owl',    em:'🦉', range:210, dmg:11, cd:.52, slow:0,  col:'#dfe6f2', role:'ranged — picks off distant threats'},
-  wolf:  {nm:'Wolf',   em:'🐺', range:125, dmg:7,  cd:.24, slow:0,  col:'#b9c0cc', role:'swift — rapid hits vs fast Shades'},
-  treant:{nm:'Treant', em:'🌳', range:135, dmg:5,  cd:.7,  slow:.5, col:'#8fca7a', role:'warden — roots & slows nearby'},
-};
-const FIDS=['bear','owl','wolf','treant'];
-const THREATS={
-  wisp:    {nm:'Wisp',    hp:30, spd:24, rw:8,  dmg:8,  col:'#9fb7e0', r:11},
-  shade:   {nm:'Shade',   hp:16, spd:50, rw:6,  dmg:5,  col:'#8f79c8', r:9},
-  devourer:{nm:'Devourer',hp:95, spd:13, rw:18, dmg:16, col:'#43356b', r:18},
-};
-const WAVES=[
-  {phase:'Waxing crescent',ph:'🌒',buff:1.0, spawn:[['wisp',6]]},
-  {phase:'Waxing gibbous', ph:'🌔',buff:1.25,spawn:[['wisp',6],['shade',3]]},
-  {phase:'Full moon',      ph:'🌕',buff:1.5, spawn:[['wisp',6],['shade',3],['devourer',1]]},
-  {phase:'The waning dark',ph:'🌘',buff:1.0, spawn:[['shade',7],['wisp',4],['devourer',2]]},
+const s2w=(sx,sy)=>({x:(sx-OX)/SC,y:(sy-OY)/SC});
+const RINGS=[{r:130,n:8},{r:210,n:12},{r:290,n:16}];
+const SLOTS=[];
+RINGS.forEach((rg,ri)=>{for(let i=0;i<rg.n;i++){const a=-Math.PI/2+(i+(ri%2?0.5:0))/rg.n*TAU;
+  SLOTS.push({x:EX+rg.r*Math.cos(a),y:EY+rg.r*Math.sin(a),ring:ri,a});}});
+const NODES=[
+  {kind:'well',nm:'Lightwell',x:95,y:150},
+  {kind:'well',nm:'Lightwell',x:625,y:825},
+  {kind:'copse',nm:'Elderwood copse',x:625,y:150},
+  {kind:'copse',nm:'Elderwood copse',x:95,y:825},
 ];
-const COST=30, NSLOTS=8;
 
-// ── state ────────────────────────────────────────────────────────────────
-let S,last;
-function reset(){
-  S={light:100,coins:100,slots:[],threats:[],beams:[],wave:-1,queue:[],spawnT:0,betweenT:4,status:'play',flash:0};
-  for(let i=0;i<NSLOTS;i++)S.slots.push({a:-Math.PI/2+i/NSLOTS*Math.PI*2,form:null,cd:0});
-  $('over').classList.remove('on');closeSheet();
-  if(!localStorage.getItem('mdgar.seen')){localStorage.setItem('mdgar.seen','1');
-    setTimeout(()=>toast('Tap a ring to post a druid. Tap a druid to wild-shape. Hold the moon till dawn.'),400);}
-}
-const slotPos=s=>({x:cx+slotR*Math.cos(s.a),y:cy+slotR*Math.sin(s.a)});
-const thPos=t=>({x:cx+t.d*Math.cos(t.a),y:cy+t.d*Math.sin(t.a)});
-const curBuff=()=>S.wave>=0?WAVES[S.wave].buff:1;
+// ════════════════════════════ STATE — the run ═════════════════════════════
+let R=null,uid=1;
+function costOf(id){const c=BUILDS[id].cost.slice();
+  if(id==='wall'&&R&&R.mods.bark)c[0]=Math.max(0,c[0]-5);return c;}
+function canPay(c){return R.light>=c[0]&&R.sap>=c[1];}
+function pay(c){R.light-=c[0];R.sap-=c[1];}
+function vigilCap(){return BAL.vigilBase+R.buildings.reduce((n,b)=>n+(b.id==='font'?BUILDS.font.vigil:0),0);}
+function vigilUsed(){let n=0;
+  for(const u of R.units)n+=UNITS[u.type].vigil;
+  for(const b of R.buildings)for(const q of b.q)n+=UNITS[q].vigil;
+  return n;}
+function mkBuilding(id,slot){const d=BUILDS[id];
+  const p=slot<0?{x:EX,y:EY}:SLOTS[slot];
+  let hp=d.hp*(id==='elder'?1:R.mods.bldHp);
+  if(id==='elder')hp+=R.mods.elderHp;
+  if(id==='wall'&&R.mods.bark)hp*=2;
+  const b={uid:uid++,id,slot,x:p.x,y:p.y,hp,maxHp:hp,r:d.r,q:[],qt:0,cd:0,furyCd:0,rally:null,bld:true};
+  R.buildings.push(b);return b;}
+function mkUnit(type,x,y,src){const d=UNITS[type];
+  const u={uid:uid++,type,x,y,hp:d.hp,maxHp:d.hp,r:d.r,cd:0,tg:null,src:src?src.uid:0,
+    jx:(Math.random()-0.5)*44,jy:(Math.random()-0.5)*44};
+  if(type==='glimmer'){u.assign=-1;u.st='go';u.carry=0;u.flee=0;}
+  else u.post=postOf(src,u);
+  R.units.push(u);return u;}
+function postOf(b,u){if(!b)return{x:EX+u.jx,y:EY+u.jy};
+  if(b.rally)return{x:b.rally.x+u.jx*0.6,y:b.rally.y+u.jy*0.6};
+  const dx=b.x-EX,dy=b.y-EY,l=Math.hypot(dx,dy)||1;
+  return{x:b.x+dx/l*46+u.jx*0.6,y:b.y+dy/l*46+u.jy*0.6};}
+function slotFree(i){return !R.buildings.some(b=>b.slot===i);}
+function arcCount(n){return n<=3?1:n<=7?2:3;}
+function pickArcs(k){const arcs=[];let guard=60;
+  while(arcs.length<k&&guard--){const a=Math.random()*TAU;
+    if(arcs.every(b=>{let da=Math.abs(a-b);da=Math.min(da,TAU-da);return da>1.5;}))arcs.push(a);}
+  return arcs;}
+function respLen(n){const m=R?R.mods.resp:0;
+  const base=n<=1?BAL.resp.first:Math.max(BAL.resp.floor,BAL.resp.base-BAL.resp.decay*(n-2));
+  return (base+m)/(FAST?4:1);}
+function newRun(){
+  const mods=metaMods();
+  R={t:0,light:BAL.start.light+mods.startL,sap:BAL.start.sap+mods.startS,
+     night:0,done:0,phase:'respite',phaseT:0,nightT:0,queue:[],spawnT:0,arcs:[],nextArcs:pickArcs(1),
+     buildings:[],units:[],foes:[],fx:[],shots:[],
+     stats:{kills:0,budVal:0,boss:0},mods,eco:{wings:0,roots:0},
+     over:false,waiting:false,paused:false,speed:FAST?8:1,bot:false,botT:0,
+     dangerT:0,dangerHudT:0,shake:0,banner:null,nextQueue:null,previewStr:'',
+     placing:null,rallyFor:null,hudT:0,tut:!meta.seen.tut,tutStep:0};
+  R.phaseT=respLen(1);
+  mkBuilding('elder',-1);
+  if(mods.bloom)mkBuilding('font',2);
+  // first three glimmers work the wells, the last two the copses
+  for(let i=0;i<BAL.start.glim;i++){const g=mkUnit('glimmer',EX+(Math.random()-0.5)*60,EY+70);
+    g.assign=i<3?[0,1,0][i]:[2,3][i-3];}
+  R.nextQueue=buildQueue(1);R.previewStr=previewOf(R.nextQueue);
+  rebuildBar();syncHud(true);setPaused(false);syncGoal();
+  return R;}
 
-function startWave(i){S.wave=i;S.queue=[];WAVES[i].spawn.forEach(([t,n])=>{for(let k=0;k<n;k++)S.queue.push(t);});
-  S.spawnT=0;const w=WAVES[i];toast(w.ph+' '+w.phase+(w.buff>1?' — wild-shapes empowered':''));}
+// ════════════════════════════ SIM — update ════════════════════════════════
+function harvMul(kind){return R.mods.harv*(kind==='well'
+  ?(R.eco.wings?BAL.ecoUp.wings.mul:1):(R.eco.roots?BAL.ecoUp.roots.mul:1));}
+function dmgMul(){let m=R.mods.dmg;
+  if(has('rites')&&R.phase==='night'&&R.night%BAL.night.bossEvery===0)m*=1.25;
+  return m;}
+function moveTo(e,tx,ty,spd,dt){const dx=tx-e.x,dy=ty-e.y,l=Math.hypot(dx,dy);
+  if(l<4)return true;const st=spd*dt;if(st>=l){e.x=tx;e.y=ty;return true;}
+  e.x+=dx/l*st;e.y+=dy/l*st;return false;}
+function nearestFoe(p,rng,air){let best=null,bd=rng*rng;
+  for(const f of R.foes){if(f.hp<=0)continue;if(!air&&FOES[f.type].fly)continue;
+    const dd=d2(p,f);if(dd<bd){bd=dd;best=f;}}
+  return best;}
+// "the grove wakes" — a foe menacing the Elderbough is everyone's business, whatever the post
+function elderThreat(f){const e=R.buildings[0];
+  return e&&e.id==='elder'&&(f.tg===e||within(f,e,e.r+90));}
+function nearestElderThreat(u,air){const e=R.buildings[0];if(!e||e.id!=='elder')return null;
+  let best=null,bd=1e12;
+  for(const f of R.foes){if(f.hp<=0)continue;if(!air&&FOES[f.type].fly)continue;
+    if(!elderThreat(f))continue;const dd=d2(u,f);if(dd<bd){bd=dd;best=f;}}
+  return best;}
+function hurtFoe(f,amt,src){f.hp-=amt;f.last=src;f.hitT=0.09;}
+function hurtBld(b,amt){b.hp-=amt;
+  if(b.id==='elder'){R.dangerT=0.45;R.dangerHudT=0.6;}}
+function hurt(t,amt){t.hp-=amt;
+  if(t.type==='glimmer'){t.flee=BAL.glim.flee;t.st='go';}}
+function banner(txt){R.banner={txt,t:2.2,dur:2.2};}
+function previewOf(q){const c={};for(const t of q)c[t]=(c[t]||0)+1;
+  return Object.keys(FOES).filter(k=>c[k])
+    .sort((a,b)=>(FOES[b].boss?1:0)-(FOES[a].boss?1:0))
+    .map(k=>FOES[k].em+'×'+c[k]).join(' ');}
+function beam(a,b,col){R.fx.push({k:'beam',x1:a.x,y1:a.y,x2:b.x,y2:b.y,t:0.14,dur:0.14,col});}
+function ring(x,y,r,col){R.fx.push({k:'ring',x,y,r,t:0.4,dur:0.4,col});}
+function poof(x,y,col){R.fx.push({k:'poof',x,y,t:0.5,dur:0.5,col});}
 
-// ── update ───────────────────────────────────────────────────────────────
+function buildQueue(n){
+  let bud=BAL.night.budBase*Math.pow(BAL.night.budGrow,n-1);
+  const q=[];
+  if(n%BAL.night.bossEvery===0){q.push('maw');bud*=BAL.night.bossEscort;}
+  const avail=Object.keys(FOES).filter(k=>!FOES[k].boss&&FOES[k].n<=n);
+  let guard=BAL.caps.queue;
+  while(guard-->0){
+    const cheap=Math.min.apply(null,avail.map(k=>FOES[k].bud));
+    if(bud<cheap)break;
+    const k=avail[Math.random()*avail.length|0];
+    if(FOES[k].bud<=bud){q.push(k);bud-=FOES[k].bud;}}
+  return q;}
+function startNight(){
+  R.night++;R.phase='night';R.arcs=R.nextArcs;R.nightT=0;
+  R.queue=R.nextQueue||buildQueue(R.night);R.nextQueue=null;R.spawnT=0;
+  const boss=R.night%BAL.night.bossEvery===0;
+  banner(boss?'🌕 Full Moon — Night '+R.night:'Night '+R.night);
+  syncHud(true);}
+function endNight(){
+  R.done=R.night;
+  if(R.done>meta.milestones.bestNight){meta.milestones.bestNight=R.done;saveMeta();}
+  refreshUnlocks(true);
+  R.phase='respite';R.phaseT=respLen(R.night+1);
+  R.nextArcs=pickArcs(arcCount(R.night+1));
+  R.nextQueue=buildQueue(R.night+1);R.previewStr=previewOf(R.nextQueue);
+  banner('Respite');
+  syncHud(true);}
+function spawnFoe(type){
+  if(R.foes.length>=BAL.caps.foes){R.queue.unshift(type);R.spawnT=0.5;return;}
+  if(!meta.seen['foe_'+type]){meta.seen['foe_'+type]=1;saveMeta();
+    toast(FOES[type].em+' '+FOES[type].nm+' — '+CODEX[type]);}
+  const d=FOES[type];
+  const arc=R.arcs[Math.random()*R.arcs.length|0]||0;
+  const a=arc+(Math.random()-0.5)*(Math.PI/2);
+  const dist=560+Math.random()*80;
+  const hp=d.hp*Math.pow(BAL.night.hpGrow,R.night-1);
+  R.foes.push({uid:uid++,type,x:EX+Math.cos(a)*dist,y:EY+Math.sin(a)*dist,
+    hp,maxHp:hp,r:d.r,cd:0,tg:null,ptg:null,tgT:0,last:null,aspd:1,hitT:0});}
+
+function glimmerUpdate(g,dt){
+  const elder=R.buildings[0];
+  if(g.flee>0){g.flee-=dt;moveTo(g,EX+g.jx*0.5,EY+g.jy*0.5,BAL.glim.spd*1.3,dt);return;}
+  if(g.assign<0){moveTo(g,EX+g.jx,EY+70+g.jy*0.4,BAL.glim.spd*0.5,dt);return;}
+  const nd=NODES[g.assign];
+  if(nd.kind==='well'){
+    if(g.st==='ret'){
+      if(within(g,elder,elder.r+18)){R.light+=g.carry;g.carry=0;g.st='go';}
+      else moveTo(g,EX,EY,BAL.glim.spd,dt);
+    }else if(g.st==='chan'){
+      g.t-=dt;if(g.t<=0){g.carry=BAL.glim.carry*harvMul('well');g.st='ret';}
+    }else{if(moveTo(g,nd.x,nd.y,BAL.glim.spd,dt)){g.st='chan';g.t=BAL.glim.chan;}}
+  }else{
+    if(g.st==='tap')R.sap+=BAL.glim.sapRate*harvMul('copse')*dt;
+    else if(moveTo(g,nd.x,nd.y,BAL.glim.spd,dt))g.st='tap';
+  }}
+function unitUpdate(u,dt){
+  const d=UNITS[u.type];
+  if(u.type==='glimmer')return glimmerUpdate(u,dt);
+  if(d.heal){
+    let best=null,bf=0.999;
+    for(const a of R.units){if(a===u||a.hp>=a.maxHp)continue;
+      if(!within(u,a,d.heal.rng))continue;
+      const f=a.hp/a.maxHp;if(f<bf){bf=f;best=a;}}
+    if(best){best.hp=Math.min(best.maxHp,best.hp+d.heal.hps*dt);
+      if(Math.random()<dt*4)beam(u,best,'#9fe8c8');}
+    else if(!within(u,u.post,20))moveTo(u,u.post.x,u.post.y,d.spd,dt);
+    return;}
+  if(u.tg&&(u.tg.hp<=0||(!within(u.post,u.tg,BAL.leash)&&!elderThreat(u.tg))))u.tg=null;
+  if(!u.tg)u.tg=nearestFoe(u.post,BAL.aggro,d.atk.air)||nearestElderThreat(u,d.atk.air);
+  if(u.tg){
+    const melee=d.atk.rng<40;
+    const rr=melee?u.r+u.tg.r+8:d.atk.rng;
+    if(!within(u,u.tg,rr))moveTo(u,u.tg.x,u.tg.y,d.spd,dt);
+    else{u.cd-=dt;if(u.cd<=0){u.cd=d.atk.cd;
+      const dmg=d.atk.dmg*dmgMul();
+      if(d.atk.lob){const l=Math.hypot(u.tg.x-u.x,u.tg.y-u.y);
+        R.shots.push({x:u.x,y:u.y,tx:u.tg.x,ty:u.tg.y,t:0,dur:Math.max(0.25,l/320),dmg,aoe:d.atk.aoe});}
+      else{hurtFoe(u.tg,dmg,u);beam(u,u.tg,'#cdd7f2');
+        if(d.atk.cleave)for(const f of R.foes){if(f!==u.tg&&f.hp>0&&within(u.tg,f,d.atk.cleave))hurtFoe(f,dmg*0.7,u);}}}}
+  }else if(!within(u,u.post,10))moveTo(u,u.post.x,u.post.y,d.spd,dt);}
+function foeUpdate(f,dt){
+  const d=FOES[f.type];
+  const elder=R.buildings[0];
+  if(f.hitT>0)f.hitT-=dt;
+  f.aspd=R.nightT>150?1.7:1; // the dark thickens — overlong nights end, one way or the other
+  const en=R.nightT>150?1.7:1;
+  if(f.tg&&f.tg.hp<=0)f.tg=null;
+  if(!f.tg){
+    if(f.last&&f.last.hp>0)f.tg=f.last;
+    else if(d.hunts&&!f.noHunt){let best=null,bd=d.hunts*d.hunts;
+      for(const u of R.units){if(u.type!=='glimmer'||u.hp<=0)continue;
+        const dd=d2(f,u);if(dd<bd){bd=dd;best=u;}}
+      f.tg=best;}
+    if(!f.tg){
+      const rng=d.rng||BAL.acquire;let best=null,bd=(rng+40)*(rng+40);
+      for(const u of R.units){if(u.hp<=0)continue;const dd=d2(f,u);if(dd<bd){bd=dd;best=u;}}
+      for(const b of R.buildings){if(b.hp<=0)continue;
+        if(d.fly&&b.id==='wall')continue;
+        const dd=d2(f,b);if(dd<bd){bd=dd;best=b;}}
+      f.tg=best;}}
+  // frustration — a foe that can't finish a unit (flee loops, out-healed) marches on the Elderbough
+  if(f.tg&&!f.tg.bld){
+    if(f.tg===f.ptg)f.tgT+=dt;else{f.ptg=f.tg;f.tgT=0;}
+    const gl=f.tg.type==='glimmer';
+    if(f.tgT>(gl?8:25)&&(gl||f.tg.hp>f.tg.maxHp*0.5)){
+      if(gl)f.noHunt=true;
+      f.ptg=null;f.tgT=0;f.tg=R.buildings[0];}}
+  else{f.ptg=null;f.tgT=0;}
+  if(f.tg){
+    const rr=d.rng?d.rng:f.r+f.tg.r+6;
+    if(!within(f,f.tg,rr))moveTo(f,f.tg.x,f.tg.y,d.spd*f.aspd,dt);
+    else{f.cd-=dt;if(f.cd<=0){f.cd=d.cd;
+      if(d.aoe){ring(f.x,f.y,d.aoe,'#b06df0');if(d.boss)R.shake=0.3;
+        for(const u of R.units){if(u.hp>0&&within(f,u,d.aoe))hurt(u,d.dmg*en);}
+        for(const b of R.buildings){if(b.hp>0&&within(f,b,d.aoe+b.r))hurtBld(b,d.dmg*en);}}
+      else{const mul=((f.tg.bld&&d.razer)?d.razer:1)*en;
+        if(f.tg.bld)hurtBld(f.tg,d.dmg*mul);else hurt(f.tg,d.dmg*en);
+        if(d.rng)beam(f,f.tg,'#8f6fd0');}}}
+  }else moveTo(f,EX,EY,d.spd*f.aspd,dt);}
+
 function update(dt){
-  if(S.status!=='play')return;
-  S.flash=Math.max(0,S.flash-dt);
-  // wave flow
-  if(S.queue.length===0 && S.threats.length===0){
-    S.betweenT-=dt;
-    if(S.betweenT<=0){ if(S.wave<WAVES.length-1){S.betweenT=3.2;startWave(S.wave+1);} else {S.status='won';return over();} }
-  }
-  // spawn
-  if(S.queue.length){S.spawnT-=dt;if(S.spawnT<=0){const t=S.queue.shift();const d=THREATS[t];
-    S.threats.push({t,a:Math.random()*Math.PI*2,d:Math.hypot(W,H)*0.5,hp:d.hp});S.spawnT=0.55;}}
-  // treant slow field: mark threats
-  for(const th of S.threats)th.slow=1;
-  for(const s of S.slots){if(s.form==='treant'){const p=slotPos(s);for(const th of S.threats){const q=thPos(th);
-    if(Math.hypot(q.x-p.x,q.y-p.y)<=FORMS.treant.range)th.slow=Math.min(th.slow,1-FORMS.treant.slow);}}}
-  // move threats inward
-  for(const th of S.threats){const d=THREATS[th.t];th.d-=d.spd*th.slow*dt;
-    if(th.d<=R+6){S.light-=d.dmg;S.flash=.3;th.dead=true;}}
-  // druids attack
-  const buff=curBuff();
-  for(const s of S.slots){ if(!s.form){continue;} s.cd-=dt; if(s.cd>0)continue;
-    const f=FORMS[s.form],p=slotPos(s); let best=null,bd=1e9;
-    for(const th of S.threats){if(th.dead)continue;const q=thPos(th);const dist=Math.hypot(q.x-p.x,q.y-p.y);
-      if(dist<=f.range && th.d<bd){bd=th.d;best=th;}}
-    if(best){best.hp-=f.dmg*buff;s.cd=f.cd;const q=thPos(best);S.beams.push({x1:p.x,y1:p.y,x2:q.x,y2:q.y,t:.14,col:f.col});} }
-  // resolve deaths
-  S.threats=S.threats.filter(th=>{ if(th.hp<=0){S.coins+=THREATS[th.t].rw;return false;} return !th.dead; });
-  // beams fade
-  for(const b of S.beams)b.t-=dt; S.beams=S.beams.filter(b=>b.t>0);
-  if(S.light<=0){S.light=0;S.status='lost';return over();}
-}
+  if(!R||R.over||R.waiting)return;
+  R.t+=dt;
+  // ── phase flow
+  if(R.phase==='respite'){R.phaseT-=dt;if(R.phaseT<=0)startNight();}
+  else{
+    R.nightT+=dt;
+    if(R.queue.length){R.spawnT-=dt;
+      while(R.spawnT<=0&&R.queue.length){spawnFoe(R.queue.shift());R.spawnT+=BAL.night.spawnGap;}}
+    else if(!R.foes.length)endNight();}
+  // ── sporecaller aura
+  const spores=R.foes.filter(f=>f.type==='spore'&&f.hp>0);
+  if(spores.length)for(const f of R.foes){if(f.type==='spore')continue;
+    for(const s of spores)if(within(f,s,FOES.spore.aura.rng)){f.aspd=FOES.spore.aura.mul;break;}}
+  // ── buildings
+  for(const b of R.buildings){
+    const d=BUILDS[b.id];
+    if(b.id==='elder'){b.hp=Math.min(b.maxHp,b.hp+R.mods.regen*(R.phase==='respite'?4:1)*dt);
+      if(R.mods.fury){b.furyCd-=dt;if(b.furyCd<=0){
+        let hit=false;
+        for(const f of R.foes)if(f.hp>0&&within(b,f,BAL.fury.rng)){hurtFoe(f,BAL.fury.dmg,b);hit=true;}
+        if(hit){b.furyCd=BAL.fury.cd;ring(b.x,b.y,BAL.fury.rng,'#9fd8a8');}else b.furyCd=0.3;}}}
+    if(d.heal){
+      for(const u of R.units){if(u.hp>0&&u.hp<u.maxHp&&within(b,u,d.heal.rng))
+        u.hp=Math.min(u.maxHp,u.hp+d.heal.hps*dt);}
+      for(const t of R.buildings){if(t!==b&&t.hp>0&&t.hp<t.maxHp&&within(b,t,d.heal.rng+t.r))
+        t.hp=Math.min(t.maxHp,t.hp+d.heal.hps*dt);}}
+    if(d.atk){b.cd-=dt;if(b.cd<=0){const f=nearestFoe(b,d.atk.rng,d.atk.air);
+      if(f){hurtFoe(f,d.atk.dmg*dmgMul(),b);beam(b,f,'#8fca7a');b.cd=d.atk.cd;}else b.cd=0.2;}}
+    if(b.q.length){b.qt-=dt;if(b.qt<=0){const t=b.q.shift();
+      const nu=mkUnit(t,b.x+(Math.random()-0.5)*20,b.y+30,b);
+      if(t==='glimmer')autoAssign(nu);
+      if(b.q.length)b.qt=UNITS[b.q[0]].tt;
+      uiDirty();}}}
+  // ── units & foes
+  for(const u of R.units)unitUpdate(u,dt);
+  for(const f of R.foes)foeUpdate(f,dt);
+  // ── shots
+  for(const s of R.shots){s.t+=dt;if(s.t>=s.dur){s.done=true;ring(s.tx,s.ty,s.aoe,'#ffe9a8');
+    for(const f of R.foes)if(f.hp>0&&within({x:s.tx,y:s.ty},f,s.aoe))hurtFoe(f,s.dmg,null);}}
+  R.shots=R.shots.filter(s=>!s.done);
+  // ── deaths (kills pay a small moonlight bounty — defense feeds the economy)
+  R.foes=R.foes.filter(f=>{if(f.hp>0)return true;
+    R.stats.kills++;R.stats.budVal+=FOES[f.type].bud;
+    R.light+=FOES[f.type].bud*BAL.bounty.perBud;
+    if(FOES[f.type].boss){R.stats.boss++;R.light+=BAL.bounty.boss;toast('🌕 The Maw is slain');}
+    poof(f.x,f.y,FOES[f.type].col);return false;});
+  R.units=R.units.filter(u=>{if(u.hp>0)return true;poof(u.x,u.y,'#cdd7f2');uiDirty();return false;});
+  let elderDown=false;
+  R.buildings=R.buildings.filter(b=>{if(b.hp>0)return true;
+    poof(b.x,b.y,'#8fca7a');if(b.id==='elder')elderDown=true;uiDirty();return false;});
+  if(elderDown)return gameOver();
+  // ── fx & feel timers
+  for(const x of R.fx)x.t-=dt;R.fx=R.fx.filter(x=>x.t>0);
+  R.dangerT=Math.max(0,R.dangerT-dt);R.dangerHudT=Math.max(0,R.dangerHudT-dt);
+  R.shake=Math.max(0,R.shake-dt);
+  if(R.banner){R.banner.t-=dt;if(R.banner.t<=0)R.banner=null;}
+  // ── bot
+  if(R.bot){R.botT-=dt;if(R.botT<=0){R.botT=1;botTick();}}
+  // ── hud + objective chip
+  R.hudT-=dt;if(R.hudT<=0){R.hudT=0.25;syncHud();syncGoal();}}
+function autoAssign(g){
+  const counts=NODES.map((n,i)=>R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length);
+  let bi=0;for(let i=1;i<NODES.length;i++)if(counts[i]<counts[bi])bi=i;
+  g.assign=bi;}
+function gameOver(){
+  R.over=true;setPaused(false);
+  const prevBest=meta.milestones.bestNight;
+  const nights=R.done,base=BAL.dew.night*nights,
+    kills=Math.floor(R.stats.budVal/BAL.dew.killDiv),boss=BAL.dew.boss*R.stats.boss,
+    total=base+kills+boss;
+  meta.dew+=total;meta.stats.runs++;meta.stats.kills+=R.stats.kills;
+  if(nights>meta.milestones.bestNight)meta.milestones.bestNight=nights;
+  meta.milestones.bossKills+=R.stats.boss;
+  refreshUnlocks(false);saveMeta();
+  $('dsum').textContent=nights===0?'The Gloam took the grove before a single night was held.'
+    :'The garrison held for '+nights+' night'+(nights===1?'':'s')+'.';
+  $('dbreak').innerHTML=
+    '<div>Nights held × '+BAL.dew.night+' <b style="float:right">✧ '+base+'</b></div>'+
+    '<div>Gloam slain ('+R.stats.kills+') <b style="float:right">✧ '+kills+'</b></div>'+
+    '<div>Bosses felled × '+BAL.dew.boss+' <b style="float:right">✧ '+boss+'</b></div>'+
+    '<div class="tot">Lunar Dew gathered <b style="float:right">✧ '+total+'</b></div>';
+  const bestLine=nights>prevBest?'🌟 A new deepest night — the old mark was '+prevBest
+    :(prevBest===0&&nights===0?'The Gloam is patient — the Vigil Tree makes you stronger'
+    :'Deepest night held: '+Math.max(prevBest,nights));
+  const nxt=MILES.find(m=>!has(m.id));
+  $('dnext').innerHTML=bestLine+(nxt?'<br>Next: '+nxt.req
+    +(nxt.id==='rites'?' ('+meta.milestones.bossKills+'/5)':'')
+    +' → '+nxt.em+' '+nxt.nm:'');
+  closeSheet();$('death').classList.add('on');$('bar').style.display='none';}
 
-// ── draw ─────────────────────────────────────────────────────────────────
+// ════════════════════════════ RENDER ══════════════════════════════════════
 function draw(t){
-  // sky
-  const g=ctx.createRadialGradient(cx,cy,R*0.5,cx,cy,Math.max(W,H)*0.8);
-  g.addColorStop(0,'#1a2350');g.addColorStop(.6,'#0d1236');g.addColorStop(1,'#070a20');
+  // sky (screen space)
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#05071a');g.addColorStop(0.55,'#0d1236');g.addColorStop(1,'#141033');
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  // stars
-  ctx.fillStyle='rgba(255,255,255,.6)';for(let i=0;i<40;i++){const sx=(i*97%W),sy=(i*57%H);
-    if(Math.hypot(sx-cx,sy-cy)>R*2.4){ctx.globalAlpha=.3+.3*Math.sin(t/900+i);ctx.fillRect(sx,sy,1.6,1.6);}}
+  ctx.fillStyle='rgba(255,255,255,.6)';
+  for(let i=0;i<46;i++){const sx=(i*97)%W,sy=(i*61)%(H*0.7);
+    ctx.globalAlpha=0.25+0.3*Math.sin(t/900+i);ctx.fillRect(sx,sy,1.5,1.5);}
   ctx.globalAlpha=1;
-  // encroaching dark (the Waning)
-  const buff=curBuff();
-  ctx.save();ctx.globalCompositeOperation='multiply';
-  const vg=ctx.createRadialGradient(cx,cy,R*3,cx,cy,Math.max(W,H)*0.6);
-  vg.addColorStop(0,'rgba(255,255,255,1)');vg.addColorStop(1,`rgba(20,10,40,${0.55+0.12*Math.sin(t/1200)})`);
-  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);ctx.restore();
-  // moon glow (brighter at full)
-  const glow=ctx.createRadialGradient(cx,cy,R*0.4,cx,cy,R*(buff>1?2.6:2));
-  glow.addColorStop(0,`rgba(226,234,255,${buff>1?.5:.32})`);glow.addColorStop(1,'rgba(226,234,255,0)');
-  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(cx,cy,R*2.6,0,7);ctx.fill();
-  // moon body
-  const mg=ctx.createRadialGradient(cx-R*.3,cy-R*.3,R*.2,cx,cy,R);
+  drawMoon(t);
+  if(!R)return;
+  const shx=R.shake>0?R.shake*10*Math.sin(t/23):0,
+        shy=R.shake>0?R.shake*10*Math.sin(t/31+1.7):0;
+  ctx.save();ctx.translate(OX+shx,OY+shy);ctx.scale(SC,SC);
+  // moor
+  const mg=ctx.createRadialGradient(EX,EY,60,EX,EY,430);
+  mg.addColorStop(0,'rgba(38,52,66,.85)');mg.addColorStop(0.8,'rgba(22,30,48,.55)');mg.addColorStop(1,'rgba(22,30,48,0)');
+  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(EX,EY,440,0,TAU);ctx.fill();
+  // rings
+  ctx.strokeStyle='rgba(160,190,220,.10)';ctx.lineWidth=1.5;
+  for(const rg of RINGS){ctx.beginPath();ctx.arc(EX,EY,rg.r,0,TAU);ctx.stroke();}
+  // arc telegraphs
+  const arcs=R.phase==='respite'?R.nextArcs:R.arcs;
+  const aAlpha=R.phase==='respite'?0.35+0.25*Math.sin(t/300):0.15;
+  ctx.strokeStyle='rgba(176,109,240,'+aAlpha+')';ctx.lineWidth=7;ctx.lineCap='round';
+  for(const a of arcs){ctx.beginPath();ctx.arc(EX,EY,335,a-Math.PI/4,a+Math.PI/4);ctx.stroke();}
+  ctx.lineCap='butt';
+  // harvest nodes
+  for(const nd of NODES){
+    if(nd.kind==='well'){
+      const wg=ctx.createRadialGradient(nd.x,nd.y,4,nd.x,nd.y,42);
+      wg.addColorStop(0,'rgba(214,228,255,.95)');wg.addColorStop(0.5,'rgba(140,166,255,.4)');wg.addColorStop(1,'rgba(140,166,255,0)');
+      ctx.fillStyle=wg;ctx.beginPath();ctx.arc(nd.x,nd.y,42,0,TAU);ctx.fill();
+      ctx.fillStyle='#1b2450';ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('☾',nd.x,nd.y+1);
+    }else{
+      ctx.font='30px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('🌲',nd.x-16,nd.y-8);ctx.fillText('🌲',nd.x+14,nd.y+2);ctx.font='24px serif';ctx.fillText('🌲',nd.x-2,nd.y+14);}}
+  // placement overlay
+  if(R.placing){
+    for(let i=0;i<SLOTS.length;i++){if(!slotFree(i))continue;const s=SLOTS[i];
+      const sel=R.placing.slot===i;
+      ctx.setLineDash(sel?[]:[4,6]);
+      ctx.strokeStyle=sel?'#9fd8a8':'rgba(200,214,255,.5)';ctx.lineWidth=sel?3:1.5;
+      ctx.beginPath();ctx.arc(s.x,s.y,26,0,TAU);ctx.stroke();ctx.setLineDash([]);
+      if(sel){const bd=BUILDS[R.placing.id];
+        ctx.globalAlpha=0.55;ctx.font='34px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(bd.em,s.x,s.y);ctx.globalAlpha=1;
+        const rng=bd.atk?bd.atk.rng:(bd.heal?bd.heal.rng:0);
+        if(rng){ctx.strokeStyle='rgba(159,216,168,.5)';ctx.lineWidth=1.5;
+          ctx.beginPath();ctx.arc(s.x,s.y,rng,0,TAU);ctx.stroke();}
+        const lx=clamp(s.x,150,WD-150),ly=clamp(s.y+46,40,HT-56);
+        ctx.fillStyle='#dfe7ff';ctx.font='600 22px system-ui,sans-serif';
+        ctx.fillText(bd.nm+' · '+fmtCost(costOf(R.placing.id)),lx,ly);
+        ctx.fillStyle='rgba(223,231,255,.72)';ctx.font='16px system-ui,sans-serif';
+        ctx.fillText('tap again to grow',lx,ly+22);}}}
+  // buildings
+  for(const b of R.buildings){
+    const d=BUILDS[b.id];
+    const glow=ctx.createRadialGradient(b.x,b.y,2,b.x,b.y,b.r*1.7);
+    glow.addColorStop(0,'rgba(159,216,168,.4)');glow.addColorStop(1,'rgba(159,216,168,0)');
+    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,b.r*1.7,0,TAU);ctx.fill();
+    ctx.font=(b.id==='elder'?76:d.r*1.5)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(d.em,b.x,b.y);
+    if(b.hp<b.maxHp)hpBar(b.x,b.y-b.r-10,b.r*2,b.hp/b.maxHp,'#9fd8a8');
+    if(b.q.length){const p=1-b.qt/UNITS[b.q[0]].tt;
+      hpBar(b.x,b.y+b.r+8,b.r*1.6,p,'#8ea6ff');}
+    if(b.rally){ctx.font='16px serif';ctx.fillText('🚩',b.rally.x,b.rally.y);}}
+  // units
+  for(const u of R.units){
+    const d=UNITS[u.type];
+    ctx.font=(u.type==='glimmer'?18:d.r*2)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(d.em,u.x,u.y);
+    if(u.type==='glimmer'&&u.carry>0){ctx.fillStyle='#d6e4ff';ctx.font='10px serif';ctx.fillText('☾',u.x+8,u.y-9);}
+    if(u.hp<u.maxHp&&u.type!=='glimmer')hpBar(u.x,u.y-u.r-8,u.r*2,u.hp/u.maxHp,'#b0e8c0');}
+  // foes
+  for(const f of R.foes){
+    const d=FOES[f.type];
+    const fg=ctx.createRadialGradient(f.x,f.y,1,f.x,f.y,f.r*1.9);
+    fg.addColorStop(0,d.col);fg.addColorStop(1,'rgba(10,6,24,0)');
+    ctx.fillStyle=fg;ctx.beginPath();ctx.arc(f.x,f.y,f.r*1.9,0,TAU);ctx.fill();
+    ctx.fillStyle=d.col;ctx.beginPath();
+    if(d.fly){const bob=Math.sin(t/160+f.uid)*3;
+      ctx.ellipse(f.x,f.y+bob,f.r*1.25,f.r*0.8,0,0,TAU);}
+    else ctx.arc(f.x,f.y,f.r,0,TAU);
+    ctx.fill();
+    if(f.hitT>0){ctx.fillStyle='rgba(255,255,255,'+(f.hitT/0.09*0.85).toFixed(3)+')';ctx.fill();}
+    ctx.fillStyle=d.boss?'#e8b0ff':'#d8c8ff';
+    const ex=f.r*0.32;
+    ctx.beginPath();ctx.arc(f.x-ex,f.y-2,d.boss?4:1.8,0,TAU);ctx.arc(f.x+ex,f.y-2,d.boss?4:1.8,0,TAU);ctx.fill();
+    if(f.hp<f.maxHp)hpBar(f.x,f.y-f.r-8,f.r*2,f.hp/f.maxHp,'#e0b0f0');}
+  // shots
+  for(const s of R.shots){const p=s.t/s.dur;
+    const x=s.x+(s.tx-s.x)*p,y=s.y+(s.ty-s.y)*p-Math.sin(p*Math.PI)*46;
+    ctx.font='14px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('✦',x,y);}
+  // fx
+  for(const x of R.fx){const p=x.t/x.dur;
+    if(x.k==='beam'){ctx.strokeStyle=x.col;ctx.globalAlpha=p;ctx.lineWidth=2.2;
+      ctx.beginPath();ctx.moveTo(x.x1,x.y1);ctx.lineTo(x.x2,x.y2);ctx.stroke();}
+    else if(x.k==='ring'){ctx.strokeStyle=x.col;ctx.globalAlpha=p*0.8;ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(x.x,x.y,x.r*(1.3-0.3*p),0,TAU);ctx.stroke();}
+    else{ctx.fillStyle=x.col;ctx.globalAlpha=p*0.5;
+      ctx.beginPath();ctx.arc(x.x,x.y,18*(1.5-p),0,TAU);ctx.fill();}}
+  ctx.globalAlpha=1;
+  // night tint
+  if(R.phase==='night'){ctx.fillStyle='rgba(30,10,50,.14)';ctx.fillRect(-OX/SC,-OY/SC,W/SC,H/SC);}
+  ctx.restore();
+  // elder danger vignette (screen space)
+  if(R.dangerT>0&&dangerGrad){ctx.globalAlpha=R.dangerT/0.45*0.5;
+    ctx.fillStyle=dangerGrad;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;}
+  // phase banner
+  if(R.banner&&!R.over){const p=R.banner.t/R.banner.dur;
+    ctx.globalAlpha=Math.min(1,(1-p)*6,p*3);
+    ctx.fillStyle='#eef3ff';ctx.font='34px "Iowan Old Style",Georgia,serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=12;
+    ctx.fillText(R.banner.txt,W/2,H*0.3);
+    ctx.shadowBlur=0;ctx.globalAlpha=1;}}
+function hpBar(x,y,w,f,col){ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(x-w/2,y,w,3.5);
+  ctx.fillStyle=col;ctx.fillRect(x-w/2,y,w*clamp(f,0,1),3.5);}
+function drawMoon(t){
+  const mx=W*0.82,my=Math.max(70,OY+40),mr=24;
+  const n=R?R.night+(R&&R.phase==='respite'?1:0):1;
+  const f=((n-1)%BAL.night.bossEvery)/(BAL.night.bossEvery-1);
+  const full=R&&(n%BAL.night.bossEvery===0);
+  const glow=ctx.createRadialGradient(mx,my,mr*0.3,mx,my,mr*(full?3.4:2.2));
+  glow.addColorStop(0,'rgba(226,234,255,'+(full?0.5:0.28)+')');glow.addColorStop(1,'rgba(226,234,255,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(mx,my,mr*3.4,0,TAU);ctx.fill();
+  const mg=ctx.createRadialGradient(mx-mr*0.3,my-mr*0.3,mr*0.2,mx,my,mr);
   mg.addColorStop(0,'#f5f7ff');mg.addColorStop(1,'#b9c4e6');
-  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill();
-  ctx.fillStyle='rgba(150,165,205,.5)';[[.3,-.2,.16],[-.25,.28,.12],[.1,.4,.09],[-.4,-.1,.08]].forEach(([dx,dy,rr])=>{
-    ctx.beginPath();ctx.arc(cx+dx*R,cy+dy*R,rr*R,0,7);ctx.fill();});
-  if(S.flash>0){ctx.fillStyle=`rgba(255,120,120,${S.flash})`;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fill();}
-  // threats
-  for(const th of S.threats){const d=THREATS[th.t],p=thPos(th);
-    const gg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,d.r*1.8);
-    gg.addColorStop(0,d.col);gg.addColorStop(1,'rgba(10,6,24,0)');
-    ctx.fillStyle=gg;ctx.beginPath();ctx.arc(p.x,p.y,d.r*1.8,0,7);ctx.fill();
-    ctx.fillStyle=d.col;ctx.beginPath();ctx.arc(p.x,p.y,d.r,0,7);ctx.fill();
-    if(th.t==='devourer'){ctx.fillStyle='#e8b0ff';ctx.beginPath();ctx.arc(p.x,p.y,d.r*.32,0,7);ctx.fill();}
-    // hp pip
-    const d0=d.hp;if(th.hp<d0){ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(p.x-d.r,p.y-d.r-6,d.r*2,3);
-      ctx.fillStyle='#b0f0c0';ctx.fillRect(p.x-d.r,p.y-d.r-6,d.r*2*(th.hp/d0),3);}}
-  // beams
-  for(const b of S.beams){ctx.strokeStyle=b.col;ctx.globalAlpha=Math.min(1,b.t/.14);ctx.lineWidth=2.4;
-    ctx.beginPath();ctx.moveTo(b.x1,b.y1);ctx.lineTo(b.x2,b.y2);ctx.stroke();}ctx.globalAlpha=1;
-  // slots / druids
-  for(const s of S.slots){const p=slotPos(s);
-    if(!s.form){ctx.strokeStyle='rgba(200,214,255,.4)';ctx.lineWidth=2;ctx.setLineDash([4,6]);
-      ctx.beginPath();ctx.arc(p.x,p.y,R*0.34,0,7);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle='rgba(200,214,255,.55)';ctx.font=`${R*0.34}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText('+',p.x,p.y);continue;}
-    const f=FORMS[s.form];
-    ctx.strokeStyle=f.col+'55';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x,p.y,f.range,0,7);ctx.stroke();
-    const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R*0.5);rg.addColorStop(0,f.col+'cc');rg.addColorStop(1,f.col+'00');
-    ctx.fillStyle=rg;ctx.beginPath();ctx.arc(p.x,p.y,R*0.5,0,7);ctx.fill();
-    ctx.font=`${R*0.5}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(f.em,p.x,p.y);}
-  requestAnimationFrame(loop);
-}
-function loop(t){if(!last)last=t;let dt=(t-last)/1000;last=t;if(dt>0.05)dt=0.05;update(dt);sync();draw(t);}
+  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(mx,my,mr,0,TAU);ctx.fill();
+  if(!full){ctx.fillStyle='rgba(7,10,32,.88)';
+    ctx.beginPath();ctx.arc(mx-mr*1.7*(1-f)+(f<0.01?-mr*0.3:0),my,mr*1.12,0,TAU);ctx.fill();}}
 
-// ── HUD / input ──────────────────────────────────────────────────────────
-function sync(){
-  const w=S.wave>=0?WAVES[S.wave]:null;
-  $('phase').innerHTML=(w?w.ph+' '+w.phase:'The night begins')+'<small>Moon Druid Garrison</small>';
-  $('coins').textContent='✦ '+S.coins;
-  $('lightfill').style.width=S.light+'%';
-  $('lightfill').style.background=S.light<35?'linear-gradient(90deg,#ff8e8e,#ffd0d0)':'linear-gradient(90deg,#8ea6ff,#eef3ff)';
-}
-cv.addEventListener('click',e=>{
-  if(S.status!=='play')return;
-  for(const s of S.slots){const p=slotPos(s);if(Math.hypot(e.clientX-p.x,e.clientY-p.y)<=R*0.5){openSheet(s);return;}}
-});
-let sheetSlot=null;
-function openSheet(s){sheetSlot=s;
-  $('cardh').textContent=s.form?'Wild-shape':'Post a druid';
-  $('cardsub').textContent=s.form?'Shift this druid’s form — free, any time.':'Costs ✦'+COST+'. You have ✦'+S.coins+'.';
-  const list=$('list');list.innerHTML='';
-  FIDS.forEach(id=>{const f=FORMS[id];const isPlace=!s.form;const afford=s.form||S.coins>=COST;const cur=s.form===id;
-    const row=document.createElement('div');row.className='row'+(afford&&!cur?'':' dim');
-    row.innerHTML=`<div class="em">${f.em}</div><div class="mid"><div class="nm">${f.nm}${cur?' · current':''}</div>`+
-      `<div class="meta">${f.role} · rng ${f.range} · dmg ${f.dmg}</div></div>`+
-      `<div class="tag">${isPlace?'✦'+COST:'shift'}</div>`;
-    if(afford&&!cur)row.onclick=()=>{setForm(s,id);closeSheet();};
-    list.appendChild(row);});
-  $('sheet').classList.add('on');
-}
-function setForm(s,id){if(!s.form){if(S.coins<COST)return;S.coins-=COST;toast(FORMS[id].em+' '+FORMS[id].nm+' posted');}
-  else toast('Wild-shape → '+FORMS[id].em+' '+FORMS[id].nm);
-  s.form=id;s.cd=0;}
-function closeSheet(){$('sheet').classList.remove('on');sheetSlot=null;}
+// ════════════════════════════ UI ══════════════════════════════════════════
+let uiFlag=true;
+function uiDirty(){uiFlag=true;}
+function fmtCost(c){return c[1]>0?c[0]+'☾ '+c[1]+'⬡':c[0]+'☾';}
+function syncHud(force){
+  if(!R)return;
+  $('res').innerHTML='☾ '+Math.floor(R.light)+' · ⬡ '+Math.floor(R.sap)+
+    ' <span class="vig">✦ '+vigilUsed()+'/'+vigilCap()+'</span>';
+  const boss=(R.night+(R.phase==='respite'?1:0))%BAL.night.bossEvery===0;
+  $('phase').innerHTML=(R.phase==='respite'
+    ?'Respite — night '+(R.night+1)+(boss?' 🌕':'')+' in '+Math.ceil(R.phaseT)+'s'
+    :'Night '+R.night+(boss?' 🌕':'')+' — the Gloam')+
+    '<small>'+(R.phase==='respite'&&R.previewStr?'coming: '+R.previewStr:'Moon Druid Garrison')+'</small>';
+  const elder=R.buildings[0];
+  if(elder){const f=elder.hp/elder.maxHp;
+    $('ebfill').style.width=(f*100)+'%';
+    $('ebfill').style.background=f<0.35?'linear-gradient(90deg,#ff8e8e,#ffd0d0)':'linear-gradient(90deg,#8fd8a8,#e6ffee)';}
+  $('ebarw').classList.toggle('hit',R.dangerHudT>0);
+  if(uiFlag||force){uiFlag=false;refreshBar();}}
+function rebuildBar(){
+  const bar=$('bar');bar.innerHTML='';
+  for(const id of BAR_ORDER){const d=BUILDS[id];
+    const locked=d.lock&&!has(d.lock);
+    const b=document.createElement('button');
+    b.type='button';b.className='bb'+(locked?' lock':'');b.dataset.b=id;
+    b.innerHTML='<span class="be">'+(locked?'🔒':d.em)+'</span><span class="bn">'+d.nm.split(' ').pop()+'</span>'+
+      '<span class="bc">'+(locked?lockReq(d.lock):fmtCost(d.cost))+'</span>';
+    b.addEventListener('click',()=>tapBuild(id));
+    bar.appendChild(b);}
+  refreshBar();}
+function lockReq(id){const ms=MILES.find(m=>m.id===id);return ms?ms.req.replace('Hold to ',''):'locked';}
+function refreshBar(){
+  if(!R)return;
+  for(const el of document.querySelectorAll('.bb')){const id=el.dataset.b,d=BUILDS[id];
+    const locked=d.lock&&!has(d.lock);
+    el.classList.toggle('lock',locked);
+    el.classList.toggle('dim',!locked&&!canPay(costOf(id)));
+    el.classList.toggle('sel',!!(R.placing&&R.placing.id===id));
+    if(!locked){el.querySelector('.be').textContent=d.em;
+      el.querySelector('.bc').textContent=fmtCost(costOf(id));}}}
+function tapBuild(id){
+  const d=BUILDS[id];
+  if(d.lock&&!has(d.lock)){const ms=MILES.find(m=>m.id===d.lock);
+    toast('🔒 '+(ms?ms.req:'Locked'));return;}
+  if(R.placing&&R.placing.id===id){R.placing=null;refreshBar();return;}
+  if(!canPay(costOf(id))){toast('Not enough — needs '+fmtCost(costOf(id)));return;}
+  R.placing={id,slot:null};R.rallyFor=null;closeSheet();refreshBar();
+  toast('Tap a ring slot, then tap again to grow the '+d.nm);}
+function place(id,slot){
+  pay(costOf(id));mkBuilding(id,slot);
+  poof(SLOTS[slot].x,SLOTS[slot].y,'#9fd8a8');
+  toast(BUILDS[id].em+' '+BUILDS[id].nm+' grown');
+  R.placing=null;uiDirty();syncHud(true);}
+
+// ── sheets
+function openSheet(html){$('card').innerHTML=html;$('sheet').classList.add('on');}
+function closeSheet(){$('sheet').classList.remove('on');}
 $('sheet').addEventListener('click',e=>{if(e.target===$('sheet'))closeSheet();});
-let tT;function toast(m){$('toast').textContent=m;$('toast').classList.add('on');clearTimeout(tT);tT=setTimeout(()=>$('toast').classList.remove('on'),2600);}
-function over(){const won=S.status==='won';$('oh').textContent=won?'🌅 Dawn holds':'🌑 The moon goes dark';
-  $('op').textContent=won?'The garrison stood through every phase. The moon endures — because you held.':'The Waning swallowed the light. Rally the garrison and hold again.';
-  $('over').classList.add('on');}
-$('ob').onclick=()=>{reset();last=0;};
+function sheetRow(em,nm,metaTxt,tag,dim,fn){
+  const r=document.createElement('div');r.className='row'+(dim?' dim':'');
+  r.innerHTML='<div class="em">'+em+'</div><div class="mid"><div class="nm">'+nm+'</div>'+
+    '<div class="meta">'+metaTxt+'</div></div><div class="tag">'+tag+'</div>';
+  if(!dim&&fn)r.addEventListener('click',fn);
+  return r;}
+function openBuilding(b){
+  const d=BUILDS[b.id];
+  openSheet('<h2>'+d.em+' '+d.nm+'</h2><p class="sub">'+d.desc+' · '+Math.round(b.hp)+'/'+Math.round(b.maxHp)+' HP</p><div id="list"></div>');
+  const list=$('list');
+  if(b.id==='elder'){
+    const gc=R.units.filter(u=>u.type==='glimmer').length;
+    list.appendChild(trainRow(b,'glimmer','You tend '+gc+' Glimmers'));
+    for(const k of ['wings','roots']){const up=BAL.ecoUp[k];
+      const done=R.eco[k]>0;
+      const nm=k==='wings'?'Brighter Wings':'Deep Taproots';
+      const dd=k==='wings'?'Glimmers carry +25% moonlight':'Sap flows +25% faster';
+      list.appendChild(sheetRow(k==='wings'?'🦋':'🌱',nm,dd,
+        done?'✓':fmtCost(up.cost),done||!canPay(up.cost),
+        ()=>{pay(up.cost);R.eco[k]=1;toast(nm+' — the grove grows wiser');openBuilding(b);syncHud(true);}));}
+  }else if(d.trains){
+    for(const t of d.trains){
+      const ud=UNITS[t];
+      if(ud.lock&&!has(ud.lock))
+        list.appendChild(sheetRow('🔒',ud.nm,MILES.find(m=>m.id===ud.lock).req,'',true,null));
+      else list.appendChild(trainRow(b,t,ud.desc));}
+    list.appendChild(sheetRow('🚩','Set post','Where this hall’s druids stand watch','tap map',false,
+      ()=>{R.rallyFor=b;closeSheet();toast('Tap the moor to set the post');}));
+    if(b.rally)list.appendChild(sheetRow('🍃','Clear post','Druids return to their bough','',false,
+      ()=>{b.rally=null;
+        for(const u of R.units)if(u.src===b.uid&&u.type!=='glimmer')u.post=postOf(b,u);
+        toast('Post cleared');openBuilding(b);}));}
+  if(b.id!=='elder'){
+    const back=Math.floor(costOf(b.id)[0]*BAL.sellBack)+'☾ '+Math.floor(costOf(b.id)[1]*BAL.sellBack)+'⬡';
+    list.appendChild(sheetRow('🍂','Unroot','Reclaim '+back,'sell',false,
+      ()=>{R.light+=costOf(b.id)[0]*BAL.sellBack;R.sap+=costOf(b.id)[1]*BAL.sellBack;
+        for(const q of b.q){R.light+=UNITS[q].cost[0];R.sap+=UNITS[q].cost[1];}
+        b.hp=0;closeSheet();toast(d.nm+' unrooted');}));}
+  if(b.q.length){const p=Math.round((1-b.qt/UNITS[b.q[0]].tt)*100);
+    const div=document.createElement('div');
+    div.innerHTML='<p class="sub" style="margin-top:10px">Waking: '+
+      b.q.map(t=>UNITS[t].em).join(' ')+'</p><div class="qbar"><div class="qfill" style="width:'+p+'%"></div></div>';
+    list.appendChild(div);}}
+function trainRow(b,t,desc){
+  const ud=UNITS[t];
+  const full=b.q.length>=BAL.queueMax;
+  const noVig=vigilUsed()+ud.vigil>vigilCap();
+  const dim=full||noVig||!canPay(ud.cost);
+  const tag=full?'queue full':noVig?'needs ✦ — grow a ⛲ Font':fmtCost(ud.cost)+' · ✦'+ud.vigil;
+  return sheetRow(ud.em,ud.nm,desc+' · '+ud.tt+'s',tag,dim,()=>{
+    pay(ud.cost);if(!b.q.length)b.qt=ud.tt;b.q.push(t);
+    toast(ud.em+' '+ud.nm+' waking…');openBuilding(b);syncHud(true);});}
+function openNode(i){
+  const nd=NODES[i];
+  const workers=R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length;
+  const idle=R.units.filter(u=>u.type==='glimmer'&&u.assign<0).length;
+  const rate=nd.kind==='well'
+    ?'each Glimmer carries '+Math.round(BAL.glim.carry*harvMul('well'))+'☾ per trip'
+    :'each Glimmer taps '+(BAL.glim.sapRate*harvMul('copse')).toFixed(2)+'⬡ per second';
+  openSheet('<h2>'+(nd.kind==='well'?'☾':'🌲')+' '+nd.nm+'</h2><p class="sub">'+rate+'</p><div id="list"></div>');
+  const list=$('list');
+  list.appendChild(sheetRow('✨','Glimmers here',workers+' at work · '+idle+' idle','',true,null));
+  list.appendChild(sheetRow('➕','Send a Glimmer',idle?'An idle spirit takes up the work':'No idle Glimmers — bud more at the Elderbough','+1',!idle,
+    ()=>{const g=R.units.find(u=>u.type==='glimmer'&&u.assign<0);
+      if(g){g.assign=i;g.st='go';}openNode(i);}));
+  list.appendChild(sheetRow('➖','Call one home','The spirit returns to the Elderbough','−1',!workers,
+    ()=>{const g=R.units.find(u=>u.type==='glimmer'&&u.assign===i);
+      if(g){g.assign=-1;g.st='go';g.carry=0;}openNode(i);}));}
 
-reset();requestAnimationFrame(loop);
+// ── grove + death screens
+function showGrove(){
+  $('death').classList.remove('on');
+  $('gdew').textContent='✧ '+meta.dew;
+  $('gbest').textContent=meta.milestones.bestNight;
+  $('gruns').textContent=meta.stats.runs;
+  $('lore').style.display=meta.stats.runs>0?'none':'block';
+  const tree=$('tree');tree.innerHTML='';
+  for(const nd of TREE){
+    const r=rank(nd.id),max=nd.costs.length,done=r>=max;
+    const row=document.createElement('div');row.className='trow'+(done?' done':'');
+    row.innerHTML='<div class="em">'+nd.em+'</div><div class="mid"><div class="nm">'+nd.nm+
+      ' <span class="pips">'+'●'.repeat(r)+'○'.repeat(max-r)+'</span></div>'+
+      '<div class="meta">'+nd.d+'</div></div>';
+    const btn=document.createElement('button');btn.type='button';
+    btn.textContent=done?'MAX':'✧ '+nd.costs[r];
+    btn.disabled=done||meta.dew<nd.costs[r];
+    if(!btn.disabled)btn.addEventListener('click',()=>{
+      meta.dew-=nd.costs[r];meta.spent[nd.id]=r+1;saveMeta();showGrove();});
+    row.appendChild(btn);tree.appendChild(row);}
+  const ml=$('miles');ml.innerHTML='';
+  for(const ms of MILES){
+    const done=has(ms.id);
+    const row=document.createElement('div');row.className='trow'+(done?' done':'');
+    row.innerHTML='<div class="em">'+(done?ms.em:'🔒')+'</div><div class="mid"><div class="nm">'+ms.nm+
+      (done?' <span class="pips">●</span>':'')+'</div><div class="meta">'+(done?ms.d:ms.req+' — '+ms.d)+'</div></div>';
+    ml.appendChild(row);}
+  $('grove').classList.add('on');$('bar').style.display='none';
+  if(R)R.waiting=true;}
+$('begin').addEventListener('click',()=>{
+  $('grove').classList.remove('on');$('bar').style.display='flex';
+  newRun();});
+$('dret').addEventListener('click',showGrove);
+
+// ── toasts / pause / speed / objective chip
+let tT;function toast(m){$('toast').textContent=m;$('toast').classList.add('on');
+  clearTimeout(tT);tT=setTimeout(()=>$('toast').classList.remove('on'),2600);}
+function setPaused(v){if(!R)return;R.paused=v;
+  $('pauseb').textContent=v?'▶':'⏸';
+  $('pausedov').classList.toggle('on',v);}
+$('pauseb').addEventListener('click',()=>{if(!R||R.over||R.waiting)return;
+  setPaused(!R.paused);});
+$('speedb').addEventListener('click',()=>{if(!R)return;
+  R.speed=R.speed>=2?1:2;$('speedb').textContent=R.speed+'×';});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&R&&!R.over&&!R.waiting)setPaused(true);});
+const GOALS=[
+  {txt:'🛖 Grow a Bough Hall — tap it below, then a ring slot, tap again',
+   done:()=>R.buildings.some(b=>b.id!=='elder'&&BUILDS[b.id].trains)},
+  {txt:'🛡️ Wake a Thornguard — tap your new hall',
+   done:()=>R.units.some(u=>u.type!=='glimmer')||R.buildings.some(b=>b.q.some(t=>t!=='glimmer'))},
+  {txt:'🌙 Hold night 1 — the Gloam comes from the violet arc',
+   done:()=>R.done>=1},
+];
+function syncGoal(){
+  const g=$('goal');
+  if(!R||!R.tut||R.over||R.waiting){g.classList.remove('on');return;}
+  while(R.tutStep<GOALS.length&&GOALS[R.tutStep].done())R.tutStep++;
+  if(R.tutStep>=GOALS.length){R.tut=false;meta.seen.tut=1;saveMeta();
+    g.classList.remove('on');toast('🌿 The grove is yours — hold as long as you can');return;}
+  g.textContent=GOALS[R.tutStep].txt;g.classList.add('on');}
+
+// ════════════════════════════ MAIN — input + loop ═════════════════════════
+cv.addEventListener('click',e=>{
+  if(!R||R.over||R.waiting)return;
+  const p=s2w(e.clientX,e.clientY);
+  if(R.placing){
+    let bi=-1,bd=46*46;
+    for(let i=0;i<SLOTS.length;i++){if(!slotFree(i))continue;
+      const dd=d2(p,SLOTS[i]);if(dd<bd){bd=dd;bi=i;}}
+    if(bi>=0){
+      if(R.placing.slot===bi){if(canPay(costOf(R.placing.id)))place(R.placing.id,bi);
+        else{toast('Not enough — needs '+fmtCost(costOf(R.placing.id)));R.placing=null;}}
+      else R.placing.slot=bi;}
+    else{R.placing=null;toast('Growth set aside');}
+    refreshBar();return;}
+  if(R.rallyFor){const b=R.rallyFor;b.rally={x:clamp(p.x,20,WD-20),y:clamp(p.y,20,HT-20)};
+    for(const u of R.units)if(u.src===b.uid&&u.type!=='glimmer')u.post=postOf(b,u);
+    R.rallyFor=null;toast('🚩 Post set');return;}
+  for(const b of R.buildings){if(within(p,b,b.r+16)){openBuilding(b);return;}}
+  for(let i=0;i<NODES.length;i++){if(within(p,NODES[i],55)){openNode(i);return;}}
+});
+
+let last=0,acc=0;
+const STEP=1/30;
+function loop(t){
+  if(!last)last=t;let dt=(t-last)/1000;last=t;if(dt>0.1)dt=0.1;
+  if(R&&!R.paused&&!R.over&&!R.waiting){
+    acc+=dt*R.speed;let n=0;
+    while(acc>=STEP&&n++<16)  {update(STEP);acc-=STEP;}
+    if(n>=16)acc=0;}
+  draw(t);
+  requestAnimationFrame(loop);}
+
+// ── autoplay bot (balance testing) ──
+function botTick(){
+  const elder=R.buildings[0];if(!elder)return;
+  const count=id=>R.buildings.filter(b=>b.id===id).length;
+  const botPlace=(id,ring)=>{let si=-1;
+    for(let i=0;i<SLOTS.length;i++)if(slotFree(i)&&SLOTS[i].ring===ring){si=i;break;}
+    if(si<0)for(let i=0;i<SLOTS.length;i++)if(slotFree(i)){si=i;break;}
+    if(si>=0)place(id,si);return si>=0;};
+  // 1. a Bough Hall before anything else
+  if(!count('hall')){if(canPay(costOf('hall')))botPlace('hall',0);return;}
+  // 2. keep every trainer's queue running (army first)
+  for(const b of R.buildings){const d=BUILDS[b.id];
+    if(!d.trains||b.q.length>=2)continue;
+    for(const t of d.trains){const ud=UNITS[t];
+      if(ud.lock&&!has(ud.lock))continue;
+      if(canPay(ud.cost)&&vigilUsed()+ud.vigil<=vigilCap()){
+        pay(ud.cost);if(!b.q.length)b.qt=ud.tt;b.q.push(t);break;}}}
+  // 3. more glimmers once the war chest is comfortable
+  const glims=R.units.filter(u=>u.type==='glimmer').length;
+  if(glims<10&&R.light>120&&elder.q.length<2&&canPay(UNITS.glimmer.cost)&&vigilUsed()+1<=vigilCap())
+    {pay(UNITS.glimmer.cost);if(!elder.q.length)elder.qt=UNITS.glimmer.tt;elder.q.push('glimmer');}
+  // 4. grow the base
+  const wants=[['font',1],['totem',2],['perch',1],['font',2],['totem',4],['hall',2],
+    ['stones',1],['shrine',1],['font',3],['totem',6]];
+  for(const[id,n]of wants){const d=BUILDS[id];
+    if(d.lock&&!has(d.lock))continue;
+    if(count(id)<n&&canPay(costOf(id))){
+      botPlace(id,id==='font'?0:1);return;}}}
+
+// ════════════════════════════ test surface ════════════════════════════════
+window.MDG={
+  R:()=>R,meta:()=>meta,BAL,DATA:{BUILDS,UNITS,FOES,TREE,MILES},
+  step:sec=>{let s=sec;while(s>0){update(Math.min(STEP,s));s-=STEP;}},
+  forceNight:n=>{R.night=n-1;R.done=Math.max(R.done,n-1);R.foes=[];R.queue=[];
+    R.nextQueue=null;R.previewStr='';
+    R.phase='respite';R.phaseT=0.001;R.nextArcs=pickArcs(arcCount(n));},
+  give:(l,s)=>{R.light+=l;R.sap+=s||0;syncHud(true);},
+  build:(id,slot)=>{if(!slotFree(slot))return null;
+    if(canPay(costOf(id)))pay(costOf(id));
+    return mkBuilding(id,slot);},
+  newRun,autoplay:()=>{R.bot=true;},
+};
+
+// ── boot ──
+loadMeta();
+showGrove();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
