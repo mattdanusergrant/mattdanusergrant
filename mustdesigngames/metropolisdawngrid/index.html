@@ -510,7 +510,7 @@
     return cells;
   }
   function placeLineCell(c,r){if(!inB(c,r))return false;var cell=grid[idx(c,r)];
-    if(cell.t==='highway'||cell.terr==='mountain')return false;                 // freeway fixed; mountains block (route around)
+    if(cell.t==='highway')return false;                                         // freeway fixed; water→bridge, mountain→tunnel
     if(brush==='rail'){                                                         // rail is an overlay — can cross a road (level crossing); water = a bridge
       if(cell.rail||(cell.t!=='empty'&&cell.t!=='road'))return false;           // already railed, or a building is here
       if(!canAfford(COST.rail))return null;spend(COST.rail);cell.rail=true;return true;}
@@ -894,10 +894,11 @@
     ctx.fillRect(x+m-h,y+m-h,h*2,h*2);
     if(N)ctx.fillRect(x+m-h,y,h*2,m);if(S)ctx.fillRect(x+m-h,y+m,h*2,m);
     if(E)ctx.fillRect(x+m,y+m-h,m,h*2);if(W)ctx.fillRect(x,y+m-h,m,h*2);}
-  function drawDeck(x,y,c,r,N,S,E,W){                    // a bridge deck under road/rail when the cell is water
-    if(grid[idx(c,r)].terr!=='water')return;
-    ctx.fillStyle='#8a7f6a';roadCross(x,y,12,N,S,E,W);   // deck edge / shadow
-    ctx.fillStyle='#b0a58d';roadCross(x,y,11,N,S,E,W);}  // deck planks
+  function drawDeck(x,y,c,r,N,S,E,W){                    // a deck under road/rail crossing an obstacle
+    var t=grid[idx(c,r)].terr;
+    if(t==='water'){ctx.fillStyle='#8a7f6a';roadCross(x,y,12,N,S,E,W);ctx.fillStyle='#b0a58d';roadCross(x,y,11,N,S,E,W);}   // bridge deck over water
+    else if(t==='mountain'){ctx.fillStyle='#6f6c72';roadCross(x,y,12,N,S,E,W);ctx.fillStyle='#8f8b90',roadCross(x,y,11,N,S,E,W);   // rock cutting through the mountain
+      ctx.fillStyle='rgba(0,0,0,.28)';if(E||W){ctx.fillRect(x,y+CELL/2-11,CELL,2);ctx.fillRect(x,y+CELL/2+9,CELL,2);} if(N||S){ctx.fillRect(x+CELL/2-11,y,2,CELL);ctx.fillRect(x+CELL/2+9,y,2,CELL);}}}   // shaded portal walls
   function drawRoad(x,y,c,r){
     var N=drivable(c,r-1),S=drivable(c,r+1),E=drivable(c+1,r),W=drivable(c-1,r),m=CELL/2;
     drawDeck(x,y,c,r,N,S,E,W);
@@ -918,6 +919,16 @@
     ctx.fillStyle=pal.rail;
     if(h){ctx.fillRect(x,y+m-4,CELL,1.5);ctx.fillRect(x,y+m+3,CELL,1.5);}
     if(v){ctx.fillRect(x+m-4,y,1.5,CELL);ctx.fillRect(x+m+3,y,1.5,CELL);}
+    if(grid[idx(c,r)].t==='road'){                                   // level crossing: red-and-white barrier marks flanking the track
+      var vRail=(N||S)&&!(E||W);                                     // track runs vertically → barriers left/right on the road
+      ctx.fillStyle='#D8452F';ctx.fillRect(x+m-1,y+m-1,2,2);         // a small red centre bolt
+      ctx.fillStyle='#E9E4D6';
+      if(vRail){ctx.fillRect(x+m-9,y+m-6,2,12);ctx.fillRect(x+m+7,y+m-6,2,12);}   // white posts either side of the tracks
+      else{ctx.fillRect(x+m-6,y+m-9,12,2);ctx.fillRect(x+m-6,y+m+7,12,2);}
+      ctx.fillStyle='#D8452F';
+      if(vRail){ctx.fillRect(x+m-9,y+m-6,2,3);ctx.fillRect(x+m+7,y+m+3,2,3);}     // red tips (crossbuck feel)
+      else{ctx.fillRect(x+m-6,y+m-9,3,2);ctx.fillRect(x+m+3,y+m+7,3,2);}
+    }
   }
   function py(v){return Math.round(v);}
   function drawPark(x,y,cell){
@@ -1037,14 +1048,15 @@
   function tileInfo(c,r){if(!inB(c,r))return '';
     var g=grid[idx(c,r)],i=idx(c,r),t=g.t;
     var name=(t==='road'&&g.rail)?'Road + rail crossing':g.rail&&t==='empty'?'Rail':(TYPELABEL[t]||t);
-    var bridge=(g.terr==='water'&&(t==='road'||g.rail))?' <span class="ik">(bridge)</span>':'';
+    var span=g.terr==='water'?'bridge':g.terr==='mountain'?'tunnel':'';
+    var bridge=(span&&(t==='road'||g.rail))?' <span class="ik">('+span+')</span>':'';
     var h='<div class="it">'+name+bridge+'</div>';
     h+='<div><span class="ik">Terrain</span> <b>'+(TERRLABEL[g.terr]||g.terr)+'</b> <span class="ik">· ('+c+','+r+')</span></div>';
     if(t==='road'||g.rail){
       if(t==='road')h+='<div><span class="ik">Road → freeway</span> '+yn(connected&&connected[i])+'</div>';
       if(g.rail)h+='<div><span class="ik">Rail → freeway</span> '+yn(railConn&&railConn[i])+'</div>';
     }
-    else if(t==='empty'){h+='<div class="ik">'+(g.terr==='water'?'Water — bridge it with road or rail':g.terr==='mountain'?'Mountain — can’t build; mine ore from an adjacent Works':'Open ground — buildable')+'</div>';}
+    else if(t==='empty'){h+='<div class="ik">'+(g.terr==='water'?'Water — bridge it with road or rail':g.terr==='mountain'?'Mountain — tunnel road/rail through; mine ore from an adjacent Works':'Open ground — buildable')+'</div>';}
     else if(t==='highway'){h+='<div class="ik">The freeway — your link to the world. Join it with a road/rail ramp.</div>';}
     else if(ZONEK[t]){
       h+='<div><span class="ik">Level</span> <b>'+g.lvl+' / '+MAXLVL+'</b></div>';
@@ -1107,10 +1119,10 @@
     if(isLineBrush()&&hoverCell){
       var ps=lineAnchor;
       if(ps){var pp=linePath(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
-        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway'||qcl.terr==='mountain')continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
+        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway')continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
         ctx.globalAlpha=1;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(ps.c*CELL+2.5,ps.r*CELL+2.5,CELL-5,CELL-5);
       } else if(inB(hoverCell.c,hoverCell.r)){var hcl=grid[idx(hoverCell.c,hoverCell.r)];
-        if(hcl&&hcl.t!=='highway'&&hcl.terr!=='mountain'){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
+        if(hcl&&hcl.t!=='highway'){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
     }
     // building placement ghost — preview every build tool before you click; over an existing same-type
     // building it previews the NEXT level (upgrade); red X where nothing can go.
