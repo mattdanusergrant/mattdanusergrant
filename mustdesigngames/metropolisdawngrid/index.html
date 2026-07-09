@@ -66,7 +66,7 @@
   .mm-legend i{width:9px;height:9px;border-radius:2px;display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
   @media(max-width:640px){.mm-legend{display:none}}
   canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
-  .toast{position:absolute;top:16px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:14px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;white-space:nowrap;z-index:5}
+  .toast{position:absolute;top:16px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:14px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;white-space:normal;max-width:min(560px,88vw);text-align:center;line-height:1.35;z-index:5}
   .toast.on{opacity:1;transform:translate(-50%,0)}
   .toast b{color:var(--muted);font-weight:500;font-size:12px;margin-left:8px}
   .tools{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;padding:9px clamp(12px,3vw,22px);border-top:1.5px solid var(--line);background:var(--bg);flex-shrink:0}
@@ -137,6 +137,9 @@
   .tutor-done button{font-family:'Fraunces',serif;font-size:12px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:6px 14px;cursor:pointer}
   @media(max-width:600px){.tutor{width:190px;font-size:11.5px;top:8px;left:8px;padding:9px 11px}}
   .obs{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;font-size:13px;color:var(--bar-ink);background:var(--bar);border:1.5px solid var(--bar-line);border-radius:999px;padding:8px 16px;box-shadow:var(--shadow);white-space:nowrap}
+  .obs.warn{color:#F3B8A4;border-color:#B5533C}
+  .obs.warn b{color:#F0876A}
+  @media(max-width:640px){.obs.warn{white-space:normal;max-width:88vw;text-align:center}}
   .obs b{color:#fff}
   .obs a{color:#8FC4F0;text-decoration:none;font-weight:600}
   .obs a:hover{text-decoration:underline}
@@ -188,6 +191,7 @@
       <ol class="tutor-l" id="tutor-l"></ol>
     </div>
     <div class="obs" id="obs" hidden><b>👁 Observing an AI-run city</b> · read-only — <a href="world/">← back to the world</a></div>
+    <div class="obs warn" id="insolvent" hidden><b>⚠ Insolvent</b> · income can’t cover upkeep — export Goods or <b>Clear</b> costly buildings to climb out</div>
     <div class="inspect" id="inspect" hidden></div>
     <div class="zoomctl" id="zoomctl">
       <button data-z="out" type="button" title="Zoom out (−)">−</button>
@@ -310,18 +314,38 @@
   var _denyT=0;
   function denyToast(){var now=performance.now();if(now-_denyT<1500)return;_denyT=now;
     toastEl.innerHTML='Credit maxed <b>— grow income to build more</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);}
+  var insolvent=false, deficitWarned=false, insolventEl;
   function economy(){
-    var income=0,upkeep=0,banks=0,ports=0;
+    var income=0,upkeep=0,banks=0,ports=0,facN=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;var t=g.t;
       if(TAX[t])income+=g.lvl*TAX[t];
       if(UPKEEP[t])upkeep+=UPKEEP[t];
-      if(t==='bank')banks++;else if(t==='port')ports++;}
+      if(t==='bank')banks++;else if(t==='port')ports++;else if(t==='fac')facN++;}
     bankCount=banks;
     income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium;          // Ports lift export revenue; a trade partner short on Goods pays a premium
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
     netRate=income-upkeep-interest;
-    treasury+=netRate;updateCashUI();
+    treasury+=netRate;
+    var floor=creditFloor();                          // passive upkeep/interest bleed can't borrow past the credit floor (spending is already gated by canAfford)
+    insolvent=treasury<=floor; if(insolvent)treasury=floor;
+    updateCashUI();
+    if(!insolventEl)insolventEl=document.getElementById('insolvent');
+    if(insolventEl)insolventEl.hidden=!(insolvent&&!OBSERVE);   // persistent banner while underwater
+    moneyCoach(facN);
+  }
+  // one-time, cause-specific nudge the moment a player is bleeding money and running low — names the actual fix
+  function moneyCoach(facN){
+    if(OBSERVE)return;
+    if(treasury>800)deficitWarned=false;              // recovered → arm a fresh warning for next time
+    if(deficitWarned||netRate>=0||treasury>=400)return;
+    deficitWarned=true;
+    var msg;
+    if(matStock>50&&facN===0)msg='💸 Losing money each month. Your <b>Works</b> pile up Materials but nothing sells them — build a <b>Factory</b> to turn them into Goods, then <b>Rail to the freeway</b> to export.';
+    else if(goodsStock>0.5&&!railToWorld)msg='💸 You’re in the red — you have <b>Goods</b> but no way out. Lay a <b>Rail line to the freeway</b> to export them for income.';
+    else if(matStock>50&&!railToWorld)msg='💸 Bleeding ₵ — nothing’s exporting. Connect <b>Rail to the freeway</b> so your Goods earn money.';
+    else msg='💸 Upkeep is outrunning your income. Grow <b>Homes &amp; Shops</b> for tax, or <b>Clear</b> utilities you don’t need yet.';
+    toastEl.innerHTML=msg;toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},7000);
   }
   var cashEl,cashRateEl;
   function updateCashUI(){
