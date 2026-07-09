@@ -29,8 +29,18 @@
   #ctl button{pointer-events:auto;background:rgba(20,28,60,.75);color:#cdd7f2;border:1px solid rgba(160,175,220,.3);
     border-radius:9px;font-size:12px;font-weight:600;padding:4px 10px;cursor:pointer}
   #ebarw{margin-top:6px;font-size:10px;letter-spacing:.06em;opacity:.9}
+  #ebarw.hit{animation:barhit .4s ease}
+  @keyframes barhit{0%{filter:brightness(2.4)}100%{filter:none}}
   #ebar{margin-top:2px;height:6px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
   #ebfill{height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,#8fd8a8,#e6ffee);transition:width .25s}
+  #goal{margin-top:8px;display:none;font-size:11.5px;font-weight:600;letter-spacing:.02em;
+    background:rgba(20,28,60,.82);border:1px solid rgba(159,216,168,.4);color:#cdeed6;
+    border-radius:99px;padding:5px 12px;width:fit-content;max-width:92vw}
+  #goal.on{display:block}
+  #pausedov{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;
+    background:rgba(5,7,26,.35);pointer-events:none;color:#e7ecff;
+    font:600 15px system-ui,sans-serif;text-shadow:0 1px 4px rgba(0,0,0,.7);letter-spacing:.03em}
+  #pausedov.on{display:flex}
 
   /* ── build bar ── */
   #bar{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;gap:7px;overflow-x:auto;
@@ -119,7 +129,9 @@
     </div>
   </div>
   <div id="ebarw">🌳 ELDERBOUGH<div id="ebar"><div id="ebfill"></div></div></div>
+  <div id="goal"></div>
 </div>
+<div id="pausedov">⏸ paused — you may still build</div>
 
 <div id="bar"></div>
 <div id="sheet"><div id="card"></div></div>
@@ -149,6 +161,7 @@
   <h1>🌑 The Elderbough falls</h1>
   <p class="tag" id="dsum"></p>
   <div id="dbreak"></div>
+  <p class="tag" id="dnext"></p>
   <button id="dret" class="big" type="button">Return to the Grove</button>
 </div></div>
 
@@ -174,6 +187,7 @@ const BAL={
   night:{budBase:6,budGrow:1.18,hpGrow:1.06,spawnGap:0.85,bossEvery:5,bossEscort:0.45},
   aggro:250,acquire:60,leash:320,sellBack:0.6,queueMax:3,
   dew:{night:5,killDiv:2,boss:15},
+  bounty:{perBud:2,boss:30},
   caps:{foes:160,queue:140},
   fury:{dmg:20,cd:3,rng:120},
 };
@@ -199,12 +213,20 @@ const UNITS={
   bear:{nm:'Bearform Warden',em:'🐻',cost:[200,80],vigil:4,tt:22,hp:500,spd:60,r:17,atk:{dmg:30,cd:1.4,rng:0,air:false,cleave:50},lock:'bearform',desc:'Elder bruiser · cleaves'},
 };
 const FOES={
-  shamble:{nm:'Shamble',bud:1,hp:60,dmg:8,cd:1,spd:34,r:13,n:1,col:'#4a3d6e'},
-  prowler:{nm:'Prowler',bud:1.5,hp:35,dmg:6,cd:0.7,spd:78,r:10,n:2,hunts:150,col:'#6e5a9e'},
-  hulk:{nm:'Gloamhulk',bud:6,hp:400,dmg:30,cd:1.6,spd:26,r:22,n:4,razer:2,col:'#2c2247'},
-  moth:{nm:'Motheater',bud:3,hp:50,dmg:10,cd:1.1,spd:48,r:11,n:4,fly:true,rng:140,col:'#8a7ab8'},
-  spore:{nm:'Sporecaller',bud:4,hp:90,dmg:8,cd:1.4,spd:30,r:14,n:7,rng:160,aura:{mul:1.3,rng:150},col:'#57724c'},
-  maw:{nm:'Dreadmoon Maw',bud:0,hp:1200,dmg:40,cd:2.4,spd:20,r:32,boss:true,aoe:100,col:'#1c1030'},
+  shamble:{nm:'Shamble',em:'🐌',bud:1,hp:60,dmg:8,cd:1,spd:34,r:13,n:1,col:'#4a3d6e'},
+  prowler:{nm:'Prowler',em:'🐺',bud:1.5,hp:35,dmg:6,cd:0.7,spd:78,r:10,n:2,hunts:150,col:'#6e5a9e'},
+  hulk:{nm:'Gloamhulk',em:'🪨',bud:6,hp:400,dmg:30,cd:1.6,spd:26,r:22,n:4,razer:2,col:'#2c2247'},
+  moth:{nm:'Motheater',em:'🦇',bud:3,hp:50,dmg:10,cd:1.1,spd:48,r:11,n:4,fly:true,rng:140,col:'#8a7ab8'},
+  spore:{nm:'Sporecaller',em:'🍄',bud:4,hp:90,dmg:8,cd:1.4,spd:30,r:14,n:7,rng:160,aura:{mul:1.3,rng:150},col:'#57724c'},
+  maw:{nm:'Dreadmoon Maw',em:'🌑',bud:0,hp:1200,dmg:40,cd:2.4,spd:20,r:32,boss:true,aoe:100,col:'#1c1030'},
+};
+const CODEX={
+  shamble:'shuffles for the Elderbough — slow, stubborn',
+  prowler:'hunts your Glimmers on the harvest lines',
+  hulk:'gnaws boughs hungrily — walls barely slow it',
+  moth:'flies over walls; only arrows and totems reach it',
+  spore:'its spores quicken nearby Gloam — fell it first',
+  maw:'the full moon’s champion — its slam crushes all',
 };
 const TREE=[
   {id:'heart',nm:'Heartwood',em:'💗',costs:[30,60,120],d:'Elderbough +300 HP per rank'},
@@ -262,10 +284,13 @@ function metaMods(){return {
 
 // ════════════════════════════ WORLD — space ═══════════════════════════════
 const WD=720,HT=1160,EX=360,EY=470;
-let W,H,DPR,SC,OX,OY;
+let W,H,DPR,SC,OX,OY,dangerGrad=null;
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
   cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
-  SC=Math.min(W/WD,H/HT);OX=(W-WD*SC)/2;OY=(H-HT*SC)/2;}
+  SC=Math.min(W/WD,H/HT);OX=(W-WD*SC)/2;OY=(H-HT*SC)/2;
+  const dg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.75);
+  dg.addColorStop(0,'rgba(255,60,60,0)');dg.addColorStop(1,'rgba(255,60,60,.85)');
+  dangerGrad=dg;}
 addEventListener('resize',resize);resize();
 const s2w=(sx,sy)=>({x:(sx-OX)/SC,y:(sy-OY)/SC});
 const RINGS=[{r:130,n:8},{r:210,n:12},{r:290,n:16}];
@@ -323,6 +348,7 @@ function newRun(){
      buildings:[],units:[],foes:[],fx:[],shots:[],
      stats:{kills:0,budVal:0,boss:0},mods,eco:{wings:0,roots:0},
      over:false,waiting:false,paused:false,speed:FAST?8:1,bot:false,botT:0,
+     dangerT:0,dangerHudT:0,shake:0,banner:null,nextQueue:null,previewStr:'',
      placing:null,rallyFor:null,hudT:0,tut:!meta.seen.tut,tutStep:0};
   R.phaseT=respLen(1);
   mkBuilding('elder',-1);
@@ -330,7 +356,8 @@ function newRun(){
   // first three glimmers work the wells, the last two the copses
   for(let i=0;i<BAL.start.glim;i++){const g=mkUnit('glimmer',EX+(Math.random()-0.5)*60,EY+70);
     g.assign=i<3?[0,1,0][i]:[2,3][i-3];}
-  rebuildBar();syncHud(true);
+  R.nextQueue=buildQueue(1);R.previewStr=previewOf(R.nextQueue);
+  rebuildBar();syncHud(true);setPaused(false);syncGoal();
   return R;}
 
 // ════════════════════════════ SIM — update ════════════════════════════════
@@ -354,9 +381,16 @@ function nearestElderThreat(u,air){const e=R.buildings[0];if(!e||e.id!=='elder')
   for(const f of R.foes){if(f.hp<=0)continue;if(!air&&FOES[f.type].fly)continue;
     if(!elderThreat(f))continue;const dd=d2(u,f);if(dd<bd){bd=dd;best=f;}}
   return best;}
-function hurtFoe(f,amt,src){f.hp-=amt;f.last=src;}
+function hurtFoe(f,amt,src){f.hp-=amt;f.last=src;f.hitT=0.09;}
+function hurtBld(b,amt){b.hp-=amt;
+  if(b.id==='elder'){R.dangerT=0.45;R.dangerHudT=0.6;}}
 function hurt(t,amt){t.hp-=amt;
   if(t.type==='glimmer'){t.flee=BAL.glim.flee;t.st='go';}}
+function banner(txt){R.banner={txt,t:2.2,dur:2.2};}
+function previewOf(q){const c={};for(const t of q)c[t]=(c[t]||0)+1;
+  return Object.keys(FOES).filter(k=>c[k])
+    .sort((a,b)=>(FOES[b].boss?1:0)-(FOES[a].boss?1:0))
+    .map(k=>FOES[k].em+'×'+c[k]).join(' ');}
 function beam(a,b,col){R.fx.push({k:'beam',x1:a.x,y1:a.y,x2:b.x,y2:b.y,t:0.14,dur:0.14,col});}
 function ring(x,y,r,col){R.fx.push({k:'ring',x,y,r,t:0.4,dur:0.4,col});}
 function poof(x,y,col){R.fx.push({k:'poof',x,y,t:0.5,dur:0.5,col});}
@@ -375,10 +409,9 @@ function buildQueue(n){
   return q;}
 function startNight(){
   R.night++;R.phase='night';R.arcs=R.nextArcs;R.nightT=0;
-  R.queue=buildQueue(R.night);R.spawnT=0;
+  R.queue=R.nextQueue||buildQueue(R.night);R.nextQueue=null;R.spawnT=0;
   const boss=R.night%BAL.night.bossEvery===0;
-  toast(boss?'🌕 The full moon rises — the Dreadmoon Maw comes':'Night '+R.night+' — the Gloam rises');
-  if(R.tut&&R.night===1)toast('The Gloam comes where the sky burns violet. Hold the line.');
+  banner(boss?'🌕 Full Moon — Night '+R.night:'Night '+R.night);
   syncHud(true);}
 function endNight(){
   R.done=R.night;
@@ -386,17 +419,20 @@ function endNight(){
   refreshUnlocks(true);
   R.phase='respite';R.phaseT=respLen(R.night+1);
   R.nextArcs=pickArcs(arcCount(R.night+1));
-  toast('Respite — night '+(R.night+1)+' gathers');
+  R.nextQueue=buildQueue(R.night+1);R.previewStr=previewOf(R.nextQueue);
+  banner('Respite');
   syncHud(true);}
 function spawnFoe(type){
   if(R.foes.length>=BAL.caps.foes){R.queue.unshift(type);R.spawnT=0.5;return;}
+  if(!meta.seen['foe_'+type]){meta.seen['foe_'+type]=1;saveMeta();
+    toast(FOES[type].em+' '+FOES[type].nm+' — '+CODEX[type]);}
   const d=FOES[type];
   const arc=R.arcs[Math.random()*R.arcs.length|0]||0;
   const a=arc+(Math.random()-0.5)*(Math.PI/2);
   const dist=560+Math.random()*80;
   const hp=d.hp*Math.pow(BAL.night.hpGrow,R.night-1);
   R.foes.push({uid:uid++,type,x:EX+Math.cos(a)*dist,y:EY+Math.sin(a)*dist,
-    hp,maxHp:hp,r:d.r,cd:0,tg:null,ptg:null,tgT:0,last:null,aspd:1});}
+    hp,maxHp:hp,r:d.r,cd:0,tg:null,ptg:null,tgT:0,last:null,aspd:1,hitT:0});}
 
 function glimmerUpdate(g,dt){
   const elder=R.buildings[0];
@@ -442,6 +478,7 @@ function unitUpdate(u,dt){
 function foeUpdate(f,dt){
   const d=FOES[f.type];
   const elder=R.buildings[0];
+  if(f.hitT>0)f.hitT-=dt;
   f.aspd=R.nightT>150?1.7:1; // the dark thickens — overlong nights end, one way or the other
   const en=R.nightT>150?1.7:1;
   if(f.tg&&f.tg.hp<=0)f.tg=null;
@@ -470,11 +507,11 @@ function foeUpdate(f,dt){
     const rr=d.rng?d.rng:f.r+f.tg.r+6;
     if(!within(f,f.tg,rr))moveTo(f,f.tg.x,f.tg.y,d.spd*f.aspd,dt);
     else{f.cd-=dt;if(f.cd<=0){f.cd=d.cd;
-      if(d.aoe){ring(f.x,f.y,d.aoe,'#b06df0');
+      if(d.aoe){ring(f.x,f.y,d.aoe,'#b06df0');if(d.boss)R.shake=0.3;
         for(const u of R.units){if(u.hp>0&&within(f,u,d.aoe))hurt(u,d.dmg*en);}
-        for(const b of R.buildings){if(b.hp>0&&within(f,b,d.aoe+b.r))b.hp-=d.dmg*en;}}
+        for(const b of R.buildings){if(b.hp>0&&within(f,b,d.aoe+b.r))hurtBld(b,d.dmg*en);}}
       else{const mul=((f.tg.bld&&d.razer)?d.razer:1)*en;
-        if(f.tg.bld)f.tg.hp-=d.dmg*mul;else hurt(f.tg,d.dmg*en);
+        if(f.tg.bld)hurtBld(f.tg,d.dmg*mul);else hurt(f.tg,d.dmg*en);
         if(d.rng)beam(f,f.tg,'#8f6fd0');}}}
   }else moveTo(f,EX,EY,d.spd*f.aspd,dt);}
 
@@ -519,41 +556,39 @@ function update(dt){
   for(const s of R.shots){s.t+=dt;if(s.t>=s.dur){s.done=true;ring(s.tx,s.ty,s.aoe,'#ffe9a8');
     for(const f of R.foes)if(f.hp>0&&within({x:s.tx,y:s.ty},f,s.aoe))hurtFoe(f,s.dmg,null);}}
   R.shots=R.shots.filter(s=>!s.done);
-  // ── deaths
+  // ── deaths (kills pay a small moonlight bounty — defense feeds the economy)
   R.foes=R.foes.filter(f=>{if(f.hp>0)return true;
     R.stats.kills++;R.stats.budVal+=FOES[f.type].bud;
-    if(FOES[f.type].boss){R.stats.boss++;toast('🌕 The Maw is slain');}
+    R.light+=FOES[f.type].bud*BAL.bounty.perBud;
+    if(FOES[f.type].boss){R.stats.boss++;R.light+=BAL.bounty.boss;toast('🌕 The Maw is slain');}
     poof(f.x,f.y,FOES[f.type].col);return false;});
   R.units=R.units.filter(u=>{if(u.hp>0)return true;poof(u.x,u.y,'#cdd7f2');uiDirty();return false;});
   let elderDown=false;
   R.buildings=R.buildings.filter(b=>{if(b.hp>0)return true;
     poof(b.x,b.y,'#8fca7a');if(b.id==='elder')elderDown=true;uiDirty();return false;});
   if(elderDown)return gameOver();
-  // ── fx
+  // ── fx & feel timers
   for(const x of R.fx)x.t-=dt;R.fx=R.fx.filter(x=>x.t>0);
-  // ── tutorial
-  if(R.tut){const steps=[
-    [1,'Your Glimmers ✨ drink from the Lightwells and tap the copses.'],
-    [10,'Tap the Elderbough 🌳 to bud more Glimmers.'],
-    [22,'Grow defenses — tap a button below, then a ring slot, then confirm.']];
-    if(R.tutStep<steps.length&&R.t>=steps[R.tutStep][0]){toast(steps[R.tutStep][1]);R.tutStep++;}}
+  R.dangerT=Math.max(0,R.dangerT-dt);R.dangerHudT=Math.max(0,R.dangerHudT-dt);
+  R.shake=Math.max(0,R.shake-dt);
+  if(R.banner){R.banner.t-=dt;if(R.banner.t<=0)R.banner=null;}
   // ── bot
   if(R.bot){R.botT-=dt;if(R.botT<=0){R.botT=1;botTick();}}
-  // ── hud
-  R.hudT-=dt;if(R.hudT<=0){R.hudT=0.25;syncHud();}}
+  // ── hud + objective chip
+  R.hudT-=dt;if(R.hudT<=0){R.hudT=0.25;syncHud();syncGoal();}}
 function autoAssign(g){
   const counts=NODES.map((n,i)=>R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length);
   let bi=0;for(let i=1;i<NODES.length;i++)if(counts[i]<counts[bi])bi=i;
   g.assign=bi;}
 function gameOver(){
-  R.over=true;
+  R.over=true;setPaused(false);
+  const prevBest=meta.milestones.bestNight;
   const nights=R.done,base=BAL.dew.night*nights,
     kills=Math.floor(R.stats.budVal/BAL.dew.killDiv),boss=BAL.dew.boss*R.stats.boss,
     total=base+kills+boss;
   meta.dew+=total;meta.stats.runs++;meta.stats.kills+=R.stats.kills;
   if(nights>meta.milestones.bestNight)meta.milestones.bestNight=nights;
   meta.milestones.bossKills+=R.stats.boss;
-  if(R.tut)meta.seen.tut=1;
   refreshUnlocks(false);saveMeta();
   $('dsum').textContent=nights===0?'The Gloam took the grove before a single night was held.'
     :'The garrison held for '+nights+' night'+(nights===1?'':'s')+'.';
@@ -562,6 +597,13 @@ function gameOver(){
     '<div>Gloam slain ('+R.stats.kills+') <b style="float:right">✧ '+kills+'</b></div>'+
     '<div>Bosses felled × '+BAL.dew.boss+' <b style="float:right">✧ '+boss+'</b></div>'+
     '<div class="tot">Lunar Dew gathered <b style="float:right">✧ '+total+'</b></div>';
+  const bestLine=nights>prevBest?'🌟 A new deepest night — the old mark was '+prevBest
+    :(prevBest===0&&nights===0?'The Gloam is patient — the Vigil Tree makes you stronger'
+    :'Deepest night held: '+Math.max(prevBest,nights));
+  const nxt=MILES.find(m=>!has(m.id));
+  $('dnext').innerHTML=bestLine+(nxt?'<br>Next: '+nxt.req
+    +(nxt.id==='rites'?' ('+meta.milestones.bossKills+'/5)':'')
+    +' → '+nxt.em+' '+nxt.nm:'');
   closeSheet();$('death').classList.add('on');$('bar').style.display='none';}
 
 // ════════════════════════════ RENDER ══════════════════════════════════════
@@ -576,7 +618,9 @@ function draw(t){
   ctx.globalAlpha=1;
   drawMoon(t);
   if(!R)return;
-  ctx.save();ctx.translate(OX,OY);ctx.scale(SC,SC);
+  const shx=R.shake>0?R.shake*10*Math.sin(t/23):0,
+        shy=R.shake>0?R.shake*10*Math.sin(t/31+1.7):0;
+  ctx.save();ctx.translate(OX+shx,OY+shy);ctx.scale(SC,SC);
   // moor
   const mg=ctx.createRadialGradient(EX,EY,60,EX,EY,430);
   mg.addColorStop(0,'rgba(38,52,66,.85)');mg.addColorStop(0.8,'rgba(22,30,48,.55)');mg.addColorStop(1,'rgba(22,30,48,0)');
@@ -613,7 +657,12 @@ function draw(t){
         ctx.fillText(bd.em,s.x,s.y);ctx.globalAlpha=1;
         const rng=bd.atk?bd.atk.rng:(bd.heal?bd.heal.rng:0);
         if(rng){ctx.strokeStyle='rgba(159,216,168,.5)';ctx.lineWidth=1.5;
-          ctx.beginPath();ctx.arc(s.x,s.y,rng,0,TAU);ctx.stroke();}}}}
+          ctx.beginPath();ctx.arc(s.x,s.y,rng,0,TAU);ctx.stroke();}
+        const lx=clamp(s.x,150,WD-150),ly=clamp(s.y+46,40,HT-56);
+        ctx.fillStyle='#dfe7ff';ctx.font='600 22px system-ui,sans-serif';
+        ctx.fillText(bd.nm+' · '+fmtCost(costOf(R.placing.id)),lx,ly);
+        ctx.fillStyle='rgba(223,231,255,.72)';ctx.font='16px system-ui,sans-serif';
+        ctx.fillText('tap again to grow',lx,ly+22);}}}
   // buildings
   for(const b of R.buildings){
     const d=BUILDS[b.id];
@@ -644,6 +693,7 @@ function draw(t){
       ctx.ellipse(f.x,f.y+bob,f.r*1.25,f.r*0.8,0,0,TAU);}
     else ctx.arc(f.x,f.y,f.r,0,TAU);
     ctx.fill();
+    if(f.hitT>0){ctx.fillStyle='rgba(255,255,255,'+(f.hitT/0.09*0.85).toFixed(3)+')';ctx.fill();}
     ctx.fillStyle=d.boss?'#e8b0ff':'#d8c8ff';
     const ex=f.r*0.32;
     ctx.beginPath();ctx.arc(f.x-ex,f.y-2,d.boss?4:1.8,0,TAU);ctx.arc(f.x+ex,f.y-2,d.boss?4:1.8,0,TAU);ctx.fill();
@@ -663,7 +713,18 @@ function draw(t){
   ctx.globalAlpha=1;
   // night tint
   if(R.phase==='night'){ctx.fillStyle='rgba(30,10,50,.14)';ctx.fillRect(-OX/SC,-OY/SC,W/SC,H/SC);}
-  ctx.restore();}
+  ctx.restore();
+  // elder danger vignette (screen space)
+  if(R.dangerT>0&&dangerGrad){ctx.globalAlpha=R.dangerT/0.45*0.5;
+    ctx.fillStyle=dangerGrad;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;}
+  // phase banner
+  if(R.banner&&!R.over){const p=R.banner.t/R.banner.dur;
+    ctx.globalAlpha=Math.min(1,(1-p)*6,p*3);
+    ctx.fillStyle='#eef3ff';ctx.font='34px "Iowan Old Style",Georgia,serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=12;
+    ctx.fillText(R.banner.txt,W/2,H*0.3);
+    ctx.shadowBlur=0;ctx.globalAlpha=1;}}
 function hpBar(x,y,w,f,col){ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(x-w/2,y,w,3.5);
   ctx.fillStyle=col;ctx.fillRect(x-w/2,y,w*clamp(f,0,1),3.5);}
 function drawMoon(t){
@@ -692,11 +753,12 @@ function syncHud(force){
   $('phase').innerHTML=(R.phase==='respite'
     ?'Respite — night '+(R.night+1)+(boss?' 🌕':'')+' in '+Math.ceil(R.phaseT)+'s'
     :'Night '+R.night+(boss?' 🌕':'')+' — the Gloam')+
-    '<small>Moon Druid Garrison</small>';
+    '<small>'+(R.phase==='respite'&&R.previewStr?'coming: '+R.previewStr:'Moon Druid Garrison')+'</small>';
   const elder=R.buildings[0];
   if(elder){const f=elder.hp/elder.maxHp;
     $('ebfill').style.width=(f*100)+'%';
     $('ebfill').style.background=f<0.35?'linear-gradient(90deg,#ff8e8e,#ffd0d0)':'linear-gradient(90deg,#8fd8a8,#e6ffee)';}
+  $('ebarw').classList.toggle('hit',R.dangerHudT>0);
   if(uiFlag||force){uiFlag=false;refreshBar();}}
 function rebuildBar(){
   const bar=$('bar');bar.innerHTML='';
@@ -745,7 +807,7 @@ function sheetRow(em,nm,metaTxt,tag,dim,fn){
   return r;}
 function openBuilding(b){
   const d=BUILDS[b.id];
-  openSheet('<h2>'+d.em+' '+d.nm+'</h2><p class="sub">'+d.desc+' · '+Math.ceil(b.hp)+'/'+b.maxHp+' HP</p><div id="list"></div>');
+  openSheet('<h2>'+d.em+' '+d.nm+'</h2><p class="sub">'+d.desc+' · '+Math.round(b.hp)+'/'+Math.round(b.maxHp)+' HP</p><div id="list"></div>');
   const list=$('list');
   if(b.id==='elder'){
     const gc=R.units.filter(u=>u.type==='glimmer').length;
@@ -764,11 +826,16 @@ function openBuilding(b){
         list.appendChild(sheetRow('🔒',ud.nm,MILES.find(m=>m.id===ud.lock).req,'',true,null));
       else list.appendChild(trainRow(b,t,ud.desc));}
     list.appendChild(sheetRow('🚩','Set post','Where this hall’s druids stand watch','tap map',false,
-      ()=>{R.rallyFor=b;closeSheet();toast('Tap the moor to set the post');}));}
+      ()=>{R.rallyFor=b;closeSheet();toast('Tap the moor to set the post');}));
+    if(b.rally)list.appendChild(sheetRow('🍃','Clear post','Druids return to their bough','',false,
+      ()=>{b.rally=null;
+        for(const u of R.units)if(u.src===b.uid&&u.type!=='glimmer')u.post=postOf(b,u);
+        toast('Post cleared');openBuilding(b);}));}
   if(b.id!=='elder'){
     const back=Math.floor(costOf(b.id)[0]*BAL.sellBack)+'☾ '+Math.floor(costOf(b.id)[1]*BAL.sellBack)+'⬡';
     list.appendChild(sheetRow('🍂','Unroot','Reclaim '+back,'sell',false,
       ()=>{R.light+=costOf(b.id)[0]*BAL.sellBack;R.sap+=costOf(b.id)[1]*BAL.sellBack;
+        for(const q of b.q){R.light+=UNITS[q].cost[0];R.sap+=UNITS[q].cost[1];}
         b.hp=0;closeSheet();toast(d.nm+' unrooted');}));}
   if(b.q.length){const p=Math.round((1-b.qt/UNITS[b.q[0]].tt)*100);
     const div=document.createElement('div');
@@ -780,7 +847,7 @@ function trainRow(b,t,desc){
   const full=b.q.length>=BAL.queueMax;
   const noVig=vigilUsed()+ud.vigil>vigilCap();
   const dim=full||noVig||!canPay(ud.cost);
-  const tag=full?'queue full':noVig?'needs ✦':fmtCost(ud.cost)+' · ✦'+ud.vigil;
+  const tag=full?'queue full':noVig?'needs ✦ — grow a ⛲ Font':fmtCost(ud.cost)+' · ✦'+ud.vigil;
   return sheetRow(ud.em,ud.nm,desc+' · '+ud.tt+'s',tag,dim,()=>{
     pay(ud.cost);if(!b.q.length)b.qt=ud.tt;b.q.push(t);
     toast(ud.em+' '+ud.nm+' waking…');openBuilding(b);syncHud(true);});}
@@ -835,15 +902,33 @@ $('begin').addEventListener('click',()=>{
   newRun();});
 $('dret').addEventListener('click',showGrove);
 
-// ── toasts / pause / speed
+// ── toasts / pause / speed / objective chip
 let tT;function toast(m){$('toast').textContent=m;$('toast').classList.add('on');
   clearTimeout(tT);tT=setTimeout(()=>$('toast').classList.remove('on'),2600);}
+function setPaused(v){if(!R)return;R.paused=v;
+  $('pauseb').textContent=v?'▶':'⏸';
+  $('pausedov').classList.toggle('on',v);}
 $('pauseb').addEventListener('click',()=>{if(!R||R.over||R.waiting)return;
-  R.paused=!R.paused;$('pauseb').textContent=R.paused?'▶':'⏸';});
+  setPaused(!R.paused);});
 $('speedb').addEventListener('click',()=>{if(!R)return;
   R.speed=R.speed>=2?1:2;$('speedb').textContent=R.speed+'×';});
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden&&R&&!R.over&&!R.waiting){R.paused=true;$('pauseb').textContent='▶';}});
+  if(document.hidden&&R&&!R.over&&!R.waiting)setPaused(true);});
+const GOALS=[
+  {txt:'🛖 Grow a Bough Hall — tap it below, then a ring slot, tap again',
+   done:()=>R.buildings.some(b=>b.id!=='elder'&&BUILDS[b.id].trains)},
+  {txt:'🛡️ Wake a Thornguard — tap your new hall',
+   done:()=>R.units.some(u=>u.type!=='glimmer')||R.buildings.some(b=>b.q.some(t=>t!=='glimmer'))},
+  {txt:'🌙 Hold night 1 — the Gloam comes from the violet arc',
+   done:()=>R.done>=1},
+];
+function syncGoal(){
+  const g=$('goal');
+  if(!R||!R.tut||R.over||R.waiting){g.classList.remove('on');return;}
+  while(R.tutStep<GOALS.length&&GOALS[R.tutStep].done())R.tutStep++;
+  if(R.tutStep>=GOALS.length){R.tut=false;meta.seen.tut=1;saveMeta();
+    g.classList.remove('on');toast('🌿 The grove is yours — hold as long as you can');return;}
+  g.textContent=GOALS[R.tutStep].txt;g.classList.add('on');}
 
 // ════════════════════════════ MAIN — input + loop ═════════════════════════
 cv.addEventListener('click',e=>{
@@ -911,6 +996,7 @@ window.MDG={
   R:()=>R,meta:()=>meta,BAL,DATA:{BUILDS,UNITS,FOES,TREE,MILES},
   step:sec=>{let s=sec;while(s>0){update(Math.min(STEP,s));s-=STEP;}},
   forceNight:n=>{R.night=n-1;R.done=Math.max(R.done,n-1);R.foes=[];R.queue=[];
+    R.nextQueue=null;R.previewStr='';
     R.phase='respite';R.phaseT=0.001;R.nextArcs=pickArcs(arcCount(n));},
   give:(l,s)=>{R.light+=l;R.sap+=s||0;syncHud(true);},
   build:(id,slot)=>{if(!slotFree(slot))return null;
