@@ -79,6 +79,9 @@
   .lobby .row .tag.join{background:rgba(120,220,150,.2); color:#8fe3a8;}
   .lobby .row .tag.watch{background:rgba(255,255,255,.08); opacity:.7;}
   .lobby .empty{font-size:12px; opacity:.4; padding:2px 2px 0;}
+  .lobby .turnsum{background:linear-gradient(180deg,var(--gold2),var(--gold)); color:#1a0612; font-weight:900;
+    text-align:center; padding:10px; border-radius:12px; font-size:14px; letter-spacing:.3px;
+    box-shadow:0 0 18px rgba(255,204,51,.4);}
 
   /* ---- Bet panel (spectator) ---- */
   .betp .odds{display:flex; gap:8px; margin:10px 0 8px;}
@@ -677,7 +680,11 @@ async function renderLobby(){
   const live = L.live.filter(g=>g.myColor===null);     // spectate others' games only
   const esc=s=>String(s==null?"":s).replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
   const row=(id,cls,txt,main,sub)=>`<div class="row" data-id="${id}"><div class="who">${esc(main)}<small>${esc(sub)}</small></div><span class="tag ${cls}">${txt}</span></div>`;
-  let h=`<div><div class="grp-h">Your games <span class="refresh" data-refresh>↻ refresh</span></div>`;
+  L.mine.sort((a,b)=>(b.myTurn?1:0)-(a.myTurn?1:0));            // your-move games first
+  const yourMove=L.mine.filter(g=>g.myTurn).length;
+  let h="";
+  if(yourMove>0) h+=`<div class="turnsum" id="turnsum">🔴 Your move in ${yourMove} game${yourMove>1?"s":""}</div>`;
+  h+=`<div><div class="grp-h">Your games <span class="refresh" data-refresh>↻ refresh</span></div>`;
   if(L.mine.length) L.mine.forEach(g=>{
     if(g.status==="waiting") h+=row(g.id,"wait","waiting","Waiting for an opponent","tap to get the share link");
     else h+=row(g.id, g.myTurn?"mine":"watch", g.myTurn?"your move":"their move",
