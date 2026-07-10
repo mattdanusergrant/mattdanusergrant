@@ -778,12 +778,16 @@
       if(inB(c+dc,r+dr)){var n=grid[idx(c+dc,r+dr)];if(n.lvl>0&&wants[n.t])return true;}}
     return false;
   }
-  var MAXLVL=3,demand={res:0,com:0,ind:0};
+  var MAXLVL=3,demand={res:0,com:0,ind:0},demTot=0;
   function computeDemand(){
     var R=0,Cc=0,I=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
       if(g.t==='res'||g.t==='tower')R+=g.lvl;else if(g.t==='com')Cc+=g.lvl;else if(g.t==='ind')I+=g.lvl;}
-    demand.res=(Cc+I)+3-R;demand.com=(R*0.6)+2-Cc;demand.ind=(R*0.5)+1-I;demand.tower=demand.res;  // Towers follow residential demand
+    // Self-consistent balance: equilibrium at R:C:I ≈ 2:1:1 (homes match jobs; shops & works each ≈ half the homes),
+    // so demand settles near zero for a balanced city. The old model had NO fixed point (R=1.1R+6 → R=−60), which
+    // pinned the meters to extremes in any large city — that was the "broken RCI" bug.
+    demand.res=(Cc+I)-R+2;demand.com=(R*0.5)-Cc+1;demand.ind=(R*0.5)-I+1;demand.tower=demand.res;  // Towers follow residential demand
+    demTot=R+Cc+I;
   }
   var GROW_NEED=6, roadList=[];
   function tick(){
@@ -823,7 +827,9 @@
     meterUI(watEl,watStat,waterGen,waterUse,'water','a tower');}
   var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
   var demColor={res:'#63A05C',com:'#5589BB',ind:'#BF8F45'};
-  function updateDemandUI(){['res','com','ind'].forEach(function(t){var el=demBars[t];el.style.height=(Math.max(0.08,Math.min(1,demand[t]/8))*100)+'%';el.style.background=demColor[t];el.style.opacity=demand[t]>0.3?1:0.35;});}
+  function updateDemandUI(){var mag=demTot*0.5+8;   // normalize by city size → a relative gauge (0.5 = balanced) that never pegs regardless of scale
+    ['res','com','ind'].forEach(function(t){var el=demBars[t];var h=Math.max(0.08,Math.min(1,0.5+demand[t]/mag));
+      el.style.height=(h*100)+'%';el.style.background=demColor[t];el.style.opacity=h>0.42?1:0.5;});}
   // each tier needs BOTH a population and a banked treasury reserve — money gates progression
   var MS=[{n:150,l:'Hamlet',cash:0},{n:500,l:'Village',cash:600},{n:1500,l:'Town',cash:1800},{n:4000,l:'City',cash:4000},{n:9000,l:'Metropolis',cash:9000},{n:20000,l:'Megacity',cash:20000}];
   var maxMS=-1,toastEl=document.getElementById('toast'),toastTimer=0;
