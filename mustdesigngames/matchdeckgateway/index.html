@@ -34,45 +34,69 @@
 -->
 <style>
   :root{
-    /* chrome — matches mattdanusergrant.com (warm paper/ink), light by default */
-    --bg:#FBF8F2; --panel:#FFFFFF; --panel2:#F4F0E6; --ink:#15161C; --muted:#6A6A6A;
-    --line:#E5E0D2; --accent:#15161C; --accent2:#B08D57; --good:#3ddc84; --bad:#ff6b6b;
-    /* game surfaces — theme-independent (felt table, card faces, suits) */
-    --felt:#16603f; --felt2:#0f4a30; --cardface:#fbfaf5; --red:#d23b3b; --black:#23263a;
-    --gold:#e6c078;
+    /* CELEBRATION OF POKER — its own identity, deliberately NOT mattdanusergrant.com.
+       A dark card-room: near-black table, casino red as the hero, gold for the win. */
+    --bg:#0c0a0b; --panel:#181215; --panel2:#221a1e; --ink:#F4ECE8; --muted:#A18C93;
+    --line:#3a232b; --accent:#D8202F; --accent-dk:#7c0f18; --accent2:#E6B34D;
+    --good:#3ddc84; --bad:#ff6b6b;
+    /* game surfaces — felt table, card faces, suits */
+    --felt:#16603f; --felt2:#0f4a30; --cardface:#fbfaf5; --red:#d8202f; --black:#1b1c22;
+    --gold:#E6B34D;
   }
-  [data-theme="dark"]{ --bg:#13110E; --panel:#1D1A16; --panel2:#252219; --ink:#EDE8DF; --muted:#8A857B; --line:#2C2924; --accent:#EDE8DF; --accent2:#c9a24b; }
-  @media(prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --bg:#13110E; --panel:#1D1A16; --panel2:#252219; --ink:#EDE8DF; --muted:#8A857B; --line:#2C2924; --accent:#EDE8DF; --accent2:#c9a24b; } }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink);
+  html,body{ margin:0; height:100%; color:var(--ink);
+    background-color:var(--bg);
+    /* red table-glow from the top, over a faint tiled ♠♥♦♣ card-back motif */
+    background-image:
+      radial-gradient(1100px 560px at 50% -8%, #3a0d14 0%, rgba(58,13,20,0) 62%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='104' height='104'%3E%3Cg font-family='Georgia,serif' font-size='30'%3E%3Ctext x='14' y='36' fill='%23ffffff' opacity='0.035'%3E♠%3C/text%3E%3Ctext x='66' y='36' fill='%23d8202f' opacity='0.06'%3E♥%3C/text%3E%3Ctext x='14' y='88' fill='%23d8202f' opacity='0.06'%3E♦%3C/text%3E%3Ctext x='66' y='88' fill='%23ffffff' opacity='0.035'%3E♣%3C/text%3E%3C/g%3E%3C/svg%3E");
+    background-repeat:no-repeat, repeat;
+    background-size:auto, 104px 104px;
+    background-attachment:fixed, fixed;
     font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.45; }
   #app{ max-width:1040px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; }
-  header{ display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line);
-    position:sticky; top:0; background:var(--bg); z-index:5; }
+  header{ display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--accent-dk);
+    position:sticky; top:0; background:linear-gradient(180deg,#150f12,#0b090a); z-index:5;
+    box-shadow:0 1px 0 rgba(216,32,47,.45), 0 8px 22px #0009; }
   header .back{ font-size:22px; background:none; border:none; color:var(--ink); cursor:pointer; padding:2px 8px; display:none; }
-  header h1{ font-family:'Fraunces',Georgia,serif; font-size:18px; margin:0; font-weight:600; letter-spacing:-0.01em; }
+  header h1{ font-family:'Fraunces',Georgia,serif; font-size:19px; margin:0; font-weight:700; letter-spacing:.005em; color:var(--ink); }
   header .sub{ font-size:12px; color:var(--muted); margin-top:1px; }
+  header .suits{ margin-left:auto; font-size:17px; letter-spacing:4px; color:var(--ink);
+    text-shadow:0 1px 2px #000; user-select:none; }
+  header .suits .r{ color:var(--accent); }
   #view{ flex:1; padding:16px; }
 
   /* Home launcher */
-  .lede{ color:var(--muted); font-size:13.5px; margin:0 2px 16px; }
-  .sec{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:15px; letter-spacing:-0.01em; color:var(--ink); margin:22px 2px 10px; }
-  .sec:first-of-type{ margin-top:4px; }
-  .grid{ display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
-  .tile{ background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--line);
-    border-radius:14px; padding:14px; cursor:pointer; transition:transform .1s, border-color .12s; }
-  .tile:hover{ transform:translateY(-3px); border-color:var(--accent); }
-  .tile .nm{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:17px; letter-spacing:-0.01em; }
+  .lede{ color:var(--muted); font-size:13.5px; margin:0 2px 18px; }
+  .sec{ font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:15px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink); margin:26px 2px 12px; display:flex; align-items:center; gap:10px; }
+  .sec:first-of-type{ margin-top:6px; }
+  .sec::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }
+  .sec .pip{ font-size:19px; line-height:1; letter-spacing:0; }
+  .sec .pip.red{ color:var(--accent); } .sec .pip.blk{ color:var(--ink); }
+  .grid{ display:grid; gap:13px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
+  .tile{ position:relative; overflow:hidden; background:linear-gradient(165deg,#1d151a,#100b0e); border:1px solid var(--line);
+    border-radius:14px; padding:15px 15px 14px; cursor:pointer; transition:transform .12s, border-color .14s, box-shadow .14s; }
+  .tile::before{ content:""; position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-dk)); }
+  .tile:hover{ transform:translateY(-3px); border-color:var(--accent);
+    box-shadow:0 12px 28px #00000070, 0 0 0 1px rgba(216,32,47,.35); }
+  .tile .nm{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:17.5px; letter-spacing:-0.01em; color:var(--ink); }
   .tile .bl{ font-size:12px; color:var(--muted); margin-top:6px; min-height:32px; }
-  .tile .meta{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
-  .chip{ font-size:11px; font-weight:700; border-radius:20px; padding:2px 9px; background:var(--panel2); color:var(--muted); border:1px solid var(--line); }
+  .tile .meta{ display:flex; gap:7px; margin-top:11px; flex-wrap:wrap; }
+  /* tags rendered as casino chips — dashed "edge spots", coloured by kind */
+  .chip{ font-size:10.5px; font-weight:800; border-radius:999px; padding:3px 10px; letter-spacing:.02em;
+    color:var(--ink); background:#241b20; border:1px dashed #ffffff30; }
+  .chip.poker{ background:linear-gradient(180deg,#c81e2c,#8f1420); border-color:#ffffff66; color:#fff; }
+  .chip.net{ background:linear-gradient(180deg,#3a2a10,#241a0a); border-color:#E6B34D99; color:var(--gold); }
+  .chip.custom{ background:linear-gradient(180deg,#26202a,#141019); border-color:#ffffff2e; color:#e9dfe6; }
 
   /* Buttons */
-  .btn{ font-family:'Fraunces',Georgia,serif; background:var(--accent); color:var(--bg); border:none; border-radius:11px; font-weight:600; font-size:15px;
-    padding:11px 16px; cursor:pointer; }
-  .btn:hover{ filter:brightness(1.08); }
-  .btn:disabled{ background:#39406090; color:#8990ad; cursor:default; }
-  .btn.alt{ background:var(--panel2); border:1px solid var(--line); color:var(--ink); }
+  .btn{ font-family:'Fraunces',Georgia,serif; background:linear-gradient(180deg,#e0263a,var(--accent-dk)); color:#fff; border:1px solid #ffffff22; border-radius:11px; font-weight:700; font-size:15px;
+    padding:11px 16px; cursor:pointer; box-shadow:0 2px 8px #0006; }
+  .btn:hover{ filter:brightness(1.1); }
+  .btn:disabled{ background:#2a2126; color:#6f636a; border-color:var(--line); box-shadow:none; cursor:default; }
+  .btn.alt{ background:var(--panel2); border:1px solid var(--line); color:var(--ink); box-shadow:none; }
   .btn.good{ background:var(--good); color:#07120b; }
   .btn.bad{ background:var(--bad); color:#2a0a0a; }
   .btn.sm{ padding:7px 11px; font-size:13px; border-radius:9px; }
@@ -106,8 +130,8 @@
   .card.red{ color:var(--red); }
   .card.black{ color:var(--black); }
   .card.back{ background:
-      repeating-linear-gradient(45deg,#3550c0,#3550c0 6px,#2a40a0 6px,#2a40a0 12px); box-shadow:0 2px 5px #0006; }
-  .card.back::after{ content:""; position:absolute; inset:6px; border:2px solid #ffffff55; border-radius:5px; }
+      repeating-linear-gradient(45deg,#c31f2c,#c31f2c 6px,#8f1420 6px,#8f1420 12px); box-shadow:0 2px 5px #0006; }
+  .card.back::after{ content:""; position:absolute; inset:6px; border:2px solid #ffffff77; border-radius:5px; }
   .card.sel{ outline:3px solid var(--gold); outline-offset:1px; }
   .card.playable{ cursor:pointer; }
   .card.playable:hover{ transform:translateY(-4px); transition:transform .08s; }
@@ -130,6 +154,7 @@
       <h1 id="title">Match Deck Gateway</h1>
       <div class="sub" id="sub">Build, playtest &amp; deal card games to friends online.</div>
     </div>
+    <div class="suits" aria-hidden="true">♠<span class="r">♥</span><span class="r">♦</span>♣</div>
   </header>
   <div id="view"></div>
 </div>
@@ -405,12 +430,12 @@ function renderHome(){
   // Classics = established real-world card games; everything else is an original design or deck tool.
   const CLASSICS=new Set(['holdem','mau']);
   const sections=[
-    { name:'Classics', list:GAMES.filter(g=>CLASSICS.has(g.id)) },
-    { name:'Custom',   list:GAMES.filter(g=>!CLASSICS.has(g.id)) },
+    { name:'Classics', pip:'♠', pk:'blk', list:GAMES.filter(g=>CLASSICS.has(g.id)) },
+    { name:'Custom',   pip:'♦', pk:'red', list:GAMES.filter(g=>!CLASSICS.has(g.id)) },
   ];
   sections.forEach(sec=>{
     if(!sec.list.length) return;
-    view.appendChild(el('h2','sec',sec.name));
+    view.appendChild(el('h2','sec',`<span class="pip ${sec.pk}">${sec.pip}</span>${sec.name}`));
     const grid=el('div','grid');
     sec.list.forEach(g=>{
       const t=el('div','tile');
