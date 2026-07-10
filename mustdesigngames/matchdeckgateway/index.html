@@ -13,9 +13,10 @@
   MATCH DECK GATEWAY (renamed from Multiplayer Deck Gateway, 2026-07-09)
   A generic lab for prototyping card games — poker variants AND fully custom decks.
   Self-contained static build (no build step). Lives at mustdesigngames/matchdeckgateway/.
-  NOTE: the deployed PartyKit backend keeps the original project name
-  ('multiplayerdeckgateway' in party/partykit.json and PARTY_HOST) — do not rename it
-  without redeploying the room server.
+  NOTE: the PartyKit room server (party/) is the project 'matchdeckgateway'. It isn't
+  wired in yet — PARTY_HOST below is empty, so online play uses the PeerJS fallback and
+  no host is live. On the next `npm run deploy` it publishes under that name; set
+  PARTY_HOST to the printed host to route online play through it.
 
   THE WORKSHOP PATTERN
     - Shared ENGINE below: a real card model (standard 52 + jokers + custom subsets),
@@ -264,7 +265,7 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
    Either way: host id = room code; clients connect; host broadcasts state,
    clients send intents.
    ============================================================ */
-/* Deployed PartyKit room-server host, e.g. 'multiplayerdeckgateway.<you>.partykit.dev'
+/* Deployed PartyKit room-server host, e.g. 'matchdeckgateway.<you>.partykit.dev'
    (see party/README.md). Empty ⇒ use the PeerJS peer-to-peer fallback. */
 const PARTY_HOST = '';
 
