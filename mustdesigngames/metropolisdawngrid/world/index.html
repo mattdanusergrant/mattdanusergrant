@@ -36,10 +36,23 @@
   .legend .dot{width:11px;height:11px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.12)}
   .legend .hd{font-family:'Fraunces',serif;font-size:12px;color:var(--muted);letter-spacing:.02em;margin-bottom:1px}
   .hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2;font-size:12px;color:var(--muted);background:var(--paper);border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;box-shadow:var(--shadow)}
+  .wtoast{position:fixed;top:60px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:13.5px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;max-width:min(480px,86vw);text-align:center;line-height:1.4;z-index:5}
+  .wtoast.on{opacity:1;transform:translate(-50%,0)}
+  .wtoast b{color:var(--muted);font-weight:500}
   @media(max-width:640px){.intro{max-width:60vw}.legend{display:none}}
   #fade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:6}
-  #ncard,#fcard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
-  #ncard.on,#fcard.on{display:flex}
+  #ncard,#fcard,#rcard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
+  #ncard.on,#fcard.on,#rcard.on{display:flex}
+  .plots{display:grid;grid-template-columns:repeat(4,46px);gap:7px;margin:4px 0 16px;justify-content:center}
+  /* .plots prefix beats the .nc-inner button pill styling on specificity */
+  .plots .plot{width:46px;height:46px;border-radius:9px;border:1.5px solid var(--line-2);background:rgba(167,192,137,.4);cursor:pointer;font-size:15px;line-height:1;color:#fff;font-family:inherit;padding:0}
+  .plots .plot.open{border:1.5px dashed #3F7CB4;background:rgba(82,133,182,.12);color:#3F7CB4;font-weight:700}
+  .plots .plot.open:hover{background:rgba(95,154,90,.25);border-color:#2E7D46;color:#2E7D46}
+  .plots .plot.city{background:#5285B6;border-color:#41709C}
+  .plots .plot.you{background:#5F9A5A;border-color:#4C8047}
+  .plots .plot.locked{opacity:.35;cursor:not-allowed}
+  .rtip{position:fixed;z-index:4;pointer-events:none;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:8px 11px;font-size:12px;line-height:1.5;color:var(--ink-2);max-width:230px}
+  .rtip b{font-family:'Fraunces',serif;font-size:13px;color:var(--ink)}
   .nc-inner{background:var(--paper);border:1.5px solid var(--line-2);border-radius:16px;padding:22px 24px;max-width:330px;box-shadow:var(--shadow-hover)}
   .nc-inner h3{font-family:'Fraunces',serif;font-weight:600;margin:0 0 8px;font-size:20px;color:var(--ink);letter-spacing:-.01em}
   .nc-inner p{margin:0 0 16px;color:var(--ink-2);font-size:14px;line-height:1.55}
@@ -61,19 +74,23 @@
     <p class="eyebrow">Concept · world model</p>
     <h1>Metropolis<br>Dawn<br>Grid</h1>
     <p>One shared world. Everyone builds on the same planet-sized grid — and you keep expanding until you run into your neighbours.</p>
-    <p class="tag"><b>Click your city</b> to drop in and build. Click an <b>AI-run city</b> to see what it trades — and visit to walk its streets. <b>Click empty land</b> to found your city somewhere new. The AI cities <b>grow over time</b>, so the world changes between visits.</p>
+    <p class="tag"><b>Click your city</b> to drop in and build. Click an <b>AI-run city</b> to see what it trades — and visit to walk its streets. <b>Hover any land square</b> for its Region, and <b>click it</b> to see the city plots inside — new cities must claim a plot bordering a megacity, or a city already connected to one. The AI cities <b>grow over time</b>.</p>
   </div>
 
   <div id="fade"></div>
   <div id="ncard"><div class="nc-inner"><h3 id="nc-name"></h3><p id="nc-msg"></p><div class="nc-actions"><button id="nc-visit" type="button">Visit →</button><button id="nc-trade" type="button" class="ghost">🤝 Trade</button><button id="nc-close" type="button" class="ghost">Close</button></div></div></div>
   <div id="fcard"><div class="nc-inner"><h3 id="fc-name">Found your city here</h3><p id="fc-msg"></p><div class="nc-actions"><button id="fc-build" type="button">Build here →</button><button id="fc-cancel" type="button" class="ghost">Keep looking</button></div></div></div>
+  <div id="rcard"><div class="nc-inner"><h3 id="rc-name"></h3><p id="rc-msg"></p><div class="plots" id="rc-plots"></div><div class="nc-actions"><button id="rc-close" type="button" class="ghost">Close</button></div></div></div>
+  <div class="rtip" id="rtip" hidden></div>
 
+  <div class="wtoast" id="wtoast"></div>
   <div class="legend">
     <span class="hd">On this world</span>
     <div class="row"><span class="dot" id="lg-you"></span> Your city</div>
     <div class="row"><span class="dot" id="lg-them"></span> AI-run cities</div>
+    <div class="row"><span class="dot" id="lg-frontier"></span> Region with open plots</div>
   </div>
-  <div class="hint">drag to spin · click empty world to found your city · click it to build</div>
+  <div class="hint">drag to spin · hover a land square · click it to open the Region and claim a plot</div>
 
   <div class="stage"><canvas id="globe"></canvas></div>
 
@@ -103,8 +120,8 @@
   function readTheme(){
     var D=dark();
     P.bg=cssVar('--bg'); P.ink=cssVar('--ink'); P.line=cssVar('--line'); P.line2=cssVar('--line-2');
-    P.ocean = D?'#243B45':'#AFC9D2';        // planet base
-    P.land  = D?'#3B5A3C':'#A7C089';        // continents
+    P.land  = D?'#3B5A3C':'#A7C089';        // planet base — a LAND world (our fiction: one giant grid of cities)
+    P.water = D?'#243B45':'#A9CBE0';        // lakes & inland seas — spots of blue, not oceans
     P.grat  = D?'rgba(230,232,225,.16)':'rgba(30,40,48,.16)';   // the "globe grid"
     P.gratMaj = D?'rgba(230,232,225,.30)':'rgba(30,40,48,.28)';
     P.rim  = D?'rgba(150,200,225,.35)':'rgba(120,160,185,.5)';
@@ -170,12 +187,153 @@
   (function loadHome(){try{var h=JSON.parse(localStorage.getItem(HOME_KEY)||'null');
     if(h&&typeof h.lat==='number'&&typeof h.lon==='number'){CITIES[0].lat=h.lat;CITIES[0].lon=h.lon;}}catch(e){}})();
 
-  // stable "continent" blobs so the planet reads as land + sea
-  var LAND=[
-    {lat:20,lon:-30,r:34},{lat:-18,lon:20,r:30},{lat:40,lon:60,r:26},
-    {lat:-30,lon:120,r:32},{lat:10,lon:150,r:24},{lat:-40,lon:-60,r:22},
-    {lat:55,lon:150,r:20}
-  ];
+  // ---- regions & plots: the world is a grid of SOLID land / SOLID ocean squares ----
+  // Each land square is a REGION holding a PLOTS×PLOTS grid of city plots. Hover a land square for
+  // its info; click it to open the Region view and claim an open plot. The settlement rule (see
+  // 07_projects/municipal-district-grid/2026-07-10-settlement-claims.md) now lives at PLOT level:
+  // a plot is claimable iff it borders a megacity, or a city already connected to one (AI cities
+  // stand in as the connected hub network; your city chains in when it borders it).
+  var TS=6, TROWS=24, TCOLS=60;                        // 6° squares between ±72° — double the old grid per axis
+  var PLOTS=4, PP=TS/PLOTS, PCOLS=TCOLS*PLOTS, PROWS=TROWS*PLOTS;   // 4×4 city plots per region
+  function tileOf(lat,lon){if(lat<-72||lat>=72)return null;
+    var tj=Math.floor((lat+72)/TS), ti=Math.floor((((lon+180)%360+360)%360)/TS)%TCOLS;
+    return {ti:ti,tj:tj,key:ti+','+tj};}
+  function tileCenter(ti,tj){return {lat:tj*TS-72+TS/2, lon:ti*TS-180+TS/2};}
+  var _landCache={};
+  function noiseLand(ti,tj){var k=ti+','+tj,v=_landCache[k];
+    if(v===undefined)v=_landCache[k]=(tnoise(ti,tj,6)*0.65+tnoise(ti+31,tj+17,3)*0.35)>0.45;   // ~60% land: continents with real oceans
+    return v;}
+  function landTile(ti,tj){if(!NET)buildNetwork();return !!NET.cityTiles[ti+','+tj]||noiseLand(ti,tj);}   // a city's region is always land
+  function plotOf(lat,lon){if(lat<-72||lat>=72)return null;
+    var pj=Math.floor((lat+72)/PP), pi=Math.floor((((lon+180)%360+360)%360)/PP)%PCOLS;
+    return {pi:pi,pj:pj,key:pi+','+pj};}
+  function plotCenter(pi,pj){return {lat:pj*PP-72+PP/2, lon:pi*PP-180+PP/2};}
+  function plotNbs(pi,pj){var o=[[(pi+1)%PCOLS,pj],[(pi+PCOLS-1)%PCOLS,pj]];
+    if(pj>0)o.push([pi,pj-1]); if(pj<PROWS-1)o.push([pi,pj+1]); return o;}
+  var NET=null;                                        // rebuilt lazily; invalidated when your city moves
+  function buildNetwork(){
+    var occ={}, conn={}, cityTiles={}, i, t;
+    for(i=0;i<CITIES.length;i++){t=tileOf(CITIES[i].lat,CITIES[i].lon);if(t)cityTiles[t.key]=1;}
+    for(i=1;i<CITIES.length;i++){var p=plotOf(CITIES[i].lat,CITIES[i].lon);if(!p)continue;
+      occ[p.key]={city:CITIES[i]};conn[p.key]=CITIES[i].name;}     // hubs: connected by definition (the wider world's network)
+    var yp=plotOf(CITIES[0].lat,CITIES[0].lon);
+    if(yp&&!occ[yp.key]){occ[yp.key]={city:CITIES[0],you:true};
+      var yn=plotNbs(yp.pi,yp.pj);                                 // your plot joins the network iff it borders it (the chain rule)
+      for(i=0;i<yn.length;i++){var yk=yn[i][0]+','+yn[i][1];if(conn[yk]){conn[yp.key]=conn[yk];break;}}}
+    var avail={};                                      // open plots: unoccupied, on land, bordering a connected city
+    for(var k in conn){var kp=k.split(','),pi=+kp[0],pj=+kp[1],nb=plotNbs(pi,pj);
+      for(var n=0;n<nb.length;n++){var nk=nb[n][0]+','+nb[n][1];if(occ[nk]||avail[nk])continue;
+        var rti=Math.floor(nb[n][0]/PLOTS),rtj=Math.floor(nb[n][1]/PLOTS);
+        if(!(cityTiles[rti+','+rtj]||noiseLand(rti,rtj)))continue;
+        avail[nk]={hub:conn[k]};}}
+    var regionAvail={}, regionCities={};               // per-region rollups for the map + tooltip
+    for(var a in avail){var ap=a.split(','),ak=Math.floor(+ap[0]/PLOTS)+','+Math.floor(+ap[1]/PLOTS);regionAvail[ak]=(regionAvail[ak]||0)+1;}
+    for(var o in occ){var op=o.split(','),ok=Math.floor(+op[0]/PLOTS)+','+Math.floor(+op[1]/PLOTS);(regionCities[ok]=regionCities[ok]||[]).push(occ[o]);}
+    NET={occ:occ,conn:conn,avail:avail,cityTiles:cityTiles,regionAvail:regionAvail,regionCities:regionCities};
+  }
+  // fast tile projection: tile corners live on a shared 3° vertex grid, computed once per frame
+  // with two trig calls per unique angle — tiles then reference vertices by index (no per-tile proj)
+  var VLA=TROWS*2+1, VLO=TCOLS*2+1;                    // 3° steps: 49 lat rows × 121 lon cols
+  var _cosLa=new Float64Array(VLA), _sinLa=new Float64Array(VLA);
+  (function(){for(var li=0;li<VLA;li++){var la=(li*3-72)*PI/180;_cosLa[li]=Math.cos(la);_sinLa[li]=Math.sin(la);}})();
+  var _vsx=new Float32Array(VLA*VLO), _vsy=new Float32Array(VLA*VLO), _vz=new Float32Array(VLA*VLO);
+  function computeVGrid(){
+    var cp=Math.cos(pitch), sp=Math.sin(pitch), lo, li, i;
+    for(lo=0;lo<VLO;lo++){var ang=((lo*3-180)+yaw)*PI/180, sLo=Math.sin(ang), cLo=Math.cos(ang);
+      for(li=0;li<VLA;li++){var x=_cosLa[li]*sLo, y=_sinLa[li], z=_cosLa[li]*cLo;
+        i=li*VLO+lo;_vsx[i]=cx+x*R;_vsy[i]=cy-(y*cp-z*sp)*R;_vz[i]=y*sp+z*cp;}}
+  }
+  function tileVerts(ti,tj){                           // 8 boundary vertex ids, or null if behind the limb
+    var b=tj*2*VLO+ti*2, m=b+VLO, t=m+VLO;
+    var ids=[b,b+1,b+2,m+2,t+2,t+1,t,m], mz=1;
+    for(var i=0;i<8;i++)if(_vz[ids[i]]<mz)mz=_vz[ids[i]];
+    return mz>0.005?ids:null;}
+  function addQuad(ids){ctx.moveTo(_vsx[ids[0]],_vsy[ids[0]]);for(var i=1;i<8;i++)ctx.lineTo(_vsx[ids[i]],_vsy[ids[i]]);ctx.closePath();}
+  var hoverTile=null;
+  // the tile layer is the raster-heavy part (~750 quads) — render it to an offscreen canvas every
+  // few frames and blit in between; markers, labels and trade pulses stay at full frame rate
+  var TILE_OS=document.createElement('canvas'), _tileTick=0;
+  function tilesDirty(){_tileTick=0;}
+  function renderTileLayer(){
+    if(TILE_OS.width!==canvas.width||TILE_OS.height!==canvas.height){TILE_OS.width=canvas.width;TILE_OS.height=canvas.height;}
+    var main=ctx;ctx=TILE_OS.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+    fillSphere();clipSphere();drawRegions();ctx.restore();
+    ctx=main;
+  }
+  function drawRegions(){
+    if(!NET)buildNetwork();
+    computeVGrid();
+    var landQ=[],waterQ=[],ti,tj,k,q;
+    for(tj=0;tj<TROWS;tj++)for(ti=0;ti<TCOLS;ti++){
+      if(_vz[(tj*2+1)*VLO+ti*2+1]<=0.005)continue;     // cull by the tile's centre vertex
+      q=tileVerts(ti,tj);if(!q)continue;
+      (landTile(ti,tj)?landQ:waterQ).push(q);
+    }
+    ctx.save();
+    ctx.beginPath();for(k=0;k<waterQ.length;k++)addQuad(waterQ[k]);ctx.fillStyle=P.water;ctx.fill();   // batched: 2 fills + 1 stroke for the whole grid
+    ctx.beginPath();for(k=0;k<landQ.length;k++)addQuad(landQ[k]);ctx.fillStyle=P.land;ctx.fill();
+    ctx.beginPath();for(k=0;k<waterQ.length;k++)addQuad(waterQ[k]);for(k=0;k<landQ.length;k++)addQuad(landQ[k]);
+    ctx.strokeStyle=P.grat;ctx.lineWidth=0.7;ctx.stroke();
+    for(k in NET.regionCities){var rc=k.split(','),t2=tileVerts(+rc[0],+rc[1]);if(!t2)continue;   // regions holding cities: tinted
+      var you=NET.regionCities[k].some(function(o){return o.you;});
+      ctx.beginPath();addQuad(t2);ctx.fillStyle=you?'rgba(46,105,44,.30)':'rgba(63,124,180,.30)';ctx.fill();}
+    ctx.setLineDash([5,4]);
+    for(k in NET.regionAvail){var ra=k.split(','),t3=tileVerts(+ra[0],+ra[1]);if(!t3)continue;    // regions with open plots: dashed
+      ctx.beginPath();addQuad(t3);ctx.fillStyle='rgba(95,154,90,.12)';ctx.fill();
+      ctx.strokeStyle='rgba(46,105,44,.85)';ctx.lineWidth=1.4;ctx.stroke();}
+    ctx.setLineDash([]);
+    if(hoverTile){var hh=hoverTile.split(','),t4=tileVerts(+hh[0],+hh[1]);
+      if(t4){ctx.beginPath();addQuad(t4);ctx.strokeStyle='rgba(24,34,48,.85)';ctx.lineWidth=1.8;ctx.stroke();}}
+    ctx.restore();
+  }
+  // region names + hover tooltip
+  var RN_A=['Harrow','Cedar','Basalt','Meridian','Alder','Quarry','Fallow','Beacon','Gable','Larkspur','Slate','Juniper','Vantage','Cobble','Hollow','Terrace'];
+  var RN_B=['Reach','Shelf','Plateau','Basin','Expanse','Flats','Highlands','Verge','Crossing','Steppe','Downs','Fold','March','Rise','Weald','Span'];
+  function regionName(ti,tj){var h=(((ti*73856093)^(tj*19349663))>>>0);h=((h^(h>>>13))*1274126177)>>>0;
+    return RN_A[h%RN_A.length]+' '+RN_B[(h>>>4)%RN_B.length];}
+  var _tipSpec={};
+  function regionInfo(ti,tj){var k=ti+','+tj;
+    var spec=_tipSpec[k];if(!spec){var c=tileCenter(ti,tj);spec=_tipSpec[k]=siteSpec(c.lat,c.lon);}
+    return {name:regionName(ti,tj),spec:spec,cities:NET.regionCities[k]||[],open:NET.regionAvail[k]||0};}
+  var rtip=document.getElementById('rtip');
+  function showTip(e,ti,tj){if(!rtip)return;var inf=regionInfo(ti,tj);
+    rtip.innerHTML='<b>'+inf.name+'</b><br>'+inf.spec+'<br>'
+      +(inf.cities.length?inf.cities.length+(inf.cities.length>1?' cities':' city')+' · ':'')
+      +(inf.open?'<b>'+inf.open+' plot'+(inf.open>1?'s':'')+' open</b> — click to claim':(inf.cities.length?'no open plots':'beyond the frontier — no open plots'));
+    rtip.style.left=(e.clientX+14)+'px';rtip.style.top=(e.clientY+12)+'px';rtip.hidden=false;}
+  function hideTip(){if(rtip)rtip.hidden=true;}
+  // region view: the plot grid — claim an open plot, visit a city, or see what's locked
+  var rcard=document.getElementById('rcard');
+  function openRegion(ti,tj){
+    var inf=regionInfo(ti,tj);
+    document.getElementById('rc-name').textContent=inf.name;
+    document.getElementById('rc-msg').innerHTML=inf.spec+'<br>'
+      +(inf.open?'<b>'+inf.open+' plot'+(inf.open>1?'s':'')+'</b> open to claim — new cities must border the megacity network.'
+                :'No open plots here — this region is beyond the frontier for now.');
+    var grid=document.getElementById('rc-plots');grid.innerHTML='';
+    for(var py=PLOTS-1;py>=0;py--)for(var px=0;px<PLOTS;px++){   // north row first
+      var pi=ti*PLOTS+px,pj=tj*PLOTS+py,k=pi+','+pj,o=NET.occ[k],a=NET.avail[k];
+      var cell=document.createElement('button');cell.type='button';cell.className='plot';
+      if(o){cell.classList.add(o.you?'you':'city');cell.textContent=o.you?'◉':'●';
+        cell.title=o.you?'Your city — click to build':(o.city.name+' — click for details');
+        (function(o){cell.addEventListener('click',function(){rcard.classList.remove('on');
+          if(o.you){var pp=proj(CITIES[0].lat,CITIES[0].lon);startDive(pp.sx,pp.sy,CITIES[0]);}
+          else showNeighbour(o.city);});})(o);}
+      else if(a){cell.classList.add('open');cell.textContent='+';
+        cell.title='Open plot — claim it (borders '+a.hub+')';
+        (function(pi,pj,a,inf){cell.addEventListener('click',function(){rcard.classList.remove('on');
+          var cc=plotCenter(pi,pj);foundHere({lat:cc.lat,lon:cc.lon},a.hub,inf.name);});})(pi,pj,a,inf);}
+      else{cell.classList.add('locked');cell.title='Beyond the frontier — a new city must border the network';}
+      grid.appendChild(cell);}
+    rcard.classList.add('on');
+  }
+  document.getElementById('rc-close').addEventListener('click',function(){rcard.classList.remove('on');});
+  rcard.addEventListener('click',function(e){if(e.target.id==='rcard')rcard.classList.remove('on');});
+  var wtoastEl=document.getElementById('wtoast'), wtoastT=0;
+  function showWToast(html){if(!wtoastEl)return;
+    wtoastEl.innerHTML=html;
+    wtoastEl.classList.add('on');clearTimeout(wtoastT);wtoastT=setTimeout(function(){wtoastEl.classList.remove('on');},3200);}
 
   // ---- projection (orthographic) ----
   function proj(lat,lon){
@@ -197,34 +355,19 @@
   }
 
   function fillSphere(){
-    // base disc with soft volume shading
+    // base disc with soft volume shading — reads as polar seas beyond the tiled band
     var g=ctx.createRadialGradient(cx-R*0.35,cy-R*0.4,R*0.2, cx,cy,R*1.05);
-    g.addColorStop(0,P.ocean); g.addColorStop(1, shade(P.ocean,-18));
+    g.addColorStop(0,P.water); g.addColorStop(1, shade(P.water,-18));
     ctx.beginPath(); ctx.arc(cx,cy,R,0,6.2832); ctx.fillStyle=g; ctx.fill();
   }
   function shade(hex,amt){var n=parseInt(hex.slice(1),16),r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt;
     r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));return 'rgb('+r+','+g+','+b+')';}
 
   function clipSphere(){ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.clip();}
-  function drawLand(){
-    for(var i=0;i<LAND.length;i++){var L=LAND[i],p=proj(L.lat,L.lon);if(p.z<=0)continue;
-      var sc=0.4+0.6*p.z, rad=L.r*(R/220)*sc;
-      ctx.fillStyle=P.land; ctx.globalAlpha=0.9*Math.min(1,p.z*1.4);
-      ctx.beginPath(); ctx.ellipse(p.sx,p.sy,rad*1.15,rad*0.85,0,0,6.2832); ctx.fill();
-    }
-    ctx.globalAlpha=1;
-  }
   function drawArc(pts){ // stroke only between consecutive front-facing samples
     var started=false;
     for(var i=0;i<pts.length;i++){var q=pts[i];
       if(q.z>0.02){ if(!started){ctx.moveTo(q.sx,q.sy);started=true;} else ctx.lineTo(q.sx,q.sy);} else started=false;}
-  }
-  function graticule(){
-    ctx.lineWidth=1; var lat,lon,pts;
-    for(lat=-75;lat<=75;lat+=15){pts=[];for(lon=0;lon<=360;lon+=4)pts.push(proj(lat,lon));
-      ctx.beginPath();ctx.strokeStyle=(lat===0)?P.gratMaj:P.grat;drawArc(pts);ctx.stroke();}
-    for(lon=0;lon<360;lon+=15){pts=[];for(lat=-88;lat<=88;lat+=3)pts.push(proj(lat,lon));
-      ctx.beginPath();ctx.strokeStyle=(lon%45===0)?P.gratMaj:P.grat;drawArc(pts);ctx.stroke();}
   }
   function rim(){ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.lineWidth=2;ctx.strokeStyle=P.rim;ctx.stroke();}
 
@@ -245,8 +388,8 @@
     list.forEach(function(p,k){
       if(typeof p.lat!=='number'||typeof p.lon!=='number')return;
       var pts=greatCircle(p,CITIES[0],52);          // partner → your city, so the pulse flows toward you
-      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(95,190,110,.30)';ctx.lineWidth=6;ctx.stroke();   // soft glow
-      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(74,170,96,.92)';ctx.lineWidth=2;ctx.stroke();     // core line
+      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=6;ctx.stroke();    // soft glow (light, so the route reads on green land)
+      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(38,110,52,.95)';ctx.lineWidth=2;ctx.stroke();     // core line
       var f=((t/2100)+k*0.28)%1, i0=Math.floor(f*(pts.length-1)), pt=pts[i0];                              // goods in transit (staggered per route)
       if(pt&&pt.z>0.03){ctx.globalAlpha=Math.min(1,pt.z*2.2);ctx.beginPath();ctx.arc(pt.sx,pt.sy,3.4,0,6.2832);ctx.fillStyle='#EAF7ED';ctx.fill();ctx.globalAlpha=1;}
     });
@@ -301,15 +444,23 @@
   var mode='world', divT=0, zx=0, zy=0, navigated=false, movedDist=0;
   function clamp(v){return Math.max(-1.2,Math.min(1.2,v));}
   function sxy(e){var r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
-  function hittest(x,y){var best=null,bd=1e9;for(var i=0;i<CITIES.length;i++){var c=CITIES[i],p=proj(c.lat,c.lon);if(p.z<=0.06)continue;var rad=(c.you?7:5)*(0.7+0.5*p.z)+9,d=Math.hypot(p.sx-x,p.sy-y);if(d<rad&&d<bd){bd=d;best=c;}}return best;}
+  function hittest(x,y){var best=null,bd=1e9;for(var i=0;i<CITIES.length;i++){var c=CITIES[i],p=proj(c.lat,c.lon);if(p.z<=0.06)continue;var rad=(c.you?7:(3.4+grownTier(c)*0.7))*(0.7+0.5*p.z)+9,d=Math.hypot(p.sx-x,p.sy-y);if(d<rad&&d<bd){bd=d;best=c;}}return best;}   // radius matches the drawn (grown-tier) marker
   function down(e){if(mode!=='world')return;dragging=true;idleT=0;lastX=e.clientX;lastY=e.clientY;movedDist=0;canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);}
   function move(e){var s=sxy(e);
-    if(dragging){var dx=e.clientX-lastX,dy=e.clientY-lastY;movedDist+=Math.abs(dx)+Math.abs(dy);yaw+=dx*0.35;pitch=clamp(pitch+dy*0.006);lastX=e.clientX;lastY=e.clientY;}
-    else if(mode==='world'){canvas.style.cursor=hittest(s.x,s.y)?'pointer':(unproj(s.x,s.y)?'crosshair':'grab');}}
+    if(dragging){var dx=e.clientX-lastX,dy=e.clientY-lastY;movedDist+=Math.abs(dx)+Math.abs(dy);yaw+=dx*0.35;pitch=clamp(pitch+dy*0.006);lastX=e.clientX;lastY=e.clientY;hoverTile=null;hideTip();}
+    else if(mode==='world'){var loc=unproj(s.x,s.y),t=loc&&tileOf(loc.lat,loc.lon);
+      if(!NET)buildNetwork();
+      var land=!!(t&&landTile(t.ti,t.tj)), nh=land?t.key:null;
+      if(nh!==hoverTile){hoverTile=nh;tilesDirty();}                       // highlight + tooltip for the land square under the cursor
+      if(land)showTip(e,t.ti,t.tj);else hideTip();
+      canvas.style.cursor=hittest(s.x,s.y)?'pointer':land?'pointer':'grab';}}
   function up(e){if(!dragging)return;dragging=false;if(mode!=='world')return;
     if(movedDist<5){var s=sxy(e),c=hittest(s.x,s.y);
-      if(c){if(c.you)startDive(s.x,s.y,c);else showNeighbour(c);}
-      else{var loc=unproj(s.x,s.y);if(loc)foundHere(loc);}}}    // empty click → found your city here
+      if(c){hideTip();if(c.you)startDive(s.x,s.y,c);else showNeighbour(c);return;}
+      var loc=unproj(s.x,s.y);if(!loc)return;
+      var t=tileOf(loc.lat,loc.lon);if(!NET)buildNetwork();
+      if(t&&landTile(t.ti,t.tj)){hideTip();openRegion(t.ti,t.tj);}         // land square → open the Region and its plots
+      else if(t)showWToast('🌊 Open ocean <b>— cities settle on land squares</b>');}}
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
 
   var diveCity=null;
@@ -317,13 +468,14 @@
   var fadeEl=document.getElementById('fade');
   var ncVisitCity=null;
   // trade partners (shared with the builder via localStorage): route your exports to AI neighbours — up to a small network
-  var MAX_PARTNERS=4;
-  function getPartners(){try{
+  var MAX_PARTNERS=4, partnersCache=null;                 // cached — drawTradeLink runs every frame, don't re-parse storage
+  function getPartners(){if(partnersCache)return partnersCache;try{
     var raw=localStorage.getItem('mdg-trade-partners');var list=raw?JSON.parse(raw):null;
     if(!list){var old=localStorage.getItem('mdg-trade-partner');if(old){var o=JSON.parse(old);list=o?[o]:[];}}  // migrate single-partner key
-    return Array.isArray(list)?list.filter(function(p){return p&&typeof p.lat==='number'&&typeof p.lon==='number';}):[];
-  }catch(e){return [];}}
-  function setPartners(list){try{localStorage.setItem('mdg-trade-partners',JSON.stringify(list));localStorage.removeItem('mdg-trade-partner');}catch(e){}}
+    partnersCache=Array.isArray(list)?list.filter(function(p){return p&&typeof p.lat==='number'&&typeof p.lon==='number';}):[];
+  }catch(e){partnersCache=[];}return partnersCache;}
+  function setPartners(list){partnersCache=list;try{localStorage.setItem('mdg-trade-partners',JSON.stringify(list));localStorage.removeItem('mdg-trade-partner');}catch(e){}}
+  window.addEventListener('storage',function(e){if(!e.key||e.key==='mdg-trade-partners')partnersCache=null;});   // another tab changed partners → re-read
   function isPartner(c){return getPartners().some(function(p){return Math.abs(p.lat-c.lat)<1e-6&&Math.abs(p.lon-c.lon)<1e-6;});}
   function updateTradeBtn(c){var b=document.getElementById('nc-trade');if(!b)return;
     var n=getPartners().length;
@@ -351,9 +503,11 @@
 
   // found / relocate your city at a clicked spot — moves the marker, saves it, offers to build there
   var fcard=document.getElementById('fcard');
-  function foundHere(loc){
-    CITIES[0].lat=loc.lat;CITIES[0].lon=loc.lon;saveHome();
-    document.getElementById('fc-msg').innerHTML='<b>'+siteSpec(loc.lat,loc.lon)+'</b><br>Your terrain — and what you can make cheaply — is set by where you settle. Drop in and build, or keep looking for a site that suits your strategy.';
+  function foundHere(loc,hub,region){
+    CITIES[0].lat=loc.lat;CITIES[0].lon=loc.lon;saveHome();NET=null;hoverTile=null;tilesDirty();   // your plot moved → rebuild the claim network
+    document.getElementById('fc-msg').innerHTML='<b>'+siteSpec(loc.lat,loc.lon)+'</b><br>'
+      +(hub?'Claims an open plot'+(region?' of <b>'+region+'</b>':'')+', bordering the <b>'+hub+'</b> network — trade reaches you from day one. ':'')
+      +'Your terrain — and what you can make cheaply — is set by where you settle. Drop in and build, or keep looking.';
     fcard.classList.add('on');
   }
   document.getElementById('fc-build').addEventListener('click',function(){fcard.classList.remove('on');var p=proj(CITIES[0].lat,CITIES[0].lon);startDive(p.sx,p.sy,CITIES[0]);});
@@ -369,8 +523,9 @@
     if(mode==='diving'){divT+=dt/0.8;var z=1+11*(divT*divT);ctx.translate(zx,zy);ctx.scale(z,z);ctx.translate(-zx,-zy);
       if(fadeEl)fadeEl.style.opacity=Math.min(1,divT*1.25);
       if(divT>=1&&!navigated){navigated=true;var u='../';if(diveCity){u='../?lat='+encodeURIComponent(diveCity.lat)+'&lon='+encodeURIComponent(diveCity.lon)+'&name='+encodeURIComponent(diveCity.name);if(!diveCity.you)u+='&ai=1&tier='+grownTier(diveCity);}window.location.href=u;}}
-    fillSphere();
-    clipSphere(); drawLand(); graticule(); drawTradeLink(now); ctx.restore();
+    if(--_tileTick<=0){renderTileLayer();_tileTick=3;}   // heavy tile raster at ~1/3 frame rate
+    ctx.drawImage(TILE_OS,0,0,W,H);
+    clipSphere(); drawTradeLink(now); ctx.restore();
     rim();
     drawCities(now);
     if(mode!=='diving')surfaceInset();
@@ -378,7 +533,8 @@
   }
 
   // legend swatches
-  function paintLegend(){document.getElementById('lg-you').style.background=P.you;document.getElementById('lg-them').style.background=P.them[0];}
+  function paintLegend(){document.getElementById('lg-you').style.background=P.you;document.getElementById('lg-them').style.background=P.them[0];
+    var f=document.getElementById('lg-frontier');if(f){f.style.background='rgba(82,133,182,.14)';f.style.boxShadow='none';f.style.border='1.5px dashed #5285B6';f.style.borderRadius='3px';}}
 
   readTheme(); paintLegend();
   window.addEventListener('resize',resize); resize();
