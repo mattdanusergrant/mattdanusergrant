@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Moss Dapple Grove</title>
-<meta name="description" content="A cozy grove-restoration game for desktop. Play a Moss Druid: clear the overgrown thicket, then beautify the land with real plants and little structures — and befriend the grove's pets. Keyboard & mouse.">
+<meta name="description" content="A cozy northbound expedition game for desktop. Play a Moss Druid: set out from your lakeside outpost, clear the thicket, build roads and camps, and claim each pond as a checkpoint on the long journey north — beautifying the land and befriending pets as you go. Keyboard & mouse.">
 <meta name="theme-color" content="#243318">
 <link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/mossdapplegrove/">
 <style>
@@ -18,12 +18,16 @@
     text-shadow:0 1px 3px rgba(0,0,0,.55);display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
   #rank{font-size:17px;font-weight:600;letter-spacing:.3px}
   #rank small{display:block;font-size:11px;font-weight:400;opacity:.72;letter-spacing:.06em;text-transform:uppercase;font-family:system-ui,sans-serif}
-  #res{font-family:system-ui,sans-serif;font-size:15px;font-weight:600;text-align:right;white-space:nowrap}
+  #biome{font-size:12px;opacity:.85;font-family:system-ui,sans-serif;margin-top:4px;letter-spacing:.03em}
+  #right{text-align:right}
+  #res{font-family:system-ui,sans-serif;font-size:15px;font-weight:600;white-space:nowrap}
   #res span{margin-left:14px}
-  #beautywrap{margin-top:7px;width:190px;margin-left:auto}
-  #beautylab{font-size:11px;opacity:.8;font-family:system-ui,sans-serif;letter-spacing:.04em;text-align:right}
-  #beautybar{margin-top:3px;height:6px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
-  #beautyfill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#8fd06a,#e9d27a,#f0b6d8);transition:width .5s ease}
+  .meter{margin-top:7px;width:190px;margin-left:auto}
+  .mlab{font-size:11px;opacity:.8;font-family:system-ui,sans-serif;letter-spacing:.04em;text-align:right}
+  .mbar{margin-top:3px;height:6px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
+  .mfill{height:100%;width:0;border-radius:99px;transition:width .4s ease}
+  #waterfill{background:linear-gradient(90deg,#4fa8d8,#8fd8f0)}
+  #beautyfill{background:linear-gradient(90deg,#8fd06a,#e9d27a,#f0b6d8)}
   /* ── bottom toolbar ── */
   #bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:20;
     display:flex;gap:10px;align-items:flex-end;font-family:system-ui,sans-serif}
@@ -36,7 +40,7 @@
   .tool .key{position:absolute;margin-top:-42px;margin-left:-6px;font-size:9px;opacity:.55;background:rgba(0,0,0,.4);border-radius:4px;padding:0 3px}
   /* palette (plants / structures) */
   #palette{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:20;display:none;
-    max-width:min(96vw,760px);flex-wrap:wrap;gap:8px;justify-content:center;font-family:system-ui,sans-serif}
+    max-width:min(96vw,780px);flex-wrap:wrap;gap:8px;justify-content:center;font-family:system-ui,sans-serif}
   #palette.on{display:flex}
   .pitem{background:rgba(20,28,12,.9);border:1.5px solid rgba(255,255,255,.14);border-radius:12px;
     padding:7px 11px 6px;cursor:pointer;display:flex;align-items:center;gap:9px;color:#eaf3da;transition:.12s;min-width:150px}
@@ -48,25 +52,27 @@
   .pitem .nm{font-size:13px;font-weight:600}
   .pitem .meta{font-size:11px;opacity:.72;margin-top:1px}
   .pitem .cost{font-size:12px;font-weight:700;white-space:nowrap}
-  .fit{font-weight:600}.fit.love{color:#9fe07a}.fit.ok{color:#e6c76a}.fit.bad{color:#e79a86}
-  /* toast + hint */
+  /* toast + tip */
   #toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);z-index:30;
     background:rgba(28,38,18,.94);color:#eef4e2;padding:10px 18px;border-radius:99px;font-size:14px;
     font-family:system-ui,sans-serif;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;text-align:center}
   #toast.on{opacity:1;transform:translateX(-50%)}
   #tip{position:fixed;left:16px;bottom:14px;z-index:15;font-family:system-ui,sans-serif;font-size:12px;
-    opacity:.72;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.6);line-height:1.5;max-width:230px}
+    opacity:.72;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.6);line-height:1.5;max-width:240px}
   #tip b{color:#cfe6a2}
+  /* parched flash */
+  #parch{position:fixed;inset:0;z-index:40;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(214,178,120,0),rgba(150,110,60,.75));opacity:0;transition:opacity .8s}
+  #parch.on{opacity:1}
   /* intro overlay */
   #intro{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(120% 120% at 50% 30%,rgba(40,54,26,.86),rgba(14,20,10,.94))}
   #intro.off{display:none}
-  #panel{max-width:520px;margin:16px;background:linear-gradient(#f3efe0,#e7e2cf);color:#33402a;
+  #panel{max-width:560px;margin:16px;background:linear-gradient(#f3efe0,#e7e2cf);color:#33402a;
     border-radius:20px;padding:26px 26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
   #panel h1{margin:0 0 4px;font-size:26px}
-  #panel .tag{margin:0 0 16px;font-size:14px;color:#6a7358;font-family:system-ui,sans-serif}
-  #panel ul{margin:0 0 18px;padding-left:2px;list-style:none;font-family:system-ui,sans-serif;font-size:14px;color:#4a5540}
-  #panel li{margin:7px 0;display:flex;gap:10px;align-items:baseline}
+  #panel .tag{margin:0 0 14px;font-size:14px;color:#6a7358;font-family:system-ui,sans-serif;line-height:1.45}
+  #panel ul{margin:0 0 16px;padding-left:2px;list-style:none;font-family:system-ui,sans-serif;font-size:13.5px;color:#4a5540}
+  #panel li{margin:6px 0;display:flex;gap:10px;align-items:baseline}
   #panel .k{font-family:ui-monospace,monospace;background:#dfd9c4;border:1px solid #c9c2a8;border-radius:6px;
     padding:1px 7px;font-size:12px;color:#3a4230;white-space:nowrap;flex-shrink:0;min-width:74px;text-align:center}
   #go{display:block;width:100%;padding:13px;border:none;border-radius:13px;cursor:pointer;
@@ -78,30 +84,36 @@
 <canvas id="scene"></canvas>
 
 <div id="hud">
-  <div id="rank">Sprout-tender<small>Moss Druid path</small></div>
   <div>
+    <div id="rank">Sprout-tender<small>Moss Druid path</small></div>
+    <div id="biome">Home Grove</div>
+  </div>
+  <div id="right">
     <div id="res"><span>🪵 <b id="mat">0</b></span><span>✦ <b id="light">0</b></span></div>
-    <div id="beautywrap"><div id="beautylab">grove beauty</div><div id="beautybar"><div id="beautyfill"></div></div></div>
+    <div class="meter"><div class="mlab" id="waterlab">💧 waterskin</div><div class="mbar"><div class="mfill" id="waterfill"></div></div></div>
+    <div class="meter"><div class="mlab">grove beauty</div><div class="mbar"><div class="mfill" id="beautyfill"></div></div></div>
   </div>
 </div>
 
 <div id="palette"></div>
 <div id="bar"></div>
-<div id="tip"><b>WASD</b>/arrows move · <b>Move mouse</b> to aim · <b>Click</b> to act · <b>1–4</b> tools · <b>E</b> pet nearby</div>
+<div id="tip"><b>WASD</b> move · <b>click</b> to act · <b>1–4</b> tools · <b>E</b> pet · <b>T</b> travel between outposts · watch your <b>💧</b> — roads &amp; camps stretch it</div>
 <div id="toast"></div>
+<div id="parch"></div>
 
 <div id="intro">
   <div id="panel">
     <h1>Moss Dapple Grove</h1>
-    <p class="tag">You are a Moss Druid. This grove has gone to thicket. Clear it, then wake it back to beauty — plant by plant, stone by stone. Nothing here can die; it only sleeps.</p>
+    <p class="tag">You are a Moss Druid at a small lakeside outpost — the last green place. Everything north has gone to thicket. Venture north, clear the way, and wake the land back to beauty. Your waterskin only carries so far: <b>build roads</b> to travel light, <b>pitch supply camps</b> between waters, and <b>claim every pond you find as a new outpost</b> on the road to the far-north Wellspring. Nothing here can die; it only sleeps.</p>
     <ul>
-      <li><span class="k">W A S D</span><span>walk the grove (arrows work too)</span></li>
-      <li><span class="k">mouse</span><span>aim at the tile you want — a ring shows your reach</span></li>
-      <li><span class="k">click</span><span>clear thicket · sow a plant · place a structure</span></li>
+      <li><span class="k">W A S D</span><span>walk (arrows too) — moving drinks from your waterskin</span></li>
+      <li><span class="k">click</span><span>clear thicket · sow a plant · place a structure (mouse aims)</span></li>
       <li><span class="k">1 2 3 4</span><span>Clear · Plant · Build · Tend tools</span></li>
-      <li><span class="k">E</span><span>pet a grove-creature standing beside you</span></li>
+      <li><span class="k">💧</span><span>refill at any lake or pond — roads drain far less, camps resupply you</span></li>
+      <li><span class="k">⛺</span><span>build an <b>Outpost</b> beside a pond → checkpoint + bigger waterskin</span></li>
+      <li><span class="k">E · T</span><span>pet a creature · travel between your outposts</span></li>
     </ul>
-    <button id="go">Enter the grove →</button>
+    <button id="go">Set out north →</button>
   </div>
 </div>
 
@@ -114,15 +126,28 @@ const fract=x=>x-Math.floor(x);
 const now=()=>Date.now();
 
 // ── world constants ─────────────────────────────────────────────────────────
-const COLS=34, ROWS=24, TS=52;           // grove size in tiles, tile px
+const COLS=26, ROWS=220, TS=52;          // a narrow grove that runs FAR north
 const WW=COLS*TS, WH=ROWS*TS;
 const REACH=2.4;                         // how far (tiles) the druid can act
+const northOf=y=>ROWS-1-y;               // "northness" 0 (south / home) → 219
+
+// biomes, south → north
+const BIOMES=[
+  {n:0,  nm:'Home Grove', g0:'#6f6046',g1:'#5b5238',th:'#2c3a1d',d:.60,sun:0,   brush:['bramble','weed','leaves','log','rock']},
+  {n:30, nm:'Sunmeadow',  g0:'#7d7a44',g1:'#6b683a',th:'#55571f',d:.50,sun:.3,  brush:['grass','weed','grass','log','rock']},
+  {n:65, nm:'Birchwood',  g0:'#6d6a48',g1:'#5c5a3e',th:'#3a4424',d:.62,sun:0,   brush:['leaves','bramble','leaves','log','rock']},
+  {n:100,nm:'The Fen',    g0:'#565c3b',g1:'#474d31',th:'#2e3620',d:.68,sun:-.35,brush:['reeds','weed','reeds','log','rock']},
+  {n:140,nm:'Pinereach',  g0:'#55604f',g1:'#475342',th:'#26362a',d:.64,sun:-.15,brush:['pine','bramble','pine','log','rock']},
+  {n:180,nm:'Frostfell',  g0:'#aebfc4',g1:'#98aab1',th:'#7e939c',d:.54,sun:0,   brush:['frost','pine','frost','ice','rock']},
+  {n:212,nm:'The Crown',  g0:'#c8d6e6',g1:'#b2c4da',th:'#8ea6c0',d:.32,sun:0,   brush:['ice','frost']},
+];
+function biomeAt(n){let b=BIOMES[0];for(const x of BIOMES)if(n>=x.n)b=x;return b;}
 
 // light system — the "Dapple" pillar
 const LIGHTS={sun:0,dapple:1,shade:2};
 const LCOL={sun:'#f2c14e',dapple:'#8fce63',shade:'#5f86a0'};
 const LNAME={sun:'full sun',dapple:'dappled shade',shade:'deep shade'};
-const GROW_MULT=[1,1.9,3.4];             // grow-time multiplier by light mismatch
+const GROW_MULT=[1,1.9,3.4];
 
 // plants: real species, real light needs. cost ✦ grove-light.
 const PLANTS=[
@@ -136,99 +161,127 @@ const PLANTS=[
 ];
 const P=Object.fromEntries(PLANTS.map(p=>[p.id,p]));
 
-// structures: pure beautification. cost 🪵 materials.
+// structures. cost 🪵 materials. road + camp + outpost are the expedition kit.
 const STRUCTS=[
-  {id:'path',    nm:'Stone path', em:'🪨', cost:2,  beauty:1,  walk:true,  blurb:'a mossy stepping stone'},
-  {id:'lantern', nm:'Lantern',    em:'🏮', cost:8,  beauty:4,  walk:true,  light:true, blurb:'glows at dusk'},
-  {id:'planter', nm:'Flower box', em:'🪴', cost:6,  beauty:3,  walk:true,  blurb:'a cheerful potted bloom'},
-  {id:'bench',   nm:'Bench',      em:'🪑', cost:10, beauty:5,  walk:false, blurb:'a place to rest — cats love it'},
-  {id:'arch',    nm:'Rose arch',  em:'🌸', cost:14, beauty:6,  walk:true,  blurb:'a blossoming trellis'},
-  {id:'lamp',    nm:'Toadstool',  em:'🍄', cost:5,  beauty:2,  walk:true,  blurb:'a fairy-ring mushroom'},
-  {id:'statue',  nm:'Mossy stone',em:'🗿', cost:12, beauty:5,  walk:false, blurb:'an ancient carved guardian'},
-  {id:'pond',    nm:'Pond',       em:'💧', cost:16, beauty:7,  walk:false, water:true, blurb:'still water — frogs move in'},
+  {id:'road',    nm:'Road stone', em:'🪨', cost:2,  beauty:1, walk:true,  blurb:'walk faster, drink far less'},
+  {id:'camp',    nm:'Supply camp',em:'⛺', cost:12, beauty:2, walk:false, blurb:'resupplies your waterskin'},
+  {id:'outpost', nm:'Outpost',    em:'🏕️', cost:25, beauty:5, walk:false, blurb:'build beside a pond — checkpoint'},
+  {id:'lantern', nm:'Lantern',    em:'🏮', cost:8,  beauty:4, walk:true,  light:true, blurb:'glows at dusk'},
+  {id:'planter', nm:'Flower box', em:'🪴', cost:6,  beauty:3, walk:true,  blurb:'a cheerful potted bloom'},
+  {id:'bench',   nm:'Bench',      em:'🪑', cost:10, beauty:5, walk:false, blurb:'a place to rest — cats love it'},
+  {id:'arch',    nm:'Rose arch',  em:'🌸', cost:14, beauty:6, walk:true,  blurb:'a blossoming trellis'},
+  {id:'toadstool',nm:'Toadstool', em:'🍄', cost:5,  beauty:2, walk:true,  blurb:'a fairy-ring mushroom'},
+  {id:'statue',  nm:'Mossy stone',em:'🗿', cost:12, beauty:5, walk:false, blurb:'an ancient carved guardian'},
 ];
 const ST=Object.fromEntries(STRUCTS.map(s=>[s.id,s]));
 
-// pets — appear as the grove grows lovely. befriend by standing close + E/click.
+// thicket brush — what clearing yields, varies by biome
+const BRUSH={
+  bramble:{em:'🌿',mat:1,label:'brambles'},
+  weed:   {em:'🥀',mat:1,label:'weeds'},
+  leaves: {em:'🍂',mat:1,label:'dead leaves'},
+  grass:  {em:'🌾',mat:1,label:'tall grass'},
+  reeds:  {em:'🌾',mat:1,label:'fen reeds'},
+  log:    {em:'🪵',mat:3,label:'fallen log'},
+  rock:   {em:'🪨',mat:2,label:'loose rock'},
+  pine:   {em:'🌲',mat:4,label:'fallen pine'},
+  frost:  {em:'❄️',mat:1,label:'frost brush'},
+  ice:    {em:'🧊',mat:2,label:'ice block'},
+};
+
+// pets — wander in near you as the grove grows lovely
 const PETS=[
-  {id:'rabbit', em:'🐇', nm:'a rabbit', at:8,  need:null,       hint:'hops in among the flowers'},
-  {id:'frog',   em:'🐸', nm:'a frog',   at:0,  need:'pond',     hint:'settles by your pond'},
-  {id:'cat',    em:'🐈', nm:'a cat',    at:0,  need:'bench',    hint:'claims your bench'},
-  {id:'fox',    em:'🦊', nm:'a fox',    at:22, need:null,       hint:'pads out of the ferns'},
-  {id:'hedgehog',em:'🦔',nm:'a hedgehog',at:34,need:null,       hint:'snuffles through the moss'},
-  {id:'deer',   em:'🦌', nm:'a deer',   at:52, need:null,       hint:'steps into the glade'},
-  {id:'owl',    em:'🦉', nm:'an owl',   at:70, need:null,       hint:'roosts as dusk falls'},
+  {id:'rabbit', em:'🐇', nm:'a rabbit',  at:8,  hint:'hops in among the flowers'},
+  {id:'frog',   em:'🐸', nm:'a frog',    at:0,  needOutpost:2, hint:'settles by your pond outpost'},
+  {id:'cat',    em:'🐈', nm:'a cat',     at:0,  needStruct:'bench', hint:'claims your bench'},
+  {id:'fox',    em:'🦊', nm:'a fox',     at:22, hint:'pads out of the ferns'},
+  {id:'hedgehog',em:'🦔',nm:'a hedgehog',at:34, hint:'snuffles through the moss'},
+  {id:'deer',   em:'🦌', nm:'a deer',    at:52, hint:'steps into the glade'},
+  {id:'owl',    em:'🦉', nm:'an owl',    at:70, hint:'roosts as dusk falls'},
 ];
 const RANKS=[[0,'Sprout-tender'],[16,'Grovekeeper'],[40,'Grove Warden'],[72,'Moss Druid']];
 
-// ── deterministic world gen ──────────────────────────────────────────────────
+// water survival
+const DRAIN_WILD=1.5, DRAIN_ROAD=0.45;   // 💧 per tile walked
+const SPD_WILD=4.6, SPD_ROAD=6.2;        // tiles per second
+const CAMP_COOLDOWN=90000;               // per-camp resupply cooldown ms
+
+// water features (all natural water; ponds are the checkpoints)
 function hash(x,y){ let h=x*374761393+y*668265263; h=(h^(h>>>13))*1274126177; return ((h^(h>>>16))>>>0)/4294967296; }
-function lightAt(x,y){ // smooth-ish light field → sun / dapple / shade
-  const n=0.5+0.5*Math.sin(x*0.55+Math.cos(y*0.4)*1.3)+0.4*hash(x,y);
-  return n<0.75?'shade':n<1.35?'dapple':'sun';
+const HOME={x:13,y:ROWS-5};
+const LAKE={x:8,y:ROWS-5,rx:2.4,ry:1.6,nm:'the Home Lake'};
+const PONDS=[36,72,108,146,184].map(n=>({x:5+Math.floor(hash(n,7)*(COLS-10)),y:ROWS-1-n,rx:1.7,ry:1.2,nm:'a pond'}));
+const WELL={x:13,y:ROWS-1-214,rx:2.6,ry:1.8,nm:'the Wellspring of the North'};
+const WATERS=[LAKE,...PONDS,WELL];
+const HOME_OUTPOST={x:HOME.x+2,y:HOME.y-1};
+
+// ── world gen (deterministic) ────────────────────────────────────────────────
+function lightAt(x,y,B){
+  const v=0.5+0.5*Math.sin(x*0.55+Math.cos(y*0.4)*1.3)+0.4*hash(x,y)+(B?B.sun:0);
+  return v<0.75?'shade':v<1.35?'dapple':'sun';
 }
 function genGrid(){
   const g=[];
-  const cx=COLS/2, cy=ROWS/2;
-  for(let y=0;y<ROWS;y++){ const row=[];
+  for(let y=0;y<ROWS;y++){ const row=[]; const B=biomeAt(northOf(y));
     for(let x=0;x<COLS;x++){
-      const d=Math.hypot(x-cx,y-cy);
-      const clearing=d<3.1;               // a small starting clearing at centre
-      const brushv=hash(x*3+1,y*7+2);
-      let t;
-      if(clearing){ t={ground:'soil',light:lightAt(x,y)}; }
-      else {
-        const brush = brushv<0.30?'bramble':brushv<0.52?'weed':brushv<0.70?'thorn':brushv<0.85?'log':'rock';
-        t={ground:'thicket',brush,light:lightAt(x,y)};
-      }
+      const t={light:lightAt(x,y,B)};
+      if(hash(x*3+1,y*7+2)<B.d){ t.ground='thicket'; t.brush=B.brush[Math.floor(hash(x*7+3,y*5+1)*B.brush.length)]; }
+      else t.ground='soil';
       row.push(t);
-    }
-    g.push(row);
+    } g.push(row); }
+  // carve waters + their clearings
+  for(const w of WATERS){
+    const cr=Math.max(w.rx,w.ry)+2.2;
+    for(let y=Math.max(0,Math.floor(w.y-cr));y<=Math.min(ROWS-1,Math.ceil(w.y+cr));y++)
+      for(let x=Math.max(0,Math.floor(w.x-cr));x<=Math.min(COLS-1,Math.ceil(w.x+cr));x++){
+        const dx=(x-w.x)/w.rx, dy=(y-w.y)/w.ry;
+        if(dx*dx+dy*dy<=1){ g[y][x]={ground:'soil',light:g[y][x].light,water:true}; }
+        else if(Math.hypot(x-w.x,y-w.y)<=cr && g[y][x].ground==='thicket'){ g[y][x]={ground:'soil',light:g[y][x].light}; }
+      }
   }
+  // home clearing + pre-built outpost
+  for(let y=HOME.y-3;y<=HOME.y+3;y++)for(let x=HOME.x-3;x<=HOME.x+3;x++){
+    const t=g[y]&&g[y][x]; if(t&&t.ground==='thicket'&&Math.hypot(x-HOME.x,y-HOME.y)<=3.2){g[y][x]={ground:'soil',light:t.light};}
+  }
+  g[HOME_OUTPOST.y][HOME_OUTPOST.x]={ground:'soil',light:g[HOME_OUTPOST.y][HOME_OUTPOST.x].light,struct:'outpost'};
   return g;
 }
-const BRUSH={ // clearing yields + look
-  bramble:{em:'🌿',mat:1,label:'brambles'},
-  weed:   {em:'🥀',mat:1,label:'weeds'},
-  thorn:  {em:'🍂',mat:1,label:'dead leaves'},
-  log:    {em:'🪵',mat:3,label:'fallen log'},
-  rock:   {em:'🪨',mat:2,label:'loose rock'},
-};
 
 // ── state / save ─────────────────────────────────────────────────────────────
-const KEY='mossdapplegrove.save.v2';
+const KEY='mossdapplegrove.save.v3';
 let S=load();
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY));
     if(s&&s.grid&&s.grid.length===ROWS&&s.grid[0].length===COLS) return s;}catch(e){}
   return {
     grid:genGrid(),
-    px:COLS/2, py:ROWS/2,          // player tile coords (float)
-    mat:6, light:14,
-    pets:{},                       // id -> {befriended, name, x, y}
+    px:HOME.x+0.5, py:HOME.y+0.5,
+    mat:8, light:14, water:100,
+    outposts:[{x:HOME_OUTPOST.x,y:HOME_OUTPOST.y}],
+    pets:{}, maxN:0, won:false,
     seen:{intro:false},
   };
 }
 let saveT=0;
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} }
-function saveSoon(){ const t=now(); if(t-saveT>800){saveT=t;save();} }
-
+function saveSoon(){ const t=now(); if(t-saveT>900){saveT=t;save();} }
 const tile=(x,y)=>S.grid[y] && S.grid[y][x];
+const cap=()=>100+10*(S.outposts.length-1);
 
 // ── derived: beauty, rank ─────────────────────────────────────────────────────
 function computeBeauty(){
   let b=0;
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
     const t=S.grid[y][x];
-    if(t.ground==='thicket') continue;
     if(t.plant){ const pl=P[t.plant.plant]; if(t.plant.blessed) b+=pl.beauty*(mismatch(pl,t)===0?1.5:1); }
     else if(t.struct){ b+=ST[t.struct].beauty; }
-    else b+=0.15; // even cleared ground is nicer than thicket
+    else if(t.cleared) b+=0.05;
   }
   return b;
 }
 let BEAUTY=0;
-const rankTitle=()=>{let t=RANKS[0][1];for(const[n,x]of RANKS)if(BEAUTY>=n)t=x;return t;};
+const rankTitle=()=>{ if(S.won) return 'Moss Druid of the North';
+  let t=RANKS[0][1];for(const[n,x]of RANKS)if(BEAUTY>=n)t=x;return t;};
 function mismatch(pl,t){return Math.abs(LIGHTS[pl.light]-LIGHTS[t.light]);}
 function growMs(cell,t){return P[cell.plant].grow*GROW_MULT[mismatch(P[cell.plant],t)]*1000;}
 function progress(cell,t){return clamp((now()-cell.at)/growMs(cell,t),0,1);}
@@ -242,7 +295,7 @@ const TOOLS=[
   {id:'tend',  nm:'Tend',  ic:'✋'},
 ];
 let tool='clear';
-let selPlant='moss', selStruct='path';
+let selPlant='moss', selStruct='road';
 
 function buildBar(){
   const bar=$('bar'); bar.innerHTML='';
@@ -287,6 +340,10 @@ function sync(){
   $('beautyfill').style.width=clamp(BEAUTY/RANKS[3][0]*100,0,100)+'%';
   saveSoon();
 }
+function syncWater(){
+  $('waterfill').style.width=clamp(S.water/cap()*100,0,100)+'%';
+  $('waterlab').textContent='💧 waterskin '+Math.ceil(S.water)+'/'+cap();
+}
 
 // ── camera / layout ───────────────────────────────────────────────────────────
 let W,H,DPR,cam={x:0,y:0};
@@ -309,12 +366,13 @@ addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(k>='1'&&k<='4'){ setTool(TOOLS[+k-1].id); return; }
   if(k==='e'){ tendNearestPet(); return; }
+  if(k==='t'){ travel(); return; }
   keys[k]=true;
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
 
-let mouse={x:-99,y:-99}, hover=null;   // hover = {x,y} tile
+let mouse={x:-99,y:-99}, hover=null;
 cv.addEventListener('mousemove',e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
 cv.addEventListener('mouseleave',()=>{mouse.x=-99;mouse.y=-99;});
 cv.addEventListener('click',()=>{ if(hover) act(hover.x,hover.y); });
@@ -334,7 +392,7 @@ function act(tx,ty){
 function doClear(tx,ty,t){
   if(t.ground!=='thicket'){ toast('Already cleared here'); return; }
   const b=BRUSH[t.brush];
-  S.grid[ty][tx]={ground:'soil',light:t.light};
+  S.grid[ty][tx]={ground:'soil',light:t.light,cleared:true};
   S.mat+=b.mat;
   const seed=hash(tx*5,ty*9)<0.16;
   if(seed) S.light+=3;
@@ -343,7 +401,7 @@ function doClear(tx,ty,t){
 }
 function doPlant(tx,ty,t){
   if(t.ground==='thicket'){ toast('Clear the thicket here first'); return; }
-  if(t.water){ toast("Can't plant in the pond"); return; }
+  if(t.water){ toast("Can't plant in the water"); return; }
   if(t.struct){ toast('Something is built here — Build tool to clear it'); return; }
   if(t.plant){ toast('Already growing here'); return; }
   const pl=P[selPlant];
@@ -354,19 +412,36 @@ function doPlant(tx,ty,t){
   toast(pl.em+' '+pl.nm+' sown — '+(m===0?'perfect light, it will thrive':m===1?'ok light':'wrong light, it will grow slowly'));
   sync();
 }
+function nearNatWater(tx,ty,r){
+  for(let y=ty-r;y<=ty+r;y++)for(let x=tx-r;x<=tx+r;x++){
+    const t=tile(x,y); if(t&&t.water) return true; }
+  return false;
+}
 function doBuild(tx,ty,t){
   if(t.ground==='thicket'){ toast('Clear the thicket here first'); return; }
+  if(t.water){ toast("Can't build on water"); return; }
   if(t.plant){ toast('A plant grows here'); return; }
   if(t.struct){ // remove (refund half)
-    const old=ST[t.struct]; delete t.struct; delete t.water;
+    if(t.struct==='outpost'){
+      if(tx===HOME_OUTPOST.x&&ty===HOME_OUTPOST.y){ toast('The home outpost anchors the grove'); return; }
+      S.outposts=S.outposts.filter(o=>!(o.x===tx&&o.y===ty));
+    }
+    const old=ST[t.struct]; delete t.struct; delete t.campAt;
     S.mat+=Math.floor(old.cost/2);
     toast('Removed the '+old.nm.toLowerCase()+' · +'+Math.floor(old.cost/2)+' 🪵');
     sync(); return;
   }
   const s=ST[selStruct];
+  if(s.id==='outpost' && !nearNatWater(tx,ty,3)){ toast('An outpost must be built beside a pond or lake'); return; }
   if(S.mat<s.cost){ toast('Not enough 🪵 materials for '+s.nm); return; }
-  S.mat-=s.cost; t.struct=s.id; if(s.water) t.water=true;
-  toast(s.em+' '+s.nm+' placed'+(s.beauty?' · +'+s.beauty+' beauty':''));
+  S.mat-=s.cost; t.struct=s.id;
+  if(s.id==='outpost'){
+    S.outposts.push({x:tx,y:ty});
+    S.water=cap();
+    toast('🏕️ Outpost established — checkpoint claimed · waterskin now '+cap()+' 💧');
+  } else {
+    toast(s.em+' '+s.nm+' placed'+(s.beauty?' · +'+s.beauty+' beauty':''));
+  }
   checkPets();
   sync();
 }
@@ -379,9 +454,8 @@ function doTend(tx,ty,t){
     const m=mismatch(pl,t), f=m===0?'loving the '+LNAME[t.light]:m===1?'coping':'struggling in the '+LNAME[t.light];
     toast(pl.em+' '+pl.nm+' — '+f+' · ~'+fmt(left)+' to awaken'); return;
   }
-  // tending a pet's tile
   const pet=petOnTile(tx,ty); if(pet){ petThe(pet); return; }
-  toast(t.ground==='thicket'?'Thicket — try the Clear tool':'Nothing to tend here');
+  toast(t.ground==='thicket'?'Thicket — try the Clear tool':t.water?'Cool clear water':'Nothing to tend here');
 }
 function awaken(tx,ty,t){
   const cell=t.plant, pl=P[cell.plant], thrive=mismatch(pl,t)===0;
@@ -393,30 +467,109 @@ function awaken(tx,ty,t){
   sync();
 }
 
+// ── water survival ────────────────────────────────────────────────────────────
+let lowWarned=false, parching=false;
+function onRoad(){ const t=tile(Math.floor(S.px),Math.floor(S.py)); return !!(t&&t.struct==='road'); }
+function drainRate(){ return onRoad()?DRAIN_ROAD:DRAIN_WILD; }
+function drink(amount){ // amount undefined = full
+  const before=S.water;
+  S.water=amount==null?cap():Math.min(cap(),S.water+amount);
+  if(S.water>=cap()) lowWarned=false;
+  return S.water-before;
+}
+function checkRefill(){
+  if(parching) return;
+  const px=Math.floor(S.px), py=Math.floor(S.py);
+  for(let y=py-2;y<=py+2;y++)for(let x=px-2;x<=px+2;x++){
+    const t=tile(x,y); if(!t) continue;
+    if(t.water && Math.hypot(x+0.5-S.px,y+0.5-S.py)<2.2){
+      if(S.water<cap()-4){ drink(); toast('💧 Waterskin refilled'); syncWater(); }
+      else S.water=cap();
+      return;
+    }
+    if(t.struct==='outpost' && Math.hypot(x+0.5-S.px,y+0.5-S.py)<2.6){
+      if(S.water<cap()-4){ drink(); toast('💧 Resupplied at the outpost'); syncWater(); }
+      else S.water=cap();
+      return;
+    }
+    if(t.struct==='camp' && Math.hypot(x+0.5-S.px,y+0.5-S.py)<2.2 && S.water<cap()-4){
+      const tnow=now();
+      if(!t.campAt || tnow-t.campAt>CAMP_COOLDOWN){
+        t.campAt=tnow; drink();
+        toast('⛺ Camp supplies used — restocks in '+Math.round(CAMP_COOLDOWN/1000)+'s');
+        syncWater(); saveSoon();
+      }
+      return;
+    }
+  }
+}
+function spendWater(dist){
+  if(parching||dist<=0) return;
+  S.water=Math.max(0,S.water-dist*drainRate());
+  if(S.water<30&&!lowWarned&&S.water>0){ lowWarned=true; toast('💧 Waterskin running low — find water, a camp, or turn back'); }
+  if(S.water<=0) parch();
+  syncWater();
+}
+function parch(){
+  parching=true;
+  $('parch').classList.add('on');
+  toast('🥀 Parched… the mists carry you back');
+  setTimeout(()=>{
+    let best=S.outposts[0],bd=1e9;
+    for(const o of S.outposts){ const d=Math.hypot(o.x+0.5-S.px,o.y+0.5-S.py); if(d<bd){bd=d;best=o;} }
+    const sp=findOpenNear(best.x,best.y);
+    S.px=sp.x+0.5; S.py=sp.y+0.5; S.water=cap(); lowWarned=false;
+    $('parch').classList.remove('on');
+    parching=false;
+    toast('You wake at the outpost, waterskin full. The north keeps.');
+    syncWater(); save();
+  },1100);
+}
+function findOpenNear(cx,cy){
+  for(let r=1;r<8;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+    const x=cx+dx,y=cy+dy;
+    if(walkable(x,y)) return {x,y};
+  }
+  return {x:HOME.x,y:HOME.y};
+}
+function travel(){
+  const near=S.outposts.find(o=>Math.hypot(o.x+0.5-S.px,o.y+0.5-S.py)<3);
+  if(!near){ toast('Stand at an outpost to travel (T)'); return; }
+  if(S.outposts.length<2){ toast('No other outposts yet — claim a pond up north'); return; }
+  const list=[...S.outposts].sort((a,b)=>b.y-a.y); // south → north
+  const i=list.indexOf(near);
+  const nxt=list[(i+1)%list.length];
+  const sp=findOpenNear(nxt.x,nxt.y);
+  S.px=sp.x+0.5; S.py=sp.y+0.5; S.water=cap();
+  toast('🧭 Travelled to your outpost in '+biomeAt(northOf(nxt.y)).nm);
+  syncWater(); save();
+}
+
 // ── pets ──────────────────────────────────────────────────────────────────────
 function petState(id){ if(!S.pets[id]) S.pets[id]={}; return S.pets[id]; }
 function checkPets(){
   for(const pt of PETS){
     const st=petState(pt.id);
     if(st.present) continue;
-    const ok = (pt.need? hasStruct(pt.need) : true) && BEAUTY>=pt.at;
+    let ok=BEAUTY>=pt.at;
+    if(pt.needStruct) ok=hasStruct(pt.needStruct);
+    if(pt.needOutpost) ok=S.outposts.length>=pt.needOutpost;
     if(ok){
       st.present=true; st.befriended=false;
-      // spawn on a cleared, walkable tile near the middle
       const s=findOpenTile();
       st.x=s.x+0.5; st.y=s.y+0.5;
       setTimeout(()=>toast(pt.em+' '+pt.hint+' — walk over and press E to befriend it'),700);
     }
   }
 }
-function findOpenTile(){
-  for(let r=0;r<40;r++){
-    const x=Math.floor(2+hash(r*13+now()%97,r*7)* (COLS-4));
-    const y=Math.floor(2+hash(r*5,r*11+now()%53)*(ROWS-4));
+function findOpenTile(){ // near the druid
+  for(let r=0;r<60;r++){
+    const x=Math.floor(clamp(S.px+(hash(r*13+now()%97,r*7)-.5)*16,1,COLS-2));
+    const y=Math.floor(clamp(S.py+(hash(r*5,r*11+now()%53)-.5)*16,1,ROWS-2));
     const t=tile(x,y);
-    if(t && t.ground!=='thicket' && !t.water && !t.plant) return {x,y};
+    if(t && t.ground!=='thicket' && !t.water && !t.plant && !t.struct) return {x,y};
   }
-  return {x:Math.floor(COLS/2),y:Math.floor(ROWS/2)};
+  return {x:Math.floor(S.px),y:Math.floor(S.py)};
 }
 function petOnTile(tx,ty){
   for(const pt of PETS){ const st=S.pets[pt.id];
@@ -452,6 +605,7 @@ function walkable(tx,ty){
   return true;
 }
 function movePlayer(dt){
+  if(parching) return;
   let dx=0,dy=0;
   if(keys['w']||keys['arrowup'])dy-=1;
   if(keys['s']||keys['arrowdown'])dy+=1;
@@ -459,13 +613,25 @@ function movePlayer(dt){
   if(keys['d']||keys['arrowright'])dx+=1;
   if(!dx&&!dy) return;
   const len=Math.hypot(dx,dy); dx/=len; dy/=len;
-  const spd=4.6*dt; // tiles/sec
+  const spd=(onRoad()?SPD_ROAD:SPD_WILD)*dt;
+  const ox=S.px, oy=S.py;
   tryMove(dx*spd,0); tryMove(0,dy*spd);
+  const moved=Math.hypot(S.px-ox,S.py-oy);
+  spendWater(moved);
+  const n=Math.floor(northOf(S.py));
+  if(n>S.maxN){ S.maxN=n;
+    const B=biomeAt(n), Bp=biomeAt(n-1);
+    if(B!==Bp) toast('🧭 You enter '+B.nm);
+  }
+  if(!S.won && Math.hypot(S.px-(WELL.x+0.5),S.py-(WELL.y+0.5))<5){
+    S.won=true; S.light+=50;
+    toast('🌌 The Wellspring of the North wakes — you are the Moss Druid of the North! +50 ✦');
+    sync();
+  }
 }
 function tryMove(dx,dy){
   const r=0.28;
   let nx=S.px+dx, ny=S.py+dy;
-  // check the leading edge against tile walls
   const ex=nx+Math.sign(dx)*r, ey=ny+Math.sign(dy)*r;
   if(dx){ if(walkable(Math.floor(ex),Math.floor(S.py))) S.px=clamp(nx,r,COLS-r); }
   if(dy){ if(walkable(Math.floor(S.px),Math.floor(ey))) S.py=clamp(ny,r,ROWS-r); }
@@ -473,12 +639,12 @@ function tryMove(dx,dy){
 function movePets(dt){
   for(const pt of PETS){ const st=S.pets[pt.id]; if(!st||!st.present) continue;
     let tx,ty;
-    if(st.befriended){ // trail the druid, keep a little distance
+    if(st.befriended){
       const d=Math.hypot(S.px-st.x,S.py-st.y);
+      if(d>12){ st.x=S.px+1; st.y=S.py; continue; }  // don't lose pets on long treks
       if(d>1.5){ tx=S.px-(S.px-st.x)/d*1.2; ty=S.py-(S.py-st.y)/d*1.2; }
-      else { return; }
-    } else { // wander
-      st.wx=st.wx||st.x; st.wy=st.wy||st.y;
+      else continue;
+    } else {
       if(!st.tgt||Math.hypot(st.tgt.x-st.x,st.tgt.y-st.y)<0.3||hash(Math.floor(st.x*3),Math.floor(now()/1500))<0.006){
         const o=findOpenTile(); st.tgt={x:o.x+0.5,y:o.y+0.5};
       }
@@ -491,57 +657,63 @@ function movePets(dt){
 }
 
 // ── time of day (the "Moon" glow) ────────────────────────────────────────────
-function daylight(t){ return 0.5+0.5*Math.sin(t/60000 - Math.PI/2); } // 2-min cycle 0..1
+let duskOverride=null;
+function daylight(t){ return duskOverride!=null?1-duskOverride:0.5+0.5*Math.sin(t/60000+Math.PI/2); } // starts at day
 
 // ── colours ──────────────────────────────────────────────────────────────────
-const hx=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const hx=h=>h[0]==='#'?[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)):h.match(/\d+/g).map(Number);
 function mix(a,b,t){t=clamp(t,0,1);const pa=hx(a),pb=hx(b);
   return `rgb(${pa.map((v,i)=>Math.round(v+(pb[i]-v)*t)).join(',')})`;}
 
 // ── render ────────────────────────────────────────────────────────────────────
 function draw(t){
   const dt=Math.min(0.05,(t-(draw.last||t))/1000); draw.last=t;
-  movePlayer(dt); movePets(dt); updateCam();
+  movePlayer(dt); movePets(dt); checkRefill(); updateCam();
 
-  const day=daylight(t), dusk=1-day;            // dusk→1 at night
+  const day=daylight(t), dusk=1-day;
 
-  // hover tile from mouse
   hover=null;
   if(mouse.x>=0){
     const tx=Math.floor((mouse.x+cam.x)/TS), ty=Math.floor((mouse.y+cam.y)/TS);
     if(tx>=0&&tx<COLS&&ty>=0&&ty<ROWS) hover={x:tx,y:ty};
   }
 
-  // sky wash behind everything
   ctx.fillStyle=mix('#5c7a3a','#20304a',dusk*0.8);
   ctx.fillRect(0,0,W,H);
 
-  // visible tile range
   const x0=Math.max(0,Math.floor(cam.x/TS)), x1=Math.min(COLS,Math.ceil((cam.x+W)/TS));
   const y0=Math.max(0,Math.floor(cam.y/TS)), y1=Math.min(ROWS,Math.ceil((cam.y+H)/TS));
 
   // ground pass
-  for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
-    const tt=S.grid[y][x], s=w2s(x*TS,y*TS);
-    if(tt.ground==='thicket'){
-      const base=mix('#2c3a1d','#26331b',hash(x,y));
-      ctx.fillStyle=mix(base,'#14200f',dusk*0.5); ctx.fillRect(s.x,s.y,TS+1,TS+1);
-    } else {
-      // cleared earth, tinted by light quality (very subtle)
-      let g=mix('#6f6046','#5b5238',hash(x*2,y*3)*0.6);
-      if(tt.light==='sun') g=mix(g,'#8a7748',0.35);
-      if(tt.light==='shade') g=mix(g,'#4a5540',0.4);
-      ctx.fillStyle=mix(g,'#1a2436',dusk*0.55); ctx.fillRect(s.x,s.y,TS+1,TS+1);
-      // scattered grass fleck so cleared land reads as living
-      if(!tt.plant&&!tt.struct){
-        ctx.fillStyle=mix('rgba(120,150,80,.5)','rgba(70,90,60,.5)',dusk*0.6);
-        const gx=s.x+fract(hash(x,y)*7)*TS, gy=s.y+fract(hash(y,x)*5)*TS;
-        ctx.fillRect(gx,gy,3,3);
+  for(let y=y0;y<y1;y++){ const B=biomeAt(northOf(y));
+    for(let x=x0;x<x1;x++){
+      const tt=S.grid[y][x], s=w2s(x*TS,y*TS);
+      if(tt.ground==='thicket'){
+        const base=mix(B.th,'#14200f',hash(x,y)*0.25);
+        ctx.fillStyle=mix(base,'#101826',dusk*0.5); ctx.fillRect(s.x,s.y,TS+1,TS+1);
+      } else if(tt.water){
+        ctx.fillStyle=mix(mix('#4a8fb5','#9fd0e4',northOf(y)>170?0.55:0),'#22384a',dusk*0.6);
+        ctx.fillRect(s.x,s.y,TS+1,TS+1);
+        // shimmer
+        ctx.fillStyle=`rgba(255,255,255,${0.14+0.08*Math.sin(t/700+x*2+y)})`;
+        ctx.fillRect(s.x,s.y+TS*0.3,TS+1,3);
+        ctx.fillStyle=`rgba(255,255,255,${0.10+0.06*Math.sin(t/900+x+y*2)})`;
+        ctx.fillRect(s.x,s.y+TS*0.66,TS+1,2);
+      } else {
+        let g=mix(B.g0,B.g1,hash(x*2,y*3)*0.8);
+        if(tt.light==='sun') g=mix(g,'#8a7748',northOf(y)>170?0.08:0.3);
+        if(tt.light==='shade') g=mix(g,northOf(y)>170?'#8fa4b8':'#3c4a3c',northOf(y)>170?0.3:0.35);
+        ctx.fillStyle=mix(g,'#1a2436',dusk*0.5); ctx.fillRect(s.x,s.y,TS+1,TS+1);
+        if(!tt.plant&&!tt.struct){
+          ctx.fillStyle=northOf(y)>170?'rgba(255,255,255,.35)':'rgba(120,150,80,.45)';
+          const gx=s.x+fract(hash(x,y)*7)*TS, gy=s.y+fract(hash(y,x)*5)*TS;
+          ctx.fillRect(gx,gy,3,3);
+        }
       }
     }
   }
 
-  // occupant pass (thicket brush, structures, plants) + dappled light shafts
+  // occupant pass
   for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
     const tt=S.grid[y][x], s=w2s(x*TS,y*TS), cx=s.x+TS/2, cy=s.y+TS/2;
     if(tt.ground==='thicket'){
@@ -549,18 +721,27 @@ function draw(t){
       ctx.globalAlpha=0.92; ctx.fillText(BRUSH[tt.brush].em,cx,cy+2); ctx.globalAlpha=1;
       continue;
     }
-    if(tt.water){ ctx.fillStyle=mix('#3f6d82','#22384a',dusk*0.6);
-      ctx.fillRect(s.x+3,s.y+3,TS-6,TS-6); }
     if(tt.struct){
       const st=ST[tt.struct];
-      if(st.light){ // lantern glow at dusk
+      if(st.light){
         const glow=dusk*0.9+0.1;
         const gg=ctx.createRadialGradient(cx,cy,0,cx,cy,TS*1.6);
         gg.addColorStop(0,`rgba(255,214,120,${0.5*glow})`); gg.addColorStop(1,'rgba(255,214,120,0)');
         ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,cy,TS*1.6,0,7); ctx.fill();
       }
+      if(tt.struct==='road'){ // flat stones, not an emoji boulder
+        ctx.fillStyle=mix('#9a917c','#3a4048',dusk*0.5);
+        roundRect(s.x+7,s.y+7,TS-14,TS-14,9); ctx.fill();
+        ctx.fillStyle='rgba(0,0,0,.12)'; roundRect(s.x+13,s.y+13,TS-26,TS-26,6); ctx.fill();
+        continue;
+      }
       ctx.font=`${TS*0.66}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(st.em,cx,cy+2);
+      if(tt.struct==='outpost'){ // gentle beacon
+        const gg=ctx.createRadialGradient(cx,cy,0,cx,cy,TS*1.3);
+        gg.addColorStop(0,`rgba(180,230,150,${0.14+dusk*0.18})`); gg.addColorStop(1,'rgba(180,230,150,0)');
+        ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,cy,TS*1.3,0,7); ctx.fill();
+      }
     }
     if(tt.plant){
       const cell=tt.plant, pl=P[cell.plant], fr=progress(cell,tt), ready=fr>=1&&!cell.blessed;
@@ -574,7 +755,7 @@ function draw(t){
       }
       if(fr<0.32){
         ctx.strokeStyle='#7bb15a'; ctx.lineWidth=Math.max(2,TS*0.07); ctx.lineCap='round';
-        const h=TS*(0.14+fr*1.1); ctx.beginPath(); ctx.moveTo(cx,cy+TS*0.28); ctx.lineTo(cx,cy+TS*0.28-h); ctx.stroke();
+        const h2=TS*(0.14+fr*1.1); ctx.beginPath(); ctx.moveTo(cx,cy+TS*0.28); ctx.lineTo(cx,cy+TS*0.28-h2); ctx.stroke();
       } else {
         const sc=0.5+0.5*Math.min(1,(fr-0.32)/0.68);
         ctx.font=`${TS*0.7*sc}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -582,12 +763,11 @@ function draw(t){
         if(ready){ ctx.font=`${TS*0.3}px serif`; ctx.globalAlpha=0.5+0.5*Math.sin(t/220);
           ctx.fillText('✨',cx+TS*0.34,cy-TS*0.3); ctx.globalAlpha=1; }
       }
-      // tiny light-quality dot at the plant's foot
       ctx.fillStyle=LCOL[tt.light]; ctx.beginPath(); ctx.arc(s.x+TS*0.16,s.y+TS*0.84,3.2,0,7); ctx.fill();
     }
   }
 
-  // dappled shafts overlay (day only) — the grove breathing light
+  // dappled shafts (day)
   ctx.save(); ctx.globalCompositeOperation='lighter';
   for(let i=0;i<6;i++){
     const sx=((i*W*0.19 + Math.sin(t/3600+i)*20) % (W+120))-60;
@@ -598,9 +778,26 @@ function draw(t){
   }
   ctx.restore();
 
+  // aurora in the far north at dusk
+  const pn=northOf(S.py);
+  if(pn>168 && dusk>0.15){
+    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
+    for(let b=0;b<3;b++){
+      ctx.beginPath();
+      for(let x=0;x<=W;x+=22){
+        const y=H*0.14+b*36+Math.sin(x/150+t/1500+b*2.1)*28;
+        x?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      ctx.strokeStyle=`rgba(${b===1?'160,130,255':'110,255,190'},${(0.05+0.05*Math.sin(t/900+b))*dusk+0.04*dusk})`;
+      ctx.lineWidth=30; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // pets
   for(const pt of PETS){ const st=S.pets[pt.id]; if(!st||!st.present) continue;
     const s=w2s(st.x*TS,st.y*TS);
+    if(s.x<-TS||s.x>W+TS||s.y<-TS||s.y>H+TS) continue;
     ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(s.x,s.y+TS*0.24,TS*0.24,TS*0.09,0,0,7); ctx.fill();
     const bob=Math.sin(t/280+st.x)*2;
     ctx.font=`${TS*0.6}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -611,7 +808,6 @@ function draw(t){
       ctx.font=`${TS*0.4}px serif`; ctx.fillText('💚',s.x,s.y-TS*0.4-(now()-st.heart)/40); ctx.globalAlpha=1; }
   }
 
-  // the druid
   drawDruid(t,dusk);
 
   // target reticle
@@ -623,7 +819,7 @@ function draw(t){
     if(reachable) drawHoverInfo(hover.x,hover.y,s);
   }
 
-  // reach ring around druid (faint)
+  // reach ring
   const ps=w2s(S.px*TS,S.py*TS);
   ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.arc(ps.x,ps.y,REACH*TS,0,7); ctx.stroke();
@@ -633,12 +829,14 @@ function draw(t){
     vg.addColorStop(0,'rgba(10,16,30,0)'); vg.addColorStop(1,`rgba(6,10,24,${dusk*0.55})`);
     ctx.fillStyle=vg; ctx.fillRect(0,0,W,H); }
 
+  drawRail(t);
+  $('biome').textContent=biomeAt(Math.floor(pn)).nm+' · '+Math.round(pn/(ROWS-1)*100)+'% north';
+
   requestAnimationFrame(draw);
 }
 function drawDruid(t,dusk){
   const s=w2s(S.px*TS,S.py*TS);
   ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(s.x,s.y+TS*0.30,TS*0.26,TS*0.1,0,0,7); ctx.fill();
-  // soft druid aura
   const gg=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,TS*0.9);
   gg.addColorStop(0,`rgba(180,230,150,${0.14+dusk*0.14})`); gg.addColorStop(1,'rgba(180,230,150,0)');
   ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(s.x,s.y,TS*0.9,0,7); ctx.fill();
@@ -647,16 +845,42 @@ function drawDruid(t,dusk){
   ctx.font=`${TS*0.72}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('🧙‍♀️',s.x,s.y+bob-2);
 }
+// the journey rail — the long road north at a glance
+function drawRail(t){
+  const rx=W-16, top=H*0.13, bot=H*0.87;
+  const yOf=n=>bot-(n/(ROWS-1))*(bot-top);
+  ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(rx,top); ctx.lineTo(rx,bot); ctx.stroke();
+  // biome ticks
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1;
+  for(const B of BIOMES){ const y=yOf(B.n); ctx.beginPath(); ctx.moveTo(rx-4,y); ctx.lineTo(rx+4,y); ctx.stroke(); }
+  // waters
+  for(const w of WATERS){
+    const n=northOf(w.y), y=yOf(n);
+    const claimed=S.outposts.some(o=>Math.hypot(o.x-w.x,o.y-w.y)<7);
+    ctx.fillStyle=w===WELL?(S.won?'#ffe9a0':'rgba(255,233,160,.55)'):claimed?'#9fe07a':'#7fc8e8';
+    ctx.beginPath(); ctx.arc(rx,y,w===WELL?5:4,0,7); ctx.fill();
+    if(claimed&&w!==WELL){ ctx.strokeStyle='#9fe07a'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(rx,y,6.5,0,7); ctx.stroke(); }
+  }
+  // furthest-north tide mark
+  ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(rx-6,yOf(S.maxN)); ctx.lineTo(rx+6,yOf(S.maxN)); ctx.stroke();
+  // the druid
+  const py=yOf(northOf(S.py));
+  ctx.fillStyle='#f4f8e9';
+  ctx.beginPath(); ctx.moveTo(rx-8,py+4); ctx.lineTo(rx-8,py-4); ctx.lineTo(rx-2,py); ctx.closePath(); ctx.fill();
+}
 function drawHoverInfo(tx,ty,s){
   const tt=tile(tx,ty); let msg='';
   if(tt.ground==='thicket') msg=(tool==='clear'?'▸ clear ':'')+BRUSH[tt.brush].label+' · +'+BRUSH[tt.brush].mat+'🪵';
+  else if(tt.water) msg='💧 fresh water — refills your waterskin';
   else if(tt.plant){ const pl=P[tt.plant.plant], m=mismatch(pl,tt);
     const fit=m===0?'loves it':m===1?'ok':'struggles'; const fr=progress(tt.plant,tt);
     msg=pl.em+' '+pl.nm+' · '+(tt.plant.blessed?'thriving':fr>=1?'ready to awaken ✦':fit); }
-  else if(tt.struct) msg=ST[tt.struct].em+' '+ST[tt.struct].nm;
+  else if(tt.struct) msg=ST[tt.struct].em+' '+ST[tt.struct].nm+(tt.struct==='outpost'?' · T to travel':'');
   else { const petn=petOnTile(tx,ty);
     if(petn) msg=petn.em+' '+petn.nm;
-    else if(tool==='plant'){ const pl=P[selPlant],m=mismatch(pl,tt),[c]=[['love','loves it'],['ok','ok'],['bad','struggles']][m];
+    else if(tool==='plant'){ const pl=P[selPlant],m=mismatch(pl,tt);
       msg='▸ sow '+pl.em+' · '+LNAME[tt.light]+' · '+['loves it','ok','struggles'][m]; }
     else if(tool==='build') msg='▸ place '+ST[selStruct].em+' '+ST[selStruct].nm;
     else msg=LNAME[tt.light]; }
@@ -676,13 +900,15 @@ function fmt(s){return s>=60?Math.round(s/60)+'m':Math.round(s)+'s';}
 // ── boot ──────────────────────────────────────────────────────────────────────
 $('go').onclick=()=>{ $('intro').classList.add('off'); S.seen.intro=true; save(); };
 if(S.seen.intro) $('intro').classList.add('off');
-buildBar(); buildPalette(); checkPets(); sync();
+buildBar(); buildPalette(); checkPets(); sync(); syncWater();
 requestAnimationFrame(draw);
 
 // expose a little for headless verification
 window.__mdg={get S(){return S;}, act, setTool, get tool(){return tool;},
   selectPlant:id=>{selPlant=id;}, selectStruct:id=>{selStruct=id;}, sync,
-  computeBeauty, checkPets, get beauty(){return BEAUTY;}, tendNearestPet, petThe, PETS};
+  computeBeauty, checkPets, get beauty(){return BEAUTY;}, tendNearestPet, petThe, PETS,
+  drainRate, onRoad, cap, travel, parch, spendWater, checkRefill,
+  setDusk:v=>{duskOverride=v;}, WATERS, WELL, HOME, HOME_OUTPOST, ROWS, COLS, northOf, biomeAt};
 </script>
 </body>
 </html>
