@@ -368,15 +368,16 @@
     var a=hash2(xi,yi),b=hash2(xi+1,yi),d=hash2(xi,yi+1),e=hash2(xi+1,yi+1);
     var sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);
     return (a*(1-sx)+b*sx)*(1-sy)+(d*(1-sx)+e*sx)*sy;}
-  function terrainAt(c,r){
-    if(r<=0)return 'plains';                                   // keep the highway row buildable/clear
-    var wc=c+WOX, wr=r+WOY;                                    // offset into the shared-world noise field (set by the globe dive)
-    var elev=vnoise(wc,wr,8)*0.6+vnoise(wc+11,wr+7,3.5)*0.4, moist=vnoise(wc+80,wr+40,6);
-    if(elev<0.36)return 'water';                               // coast/lake — free water, can't build
-    if(elev>0.72)return 'mountain';                            // peaks — can't build, but mine ore from ADJACENT tiles
-    if(moist>0.6)return 'forest';                              // forest — good for Works (timber)
+  // low-freq fields GATHER the blockers into coherent lakes & ranges (not high-freq speckle); water and
+  // mountain are INDEPENDENT fields, so a ridge can rise right at a lakeshore (dramatic side-by-side).
+  function tfbm(wc,wr,s){return vnoise(wc,wr,s)*0.85+vnoise(wc+90,wr+40,s*0.6)*0.15;}   // large low-freq base + faint edge detail (no speckle)
+  function terrClass(wc,wr){                                   // world-space classifier — the single source of truth
+    if(tfbm(wc,wr,24)<0.30)return 'water';                     // large basins fill → coherent lakes/seas (water wins ties)
+    if(tfbm(wc+310,wr+190,22)>0.76)return 'mountain';          // separate ridge field → gathered ranges; mine ore from ADJACENT tiles
+    if(vnoise(wc+80,wr+40,6)>0.6)return 'forest';              // forest — good for Works (timber)
     return 'plains';                                           // grasslands (the default)
   }
+  function terrainAt(c,r){if(r<=0)return 'plains';return terrClass(c+WOX,r+WOY);}   // highway row stays buildable/clear
   function noBuild(t){return t==='water'||t==='mountain';}     // water & mountains can't be built on
   function nearMountain(c,r){                                  // a Works next to a peak mines its ore (+80%)
     for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){if(!dc&&!dr)continue;var a=c+dc,b=r+dr;
@@ -399,9 +400,7 @@
   // terrain class at an arbitrary world location (for a trade partner) — mirrors the globe's terrainClass
   function classAt(lat,lon){
     var ox=Math.round(lon*137)+9973, oy=Math.round(lat*151)+7919, ct={plains:0,forest:0,mountain:0,water:0};
-    for(var r=1;r<32;r++)for(var c=0;c<48;c++){var wc=c+ox,wr=r+oy;
-      var elev=vnoise(wc,wr,8)*0.6+vnoise(wc+11,wr+7,3.5)*0.4, moist=vnoise(wc+80,wr+40,6);
-      ct[elev<0.36?'water':elev>0.72?'mountain':moist>0.6?'forest':'plains']++;}
+    for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrClass(c+ox,r+oy)]++;   // same classifier the surface uses
     var land=ct.plains+ct.forest||1, oS=(ct.mountain/(ct.mountain+land))/0.16, fS=(ct.forest/land)/0.30, wS=(ct.water/(ct.water+land))/0.17, mx=Math.max(oS,fS,wS);
     if(mx<1.15)return 'plains'; if(mx===oS)return 'mountain'; if(mx===fS)return 'forest'; return 'coast';
   }

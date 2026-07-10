@@ -167,9 +167,12 @@
   function tnoise(c,r,s){var x=c/s,y=r/s,xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
     var a=thash(xi,yi),b=thash(xi+1,yi),d=thash(xi,yi+1),e=thash(xi+1,yi+1);
     var sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);return (a*(1-sx)+b*sx)*(1-sy)+(d*(1-sx)+e*sx)*sy;}
+  // GATHERED terrain — mirrors the builder's terrClass exactly (low-freq lake + independent ridge fields).
+  function tfbm(wc,wr,s){return tnoise(wc,wr,s)*0.85+tnoise(wc+90,wr+40,s*0.6)*0.15;}
   function terrAt(c,r,ox,oy){if(r<=0)return 'plains';var wc=c+ox,wr=r+oy;
-    var elev=tnoise(wc,wr,8)*0.6+tnoise(wc+11,wr+7,3.5)*0.4,moist=tnoise(wc+80,wr+40,6);
-    if(elev<0.36)return 'water';if(elev>0.72)return 'mountain';if(moist>0.6)return 'forest';return 'plains';}
+    if(tfbm(wc,wr,24)<0.30)return 'water';
+    if(tfbm(wc+310,wr+190,22)>0.76)return 'mountain';
+    if(tnoise(wc+80,wr+40,6)>0.6)return 'forest';return 'plains';}
   function terrainClass(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919,ct={plains:0,forest:0,mountain:0,water:0};
     for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrAt(c,r,ox,oy)]++;
     var land=ct.plains+ct.forest||1,oS=(ct.mountain/(ct.mountain+land))/0.16,fS=(ct.forest/land)/0.30,wS=(ct.water/(ct.water+land))/0.17,mx=Math.max(oS,fS,wS);
