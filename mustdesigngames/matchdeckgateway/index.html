@@ -56,6 +56,8 @@
 
   /* Home launcher */
   .lede{ color:var(--muted); font-size:13.5px; margin:0 2px 16px; }
+  .sec{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:15px; letter-spacing:-0.01em; color:var(--ink); margin:22px 2px 10px; }
+  .sec:first-of-type{ margin-top:4px; }
   .grid{ display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
   .tile{ background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--line);
     border-radius:14px; padding:14px; cursor:pointer; transition:transform .1s, border-color .12s; }
@@ -400,16 +402,26 @@ function openGame(g){
 function renderHome(){
   view.innerHTML='';
   view.appendChild(el('p','lede','Build and playtest card games in the browser — a shared engine (real 52-card deck, poker hand evaluator, online multiplayer) with a dozen games and design tools plugged in. Tap one to play, spin up a variant, then deal it to friends over a room code.'));
-  const grid=el('div','grid');
-  GAMES.forEach(g=>{
-    const t=el('div','tile');
-    const chips = g.chips.map(c=>`<span class="chip ${c.k}">${c.t}</span>`).join('');
-    t.innerHTML=`<div class="nm">${g.title}</div><div class="bl">${g.blurb}</div>
-      <div class="meta">${chips}<span class="chip">${g.players}</span></div>`;
-    t.addEventListener('click',()=>openGame(g));
-    grid.appendChild(t);
+  // Classics = established real-world card games; everything else is an original design or deck tool.
+  const CLASSICS=new Set(['holdem','mau']);
+  const sections=[
+    { name:'Classics', list:GAMES.filter(g=>CLASSICS.has(g.id)) },
+    { name:'Custom',   list:GAMES.filter(g=>!CLASSICS.has(g.id)) },
+  ];
+  sections.forEach(sec=>{
+    if(!sec.list.length) return;
+    view.appendChild(el('h2','sec',sec.name));
+    const grid=el('div','grid');
+    sec.list.forEach(g=>{
+      const t=el('div','tile');
+      const chips = g.chips.map(c=>`<span class="chip ${c.k}">${c.t}</span>`).join('');
+      t.innerHTML=`<div class="nm">${g.title}</div><div class="bl">${g.blurb}</div>
+        <div class="meta">${chips}<span class="chip">${g.players}</span></div>`;
+      t.addEventListener('click',()=>openGame(g));
+      grid.appendChild(t);
+    });
+    view.appendChild(grid);
   });
-  view.appendChild(grid);
 }
 
 /* ============================================================
