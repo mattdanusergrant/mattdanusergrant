@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>Match Deck Gateway</title>
-<script>!function(){try{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}catch(e){}}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -35,8 +34,10 @@
 <style>
   :root{
     /* CELEBRATION OF POKER — its own identity, deliberately NOT mattdanusergrant.com.
-       A dark card-room: near-black table, casino red as the hero, gold for the win. */
-    --bg:#0c0a0b; --panel:#181215; --panel2:#221a1e; --ink:#F4ECE8; --muted:#A18C93;
+       One bright theme: a green poker-table felt backdrop, cream cards, casino red
+       as the hero, gold for the win. No light/dark toggle — this is the look. */
+    --felt-lo:#0a4a2d; --felt-hi:#219160;
+    --bg:#0c4a2f; --panel:#181215; --panel2:#221a1e; --ink:#F6F0E6; --muted:#cfe0d3;
     --line:#3a232b; --accent:#D8202F; --accent-dk:#7c0f18; --accent2:#E6B34D;
     --good:#3ddc84; --bad:#ff6b6b;
     /* game surfaces — felt table, card faces, suits */
@@ -45,19 +46,19 @@
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ margin:0; height:100%; color:var(--ink);
-    background-color:var(--bg);
-    /* red table-glow from the top, over a faint tiled ♠♥♦♣ card-back motif */
+    background-color:var(--felt-lo);
+    /* a lit poker-table felt, over a faint tiled ♠♥♦♣ motif woven into the cloth */
     background-image:
-      radial-gradient(1100px 560px at 50% -8%, #3a0d14 0%, rgba(58,13,20,0) 62%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='104' height='104'%3E%3Cg font-family='Georgia,serif' font-size='30'%3E%3Ctext x='14' y='36' fill='%23ffffff' opacity='0.035'%3E♠%3C/text%3E%3Ctext x='66' y='36' fill='%23d8202f' opacity='0.06'%3E♥%3C/text%3E%3Ctext x='14' y='88' fill='%23d8202f' opacity='0.06'%3E♦%3C/text%3E%3Ctext x='66' y='88' fill='%23ffffff' opacity='0.035'%3E♣%3C/text%3E%3C/g%3E%3C/svg%3E");
+      radial-gradient(125% 100% at 50% -6%, var(--felt-hi) 0%, #147a4c 42%, var(--felt-lo) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='104' height='104'%3E%3Cg font-family='Georgia,serif' font-size='30' fill='%23ffffff'%3E%3Ctext x='14' y='36' opacity='0.05'%3E♠%3C/text%3E%3Ctext x='66' y='36' opacity='0.05'%3E♥%3C/text%3E%3Ctext x='14' y='88' opacity='0.05'%3E♦%3C/text%3E%3Ctext x='66' y='88' opacity='0.05'%3E♣%3C/text%3E%3C/g%3E%3C/svg%3E");
     background-repeat:no-repeat, repeat;
     background-size:auto, 104px 104px;
     background-attachment:fixed, fixed;
     font-family:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.45; }
   #app{ max-width:1040px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; }
   header{ display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--accent-dk);
-    position:sticky; top:0; background:linear-gradient(180deg,#150f12,#0b090a); z-index:5;
-    box-shadow:0 1px 0 rgba(216,32,47,.45), 0 8px 22px #0009; }
+    position:sticky; top:0; background:linear-gradient(180deg,#0e3a24,#08281a); z-index:5;
+    box-shadow:0 1px 0 rgba(216,32,47,.5), 0 8px 22px #0007; }
   header .back{ font-size:22px; background:none; border:none; color:var(--ink); cursor:pointer; padding:2px 8px; display:none; }
   header h1{ font-family:'Fraunces',Georgia,serif; font-size:19px; margin:0; font-weight:700; letter-spacing:.005em; color:var(--ink); }
   header .sub{ font-size:12px; color:var(--muted); margin-top:1px; }
@@ -67,22 +68,24 @@
   #view{ flex:1; padding:16px; }
 
   /* Home launcher */
-  .lede{ color:var(--muted); font-size:13.5px; margin:0 2px 18px; }
+  .lede{ color:#eaf6ee; font-size:13.5px; margin:0 2px 18px; text-shadow:0 1px 2px rgba(0,0,0,.35); }
   .sec{ font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:15px; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--ink); margin:26px 2px 12px; display:flex; align-items:center; gap:10px; }
+    color:var(--ink); margin:26px 2px 12px; display:flex; align-items:center; gap:10px; text-shadow:0 1px 2px rgba(0,0,0,.4); }
   .sec:first-of-type{ margin-top:6px; }
-  .sec::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }
+  .sec::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(255,255,255,.32),transparent); }
   .sec .pip{ font-size:19px; line-height:1; letter-spacing:0; }
   .sec .pip.red{ color:var(--accent); } .sec .pip.blk{ color:var(--ink); }
   .grid{ display:grid; gap:13px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
-  .tile{ position:relative; overflow:hidden; background:linear-gradient(165deg,#1d151a,#100b0e); border:1px solid var(--line);
-    border-radius:14px; padding:15px 15px 14px; cursor:pointer; transition:transform .12s, border-color .14s, box-shadow .14s; }
+  /* tiles are cream playing-cards laid on the felt */
+  .tile{ position:relative; overflow:hidden; background:linear-gradient(170deg,#fdfaf1,#efe7d3); border:1px solid #d9cea9;
+    border-radius:14px; padding:15px 15px 14px; cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,.30);
+    transition:transform .12s, border-color .14s, box-shadow .14s; }
   .tile::before{ content:""; position:absolute; top:0; left:0; right:0; height:3px;
     background:linear-gradient(90deg,var(--accent),var(--accent-dk)); }
-  .tile:hover{ transform:translateY(-3px); border-color:var(--accent);
-    box-shadow:0 12px 28px #00000070, 0 0 0 1px rgba(216,32,47,.35); }
-  .tile .nm{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:17.5px; letter-spacing:-0.01em; color:var(--ink); }
-  .tile .bl{ font-size:12px; color:var(--muted); margin-top:6px; min-height:32px; }
+  .tile:hover{ transform:translateY(-3px); border-color:var(--gold);
+    box-shadow:0 16px 32px rgba(0,0,0,.42), 0 0 0 1px var(--gold); }
+  .tile .nm{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:17.5px; letter-spacing:-0.01em; color:#191510; }
+  .tile .bl{ font-size:12px; color:#6b6152; margin-top:6px; min-height:32px; }
   .tile .meta{ display:flex; gap:7px; margin-top:11px; flex-wrap:wrap; }
   /* tags rendered as casino chips — dashed "edge spots", coloured by kind */
   .chip{ font-size:10.5px; font-weight:800; border-radius:999px; padding:3px 10px; letter-spacing:.02em;

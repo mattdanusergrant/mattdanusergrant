@@ -10,7 +10,7 @@
     { label:'Must Design Games', url:'https://mustdesigngames.mattdanusergrant.com/', children:[
       { label:'Metropolis Dawn Grid', url:'https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/' },
       { label:'Moon Druid Garrison', url:'https://mustdesigngames.mattdanusergrant.com/moondruidgarrison/' },
-      { label:'Match Deck Gateway', url:'/tool.html?app=match-deck-gateway' }
+      { label:'Match Deck Gateway', url:'https://mustdesigngames.mattdanusergrant.com/matchdeckgateway/' }
     ]},
     { label:'Modular Digital Goods', url:'/#apps-h', children:[
       { label:'Math Draws Graphics', url:'https://mathdrawsgraphics.mattdanusergrant.com/', blank:true },
