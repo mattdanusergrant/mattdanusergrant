@@ -9,8 +9,8 @@
   var MAP={ label:'mattdanusergrant.com', url:'/', children:[
     { label:'Must Design Games', url:'https://mustdesigngames.mattdanusergrant.com/', children:[
       { label:'Metropolis Dawn Grid', url:'https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/' },
-      { label:'Mosslings', url:'https://mustdesigngames.mattdanusergrant.com/mosslings/' },
-      { label:'Multiplayer Deck Gateway', url:'/tool.html?app=multiplayer-deck-gateway' }
+      { label:'Moon Druid Garrison', url:'https://mustdesigngames.mattdanusergrant.com/moondruidgarrison/' },
+      { label:'Match Deck Gateway', url:'/tool.html?app=match-deck-gateway' }
     ]},
     { label:'Modular Digital Goods', url:'/#apps-h', children:[
       { label:'Math Draws Graphics', url:'https://mathdrawsgraphics.mattdanusergrant.com/', blank:true },

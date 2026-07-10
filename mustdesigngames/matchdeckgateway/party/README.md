@@ -1,4 +1,9 @@
-# Multiplayer Deck Gateway — room server
+# Match Deck Gateway — room server
+
+> Renamed from Multiplayer Deck Gateway (2026-07-09). The deployed PartyKit
+> project keeps the original name `multiplayerdeckgateway` (see `partykit.json`
+> and the `PARTY_HOST` in `../index.html`) — renaming it would change the
+> room-server host and requires a fresh deploy + client update.
 
 The authoritative backend for online play. It's a single PartyKit room server
 (`server.ts`) that runs on Cloudflare's edge. The game (`../index.html`) still
@@ -22,7 +27,7 @@ deploys separately.
 ## Deploy (one time)
 
 ```bash
-cd multiplayerdeckgateway/party
+cd matchdeckgateway/party
 npm install
 npx partykit login        # opens a browser; authorises against your Cloudflare-backed PartyKit account
 npm run deploy            # → prints your room-server host, e.g. multiplayerdeckgateway.<your-user>.partykit.dev
