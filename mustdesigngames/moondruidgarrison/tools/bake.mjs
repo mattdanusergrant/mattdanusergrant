@@ -263,6 +263,10 @@ async function main() {
   inject('ART_ATLAS', atlas ? atlas.atlas : null);
   inject('ART_MAP', atlas ? atlas.map : null);
 
+  // Attribution — licenses appreciate (not require) credit. Only the baked build uses the
+  // third-party art, so the credit lives here, not in the procedural public source.
+  html = html.replace('</body>', '<!-- Real-art build. Terrain: Szadi art — RPG Worlds Wetland. Sprites: Seth Boyles — 32rogues. Licensed to Matt Danus (commercial + modify OK); NOT for redistribution. -->\n</body>');
+
   mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, html);
   if (debug) writeFileSync(join(dirname(OUT), '_debug-atlas.png'), Buffer.from(debug.split(',')[1], 'base64'));
