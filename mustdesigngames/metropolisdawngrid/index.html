@@ -9,15 +9,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
-  /* self-contained light theme — the game owns its look (no site.css, no dark mode) */
+  /* self-contained solarpunk DAWN theme — warm sunrise chrome over a cream play field (no dark mode) */
   :root{
-    --bg:#F3F6FB; --paper:#FFFFFF;
-    --ink:#182230; --ink-2:#3A4653; --muted:#7C8792;
-    --line:#E4E9F0; --line-2:#C7D0DC;
-    --shadow:0 1px 0 rgba(20,30,45,.03),0 12px 30px rgba(20,30,45,.08);
-    --shadow-hover:0 18px 44px rgba(20,30,45,.14);
-    /* coloured chrome — dark blue-slate bars frame the light play field */
-    --bar:#223442; --bar-ink:#EDF2F7; --bar-muted:#96A8B7; --bar-line:rgba(255,255,255,.14);
+    --bg:#F7F3E9; --paper:#FFFDF8;
+    --ink:#2A2216; --ink-2:#4A3E2C; --muted:#8A7A5E;
+    --line:#EBE4D3; --line-2:#D6CBB2;
+    --shadow:0 1px 0 rgba(60,45,20,.03),0 12px 30px rgba(80,55,20,.10);
+    --shadow-hover:0 18px 44px rgba(80,55,20,.16);
+    /* coloured chrome — a bright, warm DAWN orange frames the light play field; dark warm text on it */
+    --bar:#F3993C; --bar-ink:#3A2410; --bar-muted:#7E4E1E; --bar-line:rgba(58,36,16,.20);
   }
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease}
@@ -111,7 +111,7 @@
   .tools .tgroup{border-left-color:var(--bar-line)}
   .reset{color:var(--bar-muted)}
   .reset:hover{color:var(--bar-ink)}
-  .tool.sel{background:#3F7CB4;border-color:#3F7CB4;color:#fff}
+  .tool.sel{background:#4E9A5B;border-color:#3F8049;color:#fff}   /* solarpunk leaf-green selection pops against the orange bar */
   .tools .spacer{flex:1}
   .reset{cursor:pointer;font-size:12px;color:var(--muted);background:none;border:none;font-family:inherit;text-decoration:underline;text-underline-offset:2px}
   .reset:hover{color:var(--ink)}
@@ -168,6 +168,7 @@
       <div class="rstat" id="terrstat" title="Extra Materials per tick your Works earn from ore (+80%) and forest (+40%) terrain — put Works where the land favours them"><span class="rn" id="terrb">+0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Terrain</span></div>
       <div class="rstat" id="pwrstat" title="City power — stations generate it, buildings draw it, roads carry it. A deficit browns out unpowered buildings until you add capacity."><span class="rn" id="pwr">0</span><span class="rl"><span class="dot" style="background:#E0A93E"></span>Power</span></div>
       <div class="rstat" id="watstat" title="City water — towers (and coasts/lakes) supply it, buildings draw it, roads carry it. A deficit leaves buildings dry until you add capacity."><span class="rn" id="wat">0</span><span class="rl"><span class="dot" style="background:#4C88B8"></span>Water</span></div>
+      <div class="rstat" id="trafstat" title="Traffic — a growing city generates trips. Roads carry some; Transit stops carry far more. When demand outruns capacity the streets jam and growth slows — build Transit to keep it moving."><span class="rn" id="traf">0%</span><span class="rl"><span class="dot" style="background:#C0563F"></span>Transit</span></div>
     </div>
     <div class="goal" id="goal" title="Your next milestone"><span class="gl" id="goal-label">Next: Hamlet</span><span class="gbar"><i id="goal-fill"></i></span></div>
     <div class="stat cash" title="Treasury — everything costs money. Taxes &amp; exports earn it; utilities &amp; roads cost upkeep; public services scale with population; debt charges interest. Advancing tiers needs a growing cash reserve."><span class="n" id="cash">₵0</span><span class="l" id="cashrate">—</span></div>
@@ -209,6 +210,7 @@
     <div class="tgroup"><span class="tglabel">Transport</span>
       <div class="tool sel" data-brush="road"><span class="sw" data-sw="road"></span>Road<span class="key">1</span></div>
       <div class="tool" data-brush="rail"><span class="sw" data-sw="rail"></span>Rail<span class="key">2</span></div>
+      <div class="tool" data-brush="transit"><span class="sw" data-sw="transit"></span>Transit<span class="key">M</span></div>
     </div>
     <div class="tgroup"><span class="tglabel">Zoning</span>
       <div class="tool" data-brush="res"><span class="sw" data-sw="res"></span>Homes<span class="key">3</span></div>
@@ -218,6 +220,7 @@
     </div>
     <div class="tgroup"><span class="tglabel">Utilities</span>
       <div class="tool" data-brush="power"><span class="sw" data-sw="power"></span>Power<span class="key">8</span></div>
+      <div class="tool" data-brush="solar"><span class="sw" data-sw="solar"></span>Solar<span class="key">E</span></div>
       <div class="tool" data-brush="water"><span class="sw" data-sw="water"></span>Water<span class="key">9</span></div>
     </div>
     <div class="tgroup"><span class="tglabel">Civic</span>
@@ -296,10 +299,12 @@
   var waterGen=0, waterUse=0, waterOK=true;        // city-wide water budget
   var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
   var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
+  var congestion=0, trafficDemand=0, trafficCap=0;      // public-transport pressure: trips generated vs road + transit capacity
+  var TRIPW={res:1,tower:2,com:1.5,ind:1.2,fac:1.2};     // trips generated per building level (a growing city needs to move people)
 
   // ---- economy: everything costs money; a working city earns it; debt charges interest ----
-  var COST={road:4,rail:10,res:15,com:25,ind:35,fac:60,park:20,power:120,water:100,bank:180,port:140,tower:200,bulldoze:0};
-  var UPKEEP={power:8,water:6,road:0.2,rail:0.3,bank:4,port:5,tower:3};  // ₵/month to keep running (utilities are a real fixed cost)
+  var COST={road:4,rail:10,transit:110,res:15,com:25,ind:35,fac:60,park:20,power:120,solar:80,water:100,bank:180,port:140,tower:200,bulldoze:0};
+  var UPKEEP={power:8,solar:1,water:6,road:0.2,rail:0.3,transit:4,bank:4,port:5,tower:3};  // ₵/month (solar is clean & cheap to run; a fossil station costs more)
   var TAX={res:6,com:5,ind:3,fac:3,tower:14};           // ₵/month per building level (Towers are dense = high tax)
   var CASH_START=1500, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;
   // public services scale with population — the sink that ends infinite wealth. First ~400 residents free
@@ -307,12 +312,21 @@
   // commerce (tax-per-head falls as density rises), not just sprawl. Net income stays tight, never runaway.
   var SERVICE_RATE=0.06, SERVICE_FREE=400, serviceCost=0;
   // tier at which each tool unlocks (index into MS: 0=Hamlet,1=Village,…); absent = available from start.
-  // Start bare — just Road, Homes, Power, Water — and earn the rest by growing through the tiers.
-  var TIER_UNLOCK={com:0,ind:1,rail:2,fac:2,park:3,bank:4,port:5,tower:6};
+  // Start bare — just Road, Homes, Power, Water — and research the rest by growing through the tiers.
+  var TIER_UNLOCK={com:0,solar:1,park:2,ind:2,rail:3,fac:3,transit:4,bank:5,port:6,tower:7};
+  // ---- researched tech: passive efficiency upgrades earned by chartering tiers (the "sick new tech") ----
+  var TECH={smartGrid:{t:4,n:'Smart Grid',d:'power use −25%'},rooftopSolar:{t:5,n:'Rooftop Solar',d:'solar output +40%'},
+            metroNet:{t:6,n:'Metro Network',d:'transit capacity +60%'},waterReclaim:{t:7,n:'Water Reclamation',d:'water use −25%'},
+            greenLogistics:{t:8,n:'Green Logistics',d:'export revenue +30%'}};
+  function tech(k){return maxMS>=TECH[k].t;}          // a tech is active once its tier is chartered
+  var powerUseMult=1,waterUseMult=1,solarMult=1,transitMult=1,exportMult=1;
+  function syncTech(){powerUseMult=tech('smartGrid')?0.75:1;waterUseMult=tech('waterReclaim')?0.75:1;
+    solarMult=tech('rooftopSolar')?1.4:1;transitMult=tech('metroNet')?1.6:1;exportMult=tech('greenLogistics')?1.3:1;}
   // density is also earned: building levels are capped by tier (index = maxMS+1, Outpost..Megacity) →
   // villages are low-rise, only a grown city unlocks the tall stuff. Lifts the level ceiling as you climb.
   var DENS=[1,1,2,2,3,3,4,4,5,5];
   function densCap(){return DENS[Math.max(0,Math.min(DENS.length-1,maxMS+1))];}
+  var SOLAR_OUT=420, TRANSIT_CAP=55;                  // one solar array's clean output; one Transit stop's trip capacity
   var BANK_CREDIT=2000, BANK_RATE=0.02, BANK_CAP=50;    // each Bank: +credit ceiling, + interest on reserves (capped)
   var PORT_BOOST=0.6;                                   // each Port: +60% export revenue
   var treasury=CASH_START, netRate=0, bankCount=0;
@@ -332,7 +346,7 @@
       if(UPKEEP[t])upkeep+=UPKEEP[t];
       if(t==='bank')banks++;else if(t==='port')ports++;else if(t==='fac')facN++;}
     bankCount=banks;
-    income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium;          // Ports lift export revenue; a trade partner short on Goods pays a premium
+    income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium*exportMult; // Ports + Green Logistics tech lift export revenue; a trade partner short on Goods pays a premium
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
     serviceCost=Math.round(Math.max(0,popTarget-SERVICE_FREE)*SERVICE_RATE);    // public services grow with population — the money sink
@@ -356,6 +370,17 @@
     else if(goodsStock>0.5&&!railToWorld)msg='💸 You’re in the red — you have <b>Goods</b> but no way out. Lay a <b>Rail line to the freeway</b> to export them for income.';
     else if(matStock>50&&!railToWorld)msg='💸 Bleeding ₵ — nothing’s exporting. Connect <b>Rail to the freeway</b> so your Goods earn money.';
     else msg='💸 Upkeep is outrunning your income. Grow <b>Homes &amp; Shops</b> for tax, or <b>Clear</b> utilities you don’t need yet.';
+    toastEl.innerHTML=msg;toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},7000);
+  }
+  // one-time nudge when the streets first jam — points at the fix (Transit)
+  var congestWarned=false;
+  function trafficCoach(){
+    if(OBSERVE)return;
+    if(congestion<0.35)congestWarned=false;                     // cleared → re-arm
+    if(congestWarned||congestion<0.55)return;
+    congestWarned=true;
+    var msg=unlocked('transit')?'🚦 Gridlock — the streets can’t move everyone. Build <b>Transit</b> stops to carry the crowds and keep the city growing.'
+                               :'🚦 The streets are jamming as the city grows. <b>Transit</b> unlocks soon — charter the next tier to keep it moving.';
     toastEl.innerHTML=msg;toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},7000);
   }
   var cashEl,cashRateEl;
@@ -430,6 +455,8 @@
       bankBody:'#EDE7D6',bankRoof:'#3E8E6E',bankCol:'#CFC7B2',bankCoin:'#D9AE52',
       towerRes:['#5FA5A5','#4E8C8C','#3F7373','#335E5E','#284A4A'],towerResTop:'#B7D4D4',towerWin:'#EAF3EF',
       portDeck:'#8A8272',portArm:'#4C7EA8',portHi:'#A6C3D6',
+      solarPanel:'#24507E',solarCell:'#3E7CB4',solarFrame:'#C9C2B0',solarSun:'#F3C24A',
+      transitBody:'#3E8E7E',transitRoof:'#2E6A5D',transitGlass:'#CDEAE2',transitSign:'#F3C24A',transitPost:'#5F574B',
 
       lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
       terrGrass:'rgba(130,196,100,.24)',terrWater:'rgba(74,150,200,.28)',terrMountain:'rgba(126,128,136,.34)',terrForest:'rgba(36,98,46,.5)',terrPeak:'rgba(88,90,98,.55)',
@@ -437,7 +464,7 @@
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
     }
   };
-  var SWATCH={road:'#9c968a',rail:'#8A8272',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',water:'#4C88B8',bank:'#3E8E6E',port:'#4C7EA8',tower:'#4E8C8C',bulldoze:'#c96a5a'};
+  var SWATCH={road:'#9c968a',rail:'#8A8272',transit:'#3E8E7E',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',solar:'#2E6DA4',water:'#4C88B8',bank:'#3E8E6E',port:'#4C7EA8',tower:'#4E8C8C',bulldoze:'#c96a5a'};
 
   function themeName(){return 'light';}   // light-only — the game owns its palette
   function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
@@ -548,7 +575,7 @@
     }
     if(cell.t!=='empty')return;                           // never overwrite an existing building — Clear the lot first
     if(!canAfford(cost)){denyToast();return;}
-    spend(cost);cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'||brush==='port'?1:0);cell.grow=0;
+    spend(cost);cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'||brush==='port'||brush==='solar'||brush==='transit'?1:0);cell.grow=0;
     dirty=true;svcDirty=true;scheduleSave();return true;                     // a building was placed → up() reverts to the selector
   }
   function denyUpgrade(bl){var now=performance.now();if(now-_denyT<1500)return;_denyT=now;
@@ -642,7 +669,7 @@
     if(e.key==='+'||e.key==='='){setZoom(zoom*1.2);return;}         // keyboard zoom
     if(e.key==='-'||e.key==='_'){setZoom(zoom/1.2);return;}
     if(OBSERVE)return;if(e.key==='Escape'){cancelLine();return;}
-    var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank','p':'port','P':'port','t':'tower','T':'tower'}[e.key];if(m)selectBrush(m);});
+    var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank','p':'port','P':'port','t':'tower','T':'tower','e':'solar','E':'solar','m':'transit','M':'transit'}[e.key];if(m)selectBrush(m);});
   window.addEventListener('keyup',function(e){var lk=e.key.toLowerCase();if(PANKEY[lk])keys[PANKEY[lk]]=0;});
 
   // ---- minimap: a 1px-per-cell overview of the whole world + a draggable viewport box ----
@@ -678,7 +705,7 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();treasury=CASH_START;netRate=0;updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -708,12 +735,14 @@
       return hit;}   // utilities distribute over local ROADS (not the freeway); did the source touch one?
     for(var si=0;si<n;si++){var gs=grid[si];if(!gs)continue;var stt=gs.t;
       if(stt==='power'){gen+=POWER_OUT/4;seedNet(si,pnet,pq);}         // a 2×2 station = 4 cells → POWER_OUT total
+      if(stt==='solar'){gen+=SOLAR_OUT*solarMult;seedNet(si,pnet,pq);} // clean 1×1 array — Rooftop Solar tech boosts it
       if(stt==='water'){wgen+=WATER_OUT;seedNet(si,wnet,wq);}
       if(gs.terr==='water'){if(seedNet(si,wnet,wq))wgen+=WATER_PER_TILE;}}   // a coast/lake tile adds capacity only where it meets a road
     function flow(net,que){var h=0;while(h<que.length){var id=que[h++],c=id%cols,r=(id/cols)|0,nn=[[c-1,r],[c+1,r],[c,r-1],[c,r+1]];
       for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'&&!net[ni]){net[ni]=1;que.push(ni);}}}}
     flow(pnet,pq);flow(wnet,wq);
     var use=0,wuse=0;for(var di=0;di<n;di++){var gd=grid[di];if(!gd)continue;if(POWERUSE[gd.t])use+=POWERUSE[gd.t]*(gd.lvl||1);if(WATERUSE[gd.t])wuse+=WATERUSE[gd.t]*(gd.lvl||1);}
+    use=Math.round(use*powerUseMult);wuse=Math.round(wuse*waterUseMult);   // Smart Grid / Water Reclamation techs cut demand
     powerGen=Math.round(gen);powerUse=use;powerOK=(gen>=use);          // city-wide power budget
     waterGen=Math.round(wgen);waterUse=wuse;waterOK=(wgen>=wuse);       // city-wide water budget
     function borders(net,c,r){return (inB(c-1,r)&&net[idx(c-1,r)])||(inB(c+1,r)&&net[idx(c+1,r)])||(inB(c,r-1)&&net[idx(c,r-1)])||(inB(c,r+1)&&net[idx(c,r+1)]);}
@@ -733,6 +762,14 @@
           else{railConn[ni2]=1;rq.push(ni2);}
         }}}
     for(var i3=0;i3<n;i3++){if(railConn[i3]&&grid[i3]&&grid[i3].rail){connectedRailCount++;railToWorld=true;}}
+    // ---- traffic: trips vs capacity. Roads carry a little; Transit stops carry a LOT. A dense city
+    //      outruns its roads (pop scales with density, roads only with area) → jams, unless it builds transit.
+    var roadCells=0,transitStops=0,trips=0;
+    for(var tc=0;tc<n;tc++){var gt=grid[tc];if(!gt)continue;
+      if(gt.t==='road'&&connected[tc])roadCells++;else if(gt.t==='transit')transitStops++;
+      if(TRIPW[gt.t])trips+=TRIPW[gt.t]*(gt.lvl||1);}
+    trafficDemand=trips; trafficCap=roadCells*0.6+transitStops*TRANSIT_CAP*transitMult;
+    congestion=trips>0?Math.max(0,Math.min(1,(trips-trafficCap)/trips)):0;   // 0 = free-flowing, 1 = total gridlock
   }
   function nearConnected(c,r){
     return (inB(c-1,r)&&connected[idx(c-1,r)])||(inB(c+1,r)&&connected[idx(c+1,r)])||
@@ -811,10 +848,11 @@
       var rate=demand[cell.t]>0?1:0.28;
       if(cell.t==='ind'&&matWanted)rate=1;               // Works speed up when Materials are short
       if(complement(c,r,cell.t))rate*=1.6;
+      rate*=(1-congestion*0.6);                           // gridlock throttles growth — a jammed city can't expand
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    updatePop();economy();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
+    updatePop();economy();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -825,6 +863,7 @@
     popTarget=p;}
   var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp'),terrEl=document.getElementById('terrb'),terrStat=document.getElementById('terrstat');
   var pwrEl=document.getElementById('pwr'),pwrStat=document.getElementById('pwrstat'),watEl=document.getElementById('wat'),watStat=document.getElementById('watstat');
+  var trafEl=document.getElementById('traf'),trafStat=document.getElementById('trafstat');
   function meterUI(el,stat,gen,use,label,src){var net=gen-use;
     el.textContent=(net>=0?'+':'−')+Math.abs(net).toLocaleString();
     el.style.color=gen===0?'':(net>=0?'#5FBE6E':'#F0876A');
@@ -834,7 +873,10 @@
     matEl.style.color=matHealthy?'':'#F0876A';goodsEl.style.color=goodsHealthy?'':'#F0876A';expEl.style.color=exportRate>0.5?'#5FBE6E':'';
     terrEl.textContent='+'+Math.round(terrBonus);terrStat.style.opacity=terrBonus>0.5?1:0.38;
     meterUI(pwrEl,pwrStat,powerGen,powerUse,'power','a station');
-    meterUI(watEl,watStat,waterGen,waterUse,'water','a tower');}
+    meterUI(watEl,watStat,waterGen,waterUse,'water','a tower');
+    if(trafEl){var cp=Math.round(congestion*100);trafEl.textContent=cp+'%';
+      trafEl.style.color=congestion>0.5?'#E4553C':congestion>0.25?'#E0A93E':'#5FBE6E';
+      trafStat.style.opacity=trafficDemand>0.5?1:0.38;}}
   var demBars={res:document.getElementById('dem-res'),com:document.getElementById('dem-com'),ind:document.getElementById('dem-ind')};
   var demColor={res:'#63A05C',com:'#5589BB',ind:'#BF8F45'};
   function updateDemandUI(){var mag=demTot*0.5+8;   // normalize by city size → a relative gauge (0.5 = balanced) that never pegs regardless of scale
@@ -843,15 +885,18 @@
   // each tier needs BOTH a population and a banked treasury reserve — money gates progression. A longer,
   // stepped climb to Megacity (9 tiers); each charter unlocks a tool and/or a density level (see TIER_UNLOCK/DENS).
   var MS=[{n:120,l:'Hamlet',cash:0},{n:320,l:'Village',cash:500},{n:700,l:'Township',cash:1500},{n:1500,l:'Town',cash:3500},{n:3000,l:'Borough',cash:8000},{n:6000,l:'City',cash:18000},{n:11000,l:'District',cash:40000},{n:19000,l:'Metropolis',cash:90000},{n:32000,l:'Megacity',cash:200000}];
-  var UNLOCK_LABEL={com:'Shops',ind:'Works',rail:'Rail',fac:'Factory',park:'Park',bank:'Bank',port:'Port',tower:'Tower'};
+  var UNLOCK_LABEL={com:'Shops',solar:'☀ Solar Arrays',ind:'Works',rail:'Rail',fac:'Factory',park:'Park',transit:'🚉 Public Transit',bank:'Bank',port:'Port',tower:'Tower'};
   var maxMS=-1,toastEl=document.getElementById('toast'),toastTimer=0;
-  function tierUnlocks(t){var out=[];for(var k in TIER_UNLOCK)if(TIER_UNLOCK[k]===t)out.push(UNLOCK_LABEL[k]||k);return out;}
+  function tierUnlocks(t){var out=[],k;                        // tools + researched tech granted at tier t
+    for(k in TIER_UNLOCK)if(TIER_UNLOCK[k]===t)out.push(UNLOCK_LABEL[k]||k);
+    for(k in TECH)if(TECH[k].t===t)out.push('🔬 '+TECH[k].n+' ('+TECH[k].d+')');
+    return out;}
   function checkMilestone(){var reached=maxMS;for(var i=0;i<MS.length;i++)if(popTarget>=MS[i].n&&treasury>=MS[i].cash)reached=i;
-    if(reached>maxMS){var prev=maxMS;maxMS=reached;MAXLVL=densCap();updateToolLocks();scheduleSave();
+    if(reached>maxMS){var prev=maxMS;maxMS=reached;MAXLVL=densCap();syncTech();updateToolLocks();scheduleSave();
       showToast(MS[reached].l,MS[reached].n);
       for(var tt=prev+1;tt<=reached;tt++){var u=tierUnlocks(tt),dc=DENS[Math.min(DENS.length-1,tt+1)];   // announce what each new tier grants
         var parts=u.slice();if(dc>DENS[Math.min(DENS.length-1,tt)])parts.push('taller buildings (L'+dc+')');
-        if(parts.length)setTimeout((function(p,l){return function(){toastEl.innerHTML='🔓 '+l+' unlocks <b>'+p.join(' · ')+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3200);};})(parts,MS[tt].l),1400);}
+        if(parts.length)setTimeout((function(p,l){return function(){toastEl.innerHTML='🔓 '+l+' unlocks <b>'+p.join(' · ')+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3600);};})(parts,MS[tt].l),1400);}
     }}
   var goalLabel=document.getElementById('goal-label'),goalFill=document.getElementById('goal-fill');
   function updateGoalUI(){var ni=maxMS+1;
@@ -905,11 +950,13 @@
   var cars=[];
   function adjDrive(c,r){var o=[];if(drivable(c-1,r))o.push([c-1,r]);if(drivable(c+1,r))o.push([c+1,r]);if(drivable(c,r-1))o.push([c,r-1]);if(drivable(c,r+1))o.push([c,r+1]);return o;}
   function spawnCar(){if(!roadList.length)return null;var s=roadList[(Math.random()*roadList.length)|0],a=adjDrive(s[0],s[1]);var t=a.length?a[(Math.random()*a.length)|0]:s;return {cc:s[0],cr:s[1],tc:t[0],tr:t[1],p:Math.random(),tint:(Math.random()*pal.car.length)|0};}
-  function manageCars(){var want=Math.max(0,Math.min(9,Math.floor(roadList.length/9)));while(cars.length<want){var c=spawnCar();if(!c)break;cars.push(c);}while(cars.length>want)cars.pop();}
+  function manageCars(){var want=Math.max(0,Math.min(18,Math.floor(roadList.length/9)+Math.floor(congestion*11)));   // a jammed city crowds its streets with cars
+    while(cars.length<want){var c=spawnCar();if(!c)break;cars.push(c);}while(cars.length>want)cars.pop();}
   function updateCars(dt){
     for(var i=cars.length-1;i>=0;i--){var car=cars[i];
       if(!drivable(car.cc,car.cr)){var s=spawnCar();if(s)cars[i]=s;else cars.splice(i,1);continue;}
-      car.p+=dt*2.0;
+      car.p+=dt*2.0*(1-congestion*0.82);                 // traffic crawls to a near-standstill under gridlock
+      if(car.p<0)car.p=0;
       while(car.p>=1){car.p-=1;car.cc=car.tc;car.cr=car.tr;var a=adjDrive(car.cc,car.cr);
         if(a.length>1)a=a.filter(function(n){return !(n[0]===car.pc&&n[1]===car.pr);});
         if(!a.length)a=adjDrive(car.cc,car.cr);
@@ -1075,6 +1122,26 @@
     ctx.fillStyle=pal.bankCoin;ctx.fillRect(mx+px(10*s),mt+px(5*s),4,4);      // crate
     ctx.fillStyle=pal.portHi;ctx.fillRect(bx,by,w,1);
   }
+  function drawSolar(x,y,cell){                             // a tilted photovoltaic array with a little sun glint
+    var s=growScale(cell),w=px(22*s),h=px(13*s),bx=px(x+(CELL-w)/2),by=px(y+CELL-4-h);
+    ctx.fillStyle=pal.side;ctx.fillRect(bx+2,by+h,w,2);                       // shadow
+    ctx.fillStyle=pal.solarFrame;ctx.fillRect(bx-1,by-1,w+2,h+2);            // panel frame
+    ctx.fillStyle=pal.solarPanel;ctx.fillRect(bx,by,w,h);                     // dark panel
+    ctx.fillStyle=pal.solarCell;                                             // cell grid (blue glints)
+    var cw=Math.max(2,px(4*s));
+    for(var gy=by+1;gy<by+h-1;gy+=cw+1)for(var gx=bx+1;gx<bx+w-1;gx+=cw+1)ctx.fillRect(gx,gy,cw,cw);
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(bx,by,w,1);           // top sheen
+    ctx.fillStyle=pal.solarSun;ctx.beginPath();ctx.arc(px(x+CELL-6),py(y+6),Math.max(2,px(2.4*s)),0,6.2832);ctx.fill();  // sun mark
+  }
+  function drawTransit(x,y,cell){                           // a transit stop: a canopy shelter + a route sign
+    var s=growScale(cell),w=px(20*s),h=px(7*s),bx=px(x+(CELL-w)/2),by=px(y+CELL-5-h);
+    ctx.fillStyle=pal.side;ctx.fillRect(bx+2,by+h,w,2);
+    ctx.fillStyle=pal.transitPost;ctx.fillRect(bx+1,by,2,h+3);ctx.fillRect(bx+w-3,by,2,h+3);   // posts
+    ctx.fillStyle=pal.transitGlass;ctx.fillRect(bx,by+2,w,h-2);              // glass shelter
+    ctx.fillStyle=pal.transitRoof;ctx.fillRect(bx-1,by,w+2,px(2.4*s));       // canopy roof
+    ctx.fillStyle=pal.transitBody;ctx.fillRect(px(x+CELL/2-5),py(y+4),10,px(6*s));   // route sign board
+    ctx.fillStyle=pal.transitSign;ctx.fillRect(px(x+CELL/2-3),py(y+6),6,2);          // sign stripe
+  }
   function drawHighrise(x,y,cell){                          // dense residential: a tall slab with lit windows
     var lvl=cell.lvl,s=growScale(cell),pxs=Math.max(2,Math.round(CELL/12));
     var w=px((5+lvl*0.4)*pxs*s),h=px((6+lvl*3)*pxs*s),bx=px(x+(CELL-w)/2),by=px(y+CELL-4-h);
@@ -1123,9 +1190,10 @@
     else if(kind==='goods'){ctx.fillStyle=pal.cueGood;ctx.fillRect(cx-2,y+5,4,1);ctx.fillRect(cx-2,y+8,4,1);ctx.fillRect(cx-2,y+5,1,4);ctx.fillRect(cx+1,y+5,1,4);}}  // hollow box = Goods
 
   // ---- placement preview + inspect ----
-  var BUILDB={res:1,com:1,ind:1,fac:1,park:1,power:1,water:1,bank:1,port:1,tower:1};
+  var BUILDB={res:1,com:1,ind:1,fac:1,park:1,power:1,solar:1,water:1,bank:1,port:1,tower:1,transit:1};
   function drawBuildingSprite(x,y,cell){var t=cell.t;
     if(t==='park')return drawPark(x,y,cell); if(t==='power')return drawPlant(x,y,cell,2);
+    if(t==='solar')return drawSolar(x,y,cell); if(t==='transit')return drawTransit(x,y,cell);
     if(t==='water')return drawTower(x,y,cell); if(t==='bank')return drawBank(x,y,cell); if(t==='port')return drawPort(x,y,cell);
     if(t==='res')return drawHome(x,y,cell); if(t==='tower')return drawHighrise(x,y,cell);
     if(t==='com')return drawShop(x,y,cell); if(t==='ind')return drawWorks(x,y,cell); if(t==='fac')return drawFactory(x,y,cell);}
@@ -1134,7 +1202,7 @@
     if(!unlocked(brush))return false;
     if(brush==='power')return plantFits(c,r)&&canAfford(COST.power||0);
     if(g.t!=='empty')return false; return canAfford(COST[brush]||0);}
-  var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',water:'Water tower',bank:'Bank',port:'Port'};
+  var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',solar:'Solar array',water:'Water tower',bank:'Bank',port:'Port',transit:'Transit stop'};
   var TERRLABEL={plains:'Grassland',forest:'Forest',mountain:'Mountain',water:'Water'};
   var ZONEK={res:1,com:1,ind:1,fac:1,tower:1};
   function yn(v){return v?'<span class="ok">yes</span>':'<span class="no">no</span>';}
@@ -1158,7 +1226,7 @@
       h+=why?'<div class="no">⏸ '+why+'</div>':(g.lvl<MAXLVL?'<div class="ok">▲ growing</div>':'<div class="ok">✓ maxed</div>');
       if(t==='ind')h+='<div class="ik">'+(nearMountain(c,r)?'By a mountain — +80% ore':g.terr==='forest'?'On forest — +40% timber':'No terrain boost')+'</div>';
     } else {
-      var desc={park:'Lifts nearby land',power:'Generates power for the grid (2×2)',water:'Supplies water to the grid',bank:'Raises your credit ceiling + earns interest',port:'Boosts export revenue'}[t];
+      var desc={park:'Lifts nearby land',power:'Generates power for the grid (2×2)',solar:'Clean power — cheap to run, boosted by Rooftop Solar tech',water:'Supplies water to the grid',bank:'Raises your credit ceiling + earns interest',port:'Boosts export revenue',transit:'Moves people — relieves traffic so a dense city keeps growing'}[t];
       if(desc)h+='<div class="ik">'+desc+'</div>';
       h+='<div><span class="ik">On the road grid</span> '+yn(nearConnected(c,r))+'</div>';}
     return h;}
@@ -1191,6 +1259,8 @@
       if(t==='park'){drawPark(x,y,cell);continue;}
       if(t==='power'){if(isPower(c-1,r)||isPower(c,r-1))continue;    // draw the plant once, at the block's top-left anchor
         var span=(isPower(c+1,r)&&isPower(c,r+1)&&isPower(c+1,r+1))?2:1;drawPlant(x,y,cell,span);continue;}
+      if(t==='solar'){drawSolar(x,y,cell);continue;}
+      if(t==='transit'){drawTransit(x,y,cell);continue;}
       if(t==='water'){drawTower(x,y,cell);continue;}
       if(t==='bank'){drawBank(x,y,cell);continue;}
       if(t==='port'){drawPort(x,y,cell);continue;}
@@ -1200,7 +1270,8 @@
       if(cell.lvl<MAXLVL){var bl=connected?blocker(c,r):'';if(bl)drawCue(x,y,bl);}
     }
     // cars on top
-    for(var i=0;i<cars.length;i++){var car=cars[i];var fx=(car.cc+(car.tc-car.cc)*car.p+0.5)*CELL,fy=(car.cr+(car.tr-car.cr)*car.p+0.5)*CELL;ctx.fillStyle=pal.car[car.tint];ctx.fillRect(px(fx-2),px(fy-2),4,4);}
+    var jamCol=congestion>0.6?'#D8452F':congestion>0.35?'#E0A93E':null;   // amber → red as the streets choke
+    for(var i=0;i<cars.length;i++){var car=cars[i];var fx=(car.cc+(car.tc-car.cc)*car.p+0.5)*CELL,fy=(car.cr+(car.tr-car.cr)*car.p+0.5)*CELL;ctx.fillStyle=jamCol||pal.car[car.tint];ctx.fillRect(px(fx-2),px(fy-2),4,4);}
     // freight trains: engine + a Materials car + a Goods car, trailing along the rails
     for(var ti=0;ti<trains.length;ti++){var tr=trains[ti];
       var e=tseg(tr.trail[0],tr.tgt,tr.p),c1=tseg(tr.trail[1]||tr.trail[0],tr.trail[0],tr.p),c2=tseg(tr.trail[2]||tr.trail[1]||tr.trail[0],tr.trail[1]||tr.trail[0],tr.p);
@@ -1340,7 +1411,7 @@
   window.addEventListener('resize',resize);
   resize();initWorld();ensureHighway();centerCam(HWCOL,HWROW);   // build the fixed world, lay the corridor, aim the camera at it
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
-  else { load(); MAXLVL=densCap(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }   // density ceiling follows the loaded tier
+  else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }   // density ceiling + tech follow the loaded tier
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var gg0=grid[idx(c0,r0)];if(gg0.t==='road'||gg0.t==='highway')roadList.push([c0,r0]);if(gg0.rail||gg0.t==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
