@@ -301,7 +301,7 @@
   var mode='world', divT=0, zx=0, zy=0, navigated=false, movedDist=0;
   function clamp(v){return Math.max(-1.2,Math.min(1.2,v));}
   function sxy(e){var r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
-  function hittest(x,y){var best=null,bd=1e9;for(var i=0;i<CITIES.length;i++){var c=CITIES[i],p=proj(c.lat,c.lon);if(p.z<=0.06)continue;var rad=(c.you?7:5)*(0.7+0.5*p.z)+9,d=Math.hypot(p.sx-x,p.sy-y);if(d<rad&&d<bd){bd=d;best=c;}}return best;}
+  function hittest(x,y){var best=null,bd=1e9;for(var i=0;i<CITIES.length;i++){var c=CITIES[i],p=proj(c.lat,c.lon);if(p.z<=0.06)continue;var rad=(c.you?7:(3.4+grownTier(c)*0.7))*(0.7+0.5*p.z)+9,d=Math.hypot(p.sx-x,p.sy-y);if(d<rad&&d<bd){bd=d;best=c;}}return best;}   // radius matches the drawn (grown-tier) marker
   function down(e){if(mode!=='world')return;dragging=true;idleT=0;lastX=e.clientX;lastY=e.clientY;movedDist=0;canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);}
   function move(e){var s=sxy(e);
     if(dragging){var dx=e.clientX-lastX,dy=e.clientY-lastY;movedDist+=Math.abs(dx)+Math.abs(dy);yaw+=dx*0.35;pitch=clamp(pitch+dy*0.006);lastX=e.clientX;lastY=e.clientY;}
@@ -317,13 +317,14 @@
   var fadeEl=document.getElementById('fade');
   var ncVisitCity=null;
   // trade partners (shared with the builder via localStorage): route your exports to AI neighbours — up to a small network
-  var MAX_PARTNERS=4;
-  function getPartners(){try{
+  var MAX_PARTNERS=4, partnersCache=null;                 // cached — drawTradeLink runs every frame, don't re-parse storage
+  function getPartners(){if(partnersCache)return partnersCache;try{
     var raw=localStorage.getItem('mdg-trade-partners');var list=raw?JSON.parse(raw):null;
     if(!list){var old=localStorage.getItem('mdg-trade-partner');if(old){var o=JSON.parse(old);list=o?[o]:[];}}  // migrate single-partner key
-    return Array.isArray(list)?list.filter(function(p){return p&&typeof p.lat==='number'&&typeof p.lon==='number';}):[];
-  }catch(e){return [];}}
-  function setPartners(list){try{localStorage.setItem('mdg-trade-partners',JSON.stringify(list));localStorage.removeItem('mdg-trade-partner');}catch(e){}}
+    partnersCache=Array.isArray(list)?list.filter(function(p){return p&&typeof p.lat==='number'&&typeof p.lon==='number';}):[];
+  }catch(e){partnersCache=[];}return partnersCache;}
+  function setPartners(list){partnersCache=list;try{localStorage.setItem('mdg-trade-partners',JSON.stringify(list));localStorage.removeItem('mdg-trade-partner');}catch(e){}}
+  window.addEventListener('storage',function(e){if(!e.key||e.key==='mdg-trade-partners')partnersCache=null;});   // another tab changed partners → re-read
   function isPartner(c){return getPartners().some(function(p){return Math.abs(p.lat-c.lat)<1e-6&&Math.abs(p.lon-c.lon)<1e-6;});}
   function updateTradeBtn(c){var b=document.getElementById('nc-trade');if(!b)return;
     var n=getPartners().length;

@@ -256,7 +256,7 @@
   var CELL=32, WORLD=256, cols=WORLD, rows=WORLD, dpr=1;   // fixed, standardized world; the view is a camera onto it
   var camX=0, camY=0, VCOLS=0, VROWS=0, keys={};           // camera (top-left world cell, float) + visible span + held keys
   var zoom=1, ZMIN=0.5, ZMAX=3, stW=0, stH=0;              // mousewheel/UI zoom (screen scale) + stage size in CSS px
-  var grid=[], brush='road', lastPaint=-1, dirty=true, svcDirty=false;
+  var grid=[], brush='road', lastPaint=-1, dirty=true, svcDirty=false, lastPulseAt=-9999;
   var lineAnchor=null, hoverCell=null;                      // road/rail line-tool state
   var dragStart=null, panned=false;                         // pointer: distinguish a click (place one) from a drag (pan)
   // ---- region: where this patch sits on the shared world (carried in from the globe dive) ----
@@ -314,8 +314,9 @@
   var _denyT=0;
   function denyToast(){var now=performance.now();if(now-_denyT<1500)return;_denyT=now;
     toastEl.innerHTML='Credit maxed <b>— grow income to build more</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);}
-  var insolvent=false, deficitWarned=false, insolventEl;
+  var insolvent=false, deficitWarned=false, insolventEl, _ecoT=0;
   function economy(){
+    if(!OBSERVE&&(++_ecoT%20===0))scheduleSave();       // treasury moves every tick — persist it even when the player is only watching
     var income=0,upkeep=0,banks=0,ports=0,facN=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;var t=g.t;
       if(TAX[t])income+=g.lvl*TAX[t];
@@ -501,7 +502,11 @@
   // power station is a 2×2 footprint
   function isPower(c,r){return inB(c,r)&&grid[idx(c,r)].t==='power';}
   function plantCells(c,r){return [[c,r],[c+1,r],[c,r+1],[c+1,r+1]];}
-  function plantFits(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var a=cs[i][0],b=cs[i][1];if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;}return true;}
+  function plantFits(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var a=cs[i][0],b=cs[i][1];if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;}
+    // no orthogonal contact with another station — keeps every 2×2 unambiguous to select, draw, and clear
+    var ring=[[c-1,r],[c-1,r+1],[c+2,r],[c+2,r+1],[c,r-1],[c+1,r-1],[c,r+2],[c+1,r+2]];
+    for(var k=0;k<8;k++)if(isPower(ring[k][0],ring[k][1]))return false;
+    return true;}
   function layPlant(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var g=grid[idx(cs[i][0],cs[i][1])];g.t='power';g.lvl=1;g.grow=0;}}
   function plantTopLeft(c,r){var tc=c,tr=r;if(isPower(tc-1,tr))tc--;if(isPower(tc,tr-1))tr--;return [tc,tr];}
   function paintAt(c,r){
@@ -529,9 +534,10 @@
       if(!ZONES[brush]||cell.lvl>=MAXLVL)return;
       var ub=blocker(c,r); if(ub){denyUpgrade(ub);return;}
       if(!canAfford(cost)){denyToast();return;}
-      spend(cost);cell.lvl++;cell.grow=0;cell.pulse=performance.now();
+      spend(cost);cell.lvl++;cell.grow=0;cell.pulse=lastPulseAt=performance.now();
       dirty=true;svcDirty=true;scheduleSave();return;
     }
+    if(cell.t!=='empty')return;                           // never overwrite an existing building — Clear the lot first
     if(!canAfford(cost)){denyToast();return;}
     spend(cost);cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'||brush==='port'?1:0);cell.grow=0;
     dirty=true;svcDirty=true;scheduleSave();return true;                     // a building was placed → up() reverts to the selector
@@ -782,7 +788,7 @@
       if(cell.t==='ind'&&matWanted)rate=1;               // Works speed up when Materials are short
       if(complement(c,r,cell.t))rate*=1.6;
       cell.grow+=rate;
-      if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=performance.now();dirty=true;scheduleSave();}
+      if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
     economy();updatePop();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
   }
@@ -1095,7 +1101,7 @@
     if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.rail)return false;
     if(!unlocked(brush))return false;
     if(brush==='power')return plantFits(c,r)&&canAfford(COST.power||0);
-    if(g.t===brush)return false; return canAfford(COST[brush]||0);}
+    if(g.t!=='empty')return false; return canAfford(COST[brush]||0);}
   var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',water:'Water tower',bank:'Bank',port:'Port'};
   var TERRLABEL={plains:'Grassland',forest:'Forest',mountain:'Mountain',water:'Water'};
   var ZONEK={res:1,com:1,ind:1,fac:1,tower:1};
@@ -1213,6 +1219,7 @@
   // ---- save / load ----
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
+  window.addEventListener('pagehide',function(){save();});   // flush on leave — a debounced save may still be pending
   function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0]);}
     localStorage.setItem(SAVE_KEY,JSON.stringify({v:7,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
@@ -1223,7 +1230,7 @@
 
   // ---- animation loop ----
   var lastFrame=performance.now(),lastAmbient=0;
-  function anyPulse(){var now=performance.now();for(var i=0;i<grid.length;i++){if(grid[i]&&now-grid[i].pulse<380)return true;}return false;}
+  function anyPulse(){return performance.now()-lastPulseAt<380;}   // one timestamp instead of a full-grid scan every frame
   function frame(now){
     var dt=Math.min(0.05,(now-lastFrame)/1000);lastFrame=now;
     if(keys.u||keys.d||keys.l||keys.r){var sp=26*dt;                 // WASD / arrows glide the camera
