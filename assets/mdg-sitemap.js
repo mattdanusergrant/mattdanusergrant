@@ -12,7 +12,7 @@
       { label:'Moon Druid Garrison', url:'https://mustdesigngames.mattdanusergrant.com/moondruidgarrison/' },
       { label:'Match Deck Gateway', url:'https://mustdesigngames.mattdanusergrant.com/matchdeckgateway/' }
     ]},
-    { label:'Modular Digital Goods', url:'/#apps-h', children:[
+    { label:'Tools & Projects', url:'/#apps-h', children:[
       { label:'Math Draws Graphics', url:'https://mathdrawsgraphics.mattdanusergrant.com/', blank:true },
       { label:'Make Dope Grooves', url:'/tool.html?app=makedopegrooves' },
       { label:'Markdown Document Generator', url:'/resume-builder.html' },
