@@ -108,8 +108,8 @@
   function readTheme(){
     var D=dark();
     P.bg=cssVar('--bg'); P.ink=cssVar('--ink'); P.line=cssVar('--line'); P.line2=cssVar('--line-2');
-    P.ocean = D?'#243B45':'#AFC9D2';        // planet base
-    P.land  = D?'#3B5A3C':'#A7C089';        // continents
+    P.land  = D?'#3B5A3C':'#A7C089';        // planet base — a LAND world (our fiction: one giant grid of cities)
+    P.water = D?'#243B45':'#A9CBE0';        // lakes & inland seas — spots of blue, not oceans
     P.grat  = D?'rgba(230,232,225,.16)':'rgba(30,40,48,.16)';   // the "globe grid"
     P.gratMaj = D?'rgba(230,232,225,.30)':'rgba(30,40,48,.28)';
     P.rim  = D?'rgba(150,200,225,.35)':'rgba(120,160,185,.5)';
@@ -216,7 +216,7 @@
     ctx.save();var k,t,tp;
     for(k in NET.claimed){t=NET.claimed[k];tp=tilePath(t.ti,t.tj);if(!tp)continue;   // claimed territory
       fillTilePath(tp.pts);
-      if(t.you){ctx.fillStyle='rgba(95,154,90,'+(0.22*tp.a)+')';ctx.strokeStyle='rgba(95,154,90,'+(0.75*tp.a)+')';}
+      if(t.you){ctx.fillStyle='rgba(56,118,52,'+(0.34*tp.a)+')';ctx.strokeStyle='rgba(36,92,34,'+(0.9*tp.a)+')';}   // deeper green so your tile reads on the green land-world
       else{ctx.fillStyle='rgba(82,133,182,'+(0.15*tp.a)+')';ctx.strokeStyle='rgba(82,133,182,'+(0.5*tp.a)+')';}
       ctx.fill();ctx.lineWidth=1.2;ctx.stroke();}
     ctx.setLineDash([5,4]);
@@ -232,11 +232,11 @@
     wtoastEl.innerHTML='⛔ Beyond the frontier <b>— new cities must claim a dashed tile bordering the megacity network</b>';
     wtoastEl.classList.add('on');clearTimeout(wtoastT);wtoastT=setTimeout(function(){wtoastEl.classList.remove('on');},3200);}
 
-  // stable "continent" blobs so the planet reads as land + sea
-  var LAND=[
-    {lat:20,lon:-30,r:34},{lat:-18,lon:20,r:30},{lat:40,lon:60,r:26},
-    {lat:-30,lon:120,r:32},{lat:10,lon:150,r:24},{lat:-40,lon:-60,r:22},
-    {lat:55,lon:150,r:20}
+  // stable lake/sea spots so the land-world still reads as a planet (blue accents on green)
+  var WATER=[
+    {lat:20,lon:-30,r:20},{lat:-18,lon:20,r:18},{lat:40,lon:60,r:15},
+    {lat:-30,lon:120,r:19},{lat:10,lon:150,r:14},{lat:-40,lon:-60,r:13},
+    {lat:55,lon:150,r:12},{lat:0,lon:-100,r:15}
   ];
 
   // ---- projection (orthographic) ----
@@ -259,19 +259,19 @@
   }
 
   function fillSphere(){
-    // base disc with soft volume shading
+    // base disc with soft volume shading — green land is the default surface
     var g=ctx.createRadialGradient(cx-R*0.35,cy-R*0.4,R*0.2, cx,cy,R*1.05);
-    g.addColorStop(0,P.ocean); g.addColorStop(1, shade(P.ocean,-18));
+    g.addColorStop(0,P.land); g.addColorStop(1, shade(P.land,-18));
     ctx.beginPath(); ctx.arc(cx,cy,R,0,6.2832); ctx.fillStyle=g; ctx.fill();
   }
   function shade(hex,amt){var n=parseInt(hex.slice(1),16),r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt;
     r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));return 'rgb('+r+','+g+','+b+')';}
 
   function clipSphere(){ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.clip();}
-  function drawLand(){
-    for(var i=0;i<LAND.length;i++){var L=LAND[i],p=proj(L.lat,L.lon);if(p.z<=0)continue;
+  function drawWater(){
+    for(var i=0;i<WATER.length;i++){var L=WATER[i],p=proj(L.lat,L.lon);if(p.z<=0)continue;
       var sc=0.4+0.6*p.z, rad=L.r*(R/220)*sc;
-      ctx.fillStyle=P.land; ctx.globalAlpha=0.9*Math.min(1,p.z*1.4);
+      ctx.fillStyle=P.water; ctx.globalAlpha=0.9*Math.min(1,p.z*1.4);
       ctx.beginPath(); ctx.ellipse(p.sx,p.sy,rad*1.15,rad*0.85,0,0,6.2832); ctx.fill();
     }
     ctx.globalAlpha=1;
@@ -307,8 +307,8 @@
     list.forEach(function(p,k){
       if(typeof p.lat!=='number'||typeof p.lon!=='number')return;
       var pts=greatCircle(p,CITIES[0],52);          // partner → your city, so the pulse flows toward you
-      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(95,190,110,.30)';ctx.lineWidth=6;ctx.stroke();   // soft glow
-      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(74,170,96,.92)';ctx.lineWidth=2;ctx.stroke();     // core line
+      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=6;ctx.stroke();    // soft glow (light, so the route reads on green land)
+      ctx.beginPath();drawArc(pts);ctx.strokeStyle='rgba(38,110,52,.95)';ctx.lineWidth=2;ctx.stroke();     // core line
       var f=((t/2100)+k*0.28)%1, i0=Math.floor(f*(pts.length-1)), pt=pts[i0];                              // goods in transit (staggered per route)
       if(pt&&pt.z>0.03){ctx.globalAlpha=Math.min(1,pt.z*2.2);ctx.beginPath();ctx.arc(pt.sx,pt.sy,3.4,0,6.2832);ctx.fillStyle='#EAF7ED';ctx.fill();ctx.globalAlpha=1;}
     });
@@ -443,7 +443,7 @@
       if(fadeEl)fadeEl.style.opacity=Math.min(1,divT*1.25);
       if(divT>=1&&!navigated){navigated=true;var u='../';if(diveCity){u='../?lat='+encodeURIComponent(diveCity.lat)+'&lon='+encodeURIComponent(diveCity.lon)+'&name='+encodeURIComponent(diveCity.name);if(!diveCity.you)u+='&ai=1&tier='+grownTier(diveCity);}window.location.href=u;}}
     fillSphere();
-    clipSphere(); drawLand(); graticule(); drawClaims(); drawTradeLink(now); ctx.restore();
+    clipSphere(); drawWater(); graticule(); drawClaims(); drawTradeLink(now); ctx.restore();
     rim();
     drawCities(now);
     if(mode!=='diving')surfaceInset();
