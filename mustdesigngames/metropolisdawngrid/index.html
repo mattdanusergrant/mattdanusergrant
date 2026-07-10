@@ -203,7 +203,7 @@
 
   <footer class="tools" id="tools">
     <div class="tgroup"><span class="tglabel">Tools</span>
-      <div class="tool" data-brush="inspect"><span class="ico">🔍</span>Inspect<span class="key">I</span></div>
+      <div class="tool" data-brush="inspect"><span class="ico">🔍</span>Inspect<span class="key">`</span></div>
       <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
     </div>
     <div class="tgroup"><span class="tglabel">Transport</span>
@@ -617,7 +617,7 @@
   window.addEventListener('keydown',function(e){
     var lk=e.key.toLowerCase();
     if(PANKEY[lk]){keys[PANKEY[lk]]=1;e.preventDefault();return;}
-    if(e.key==='i'||e.key==='I'){selectBrush('inspect');return;}    // inspect works in observe mode too
+    if(e.key==='`'||e.key==='i'||e.key==='I'){selectBrush('inspect');return;}    // ` is the shortcut (I kept as an alias); inspect works in observe mode too
     if(e.key==='+'||e.key==='='){setZoom(zoom*1.2);return;}         // keyboard zoom
     if(e.key==='-'||e.key==='_'){setZoom(zoom/1.2);return;}
     if(OBSERVE)return;if(e.key==='Escape'){cancelLine();return;}
