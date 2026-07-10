@@ -218,6 +218,8 @@ const BAL={
   resp:{first:45,base:24,decay:0.8,floor:12},
   night:{budBase:6,budGrow:1.18,hpGrow:1.06,spawnGap:0.85,bossEvery:5,bossEscort:0.45},
   aggro:250,acquire:60,leash:320,sellBack:0.6,queueMax:3,
+  nodeCap:{well:4,copse:3},
+  expandR:260,seedShare:0.35,seedSpawn:480,
   dew:{night:5,killDiv:2,boss:15},
   bounty:{perBud:2,boss:30},
   caps:{foes:160,queue:140},
@@ -234,8 +236,9 @@ const BUILDS={
   totem :{nm:'Thorn Totem',em:'🌵',cost:[60,30],hp:300,r:24,atk:{dmg:15,cd:1,rng:180,air:true},desc:'Flings thorns · strikes flyers'},
   stones:{nm:'Starcaller Stones',em:'🗿',cost:[140,90],hp:450,r:32,trains:['star'],lock:'starcaller',desc:'Wakes Starcallers'},
   shrine:{nm:'Grove Shrine',em:'⛩️',cost:[120,80],hp:450,r:32,trains:['mend'],lock:'dewmender',desc:'Wakes Dewmenders'},
+  seed  :{nm:'Elderseed',em:'🌰',cost:[240,140],hp:900,r:38,vigil:4,runGate:3,desc:'Roots a young bough on the fallow knoll — wakes the far grove, takes moonlight deliveries, and opens a build ring of its own'},
 };
-const BAR_ORDER=['font','hall','perch','wall','totem','stones','shrine'];
+const BAR_ORDER=['font','hall','perch','wall','totem','stones','shrine','seed'];
 const UNITS={
   glimmer:{nm:'Glimmer',em:'✨',cost:[25,0],vigil:1,tt:8,hp:40,spd:110,r:9,desc:'Servitor spirit — harvests light and sap'},
   thorn:{nm:'Thornguard',em:'🛡️',cost:[60,10],vigil:2,tt:12,hp:220,spd:70,r:13,atk:{dmg:12,cd:1,rng:0,air:false},desc:'Holds the line up close'},
@@ -315,7 +318,8 @@ function metaMods(){return {
 };}
 
 // ════════════════════════════ WORLD — space ═══════════════════════════════
-const WD=1600,HT=1000,EX=800,EY=470;
+const WD=1600,HT=1000,EX=430,EY=650; // home corner (lower-left)
+const KNOLL={x:1240,y:330,r:170};    // fallow knoll — where the Elderseed may root
 let W,H,DPR,SC,OX,OY,dangerGrad=null;
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
   cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -326,13 +330,13 @@ function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=inne
   posElderBar();}
 addEventListener('resize',resize);resize();
 const s2w=(sx,sy)=>({x:(sx-OX)/SC,y:(sy-OY)/SC});
-const BUILD_MAX=380; // free-form placement: anywhere inside this ring that doesn't overlap
+const BUILD_MAX=380; // home build ring around the Elderbough
 let MOUSE=null;      // last cursor position in world coords
 const NODES=[
-  {kind:'well',nm:'Lightwell',x:420,y:250},
-  {kind:'well',nm:'Lightwell',x:1180,y:690},
-  {kind:'copse',nm:'Elderwood copse',x:1180,y:250},
-  {kind:'copse',nm:'Elderwood copse',x:420,y:690},
+  {kind:'well',nm:'Lightwell',x:180,y:330},
+  {kind:'copse',nm:'Elderwood copse',x:140,y:840},
+  {kind:'well',nm:'Lightwell',x:1400,y:240,far:true},
+  {kind:'copse',nm:'Elderwood copse',x:1120,y:180,far:true},
 ];
 
 // ════════════════════════════ STATE — the run ═════════════════════════════
@@ -341,7 +345,11 @@ function costOf(id){const c=BUILDS[id].cost.slice();
   if(id==='wall'&&R&&R.mods.bark)c[0]=Math.max(0,c[0]-5);return c;}
 function canPay(c){return R.light>=c[0]&&R.sap>=c[1];}
 function pay(c){R.light-=c[0];R.sap-=c[1];}
-function vigilCap(){return BAL.vigilBase+R.buildings.reduce((n,b)=>n+(b.id==='font'?BUILDS.font.vigil:0),0);}
+function vigilCap(){return R.buildings.reduce((n,b)=>n+(BUILDS[b.id].vigil||0),BAL.vigilBase);}
+function seedBld(){return R?(R.buildings.find(b=>b.id==='seed'&&b.hp>0)||null):null;}
+function nodeActive(i){return !NODES[i].far||!!seedBld();}
+function nodeCap(i){return BAL.nodeCap[NODES[i].kind];}
+function workersAt(i){return R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length;}
 function vigilUsed(){let n=0;
   for(const u of R.units)n+=UNITS[u.type].vigil;
   for(const b of R.buildings)for(const q of b.q)n+=UNITS[q].vigil;
@@ -354,8 +362,14 @@ function mkBuilding(id,x,y){const d=BUILDS[id];
   R.buildings.push(b);return b;}
 function canPlaceAt(id,x,y){
   const d=BUILDS[id];
-  if(Math.hypot(x-EX,y-EY)>BUILD_MAX)return false;
   if(x<20||x>WD-20||y<20||y>HT-20)return false;
+  if(id==='seed'){
+    if(Math.hypot(x-KNOLL.x,y-KNOLL.y)>KNOLL.r)return false;}
+  else{
+    const s=seedBld();
+    const home=Math.hypot(x-EX,y-EY)<=BUILD_MAX;
+    const out=s&&Math.hypot(x-s.x,y-s.y)<=BAL.expandR;
+    if(!home&&!out)return false;}
   for(const b of R.buildings){if(b.hp<=0)continue;
     const gap=(id==='wall'&&b.id==='wall')?3:10; // walls may butt together into palisades
     if(within({x,y},b,d.r+b.r+gap))return false;}
@@ -373,8 +387,9 @@ function postOf(b,u){if(!b)return{x:EX+u.jx,y:EY+u.jy};
   return{x:b.x+dx/l*46+u.jx*0.6,y:b.y+dy/l*46+u.jy*0.6};}
 function arcCount(n){return n<=3?1:n<=7?2:3;}
 function pickArcs(k){const arcs=[];let guard=60;
-  while(arcs.length<k&&guard--){const a=Math.random()*TAU;
-    if(arcs.every(b=>{let da=Math.abs(a-b);da=Math.min(da,TAU-da);return da>1.5;}))arcs.push(a);}
+  // home sits in a corner — the Gloam climbs from the open moor (up/right of the Elderbough)
+  while(arcs.length<k&&guard--){const a=-0.4+(Math.random()*2-1)*1.6;
+    if(arcs.every(b=>Math.abs(a-b)>1.1))arcs.push(a);}
   return arcs;}
 function respLen(n){const m=R?R.mods.resp:0;
   const base=n<=1?BAL.resp.first:Math.max(BAL.resp.floor,BAL.resp.base-BAL.resp.decay*(n-2));
@@ -391,9 +406,9 @@ function newRun(){
   R.phaseT=respLen(1);
   mkBuilding('elder',EX,EY);
   if(mods.bloom)mkBuilding('font',EX,EY-135);
-  // first three glimmers work the wells, the last two the copses
+  // three glimmers on the home Lightwell, two on the home copse
   for(let i=0;i<BAL.start.glim;i++){const g=mkUnit('glimmer',EX+(Math.random()-0.5)*60,EY+70);
-    g.assign=i<3?[0,1,0][i]:[2,3][i-3];}
+    g.assign=i<3?0:1;}
   R.nextQueue=buildQueue(1);R.previewStr=previewOf(R.nextQueue);
   rebuildBar();syncHud(true);setPaused(false);syncGoal();
   return R;}
@@ -421,11 +436,12 @@ function nearestElderThreat(u,air){const e=R.buildings[0];if(!e||e.id!=='elder')
   return best;}
 function hurtFoe(f,amt,src){f.hp-=amt;f.last=src;f.hitT=0.09;}
 function hurtBld(b,amt){b.hp-=amt;
-  if(b.id==='elder'){R.dangerT=0.45;R.dangerHudT=0.6;}}
+  if(b.id==='elder'){R.dangerT=0.45;R.dangerHudT=0.6;}
+  if(b.id==='seed'&&R.t-(R.seedWarn||0)>10){R.seedWarn=R.t;toast('🌰 The Elderseed is under attack');}}
 function hurt(t,amt){t.hp-=amt;
   if(t.type==='glimmer'){t.flee=BAL.glim.flee;t.st='go';}}
 function banner(txt){R.banner={txt,t:2.2,dur:2.2};}
-function previewOf(q){const c={};for(const t of q)c[t]=(c[t]||0)+1;
+function previewOf(q){const c={};for(const e of q)c[e.t]=(c[e.t]||0)+1;
   return Object.keys(FOES).filter(k=>c[k])
     .sort((a,b)=>(FOES[b].boss?1:0)-(FOES[a].boss?1:0))
     .map(k=>FOES[k].em+'×'+c[k]).join(' ');}
@@ -436,51 +452,65 @@ function poof(x,y,col){R.fx.push({k:'poof',x,y,t:0.5,dur:0.5,col});}
 function buildQueue(n){
   let bud=BAL.night.budBase*Math.pow(BAL.night.budGrow,n-1);
   const q=[];
-  if(n%BAL.night.bossEvery===0){q.push('maw');bud*=BAL.night.bossEscort;}
+  if(n%BAL.night.bossEvery===0){q.push({t:'maw'});bud*=BAL.night.bossEscort;}
   const avail=Object.keys(FOES).filter(k=>!FOES[k].boss&&FOES[k].n<=n);
   let guard=BAL.caps.queue;
   while(guard-->0){
     const cheap=Math.min.apply(null,avail.map(k=>FOES[k].bud));
     if(bud<cheap)break;
     const k=avail[Math.random()*avail.length|0];
-    if(FOES[k].bud<=bud){q.push(k);bud-=FOES[k].bud;}}
+    if(FOES[k].bud<=bud){q.push({t:k});bud-=FOES[k].bud;}}
   return q;}
 function startNight(){
   R.night++;R.phase='night';R.arcs=R.nextArcs;R.nightT=0;
-  R.queue=R.nextQueue||buildQueue(R.night);R.nextQueue=null;R.spawnT=0;
+  // a rooted Elderseed draws part of every night onto itself
+  R.queue=(R.nextQueue||buildQueue(R.night)).map(e=>({t:e.t,
+    g:(seedBld()&&Math.random()<BAL.seedShare)?'seed':'elder'}));
+  R.nextQueue=null;R.spawnT=0;
   const boss=R.night%BAL.night.bossEvery===0;
   banner(boss?'🌕 Full Moon — Night '+R.night:'Night '+R.night);
   syncHud(true);}
 function endNight(){
   R.done=R.night;
   if(R.done>meta.milestones.bestNight){meta.milestones.bestNight=R.done;saveMeta();}
+  if(R.done===BUILDS.seed.runGate&&!seedBld()&&!R.seedToasted){R.seedToasted=true;
+    toast('🌰 The Elderseed may now be planted — the fallow knoll waits by the far grove (8)');
+    uiDirty();}
   refreshUnlocks(true);
   R.phase='respite';R.phaseT=respLen(R.night+1);
   R.nextArcs=pickArcs(arcCount(R.night+1));
   R.nextQueue=buildQueue(R.night+1);R.previewStr=previewOf(R.nextQueue);
   banner('Respite');
   syncHud(true);}
-function spawnFoe(type){
-  if(R.foes.length>=BAL.caps.foes){R.queue.unshift(type);R.spawnT=0.5;return;}
+function spawnFoe(e){
+  if(R.foes.length>=BAL.caps.foes){R.queue.unshift(e);R.spawnT=0.5;return;}
+  const type=e.t;
   if(!meta.seen['foe_'+type]){meta.seen['foe_'+type]=1;saveMeta();
     toast(FOES[type].em+' '+FOES[type].nm+' — '+CODEX[type]);}
   const d=FOES[type];
-  const arc=R.arcs[Math.random()*R.arcs.length|0]||0;
-  const a=arc+(Math.random()-0.5)*(Math.PI/2);
-  const dist=660+Math.random()*80;
+  const s=seedBld();
+  const goal=(e.g==='seed'&&s)?'seed':'elder';
+  let ax,ay,a,dist;
+  if(goal==='seed'){ax=s.x;ay=s.y;a=Math.random()*TAU;dist=BAL.seedSpawn+Math.random()*60;}
+  else{ax=EX;ay=EY;
+    const arc=R.arcs[Math.random()*R.arcs.length|0]||0;
+    a=arc+(Math.random()-0.5)*(Math.PI/2);dist=660+Math.random()*80;}
   const hp=d.hp*Math.pow(BAL.night.hpGrow,R.night-1);
-  R.foes.push({uid:uid++,type,x:EX+Math.cos(a)*dist,y:EY+Math.sin(a)*dist,
+  R.foes.push({uid:uid++,type,goal,x:ax+Math.cos(a)*dist,y:ay+Math.sin(a)*dist,
     hp,maxHp:hp,r:d.r,cd:0,tg:null,ptg:null,tgT:0,last:null,aspd:1,hitT:0});}
 
 function glimmerUpdate(g,dt){
   const elder=R.buildings[0];
   if(g.flee>0){g.flee-=dt;moveTo(g,EX+g.jx*0.5,EY+g.jy*0.5,BAL.glim.spd*1.3,dt);return;}
+  if(g.assign>=0&&!nodeActive(g.assign)){g.assign=-1;g.st='go';g.carry=0;}
   if(g.assign<0){moveTo(g,EX+g.jx,EY+70+g.jy*0.4,BAL.glim.spd*0.5,dt);return;}
   const nd=NODES[g.assign];
   if(nd.kind==='well'){
     if(g.st==='ret'){
-      if(within(g,elder,elder.r+18)){R.light+=g.carry;g.carry=0;g.st='go';}
-      else moveTo(g,EX,EY,BAL.glim.spd,dt);
+      const s=seedBld();
+      const drop=(nd.far&&s)?s:elder; // far moonlight lands at the Elderseed
+      if(within(g,drop,drop.r+18)){R.light+=g.carry;g.carry=0;g.st='go';}
+      else moveTo(g,drop.x,drop.y,BAL.glim.spd,dt);
     }else if(g.st==='chan'){
       g.t-=dt;if(g.t<=0){g.carry=BAL.glim.carry*harvMul('well');g.st='ret';}
     }else{if(moveTo(g,nd.x,nd.y,BAL.glim.spd,dt)){g.st='chan';g.t=BAL.glim.chan;}}
@@ -551,7 +581,8 @@ function foeUpdate(f,dt){
       else{const mul=((f.tg.bld&&d.razer)?d.razer:1)*en;
         if(f.tg.bld)hurtBld(f.tg,d.dmg*mul);else hurt(f.tg,d.dmg*en);
         if(d.rng)beam(f,f.tg,'#8f6fd0');}}}
-  }else moveTo(f,EX,EY,d.spd*f.aspd,dt);}
+  }else{const s=f.goal==='seed'?seedBld():null;
+    moveTo(f,s?s.x:EX,s?s.y:EY,d.spd*f.aspd,dt);}}
 
 function update(dt){
   if(!R||R.over||R.waiting)return;
@@ -603,7 +634,9 @@ function update(dt){
   R.units=R.units.filter(u=>{if(u.hp>0)return true;poof(u.x,u.y,'#cdd7f2');uiDirty();return false;});
   let elderDown=false;
   R.buildings=R.buildings.filter(b=>{if(b.hp>0)return true;
-    poof(b.x,b.y,'#8fca7a');if(b.id==='elder')elderDown=true;uiDirty();return false;});
+    poof(b.x,b.y,'#8fca7a');if(b.id==='elder')elderDown=true;
+    if(b.id==='seed')toast('🌰 The Elderseed is lost — the far grove goes dark');
+    uiDirty();return false;});
   if(elderDown)return gameOver();
   // ── fx & feel timers
   for(const x of R.fx)x.t-=dt;R.fx=R.fx.filter(x=>x.t>0);
@@ -615,9 +648,14 @@ function update(dt){
   // ── hud + objective chip
   R.hudT-=dt;if(R.hudT<=0){R.hudT=0.25;syncHud();syncGoal();}}
 function autoAssign(g){
-  const counts=NODES.map((n,i)=>R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length);
-  let bi=0;for(let i=1;i<NODES.length;i++)if(counts[i]<counts[bi])bi=i;
-  g.assign=bi;}
+  let bi=-1,best=1e9;
+  for(let i=0;i<NODES.length;i++){
+    if(!nodeActive(i))continue;
+    const w=workersAt(i);
+    if(w>=nodeCap(i))continue;
+    if(w<best){best=w;bi=i;}}
+  g.assign=bi; // -1 = every open node is full: the spirit idles at home
+  if(bi<0)toast('✨ Every node is worked full — the far grove waits');}
 function gameOver(){
   R.over=true;setPaused(false);
   const prevBest=meta.milestones.bestNight;
@@ -660,17 +698,30 @@ function draw(t){
         shy=R.shake>0?R.shake*10*Math.sin(t/31+1.7):0;
   ctx.save();ctx.translate(OX+shx,OY+shy);ctx.scale(SC,SC);
   // moor
-  const mg=ctx.createRadialGradient(EX,EY,60,EX,EY,560);
-  mg.addColorStop(0,'rgba(38,52,66,.85)');mg.addColorStop(0.8,'rgba(22,30,48,.55)');mg.addColorStop(1,'rgba(22,30,48,0)');
-  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(EX,EY,570,0,TAU);ctx.fill();
-  // arc telegraphs
+  const mg=ctx.createRadialGradient(750,480,80,750,480,760);
+  mg.addColorStop(0,'rgba(38,52,66,.75)');mg.addColorStop(0.8,'rgba(22,30,48,.5)');mg.addColorStop(1,'rgba(22,30,48,0)');
+  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(750,480,770,0,TAU);ctx.fill();
+  // arc telegraphs (home assault)
   const arcs=R.phase==='respite'?R.nextArcs:R.arcs;
   const aAlpha=R.phase==='respite'?0.35+0.25*Math.sin(t/300):0.15;
   ctx.strokeStyle='rgba(176,109,240,'+aAlpha+')';ctx.lineWidth=7;ctx.lineCap='round';
   for(const a of arcs){ctx.beginPath();ctx.arc(EX,EY,460,a-Math.PI/4,a+Math.PI/4);ctx.stroke();}
   ctx.lineCap='butt';
-  // harvest nodes
-  for(const nd of NODES){
+  // a rooted Elderseed draws the mists too — soft warning ring during respite
+  const sb=seedBld();
+  if(sb&&R.phase==='respite'){
+    ctx.strokeStyle='rgba(176,109,240,'+(0.16+0.1*Math.sin(t/340))+')';ctx.lineWidth=5;
+    ctx.beginPath();ctx.arc(sb.x,sb.y,330,0,TAU);ctx.stroke();}
+  // fallow knoll marker (until the Elderseed roots)
+  if(!sb){
+    ctx.setLineDash([7,9]);ctx.strokeStyle='rgba(159,216,168,.35)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(KNOLL.x,KNOLL.y,64,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    ctx.globalAlpha=0.45;ctx.font='30px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🌰',KNOLL.x,KNOLL.y);ctx.globalAlpha=1;}
+  // harvest nodes (far pair sleeps under the Gloam until the Elderseed wakes it)
+  for(let ni=0;ni<NODES.length;ni++){const nd=NODES[ni];
+    const act=nodeActive(ni);
+    ctx.globalAlpha=act?1:0.45;
     if(nd.kind==='well'){
       const wg=ctx.createRadialGradient(nd.x,nd.y,4,nd.x,nd.y,42);
       wg.addColorStop(0,'rgba(214,228,255,.95)');wg.addColorStop(0.5,'rgba(140,166,255,.4)');wg.addColorStop(1,'rgba(140,166,255,0)');
@@ -679,11 +730,23 @@ function draw(t){
       ctx.fillText('☾',nd.x,nd.y+1);
     }else{
       ctx.font='30px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText('🌲',nd.x-16,nd.y-8);ctx.fillText('🌲',nd.x+14,nd.y+2);ctx.font='24px serif';ctx.fillText('🌲',nd.x-2,nd.y+14);}}
-  // placement (free-form): boundary ring + cursor ghost with validity color
+      ctx.fillText('🌲',nd.x-16,nd.y-8);ctx.fillText('🌲',nd.x+14,nd.y+2);ctx.font='24px serif';ctx.fillText('🌲',nd.x-2,nd.y+14);}
+    ctx.globalAlpha=1;
+    if(!act){const vg=ctx.createRadialGradient(nd.x,nd.y,4,nd.x,nd.y,48);
+      vg.addColorStop(0,'rgba(110,70,170,.4)');vg.addColorStop(1,'rgba(110,70,170,0)');
+      ctx.fillStyle=vg;ctx.beginPath();ctx.arc(nd.x,nd.y,48,0,TAU);ctx.fill();}}
+  // placement (free-form): zone rings + cursor ghost with validity color
   if(R.placing){
-    ctx.strokeStyle='rgba(159,216,168,.3)';ctx.lineWidth=1.5;ctx.setLineDash([6,9]);
-    ctx.beginPath();ctx.arc(EX,EY,BUILD_MAX,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    ctx.lineWidth=1.5;ctx.setLineDash([6,9]);
+    if(R.placing.id==='seed'){
+      ctx.strokeStyle='rgba(159,216,168,.5)';
+      ctx.beginPath();ctx.arc(KNOLL.x,KNOLL.y,KNOLL.r,0,TAU);ctx.stroke();}
+    else{
+      ctx.strokeStyle='rgba(159,216,168,.3)';
+      ctx.beginPath();ctx.arc(EX,EY,BUILD_MAX,0,TAU);ctx.stroke();
+      const sz=seedBld();
+      if(sz){ctx.beginPath();ctx.arc(sz.x,sz.y,BAL.expandR,0,TAU);ctx.stroke();}}
+    ctx.setLineDash([]);
     const bd=BUILDS[R.placing.id];
     const m=MOUSE||{x:EX,y:EY-160};
     const okP=canPlaceAt(R.placing.id,m.x,m.y)&&canPay(costOf(R.placing.id));
@@ -755,8 +818,11 @@ function draw(t){
       tip=[BUILDS[b.id].em+' '+BUILDS[b.id].nm,
         Math.round(b.hp)+'/'+Math.round(b.maxHp)+' HP'+(b.q.length?' · waking '+b.q.map(q=>UNITS[q].em).join(''):'')];break;}
     if(!tip)for(let i=0;i<NODES.length;i++){const nd=NODES[i];if(within(MOUSE,nd,55)){
-      const w=R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length;
-      tip=[(nd.kind==='well'?'☾ ':'🌲 ')+nd.nm,w+' Glimmer'+(w===1?'':'s')+' at work — click to manage'];break;}}
+      tip=nodeActive(i)
+        ?[(nd.kind==='well'?'☾ ':'🌲 ')+nd.nm,workersAt(i)+'/'+nodeCap(i)+' Glimmers at work — click to manage']
+        :[(nd.kind==='well'?'☾ ':'🌲 ')+nd.nm+' (gloamed)','Plant the 🌰 Elderseed on the fallow knoll to wake it'];break;}}
+    if(!tip&&!seedBld()&&within(MOUSE,KNOLL,80))
+      tip=['🌰 Fallow knoll','Plant the Elderseed here (hold night '+BUILDS.seed.runGate+' first) — wakes the far grove'];
     if(!tip)for(const f of R.foes)if(f.hp>0&&within(MOUSE,f,f.r+8)){
       tip=[FOES[f.type].em+' '+FOES[f.type].nm,Math.ceil(f.hp)+' HP'];break;}
     if(!tip)for(const u of R.units)if(u.type!=='glimmer'&&within(MOUSE,u,u.r+8)){
@@ -824,15 +890,16 @@ function syncHud(force){
   $('ebarw').classList.toggle('hit',R.dangerHudT>0);
   syncElderBar();
   if(uiFlag||force){uiFlag=false;refreshBar();}}
+function barLocked(d){return (d.lock&&!has(d.lock))||(d.runGate&&(!R||R.done<d.runGate));}
 function rebuildBar(){
   const bar=$('bar');bar.innerHTML='';
   for(const id of BAR_ORDER){const d=BUILDS[id];
-    const locked=d.lock&&!has(d.lock);
+    const locked=barLocked(d);
     const b=document.createElement('button');
     b.type='button';b.className='bb'+(locked?' lock':'');b.dataset.b=id;
     b.innerHTML='<span class="bk">'+(BAR_ORDER.indexOf(id)+1)+'</span>'+
       '<span class="be">'+(locked?'🔒':d.em)+'</span><span class="bn">'+d.nm.split(' ').pop()+'</span>'+
-      '<span class="bc">'+(locked?lockReq(d.lock):fmtCost(d.cost))+'</span>';
+      '<span class="bc">'+(locked?(d.runGate?'night '+d.runGate:lockReq(d.lock)):fmtCost(d.cost))+'</span>';
     b.addEventListener('click',()=>tapBuild(id));
     bindTip(b,()=>buildTipHtml(id));
     bar.appendChild(b);}
@@ -841,16 +908,20 @@ function lockReq(id){const ms=MILES.find(m=>m.id===id);return ms?ms.req.replace(
 function refreshBar(){
   if(!R)return;
   for(const el of document.querySelectorAll('.bb')){const id=el.dataset.b,d=BUILDS[id];
-    const locked=d.lock&&!has(d.lock);
+    const locked=barLocked(d);
     el.classList.toggle('lock',locked);
     el.classList.toggle('dim',!locked&&!canPay(costOf(id)));
     el.classList.toggle('sel',!!(R.placing&&R.placing.id===id));
     if(!locked){el.querySelector('.be').textContent=d.em;
-      el.querySelector('.bc').textContent=fmtCost(costOf(id));}}}
+      el.querySelector('.bc').textContent=fmtCost(costOf(id));}
+    else{el.querySelector('.be').textContent='🔒';
+      el.querySelector('.bc').textContent=d.runGate?'night '+d.runGate:lockReq(d.lock);}}}
 function tapBuild(id){
   const d=BUILDS[id];
   if(d.lock&&!has(d.lock)){const ms=MILES.find(m=>m.id===d.lock);
     toast('🔒 '+(ms?ms.req:'Locked'));return;}
+  if(d.runGate&&R.done<d.runGate){
+    toast('🔒 The '+d.nm+' wakes once you have held night '+d.runGate);return;}
   if(R.placing&&R.placing.id===id){R.placing=null;refreshBar();return;}
   if(!canPay(costOf(id))){toast('Not enough — needs '+fmtCost(costOf(id)));return;}
   R.placing={id};R.rallyFor=null;closeSheet();refreshBar();
@@ -915,15 +986,22 @@ function trainRow(b,t,desc){
     ()=>unitTipHtml(t));}
 function openNode(i){
   const nd=NODES[i];
-  const workers=R.units.filter(u=>u.type==='glimmer'&&u.assign===i).length;
+  if(!nodeActive(i)){
+    openSheet('<h2>'+(nd.kind==='well'?'☾':'🌲')+' '+nd.nm+'</h2>'+
+      '<p class="sub">Gloamed over — the far grove sleeps under the mists. Plant the 🌰 Elderseed on the fallow knoll (held night '+BUILDS.seed.runGate+' required) to wake it.</p>');
+    return;}
+  const workers=workersAt(i),cap=nodeCap(i);
   const idle=R.units.filter(u=>u.type==='glimmer'&&u.assign<0).length;
   const rate=nd.kind==='well'
     ?'each Glimmer carries '+Math.round(BAL.glim.carry*harvMul('well'))+'☾ per trip'
     :'each Glimmer taps '+(BAL.glim.sapRate*harvMul('copse')).toFixed(2)+'⬡ per second';
-  openSheet('<h2>'+(nd.kind==='well'?'☾':'🌲')+' '+nd.nm+'</h2><p class="sub">'+rate+'</p><div id="list"></div>');
+  openSheet('<h2>'+(nd.kind==='well'?'☾':'🌲')+' '+nd.nm+'</h2><p class="sub">'+rate+' · room for '+cap+'</p><div id="list"></div>');
   const list=$('list');
-  list.appendChild(sheetRow('✨','Glimmers here',workers+' at work · '+idle+' idle','',true,null));
-  list.appendChild(sheetRow('➕','Send a Glimmer',idle?'An idle spirit takes up the work':'No idle Glimmers — bud more at the Elderbough','+1',!idle,
+  list.appendChild(sheetRow('✨','Glimmers here',workers+'/'+cap+' at work · '+idle+' idle','',true,null));
+  const full=workers>=cap;
+  list.appendChild(sheetRow('➕','Send a Glimmer',
+    full?'This node is worked full':(idle?'An idle spirit takes up the work':'No idle Glimmers — bud more at the Elderbough'),
+    full?'full':'+1',full||!idle,
     ()=>{const g=R.units.find(u=>u.type==='glimmer'&&u.assign<0);
       if(g){g.assign=i;g.st='go';}openNode(i);}));
   list.appendChild(sheetRow('➖','Call one home','The spirit returns to the Elderbough','−1',!workers,
@@ -998,6 +1076,8 @@ function buildTipHtml(id){const d=BUILDS[id];
   if(d.trains)h+='<br>Wakes: '+d.trains.map(t=>UNITS[t].em+' '+UNITS[t].nm+(UNITS[t].lock&&!has(UNITS[t].lock)?' 🔒':'')).join(' · ');
   else h+='<br><span class="tc">'+d.desc+'</span>';
   if(locked){const ms=MILES.find(m=>m.id===d.lock);h+='<br>🔒 '+(ms?ms.req:'Locked');}
+  if(d.runGate){if(!(R&&R.done>=d.runGate))h+='<br>🔒 Unlocks once you have held night '+d.runGate+' (this run)';
+    h+='<br><span class="tc">Plants only on the fallow knoll by the far grove. The Gloam will come for it.</span>';}
   const k=BAR_ORDER.indexOf(id);if(k>=0)h+='<br><span class="tc">Hotkey '+(k+1)+'</span>';
   return h;}
 
@@ -1140,10 +1220,22 @@ function botTick(){
       if(ud.lock&&!has(ud.lock))continue;
       if(canPay(ud.cost)&&vigilUsed()+ud.vigil<=vigilCap()){
         pay(ud.cost);if(!b.q.length)b.qt=ud.tt;b.q.push(t);break;}}}
-  // 3. more glimmers once the war chest is comfortable
+  // 3. more glimmers up to what the open nodes can employ
+  const capTotal=NODES.reduce((n,nd,i)=>n+(nodeActive(i)?nodeCap(i):0),0);
   const glims=R.units.filter(u=>u.type==='glimmer').length;
-  if(glims<10&&R.light>120&&elder.q.length<2&&canPay(UNITS.glimmer.cost)&&vigilUsed()+1<=vigilCap())
+  if(glims<capTotal&&R.light>120&&elder.q.length<2&&canPay(UNITS.glimmer.cost)&&vigilUsed()+1<=vigilCap())
     {pay(UNITS.glimmer.cost);if(!elder.q.length)elder.qt=UNITS.glimmer.tt;elder.q.push('glimmer');}
+  // 3b. expand once the gate opens; then guard the expansion
+  if(R.done>=BUILDS.seed.runGate&&!seedBld()&&canPay(costOf('seed'))){
+    for(let i=0;i<24;i++){const a=Math.random()*TAU,rr=Math.random()*KNOLL.r*0.8;
+      const x=KNOLL.x+Math.cos(a)*rr,y=KNOLL.y+Math.sin(a)*rr;
+      if(canPlaceAt('seed',x,y)){place('seed',x,y);return;}}}
+  const sd=seedBld();
+  if(sd){const guards=R.buildings.filter(b=>b.id==='totem'&&d2(b,sd)<BAL.expandR*BAL.expandR).length;
+    if(guards<2&&canPay(costOf('totem'))){
+      for(let i=0;i<24;i++){const a=Math.random()*TAU,rr=110+Math.random()*100;
+        const x=sd.x+Math.cos(a)*rr,y=sd.y+Math.sin(a)*rr;
+        if(canPlaceAt('totem',x,y)){place('totem',x,y);return;}}}}
   // 4. grow the base
   const wants=[['font',1],['totem',2],['perch',1],['font',2],['totem',4],['hall',2],
     ['stones',1],['shrine',1],['font',3],['totem',6]];
