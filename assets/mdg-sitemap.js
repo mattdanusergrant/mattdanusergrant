@@ -12,10 +12,12 @@
       { label:'Moon Druid Garrison', url:'https://mustdesigngames.mattdanusergrant.com/moondruidgarrison/' },
       { label:'Match Deck Gateway', url:'https://mustdesigngames.mattdanusergrant.com/matchdeckgateway/' }
     ]},
-    { label:'Tools & Projects', url:'/#apps-h', children:[
+    { label:'Tools', url:'/#tools-h', children:[
       { label:'Math Draws Graphics', url:'https://mathdrawsgraphics.mattdanusergrant.com/', blank:true },
       { label:'Make Dope Grooves', url:'/tool.html?app=makedopegrooves' },
-      { label:'Markdown Document Generator', url:'/resume-builder.html' },
+      { label:'Markdown Document Generator', url:'/resume-builder.html' }
+    ]},
+    { label:'Projects', url:'/#projects-h', children:[
       { label:'Invisible Ink', url:'https://itsinvisible.ink', blank:true },
       { label:'Keeping Cadence', url:'https://mattdanusergrant.github.io/keeping-cadence/', blank:true },
       { label:'Dank Omphalos', url:'https://dankomphalos.com/', blank:true }
