@@ -435,6 +435,27 @@ function paintTerrain(){
     m.addColorStop(0,'rgba(96,86,132,0.22)');m.addColorStop(1,'rgba(96,86,132,0)');return m;};
   mistG=[mk(0,0,0,140),mk(0,HT,0,HT-140),mk(0,0,160,0),mk(WD,0,WD-160,0)];}
 
+// ── ART — optional sprite layer, baked from Modular Digital Goods (private repo). ──
+// The baker fills these three; until then they stay null and the game renders
+// procedurally / emoji exactly as before (verify suite unchanged). See the handoff
+// spec: ConductiveOS 07_projects/modulardigitalgoods/README.md.
+const ART_TERRAIN=null; // data URI: baked Vigil Moor (Wetland tiles)
+const ART_ATLAS=null;   // data URI: trimmed + tinted sprite sheet (32rogues)
+const ART_MAP=null;     // { key:[sx,sy,sw,sh], ... } sprite rects within ART_ATLAS
+const ART={sheet:null,ready:false,terrain:null,terrReady:false};
+function artInit(){try{
+  if(ART_ATLAS&&ART_MAP){const im=new Image();im.onload=()=>{ART.sheet=im;ART.ready=true;};im.src=ART_ATLAS;}
+  if(ART_TERRAIN){const im=new Image();im.onload=()=>{ART.terrain=im;ART.terrReady=true;};im.src=ART_TERRAIN;}
+}catch(e){}}
+// Draw sprite `key` centred at (cx,cy), longest side ≈ size px. Returns false when no
+// sprite is available → caller falls back to the existing emoji / procedural path.
+function sprite(key,cx,cy,size){
+  if(!ART.ready||!ART_MAP||!ART_MAP[key])return false;
+  const r=ART_MAP[key],sc=size/Math.max(r[2],r[3]),w=r[2]*sc,h=r[3]*sc;
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(ART.sheet,r[0],r[1],r[2],r[3],cx-w/2,cy-h/2,w,h);
+  ctx.imageSmoothingEnabled=true;return true;}
+
 // ════════════════════════════ STATE — the run ═════════════════════════════
 let R=null,uid=1;
 function costOf(id){const c=BUILDS[id].cost.slice();
@@ -793,7 +814,7 @@ function draw(t){
         shy=R.shake>0?R.shake*10*Math.sin(t/31+1.7):0;
   ctx.save();ctx.translate(OX+shx,OY+shy);ctx.scale(SC,SC);
   // the Vigil Moor
-  if(TER)ctx.drawImage(TER,0,0,WD,HT);
+  const _moor=ART.terrReady?ART.terrain:TER;if(_moor)ctx.drawImage(_moor,0,0,WD,HT);
   // drifting cloud shadow
   const cs=((t/45000)%1.6)-0.3;
   ctx.fillStyle='rgba(4,8,18,0.10)';
@@ -880,8 +901,9 @@ function draw(t){
     const glow=ctx.createRadialGradient(b.x,b.y,2,b.x,b.y,b.r*1.7);
     glow.addColorStop(0,'rgba(159,216,168,.4)');glow.addColorStop(1,'rgba(159,216,168,0)');
     ctx.fillStyle=glow;ctx.beginPath();ctx.arc(b.x,b.y,b.r*1.7,0,TAU);ctx.fill();
-    ctx.font=(b.id==='elder'?76:d.r*1.5)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(d.em,b.x,b.y);
+    if(!sprite('b_'+b.id,b.x,b.y,b.id==='elder'?90:d.r*2.4)){
+      ctx.font=(b.id==='elder'?76:d.r*1.5)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(d.em,b.x,b.y);}
     if(b.hp<b.maxHp)hpBar(b.x,b.y-b.r-10,b.r*2,b.hp/b.maxHp,'#9fd8a8');
     if(b.q.length){const p=1-b.qt/UNITS[b.q[0]].tt;
       hpBar(b.x,b.y+b.r+8,b.r*1.6,p,'#8ea6ff');}
@@ -889,8 +911,9 @@ function draw(t){
   // units
   for(const u of R.units){
     const d=UNITS[u.type];
-    ctx.font=(u.type==='glimmer'?18:d.r*2)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(d.em,u.x,u.y);
+    if(!sprite('u_'+u.type,u.x,u.y,u.type==='glimmer'?22:d.r*2.6)){
+      ctx.font=(u.type==='glimmer'?18:d.r*2)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(d.em,u.x,u.y);}
     if(u.type==='glimmer'&&u.carry>0){ctx.fillStyle='#d6e4ff';ctx.font='10px serif';ctx.fillText('☾',u.x+8,u.y-9);}
     if(u.hp<u.maxHp&&u.type!=='glimmer')hpBar(u.x,u.y-u.r-8,u.r*2,u.hp/u.maxHp,'#b0e8c0');}
   // foes
@@ -899,15 +922,19 @@ function draw(t){
     const fg=ctx.createRadialGradient(f.x,f.y,1,f.x,f.y,f.r*1.9);
     fg.addColorStop(0,d.col);fg.addColorStop(1,'rgba(10,6,24,0)');
     ctx.fillStyle=fg;ctx.beginPath();ctx.arc(f.x,f.y,f.r*1.9,0,TAU);ctx.fill();
-    ctx.fillStyle=d.col;ctx.beginPath();
-    if(d.fly){const bob=Math.sin(t/160+f.uid)*3;
-      ctx.ellipse(f.x,f.y+bob,f.r*1.25,f.r*0.8,0,0,TAU);}
-    else ctx.arc(f.x,f.y,f.r,0,TAU);
-    ctx.fill();
-    if(f.hitT>0){ctx.fillStyle='rgba(255,255,255,'+(f.hitT/0.09*0.85).toFixed(3)+')';ctx.fill();}
-    ctx.fillStyle=d.boss?'#e8b0ff':'#d8c8ff';
-    const ex=f.r*0.32;
-    ctx.beginPath();ctx.arc(f.x-ex,f.y-2,d.boss?4:1.8,0,TAU);ctx.arc(f.x+ex,f.y-2,d.boss?4:1.8,0,TAU);ctx.fill();
+    const bob=d.fly?Math.sin(t/160+f.uid)*3:0;
+    if(sprite('f_'+f.type,f.x,f.y+bob,f.r*2.8)){
+      if(f.hitT>0){ctx.globalAlpha=f.hitT/0.09*0.55;ctx.fillStyle='#fff';
+        ctx.fillRect(f.x-f.r,f.y-f.r+bob,f.r*2,f.r*2);ctx.globalAlpha=1;}
+    }else{
+      ctx.fillStyle=d.col;ctx.beginPath();
+      if(d.fly)ctx.ellipse(f.x,f.y+bob,f.r*1.25,f.r*0.8,0,0,TAU);
+      else ctx.arc(f.x,f.y,f.r,0,TAU);
+      ctx.fill();
+      if(f.hitT>0){ctx.fillStyle='rgba(255,255,255,'+(f.hitT/0.09*0.85).toFixed(3)+')';ctx.fill();}
+      ctx.fillStyle=d.boss?'#e8b0ff':'#d8c8ff';
+      const ex=f.r*0.32;
+      ctx.beginPath();ctx.arc(f.x-ex,f.y-2,d.boss?4:1.8,0,TAU);ctx.arc(f.x+ex,f.y-2,d.boss?4:1.8,0,TAU);ctx.fill();}
     if(f.hp<f.maxHp)hpBar(f.x,f.y-f.r-8,f.r*2,f.hp/f.maxHp,'#e0b0f0');}
   // shots
   for(const s of R.shots){const p=s.t/s.dur;
@@ -1379,6 +1406,7 @@ window.MDG={
 // ── boot ──
 loadMeta();
 paintTerrain();
+artInit();
 showGrove();
 requestAnimationFrame(loop);
 </script>
