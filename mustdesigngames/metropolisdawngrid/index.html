@@ -170,7 +170,7 @@
       <div class="rstat" id="watstat" title="City water — towers (and coasts/lakes) supply it, buildings draw it, roads carry it. A deficit leaves buildings dry until you add capacity."><span class="rn" id="wat">0</span><span class="rl"><span class="dot" style="background:#4C88B8"></span>Water</span></div>
     </div>
     <div class="goal" id="goal" title="Your next milestone"><span class="gl" id="goal-label">Next: Hamlet</span><span class="gbar"><i id="goal-fill"></i></span></div>
-    <div class="stat cash" title="Treasury — everything costs money. Taxes &amp; exports earn it; utilities &amp; roads cost upkeep; debt charges interest. Advancing tiers needs a cash reserve."><span class="n" id="cash">₵0</span><span class="l" id="cashrate">—</span></div>
+    <div class="stat cash" title="Treasury — everything costs money. Taxes &amp; exports earn it; utilities &amp; roads cost upkeep; public services scale with population; debt charges interest. Advancing tiers needs a growing cash reserve."><span class="n" id="cash">₵0</span><span class="l" id="cashrate">—</span></div>
     <div class="stat"><span class="n" id="pop">0</span><span class="l">Population</span></div>
   </header>
 
@@ -299,11 +299,20 @@
 
   // ---- economy: everything costs money; a working city earns it; debt charges interest ----
   var COST={road:4,rail:10,res:15,com:25,ind:35,fac:60,park:20,power:120,water:100,bank:180,port:140,tower:200,bulldoze:0};
-  var UPKEEP={power:6,water:5,road:0.2,rail:0.3,bank:4,port:5,tower:3};  // ₵/month to keep running
+  var UPKEEP={power:8,water:6,road:0.2,rail:0.3,bank:4,port:5,tower:3};  // ₵/month to keep running (utilities are a real fixed cost)
   var TAX={res:6,com:5,ind:3,fac:3,tower:14};           // ₵/month per building level (Towers are dense = high tax)
-  var CASH_START=1500, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1500, CREDIT_PER_TIER=1500, REFUND=0.25;
-  // tier at which each tool unlocks (index into MS: 0=Hamlet,1=Village,…); absent = available from start
-  var TIER_UNLOCK={bank:1,port:2,tower:3};
+  var CASH_START=1500, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;
+  // public services scale with population — the sink that ends infinite wealth. First ~400 residents free
+  // (early game breathes); past that every resident costs, so a big city must fund itself with exports &
+  // commerce (tax-per-head falls as density rises), not just sprawl. Net income stays tight, never runaway.
+  var SERVICE_RATE=0.06, SERVICE_FREE=400, serviceCost=0;
+  // tier at which each tool unlocks (index into MS: 0=Hamlet,1=Village,…); absent = available from start.
+  // Start bare — just Road, Homes, Power, Water — and earn the rest by growing through the tiers.
+  var TIER_UNLOCK={com:0,ind:1,rail:2,fac:2,park:3,bank:4,port:5,tower:6};
+  // density is also earned: building levels are capped by tier (index = maxMS+1, Outpost..Megacity) →
+  // villages are low-rise, only a grown city unlocks the tall stuff. Lifts the level ceiling as you climb.
+  var DENS=[1,1,2,2,3,3,4,4,5,5];
+  function densCap(){return DENS[Math.max(0,Math.min(DENS.length-1,maxMS+1))];}
   var BANK_CREDIT=2000, BANK_RATE=0.02, BANK_CAP=50;    // each Bank: +credit ceiling, + interest on reserves (capped)
   var PORT_BOOST=0.6;                                   // each Port: +60% export revenue
   var treasury=CASH_START, netRate=0, bankCount=0;
@@ -326,7 +335,8 @@
     income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium;          // Ports lift export revenue; a trade partner short on Goods pays a premium
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
-    netRate=income-upkeep-interest;
+    serviceCost=Math.round(Math.max(0,popTarget-SERVICE_FREE)*SERVICE_RATE);    // public services grow with population — the money sink
+    netRate=income-upkeep-interest-serviceCost;
     treasury+=netRate;
     var floor=creditFloor();                          // passive upkeep/interest bleed can't borrow past the credit floor (spending is already gated by canAfford)
     insolvent=treasury<=floor; if(insolvent)treasury=floor;
@@ -410,15 +420,15 @@
     light:{
       road:'#B9B3A2',curb:'#9E9788',lane:'#EFEADB',
       hw:'#8E887B',hwMed:'#E7C24A',hwLane:'#F1ECDD',
-      res:['#7EB277','#63A05C','#4C8047'],resRoof:['#B85C4A','#A8503E','#8F4433'],win:'#FBF6E6',door:'#6B4A38',
-      com:['#6C9FCB','#5589BB','#41709C'],comRoof:'#33587C',awning:['#E4A65A','#D98F6E','#7FB0C4'],
-      ind:['#D2A45C','#BF8F45','#A9792F'],indRoof:'#7E5B24',stack:'#8A8378',smoke:'rgba(120,110,95,.5)',
-      fac:['#9585BE','#7C6CB0','#655499'],facRoof:'#4B3D77',facPipe:'#B6ADCB',
+      res:['#7EB277','#63A05C','#4C8047','#3C6E39','#2E5A2C'],resRoof:['#B85C4A','#A8503E','#8F4433','#79392C','#663025'],win:'#FBF6E6',door:'#6B4A38',
+      com:['#6C9FCB','#5589BB','#41709C','#345C82','#284A6B'],comRoof:'#33587C',awning:['#E4A65A','#D98F6E','#7FB0C4'],
+      ind:['#D2A45C','#BF8F45','#A9792F','#916627','#78541F'],indRoof:'#7E5B24',stack:'#8A8378',smoke:'rgba(120,110,95,.5)',
+      fac:['#9585BE','#7C6CB0','#655499','#524481','#413669'],facRoof:'#4B3D77',facPipe:'#B6ADCB',
       park:'#5E9E52',parkTrunk:'#7A5537',parkDark:'#4A8341',grass:'rgba(95,158,82,.16)',
       plantBody:'#8A8478',plantRoof:'#6E5A45',plantStack:'#B85C4A',plantGlow:'#E7C24A',
       towerLeg:'#5F574B',towerTank:'#6E93A6',towerHi:'#A6C3CE',
       bankBody:'#EDE7D6',bankRoof:'#3E8E6E',bankCol:'#CFC7B2',bankCoin:'#D9AE52',
-      towerRes:['#5FA5A5','#4E8C8C','#3F7373'],towerResTop:'#B7D4D4',towerWin:'#EAF3EF',
+      towerRes:['#5FA5A5','#4E8C8C','#3F7373','#335E5E','#284A4A'],towerResTop:'#B7D4D4',towerWin:'#EAF3EF',
       portDeck:'#8A8272',portArm:'#4C7EA8',portHi:'#A6C3D6',
 
       lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
@@ -668,7 +678,7 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;treasury=CASH_START;netRate=0;updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();treasury=CASH_START;netRate=0;updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -778,7 +788,7 @@
       if(inB(c+dc,r+dr)){var n=grid[idx(c+dc,r+dr)];if(n.lvl>0&&wants[n.t])return true;}}
     return false;
   }
-  var MAXLVL=3,demand={res:0,com:0,ind:0},demTot=0;
+  var MAXLVL=1,demand={res:0,com:0,ind:0},demTot=0;   // level ceiling is tier-gated (densCap); starts low-rise
   function computeDemand(){
     var R=0,Cc=0,I=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
@@ -804,7 +814,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    economy();updatePop();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
+    updatePop();economy();updateDemandUI();updateResourceUI();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -830,10 +840,19 @@
   function updateDemandUI(){var mag=demTot*0.5+8;   // normalize by city size → a relative gauge (0.5 = balanced) that never pegs regardless of scale
     ['res','com','ind'].forEach(function(t){var el=demBars[t];var h=Math.max(0.08,Math.min(1,0.5+demand[t]/mag));
       el.style.height=(h*100)+'%';el.style.background=demColor[t];el.style.opacity=h>0.42?1:0.5;});}
-  // each tier needs BOTH a population and a banked treasury reserve — money gates progression
-  var MS=[{n:150,l:'Hamlet',cash:0},{n:500,l:'Village',cash:600},{n:1500,l:'Town',cash:1800},{n:4000,l:'City',cash:4000},{n:9000,l:'Metropolis',cash:9000},{n:20000,l:'Megacity',cash:20000}];
+  // each tier needs BOTH a population and a banked treasury reserve — money gates progression. A longer,
+  // stepped climb to Megacity (9 tiers); each charter unlocks a tool and/or a density level (see TIER_UNLOCK/DENS).
+  var MS=[{n:120,l:'Hamlet',cash:0},{n:320,l:'Village',cash:500},{n:700,l:'Township',cash:1500},{n:1500,l:'Town',cash:3500},{n:3000,l:'Borough',cash:8000},{n:6000,l:'City',cash:18000},{n:11000,l:'District',cash:40000},{n:19000,l:'Metropolis',cash:90000},{n:32000,l:'Megacity',cash:200000}];
+  var UNLOCK_LABEL={com:'Shops',ind:'Works',rail:'Rail',fac:'Factory',park:'Park',bank:'Bank',port:'Port',tower:'Tower'};
   var maxMS=-1,toastEl=document.getElementById('toast'),toastTimer=0;
-  function checkMilestone(){var reached=maxMS;for(var i=0;i<MS.length;i++)if(popTarget>=MS[i].n&&treasury>=MS[i].cash)reached=i;if(reached>maxMS){maxMS=reached;showToast(MS[reached].l,MS[reached].n);updateToolLocks();scheduleSave();}}
+  function tierUnlocks(t){var out=[];for(var k in TIER_UNLOCK)if(TIER_UNLOCK[k]===t)out.push(UNLOCK_LABEL[k]||k);return out;}
+  function checkMilestone(){var reached=maxMS;for(var i=0;i<MS.length;i++)if(popTarget>=MS[i].n&&treasury>=MS[i].cash)reached=i;
+    if(reached>maxMS){var prev=maxMS;maxMS=reached;MAXLVL=densCap();updateToolLocks();scheduleSave();
+      showToast(MS[reached].l,MS[reached].n);
+      for(var tt=prev+1;tt<=reached;tt++){var u=tierUnlocks(tt),dc=DENS[Math.min(DENS.length-1,tt+1)];   // announce what each new tier grants
+        var parts=u.slice();if(dc>DENS[Math.min(DENS.length-1,tt)])parts.push('taller buildings (L'+dc+')');
+        if(parts.length)setTimeout((function(p,l){return function(){toastEl.innerHTML='🔓 '+l+' unlocks <b>'+p.join(' · ')+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3200);};})(parts,MS[tt].l),1400);}
+    }}
   var goalLabel=document.getElementById('goal-label'),goalFill=document.getElementById('goal-fill');
   function updateGoalUI(){var ni=maxMS+1;
     if(ni>=MS.length){goalLabel.textContent='Megacity · top tier';goalFill.style.width='100%';return;}
@@ -847,20 +866,17 @@
   var TUTOR_KEY='mdg-tutor-done';
   var STEPS=[
     {label:'Lay a <b>Road</b> up to the highway'},
-    {label:'Zone <b>3 Homes</b> beside the road'},
+    {label:'Zone a few <b>Homes</b> beside the road'},
     {label:'Add <b>Power</b> &amp; <b>Water</b> to reach them'},
-    {label:'Build <b>Works</b> (next to a mountain) + a <b>Factory</b>'},
-    {label:'Lay <b>Rail</b> to the highway → ship an <b>Export</b>'}
+    {label:'Grow to a <b>Hamlet</b> → unlocks Shops'}
   ];
   var tutorDone=false, tutorActive=false, tutorStep=-1, exportedEver=false;
   function tutorEval(){
-    var road=false,res=0,served=false,ind=0,fac=0;
+    var road=false,res=0,served=false;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
       if(g.t==='road'){if(connected&&connected[i])road=true;}
-      else if(g.t==='res'){res++;if(!served&&connected&&blocker(i%cols,(i/cols)|0)==='')served=true;}
-      else if(g.t==='ind')ind++;else if(g.t==='fac')fac++;}
-    if(exportRate>0.5)exportedEver=true;
-    var done=[road,res>=3,served,(ind>=1&&fac>=1),exportedEver];
+      else if(g.t==='res'){res++;if(!served&&connected&&blocker(i%cols,(i/cols)|0)==='')served=true;}}
+    var done=[road,res>=2,served,maxMS>=0];        // reaching Hamlet (the first tier) completes the tutorial
     var s=0;while(s<done.length&&done[s])s++;
     return {done:done,step:s};
   }
@@ -874,7 +890,7 @@
   function showTutor(){var box=document.getElementById('tutor');if(!box)return;buildTutorPanel();renderTutor();box.hidden=false;}
   function endTutor(){tutorActive=false;try{localStorage.setItem(TUTOR_KEY,'1');}catch(e){}tutorDone=true;}
   function finishTutor(){endTutor();var box=document.getElementById('tutor');if(!box)return;
-    box.innerHTML='<div class="tutor-done"><b>Your first city is alive 🎉</b><p>Works feed Factories, Shops sell, and trains export your surplus for cash. Keep your <b>Treasury</b> in the black — you\'ll need a reserve to charter each new tier.</p><button type="button" id="tutor-close">Build on →</button></div>';
+    box.innerHTML='<div class="tutor-done"><b>Your first Hamlet is alive 🎉</b><p>Chartering each tier unlocks new tools — <b>Shops, Works, Factory, Rail</b> — and taller buildings. Watch your <b>Treasury</b>: public services grow with population, so fund the city with commerce &amp; exports as it grows.</p><button type="button" id="tutor-close">Build on →</button></div>';
     var cl=document.getElementById('tutor-close');if(cl)cl.addEventListener('click',function(){box.hidden=true;});}
   function tutorTick(){if(!tutorActive)return;var ev=tutorEval();if(ev.step!==tutorStep){tutorStep=ev.step;renderTutor(ev);}if(ev.step>=STEPS.length)finishTutor();}
   function initTutorDecision(){
@@ -1063,7 +1079,7 @@
     var lvl=cell.lvl,s=growScale(cell),pxs=Math.max(2,Math.round(CELL/12));
     var w=px((5+lvl*0.4)*pxs*s),h=px((6+lvl*3)*pxs*s),bx=px(x+(CELL-w)/2),by=px(y+CELL-4-h);
     ctx.fillStyle=pal.side;ctx.fillRect(bx+pxs,by+h,w,pxs);                    // shadow
-    ctx.fillStyle=pal.towerRes[Math.min(2,lvl-1)];ctx.fillRect(bx,by,w,h);    // slab
+    ctx.fillStyle=pal.towerRes[Math.min(4,lvl-1)];ctx.fillRect(bx,by,w,h);    // slab
     ctx.fillStyle=pal.towerResTop;ctx.fillRect(bx,by,w,Math.max(2,px(pxs*0.8)));  // crown
     // window grid
     ctx.fillStyle=pal.towerWin;var ws=Math.max(1,px(pxs*0.7)),gap=px(pxs*0.8),sx=bx+pxs,sy=by+px(pxs*1.6);
@@ -1324,7 +1340,7 @@
   window.addEventListener('resize',resize);
   resize();initWorld();ensureHighway();centerCam(HWCOL,HWROW);   // build the fixed world, lay the corridor, aim the camera at it
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
-  else { load(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }
+  else { load(); MAXLVL=densCap(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }   // density ceiling follows the loaded tier
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var gg0=grid[idx(c0,r0)];if(gg0.t==='road'||gg0.t==='highway')roadList.push([c0,r0]);if(gg0.rail||gg0.t==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
