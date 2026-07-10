@@ -16,8 +16,8 @@
     --line:#EBE4D3; --line-2:#D6CBB2;
     --shadow:0 1px 0 rgba(60,45,20,.03),0 12px 30px rgba(80,55,20,.10);
     --shadow-hover:0 18px 44px rgba(80,55,20,.16);
-    /* coloured chrome — a bright, warm DAWN orange frames the light play field; dark warm text on it */
-    --bar:#F3993C; --bar-ink:#3A2410; --bar-muted:#7E4E1E; --bar-line:rgba(58,36,16,.20);
+    /* coloured chrome — a bright golden DAWN yellow frames the light play field; dark warm text on it */
+    --bar:#F5C518; --bar-ink:#3A2E08; --bar-muted:#7A6216; --bar-line:rgba(58,44,8,.22);
   }
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease}
@@ -69,10 +69,22 @@
   .toast{position:absolute;top:16px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:14px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;white-space:normal;max-width:min(560px,88vw);text-align:center;line-height:1.35;z-index:5}
   .toast.on{opacity:1;transform:translate(-50%,0)}
   .toast b{color:var(--muted);font-weight:500;font-size:12px;margin-left:8px}
-  .tools{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;padding:9px clamp(12px,3vw,22px);border-top:1.5px solid var(--line);background:var(--bg);flex-shrink:0}
-  .tgroup{display:flex;align-items:center;gap:6px;padding-left:10px;border-left:1.5px solid var(--line-2)}
-  .tgroup:first-child{padding-left:0;border-left:none}
-  .tglabel{font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  .tools{display:flex;align-items:center;gap:8px;padding:8px clamp(12px,3vw,22px);border-top:1.5px solid var(--line);background:var(--bg);flex-shrink:0}
+  /* one row of category icons; each opens a popup menu above it */
+  .cat{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:5px 12px;border-radius:11px;border:1.5px solid var(--bar-line);background:rgba(255,255,255,.16);color:var(--bar-ink);min-width:60px;user-select:none;transition:background .12s,border-color .12s,transform .1s}
+  .cat:hover{background:rgba(255,255,255,.34)}
+  .cat:active{transform:translateY(1px)}
+  .cat.open{background:var(--paper);border-color:var(--line-2)}
+  .cat.hascur{box-shadow:inset 0 0 0 1.5px #4E9A5B}       /* the category holding the active tool */
+  .cico{font-size:19px;line-height:1}
+  .clabel{font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--bar-muted)}
+  .cat.open .clabel{color:var(--ink-2)}
+  .catmenu{display:none;position:absolute;bottom:calc(100% + 8px);left:0;flex-direction:column;gap:6px;background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:10px;box-shadow:var(--shadow-hover);z-index:20;min-width:150px}
+  .cat.open .catmenu{display:flex}
+  .menuhd{font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 2px 2px}
+  .catmenu .tool{width:100%;box-sizing:border-box}
+  .curtool{font-family:'Fraunces',serif;font-size:13px;color:var(--bar-ink);font-weight:600;white-space:nowrap}
+  @media(max-width:560px){.clabel{display:none}.cat{min-width:0;padding:6px 9px}.curtool{display:none}}
   .tool{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500;color:var(--ink-2);background:var(--paper);border:1.5px solid var(--line-2);border-radius:9px;padding:7px 10px;transition:border-color .15s,transform .1s,background .15s;user-select:none}
   .tool:hover{border-color:var(--ink)}
   .tool:active{transform:translateY(1px)}
@@ -203,35 +215,40 @@
   <div id="worldfade"></div>
 
   <footer class="tools" id="tools">
-    <div class="tgroup"><span class="tglabel">Tools</span>
-      <div class="tool" data-brush="inspect"><span class="ico">🔍</span>Inspect<span class="key">`</span></div>
-      <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
-    </div>
-    <div class="tgroup"><span class="tglabel">Transport</span>
-      <div class="tool sel" data-brush="road"><span class="sw" data-sw="road"></span>Road<span class="key">1</span></div>
-      <div class="tool" data-brush="rail"><span class="sw" data-sw="rail"></span>Rail<span class="key">2</span></div>
-      <div class="tool" data-brush="transit"><span class="sw" data-sw="transit"></span>Transit<span class="key">M</span></div>
-    </div>
-    <div class="tgroup"><span class="tglabel">Zoning</span>
-      <div class="tool" data-brush="res"><span class="sw" data-sw="res"></span>Homes<span class="key">3</span></div>
-      <div class="tool" data-brush="com"><span class="sw" data-sw="com"></span>Shops<span class="key">4</span></div>
-      <div class="tool" data-brush="ind"><span class="sw" data-sw="ind"></span>Works<span class="key">5</span></div>
-      <div class="tool" data-brush="fac"><span class="sw" data-sw="fac"></span>Factory<span class="key">6</span></div>
-    </div>
-    <div class="tgroup"><span class="tglabel">Utilities</span>
-      <div class="tool" data-brush="power"><span class="sw" data-sw="power"></span>Power<span class="key">8</span></div>
-      <div class="tool" data-brush="solar"><span class="sw" data-sw="solar"></span>Solar<span class="key">E</span></div>
-      <div class="tool" data-brush="water"><span class="sw" data-sw="water"></span>Water<span class="key">9</span></div>
-    </div>
-    <div class="tgroup"><span class="tglabel">Civic</span>
-      <div class="tool" data-brush="park"><span class="sw" data-sw="park"></span>Park<span class="key">7</span></div>
-      <div class="tool" data-brush="bank"><span class="sw" data-sw="bank"></span>Bank<span class="key">B</span></div>
-      <div class="tool" data-brush="port"><span class="sw" data-sw="port"></span>Port<span class="key">P</span></div>
-      <div class="tool" data-brush="tower"><span class="sw" data-sw="tower"></span>Tower<span class="key">T</span></div>
-    </div>
-    <button class="reset" id="reset" type="button">Reset</button>
+    <div class="cat" data-cat="tools"><span class="cico">🔍</span><span class="clabel">Tools</span>
+      <div class="catmenu"><span class="menuhd">Tools</span>
+        <div class="tool" data-brush="inspect"><span class="ico">🔍</span>Inspect<span class="key">`</span></div>
+        <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
+      </div></div>
+    <div class="cat" data-cat="transport"><span class="cico">🛣️</span><span class="clabel">Transport</span>
+      <div class="catmenu"><span class="menuhd">Transport</span>
+        <div class="tool sel" data-brush="road"><span class="sw" data-sw="road"></span>Road<span class="key">1</span></div>
+        <div class="tool" data-brush="rail"><span class="sw" data-sw="rail"></span>Rail<span class="key">2</span></div>
+        <div class="tool" data-brush="transit"><span class="sw" data-sw="transit"></span>Transit<span class="key">M</span></div>
+      </div></div>
+    <div class="cat" data-cat="zoning"><span class="cico">🏙️</span><span class="clabel">Zoning</span>
+      <div class="catmenu"><span class="menuhd">Zoning</span>
+        <div class="tool" data-brush="res"><span class="sw" data-sw="res"></span>Homes<span class="key">3</span></div>
+        <div class="tool" data-brush="com"><span class="sw" data-sw="com"></span>Shops<span class="key">4</span></div>
+        <div class="tool" data-brush="ind"><span class="sw" data-sw="ind"></span>Works<span class="key">5</span></div>
+        <div class="tool" data-brush="fac"><span class="sw" data-sw="fac"></span>Factory<span class="key">6</span></div>
+      </div></div>
+    <div class="cat" data-cat="utilities"><span class="cico">⚡</span><span class="clabel">Power</span>
+      <div class="catmenu"><span class="menuhd">Power &amp; Utilities</span>
+        <div class="tool" data-brush="power"><span class="sw" data-sw="power"></span>Power<span class="key">8</span></div>
+        <div class="tool" data-brush="solar"><span class="sw" data-sw="solar"></span>Solar<span class="key">E</span></div>
+        <div class="tool" data-brush="water"><span class="sw" data-sw="water"></span>Water<span class="key">9</span></div>
+      </div></div>
+    <div class="cat" data-cat="civic"><span class="cico">🏛️</span><span class="clabel">Civic</span>
+      <div class="catmenu"><span class="menuhd">Civic</span>
+        <div class="tool" data-brush="park"><span class="sw" data-sw="park"></span>Park<span class="key">7</span></div>
+        <div class="tool" data-brush="bank"><span class="sw" data-sw="bank"></span>Bank<span class="key">B</span></div>
+        <div class="tool" data-brush="port"><span class="sw" data-sw="port"></span>Port<span class="key">P</span></div>
+        <div class="tool" data-brush="tower"><span class="sw" data-sw="tower"></span>Tower<span class="key">T</span></div>
+      </div></div>
     <span class="spacer"></span>
-    <span class="hint"><b>Road, rail &amp; zoning:</b> click start, then click end to lay a row. Build <b>Works</b> next to grey <b>mountains</b> (or on <b>forest</b>) to boost Materials; rail to the highway to export.</span>
+    <span class="curtool" id="curtool" title="Current tool">Road</span>
+    <button class="reset" id="reset" type="button">Reset</button>
   </footer>
 
 <script>
@@ -291,7 +308,7 @@
   }catch(e){return [];}})();
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
   var ZONES={res:1,com:1,ind:1,fac:1,tower:1};
-  var POWER_OUT=1500;                              // each power station outputs a LOT (2×2 footprint)
+  var POWER_OUT=2700;                              // each power station outputs a LOT (3×3 footprint)
   var POWERUSE={res:2,com:2,ind:3,fac:4,tower:6,bank:2,port:3};   // power drawn per building level
   var powerGen=0, powerUse=0, powerOK=true;        // city-wide power budget (generated vs consumed)
   var WATER_OUT=1000, WATER_PER_TILE=180;          // each tower's output; each coast/lake tile feeding a road adds some
@@ -536,22 +553,22 @@
   function cellFromEvent(e){var p=screenPx(e);
     return {c:Math.floor(camX+p.x/(CELL*zoom)),r:Math.floor(camY+p.y/(CELL*zoom))};}   // screen → world cell, through camera + zoom
   // power station is a 2×2 footprint
+  var PLANT_N=3;                                   // power stations are a 3×3 footprint
   function isPower(c,r){return inB(c,r)&&grid[idx(c,r)].t==='power';}
-  function plantCells(c,r){return [[c,r],[c+1,r],[c,r+1],[c+1,r+1]];}
-  function plantFits(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var a=cs[i][0],b=cs[i][1];if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;}
-    // no orthogonal contact with another station — keeps every 2×2 unambiguous to select, draw, and clear
-    var ring=[[c-1,r],[c-1,r+1],[c+2,r],[c+2,r+1],[c,r-1],[c+1,r-1],[c,r+2],[c+1,r+2]];
-    for(var k=0;k<8;k++)if(isPower(ring[k][0],ring[k][1]))return false;
+  function plantCells(c,r){var o=[];for(var dr=0;dr<PLANT_N;dr++)for(var dc=0;dc<PLANT_N;dc++)o.push([c+dc,r+dr]);return o;}
+  function plantFits(c,r){var cs=plantCells(c,r);for(var i=0;i<cs.length;i++){var a=cs[i][0],b=cs[i][1];if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;}
+    // no orthogonal contact with another station — keeps every block unambiguous to select, draw, and clear
+    for(var d=0;d<PLANT_N;d++){if(isPower(c-1,r+d)||isPower(c+PLANT_N,r+d)||isPower(c+d,r-1)||isPower(c+d,r+PLANT_N))return false;}
     return true;}
-  function layPlant(c,r){var cs=plantCells(c,r);for(var i=0;i<4;i++){var g=grid[idx(cs[i][0],cs[i][1])];g.t='power';g.lvl=1;g.grow=0;}}
-  function plantTopLeft(c,r){var tc=c,tr=r;if(isPower(tc-1,tr))tc--;if(isPower(tc,tr-1))tr--;return [tc,tr];}
+  function layPlant(c,r){var cs=plantCells(c,r);for(var i=0;i<cs.length;i++){var g=grid[idx(cs[i][0],cs[i][1])];g.t='power';g.lvl=1;g.grow=0;}}
+  function plantTopLeft(c,r){var tc=c,tr=r;while(isPower(tc-1,tr))tc--;while(isPower(tc,tr-1))tr--;return [tc,tr];}
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
     if(brush==='bulldoze'){
       if(cell.t==='empty'&&!cell.rail)return;
       if(cell.t==='power'){var tl=plantTopLeft(c,r),cs=plantCells(tl[0],tl[1]),refunded=false;   // remove the whole 2×2 station
-        for(var b=0;b<4;b++){if(isPower(cs[b][0],cs[b][1])){var pg=grid[idx(cs[b][0],cs[b][1])];if(!refunded){treasury+=Math.round((COST.power||0)*REFUND);refunded=true;}pg.t='empty';pg.lvl=0;pg.grow=0;}}}
+        for(var b=0;b<cs.length;b++){if(isPower(cs[b][0],cs[b][1])){var pg=grid[idx(cs[b][0],cs[b][1])];if(!refunded){treasury+=Math.round((COST.power||0)*REFUND);refunded=true;}pg.t='empty';pg.lvl=0;pg.grow=0;}}}
       else{var ref=0;if(cell.rail){ref+=Math.round((COST.rail||0)*REFUND);cell.rail=false;}   // clears the whole cell (rail overlay + whatever's under it)
         if(cell.t!=='empty'){ref+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;}treasury+=ref;}
       updateCashUI();dirty=true;svcDirty=true;scheduleSave();return;
@@ -652,15 +669,28 @@
     var nm={road:'Road',rail:'Rail',res:'Homes',com:'Shops',ind:'Works',fac:'Factory'}[b]||'Zone';
     toastEl.innerHTML=nm+' <b>click start, then click end · Esc cancels</b>';
     toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);}
+  var TOOLNAME={inspect:'Inspect',bulldoze:'Clear',road:'Road',rail:'Rail',transit:'Transit',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',power:'Power',solar:'Solar',water:'Water',park:'Park',bank:'Bank',port:'Port',tower:'Tower'};
+  var curToolEl=document.getElementById('curtool');
+  function closeMenus(){Array.prototype.forEach.call(tools.querySelectorAll('.cat.open'),function(c){c.classList.remove('open');});}
+  function reflectTool(b){                                  // update the current-tool label + which category chip holds it
+    if(curToolEl)curToolEl.textContent=TOOLNAME[b]||b;
+    Array.prototype.forEach.call(tools.querySelectorAll('.cat'),function(c){c.classList.toggle('hascur',!!c.querySelector('.tool[data-brush="'+b+'"].sel'));});}
   function selectBrush(b){
     if(!unlocked(b)){var ms=MS[TIER_UNLOCK[b]];toastEl.innerHTML='Unlocks at <b>'+(ms?ms.l:'a later tier')+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);return;}
     brush=b;cancelLine();Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){el.classList.toggle('sel',el.getAttribute('data-brush')===b);});if(LINE[b])lineHint(b);
+    reflectTool(b);closeMenus();
     if(b!=='inspect')document.getElementById('inspect').hidden=true; else updateInspect();dirty=true;}
   function updateToolLocks(){Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){var b=el.getAttribute('data-brush');var lk=!unlocked(b);el.classList.toggle('locked',lk);
     var key=el.querySelector('.key'),lock=el.querySelector('.lock');
     if(lk){if(key)key.style.display='none';if(!lock){lock=document.createElement('span');lock.className='lock';el.appendChild(lock);}lock.textContent='🔒 '+MS[TIER_UNLOCK[b]].l;}
     else{if(key)key.style.display='';if(lock)lock.remove();}});}
-  tools.addEventListener('click',function(e){var t=e.target.closest('.tool');if(t)selectBrush(t.getAttribute('data-brush'));});
+  tools.addEventListener('click',function(e){
+    var t=e.target.closest('.tool');
+    if(t){selectBrush(t.getAttribute('data-brush'));return;}       // selectBrush closes the menu
+    var cat=e.target.closest('.cat');
+    if(cat){var wasOpen=cat.classList.contains('open');closeMenus();if(!wasOpen)cat.classList.add('open');}});
+  document.addEventListener('pointerdown',function(e){if(!e.target.closest('.tools'))closeMenus();});   // click the map/anywhere else → close menus
+  reflectTool(brush);
   var PANKEY={w:'u',arrowup:'u',s:'d',arrowdown:'d',a:'l',arrowleft:'l',d:'r',arrowright:'r'};   // WASD / arrows pan the camera
   window.addEventListener('keydown',function(e){
     var lk=e.key.toLowerCase();
@@ -734,7 +764,7 @@
       for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'){hit=true;if(!net[ni]){net[ni]=1;que.push(ni);}}}
       return hit;}   // utilities distribute over local ROADS (not the freeway); did the source touch one?
     for(var si=0;si<n;si++){var gs=grid[si];if(!gs)continue;var stt=gs.t;
-      if(stt==='power'){gen+=POWER_OUT/4;seedNet(si,pnet,pq);}         // a 2×2 station = 4 cells → POWER_OUT total
+      if(stt==='power'){gen+=POWER_OUT/9;seedNet(si,pnet,pq);}         // a 3×3 station = 9 cells → POWER_OUT total
       if(stt==='solar'){gen+=SOLAR_OUT*solarMult;seedNet(si,pnet,pq);} // clean 1×1 array — Rooftop Solar tech boosts it
       if(stt==='water'){wgen+=WATER_OUT;seedNet(si,wnet,wq);}
       if(gs.terr==='water'){if(seedNet(si,wnet,wq))wgen+=WATER_PER_TILE;}}   // a coast/lake tile adds capacity only where it meets a road
@@ -1258,7 +1288,7 @@
       x=c*CELL;y=r*CELL;
       if(t==='park'){drawPark(x,y,cell);continue;}
       if(t==='power'){if(isPower(c-1,r)||isPower(c,r-1))continue;    // draw the plant once, at the block's top-left anchor
-        var span=(isPower(c+1,r)&&isPower(c,r+1)&&isPower(c+1,r+1))?2:1;drawPlant(x,y,cell,span);continue;}
+        var span=(isPower(c+2,r)&&isPower(c,r+2)&&isPower(c+2,r+2))?3:(isPower(c+1,r)&&isPower(c,r+1))?2:1;drawPlant(x,y,cell,span);continue;}
       if(t==='solar'){drawSolar(x,y,cell);continue;}
       if(t==='transit'){drawTransit(x,y,cell);continue;}
       if(t==='water'){drawTower(x,y,cell);continue;}
@@ -1291,7 +1321,7 @@
     // building placement ghost — preview every build tool before you click (hidden once a zone line is
     // anchored, so the row path shows); over an existing same-type building it previews the NEXT level.
     if(!OBSERVE&&BUILDB[brush]&&!lineAnchor&&hoverCell&&inB(hoverCell.c,hoverCell.r)&&!(dragStart&&panned)){
-      var gc=hoverCell.c,gr=hoverCell.r,span=brush==='power'?2:1,gg=grid[idx(gc,gr)];
+      var gc=hoverCell.c,gr=hoverCell.r,span=brush==='power'?PLANT_N:1,gg=grid[idx(gc,gr)];
       if(ZONEK[brush]&&gg.t===brush&&gg.lvl<MAXLVL){                 // upgrade preview → next level
         var ready=blocker(gc,gr)===''&&canAfford(COST[brush]||0),col=ready?SWATCH[brush]:'#D6A94E';
         ctx.globalAlpha=0.5;drawBuildingSprite(gc*CELL,gr*CELL,{t:brush,lvl:gg.lvl+1,grow:0,seed:gg.seed,pulse:-9999,terr:gg.terr});
@@ -1396,8 +1426,8 @@
     var powNeed=(cnt.res*POWERUSE.res+cnt.com*POWERUSE.com+cnt.ind*POWERUSE.ind+cnt.fac*POWERUSE.fac)*3;
     var watNeed=(cnt.res*WATERUSE.res+cnt.com*WATERUSE.com+cnt.ind*WATERUSE.ind+cnt.fac*WATERUSE.fac)*3;
     var nPow=Math.max(1,Math.ceil(powNeed*1.3/POWER_OUT)), nWat=Math.max(1,Math.ceil(watNeed*1.3/WATER_OUT)), made=0;
-    for(var pc=c0;pc<=c1&&made<nPow;pc+=3){if(plantFits(pc,ur)){layPlant(pc,ur);made++;}}   // enough 2×2 stations
-    if(!made)placeAt(c0,ur,'power',0);
+    for(var pc=c0;pc<=c1&&made<nPow;pc+=4){if(plantFits(pc,ur)){layPlant(pc,ur);made++;}}   // enough 3×3 stations (step past the footprint + gap)
+    if(!made)for(var pf=c0;pf<=c1;pf++){if(plantFits(pf,ur)){layPlant(pf,ur);made++;break;}}
     for(var wm=0,wc=c0+1;wc<=c1&&wm<nWat;wc+=4){if(placeAt(wc,ur+2>rows-2?ur:ur+2,'water',0))wm++;}   // enough water towers
     for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail spur: a short perpendicular line joining the corridor, so exports flow
       var hc=hi%cols,hr=(hi/cols)|0,dd=[[0,1],[0,-1],[1,0],[-1,0]],done=false;
