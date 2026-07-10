@@ -228,7 +228,7 @@
     </div>
     <button class="reset" id="reset" type="button">Reset</button>
     <span class="spacer"></span>
-    <span class="hint"><b>Road &amp; rail:</b> click start, then click end. Build <b>Works</b> next to grey <b>mountains</b> (or on <b>forest</b>) to boost Materials; rail to the highway to export.</span>
+    <span class="hint"><b>Road, rail &amp; zoning:</b> click start, then click end to lay a row. Build <b>Works</b> next to grey <b>mountains</b> (or on <b>forest</b>) to boost Materials; rail to the highway to export.</span>
   </footer>
 
 <script>
@@ -544,9 +544,10 @@
   function denyUpgrade(bl){var now=performance.now();if(now-_denyT<1500)return;_denyT=now;
     var why={disc:'connect a road',pow:'add power',wat:'add water',goods:'needs Goods',mat:'needs Materials'}[bl]||'not ready';
     toastEl.innerHTML='Can’t level up — <b>'+why+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);}
-  // ---- line tool (road / rail): click start → click end, snaps to a clean L-shape.
-  //      Drag-and-release also works. Every other brush stays freehand drag-paint. ----
-  var LINE={road:1,rail:1};
+  // ---- line tool (road / rail / zoning): click start → click end, snaps to a clean L-shape,
+  //      laying a whole row in one gesture. Zones fill empty ground along the path (skip anything
+  //      occupied); a single-cell "line" on an existing same-type zone levels it up (click-to-upgrade). ----
+  var LINE={road:1,rail:1,res:1,com:1,ind:1,fac:1};
   function isLineBrush(){return !!LINE[brush];}
   function linePath(a,b){                              // L-shaped path, long leg first
     var cells=[],c=a.c,r=a.r,dc=b.c-a.c,dr=b.r-a.r,sc=dc<0?-1:1,sr=dr<0?-1:1;
@@ -560,9 +561,18 @@
     if(brush==='rail'){                                                         // rail is an overlay — can cross a road (level crossing); water = a bridge
       if(cell.rail||(cell.t!=='empty'&&cell.t!=='road'))return false;           // already railed, or a building is here
       if(!canAfford(COST.rail))return null;spend(COST.rail);cell.rail=true;return true;}
-    if(cell.t==='road'||cell.t!=='empty')return false;                          // road only on open ground (a rail-only cell is still 'empty' → crossing)
-    if(!canAfford(COST.road))return null;spend(COST.road);cell.t='road';cell.lvl=0;cell.grow=0;return true;}
-  function commitLine(a,b){var path=linePath(a,b),any=false,broke=false;
+    if(brush==='road'){                                                         // road only on open ground (a rail-only cell is still 'empty' → crossing)
+      if(cell.t==='road'||cell.t!=='empty')return false;
+      if(!canAfford(COST.road))return null;spend(COST.road);cell.t='road';cell.lvl=0;cell.grow=0;return true;}
+    // zoning row: drop a building on each empty, buildable cell (skip water/mountain/roads/rail/occupied)
+    if(noBuild(cell.terr)||cell.rail||cell.t!=='empty')return false;
+    if(!unlocked(brush))return false;
+    var cost=COST[brush]||0; if(!canAfford(cost))return null;
+    spend(cost);cell.t=brush;cell.lvl=0;cell.grow=0;return true;}                // zones start at level 0 and grow
+  function commitLine(a,b){
+    if(a.c===b.c&&a.r===b.r&&inB(a.c,a.r)){                                      // single-cell "line" on an existing same-type zone → level it up
+      var g=grid[idx(a.c,a.r)];if(g.t===brush&&ZONES[brush]){lastPaint=-1;paintAt(a.c,a.r);return;}}
+    var path=linePath(a,b),any=false,broke=false;
     for(var i=0;i<path.length;i++){var r=placeLineCell(path[i][0],path[i][1]);if(r===null){broke=true;break;}if(r)any=true;}
     if(any){dirty=true;svcDirty=true;scheduleSave();}
     if(broke)denyToast();}
@@ -602,7 +612,8 @@
   var tools=document.getElementById('tools');
   var _hinted={};
   function lineHint(b){if(_hinted[b])return;_hinted[b]=1;
-    toastEl.innerHTML=(b==='road'?'Road':'Rail')+' <b>click start, then click end · Esc cancels</b>';
+    var nm={road:'Road',rail:'Rail',res:'Homes',com:'Shops',ind:'Works',fac:'Factory'}[b]||'Zone';
+    toastEl.innerHTML=nm+' <b>click start, then click end · Esc cancels</b>';
     toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);}
   function selectBrush(b){
     if(!unlocked(b)){var ms=MS[TIER_UNLOCK[b]];toastEl.innerHTML='Unlocks at <b>'+(ms?ms.l:'a later tier')+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);return;}
@@ -1175,18 +1186,18 @@
       ctx.fillStyle=pal.cueGood;ctx.fillRect(px(c2.x-3),px(c2.y-3),5,5);
       ctx.fillStyle=pal.trainEngine;ctx.fillRect(px(e.x-3),px(e.y-3),6,6);
     }
-    // line-tool preview (road/rail): ghost the L-path from the pending start to the cursor
+    // line-tool preview (road/rail/zoning): ghost the L-path from the pending start to the cursor
     if(isLineBrush()&&hoverCell){
       var ps=lineAnchor;
       if(ps){var pp=linePath(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
         for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway')continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
         ctx.globalAlpha=1;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(ps.c*CELL+2.5,ps.r*CELL+2.5,CELL-5,CELL-5);
-      } else if(inB(hoverCell.c,hoverCell.r)){var hcl=grid[idx(hoverCell.c,hoverCell.r)];
+      } else if(inB(hoverCell.c,hoverCell.r)&&(brush==='road'||brush==='rail')){var hcl=grid[idx(hoverCell.c,hoverCell.r)];   // zones show the building ghost below instead
         if(hcl&&hcl.t!=='highway'){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
     }
-    // building placement ghost — preview every build tool before you click; over an existing same-type
-    // building it previews the NEXT level (upgrade); red X where nothing can go.
-    if(!OBSERVE&&BUILDB[brush]&&hoverCell&&inB(hoverCell.c,hoverCell.r)&&!(dragStart&&panned)){
+    // building placement ghost — preview every build tool before you click (hidden once a zone line is
+    // anchored, so the row path shows); over an existing same-type building it previews the NEXT level.
+    if(!OBSERVE&&BUILDB[brush]&&!lineAnchor&&hoverCell&&inB(hoverCell.c,hoverCell.r)&&!(dragStart&&panned)){
       var gc=hoverCell.c,gr=hoverCell.r,span=brush==='power'?2:1,gg=grid[idx(gc,gr)];
       if(ZONEK[brush]&&gg.t===brush&&gg.lvl<MAXLVL){                 // upgrade preview → next level
         var ready=blocker(gc,gr)===''&&canAfford(COST[brush]||0),col=ready?SWATCH[brush]:'#D6A94E';
