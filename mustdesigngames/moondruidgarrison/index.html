@@ -339,6 +339,102 @@ const NODES=[
   {kind:'copse',nm:'Elderwood copse',x:1120,y:180,far:true},
 ];
 
+// ── TERRAIN — the Vigil Moor, painted once to an offscreen canvas ─────────
+// Seeded so the moor is the same place every run; drawn per-frame via drawImage.
+let TER=null,mistG=null;
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const PATH_PTS=(()=>{const p=[];for(let i=0;i<=24;i++){const u=i/24;
+  p.push({x:(1-u)*(1-u)*430+2*(1-u)*u*820+u*u*1240,
+          y:(1-u)*(1-u)*650+2*(1-u)*u*520+u*u*330});}return p;})();
+const STREAM_PTS=(()=>{const p=[];
+  const cub=(a,b,c2,d,u)=>{const v=1-u;return v*v*v*a+3*v*v*u*b+3*v*u*u*c2+u*u*u*d;};
+  for(let i=0;i<=20;i++){const u=i/20;p.push({x:cub(795,700,950,880,u),y:cub(-30,180,320,520,u)});}
+  for(let i=1;i<=20;i++){const u=i/20;p.push({x:cub(880,820,1000,950,u),y:cub(520,700,820,1030,u)});}
+  return p;})();
+function paintTerrain(){
+  TER=document.createElement('canvas');TER.width=WD*2;TER.height=HT*2;
+  const c=TER.getContext('2d');c.scale(2,2);
+  const r=mulberry(20260709);
+  // base moorland
+  const g=c.createLinearGradient(0,0,WD,HT);
+  g.addColorStop(0,'#16232a');g.addColorStop(0.5,'#192b30');g.addColorStop(1,'#162830');
+  c.fillStyle=g;c.fillRect(0,0,WD,HT);
+  // mottled moss and heath
+  const TONES=['rgba(50,88,72,','rgba(38,74,80,','rgba(54,94,62,','rgba(34,62,66,','rgba(76,62,110,'];
+  for(let i=0;i<230;i++){const x=r()*WD,y=r()*HT,rad=36+r()*110;
+    const tone=TONES[(r()*(r()<0.9?4:5))|0];
+    const bg=c.createRadialGradient(x,y,2,x,y,rad);
+    bg.addColorStop(0,tone+(0.04+r()*0.06).toFixed(3)+')');bg.addColorStop(1,tone+'0)');
+    c.fillStyle=bg;c.beginPath();c.ellipse(x,y,rad,rad*(0.6+r()*0.4),r()*3,0,TAU);c.fill();}
+  // still moonbeams
+  for(let i=0;i<5;i++){const x=r()*WD,y=r()*HT,rad=180+r()*160;
+    const mb=c.createRadialGradient(x,y,10,x,y,rad);
+    mb.addColorStop(0,'rgba(220,235,255,0.035)');mb.addColorStop(1,'rgba(220,235,255,0)');
+    c.fillStyle=mb;c.beginPath();c.arc(x,y,rad,0,TAU);c.fill();}
+  // the stream — meanders down the moor, parting home from the far grove
+  c.lineCap='round';
+  const strokeStream=(w,st)=>{c.strokeStyle=st;c.lineWidth=w;c.beginPath();
+    c.moveTo(795,-30);c.bezierCurveTo(700,180,950,320,880,520);
+    c.bezierCurveTo(820,700,1000,820,950,1030);c.stroke();};
+  strokeStream(38,'rgba(8,16,30,0.45)');   // soft banks
+  strokeStream(26,'rgba(22,42,68,0.9)');
+  strokeStream(14,'rgba(36,62,96,0.9)');
+  c.setLineDash([3,34]);strokeStream(2,'rgba(170,200,250,0.3)');c.setLineDash([]); // sparse glints
+  // the old path — home grove to the fallow knoll
+  const strokePath=(w,st)=>{c.strokeStyle=st;c.lineWidth=w;c.beginPath();
+    c.moveTo(430,650);c.quadraticCurveTo(820,520,1240,330);c.stroke();};
+  strokePath(26,'rgba(52,45,34,0.45)');
+  c.setLineDash([16,10]);strokePath(12,'rgba(92,80,58,0.38)');c.setLineDash([]);
+  // ford — stepping stones where the path actually meets the stream
+  let fi=0,fd=1e9;
+  PATH_PTS.forEach((pp,i)=>{for(const sp of STREAM_PTS){
+    const dd=(pp.x-sp.x)*(pp.x-sp.x)+(pp.y-sp.y)*(pp.y-sp.y);if(dd<fd){fd=dd;fi=i;}}});
+  const fp=PATH_PTS[fi],fq=PATH_PTS[Math.min(fi+1,PATH_PTS.length-1)];
+  const fa=Math.atan2(fq.y-fp.y,fq.x-fp.x);
+  for(let i=-1;i<=2;i++){const fx=fp.x+Math.cos(fa)*i*15,fy=fp.y+Math.sin(fa)*i*15;
+    c.fillStyle='#4b5666';c.beginPath();c.ellipse(fx,fy,7,5,fa,0,TAU);c.fill();
+    c.fillStyle='rgba(255,255,255,0.14)';c.beginPath();c.ellipse(fx-2,fy-2,3,2,fa,0,TAU);c.fill();}
+  // grove disc and the knoll mound
+  const disc=(x,y,rad,c0,c1)=>{const dg2=c.createRadialGradient(x,y,6,x,y,rad);
+    dg2.addColorStop(0,c0);dg2.addColorStop(1,c1);
+    c.fillStyle=dg2;c.beginPath();c.arc(x,y,rad,0,TAU);c.fill();};
+  disc(EX,EY,150,'rgba(74,116,84,0.28)','rgba(74,116,84,0)');
+  disc(KNOLL.x,KNOLL.y,KNOLL.r+20,'rgba(118,126,96,0.18)','rgba(118,126,96,0)');
+  // tarn basins beneath the Lightwells
+  for(const nd of NODES)if(nd.kind==='well'){
+    c.fillStyle='rgba(0,0,0,0.25)';c.beginPath();c.ellipse(nd.x+4,nd.y+8,58,42,0,0,TAU);c.fill();
+    c.fillStyle='rgba(24,44,72,0.9)';c.beginPath();c.ellipse(nd.x,nd.y+4,52,38,0,0,TAU);c.fill();
+    c.strokeStyle='rgba(150,180,230,0.25)';c.lineWidth=2;
+    c.beginPath();c.ellipse(nd.x,nd.y+4,52,38,0,0,TAU);c.stroke();}
+  // rocks
+  for(let i=0;i<26;i++){const x=r()*WD,y=r()*HT,s=4+r()*9,a=r()*3;
+    c.fillStyle='rgba(0,0,0,0.22)';c.beginPath();c.ellipse(x+2,y+3,s*1.1,s*0.7,a,0,TAU);c.fill();
+    c.fillStyle='#3a4450';c.beginPath();c.ellipse(x,y,s,s*0.72,a,0,TAU);c.fill();
+    c.fillStyle='rgba(255,255,255,0.10)';c.beginPath();c.ellipse(x-s*0.25,y-s*0.3,s*0.5,s*0.3,a,0,TAU);c.fill();}
+  // grass tufts — sparse, quiet
+  c.lineWidth=1.3;
+  for(let i=0;i<110;i++){const x=r()*WD,y=r()*HT;
+    c.strokeStyle=r()<0.7?'rgba(105,140,105,0.28)':'rgba(130,160,180,0.2)';
+    for(let k=-1;k<=1;k++){c.beginPath();c.moveTo(x,y);
+      c.lineTo(x+k*2.5+(r()*2-1),y-4-r()*4);c.stroke();}}
+  // fringe elderwood — kept off the build zones, path, and stream
+  c.textAlign='center';c.textBaseline='middle';
+  let trees=0,guard=600;
+  while(trees<22&&guard-->0){
+    const x=40+r()*(WD-80),y=40+r()*(HT-80);
+    if(Math.hypot(x-EX,y-EY)<420)continue;
+    if(Math.hypot(x-KNOLL.x,y-KNOLL.y)<KNOLL.r+120)continue;
+    if(NODES.some(nd=>Math.hypot(x-nd.x,y-nd.y)<90))continue;
+    if(STREAM_PTS.some(p=>Math.hypot(x-p.x,y-p.y)<58))continue;
+    if(PATH_PTS.some(p=>Math.hypot(x-p.x,y-p.y)<60))continue;
+    c.globalAlpha=0.85;c.font=(20+r()*14)+'px serif';c.fillText('🌲',x,y);c.globalAlpha=1;
+    trees++;}
+  // edge mist gradients — created on the MAIN ctx (they're used there each frame)
+  const mk=(x0,y0,x1,y1)=>{const m=ctx.createLinearGradient(x0,y0,x1,y1);
+    m.addColorStop(0,'rgba(96,86,132,0.22)');m.addColorStop(1,'rgba(96,86,132,0)');return m;};
+  mistG=[mk(0,0,0,140),mk(0,HT,0,HT-140),mk(0,0,160,0),mk(WD,0,WD-160,0)];}
+
 // ════════════════════════════ STATE — the run ═════════════════════════════
 let R=null,uid=1;
 function costOf(id){const c=BUILDS[id].cost.slice();
@@ -692,15 +788,31 @@ function draw(t){
   for(let i=0;i<46;i++){const sx=(i*97)%W,sy=(i*61)%(H*0.7);
     ctx.globalAlpha=0.25+0.3*Math.sin(t/900+i);ctx.fillRect(sx,sy,1.5,1.5);}
   ctx.globalAlpha=1;
-  drawMoon(t);
   if(!R)return;
   const shx=R.shake>0?R.shake*10*Math.sin(t/23):0,
         shy=R.shake>0?R.shake*10*Math.sin(t/31+1.7):0;
   ctx.save();ctx.translate(OX+shx,OY+shy);ctx.scale(SC,SC);
-  // moor
-  const mg=ctx.createRadialGradient(750,480,80,750,480,760);
-  mg.addColorStop(0,'rgba(38,52,66,.75)');mg.addColorStop(0.8,'rgba(22,30,48,.5)');mg.addColorStop(1,'rgba(22,30,48,0)');
-  ctx.fillStyle=mg;ctx.beginPath();ctx.arc(750,480,770,0,TAU);ctx.fill();
+  // the Vigil Moor
+  if(TER)ctx.drawImage(TER,0,0,WD,HT);
+  // drifting cloud shadow
+  const cs=((t/45000)%1.6)-0.3;
+  ctx.fillStyle='rgba(4,8,18,0.10)';
+  ctx.beginPath();ctx.ellipse(cs*WD,300+180*Math.sin(t/23000),340,180,0.4,0,TAU);ctx.fill();
+  // edge mist — where the Gloam gathers (breathes slowly)
+  if(mistG){ctx.globalAlpha=0.8+0.2*Math.sin(t/1700);
+    ctx.fillStyle=mistG[0];ctx.fillRect(0,0,WD,150);
+    ctx.fillStyle=mistG[1];ctx.fillRect(0,HT-150,WD,150);
+    ctx.fillStyle=mistG[2];ctx.fillRect(0,0,170,HT);
+    ctx.fillStyle=mistG[3];ctx.fillRect(WD-170,0,170,HT);
+    ctx.globalAlpha=1;}
+  // fireflies about the groves
+  ctx.fillStyle='rgba(200,255,190,0.8)';
+  for(let i=0;i<10;i++){
+    const bx=(i<5?EX:KNOLL.x)+Math.sin(t/900+i*2.1)*(60+i*14);
+    const by=(i<5?EY:KNOLL.y)+Math.cos(t/1100+i*1.7)*(40+i*9);
+    ctx.globalAlpha=0.25+0.3*Math.sin(t/500+i*2.4);
+    ctx.fillRect(bx,by,2.4,2.4);}
+  ctx.globalAlpha=1;
   // arc telegraphs (home assault)
   const arcs=R.phase==='respite'?R.nextArcs:R.arcs;
   const aAlpha=R.phase==='respite'?0.35+0.25*Math.sin(t/300):0.15;
@@ -853,7 +965,9 @@ function draw(t){
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=12;
     ctx.fillText(R.banner.txt,W/2,H*0.3);
-    ctx.shadowBlur=0;ctx.globalAlpha=1;}}
+    ctx.shadowBlur=0;ctx.globalAlpha=1;}
+  drawMoon(t); // the moon rides above the moor — phase doubles as the boss-night dial
+}
 function hpBar(x,y,w,f,col){ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(x-w/2,y,w,3.5);
   ctx.fillStyle=col;ctx.fillRect(x-w/2,y,w*clamp(f,0,1),3.5);}
 function drawMoon(t){
@@ -861,6 +975,10 @@ function drawMoon(t){
   const n=R?R.night+(R&&R.phase==='respite'?1:0):1;
   const f=((n-1)%BAL.night.bossEvery)/(BAL.night.bossEvery-1);
   const full=R&&(n%BAL.night.bossEvery===0);
+  const halo=ctx.createRadialGradient(mx,my,mr,mx,my,mr*2.6);
+  halo.addColorStop(0,'rgba(7,10,32,0.45)');halo.addColorStop(1,'rgba(7,10,32,0)');
+  ctx.fillStyle=halo; // soft night halo so the dial reads above the moor
+  ctx.beginPath();ctx.arc(mx,my,mr*2.6,0,TAU);ctx.fill();
   const glow=ctx.createRadialGradient(mx,my,mr*0.3,mx,my,mr*(full?3.4:2.2));
   glow.addColorStop(0,'rgba(226,234,255,'+(full?0.5:0.28)+')');glow.addColorStop(1,'rgba(226,234,255,0)');
   ctx.fillStyle=glow;ctx.beginPath();ctx.arc(mx,my,mr*3.4,0,TAU);ctx.fill();
@@ -1260,6 +1378,7 @@ window.MDG={
 
 // ── boot ──
 loadMeta();
+paintTerrain();
 showGrove();
 requestAnimationFrame(loop);
 </script>
