@@ -9,7 +9,7 @@
   var MAP={ label:'mattdanusergrant.com', url:'/', children:[
     { label:'Must Design Games', url:'https://mustdesigngames.mattdanusergrant.com/', children:[
       { label:'Metropolis Dawn Grid', url:'https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/' },
-      { label:'Moon Druid Guardians', url:'https://mustdesigngames.mattdanusergrant.com/moondruidguardians/' },
+      { label:'Moon Druid Guardians', url:'https://moondruidguardians.mattdanusergrant.com/' },
       { label:'Match Deck Gateway', url:'https://mustdesigngames.mattdanusergrant.com/matchdeckgateway/' }
     ]},
     { label:'Tools', url:'/#tools-h', children:[

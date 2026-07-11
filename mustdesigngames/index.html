@@ -169,7 +169,7 @@
        a game's page to refresh one. Promote/demote by editing this array (see mdg.html tiers). */
     const GAMES = [
       {slug:"metropolisdawngrid", name:"Metropolis Dawn Grid", updated:"2026-07-09", change:"Minimap overview + legend, click-to-upgrade previews, city water meter", size:105, desc:"A lean <b>city-builder</b> set on one shared world: zone your district, wire up the supply chain, and lay rail across the map. Ship your surplus out by train while the neighbours build theirs.", intent:"Can a shared-world city builder work async, on one grid?"},
-      {slug:"moondruidguardians", name:"Moon Druid Guardians", updated:"2026-07-09", change:"Promoted from the workshop — rebuilt as a desktop base-builder survival roguelike", size:66, desc:"A defensive <b>base-builder roguelike</b> under the moon. Bud Glimmer spirits to harvest moonlight and sap, grow a druid garrison around the Elderbough, and hold against escalating nights of the Gloam — then spend Lunar Dew to hold longer.", intent:"A WC3-style opening, purely defensive — how long can you hold?"},
+      {slug:"moondruidguardians", href:"https://moondruidguardians.mattdanusergrant.com/", name:"Moon Druid Guardians", updated:"2026-07-09", change:"Promoted from the workshop — rebuilt as a desktop base-builder survival roguelike", size:66, desc:"A defensive <b>base-builder roguelike</b> under the moon. Bud Glimmer spirits to harvest moonlight and sap, grow a druid garrison around the Elderbough, and hold against escalating nights of the Gloam — then spend Lunar Dew to hold longer.", intent:"A WC3-style opening, purely defensive — how long can you hold?"},
       {slug:"mosslings", name:"Mosslings", updated:"2026-07-08", change:"Reverted to the Mosslings name — Moss Dapple Grove spun off as its own game", size:136, desc:"A cozy <b>virtual pet</b> kept in a jar of moss and dew. Adopt the little plant-creature, keep it fed, happy and rested, and let the garden you grow feed the care loop back.", intent:"A cozy care loop that earns a daily check-in."},
       {slug:"honk-beach", name:"Honk Beach", updated:"2026-07-06", change:"Added to the arcade", size:20, desc:"A frantic one-tap <b>arcade</b> defense — your beach picnic is under siege by a mob of hungry geese. Tap to shoo them off before they make off with lunch; built phone-first for pure reaction.", intent:"One-tap defense — pure reaction, phone-first."},
       {slug:"keeprippingpacks", name:"Keep Ripping Packs", updated:"2026-07-06", change:"Added to the arcade", size:425, desc:"An <b>economy sim</b> running on the dopamine of the pack rip. Tear open boosters, sort the spill, craft complete Sets, and sell into a live market that moves with supply.", intent:"The dopamine of pack-opening as a full economy."},
@@ -216,7 +216,7 @@
     const COLS = [
       {label:'', key:null, cell:g => `<img class="g-thumb" src="./thumbs/${g.slug}.jpg" alt="${esc(g.name)} thumbnail" width="92" height="58">`},
       {label:'Game', key:'name', val:g => g.name.toLowerCase(), cell:g =>
-        `<a class="g-name" href="./${g.slug}/" title="${esc(g.intent)}">${esc(g.name)}</a><div class="g-desc">${g.desc}</div>`},
+        `<a class="g-name" href="${g.href||'./'+g.slug+'/'}" data-slug="${g.slug}"${g.href?' target="_blank" rel="noopener"':''} title="${esc(g.intent)}">${esc(g.name)}</a><div class="g-desc">${g.desc}</div>`},
       {label:'Updated', key:'updated', val:g => g.updated, cell:g =>
         `<span class="g-when"><time datetime="${g.updated}" title="${fmt.format(new Date(g.updated+'T00:00:00'))} — ${esc(g.change)}">${ago(new Date(g.updated+'T00:00:00').getTime())}</time></span>`},
       {label:'Size', key:'size', val:g => g.size, cell:g => `<span class="g-num">${g.size} KB</span>`},
@@ -224,7 +224,7 @@
         const n = playN(g.slug);
         return `<span class="g-played${n?'':' zero'}"${n?` title="last played ${esc(ago(playLast(g.slug)))}"`:''}>${n?n+'×':'—'}</span>`;
       }},
-      {label:'', key:null, cell:g => `<a class="g-play" href="./${g.slug}/" data-slug="${g.slug}">play <span aria-hidden="true">→</span></a>`},
+      {label:'', key:null, cell:g => `<a class="g-play" href="${g.href||'./'+g.slug+'/'}" data-slug="${g.slug}"${g.href?' target="_blank" rel="noopener"':''}>play <span aria-hidden="true">→</span></a>`},
     ];
 
     let sortKey = 'updated', sortDir = -1;   // default: latest change first
@@ -260,8 +260,8 @@
       render();
     });
     document.getElementById('games-body').addEventListener('click', e => {
-      const a = e.target.closest('a[href^="./"]'); if (!a) return;
-      const slug = a.dataset.slug || a.getAttribute('href').replace(/[./]/g,'');
+      const a = e.target.closest('a[data-slug]'); if (!a) return;
+      const slug = a.dataset.slug;
       recordPlay(slug);   // localStorage write is synchronous, so it persists before navigation
     });
     render();
