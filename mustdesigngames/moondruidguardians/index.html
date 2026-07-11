@@ -318,8 +318,9 @@ function metaMods(){return {
 };}
 
 // ════════════════════════════ WORLD — space ═══════════════════════════════
-const WD=1600,HT=1000,EX=430,EY=650; // home corner (lower-left)
-const KNOLL={x:1240,y:330,r:170};    // fallow knoll — where the Elderseed may root
+const LEVEL=null; // injected by tools/level-bake.mjs from a map-editor level: {home:{x,y}, knoll:{x,y,r}, nodes:[{kind,nm,x,y,far}]}
+const WD=1600,HT=1000,EX=LEVEL&&LEVEL.home?LEVEL.home.x:430,EY=LEVEL&&LEVEL.home?LEVEL.home.y:650; // home corner (lower-left)
+const KNOLL=LEVEL&&LEVEL.knoll?LEVEL.knoll:{x:1240,y:330,r:170};    // fallow knoll — where the Elderseed may root
 let W,H,DPR,SC,OX,OY,dangerGrad=null;
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
   cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -332,7 +333,7 @@ addEventListener('resize',resize);resize();
 const s2w=(sx,sy)=>({x:(sx-OX)/SC,y:(sy-OY)/SC});
 const BUILD_MAX=380; // home build ring around the Elderbough
 let MOUSE=null;      // last cursor position in world coords
-const NODES=[
+const NODES=LEVEL&&LEVEL.nodes?LEVEL.nodes:[
   {kind:'well',nm:'Lightwell',x:180,y:330},
   {kind:'copse',nm:'Elderwood copse',x:140,y:840},
   {kind:'well',nm:'Lightwell',x:1400,y:240,far:true},
