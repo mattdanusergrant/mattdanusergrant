@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Moon Druid Garrison</title>
+<title>Moon Druid Guardians</title>
 <meta name="description" content="A defensive grove-builder under the moon. Bud Glimmer spirits, grow a garrison around the Elderbough wherever you choose, and hold the Lastlight Grove against the Gloam — night after night, for as long as you can last. Built for keyboard-and-mouse play.">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Moon Druid Garrison">
+<meta name="apple-mobile-web-app-title" content="Moon Druid Guardians">
 <meta name="theme-color" content="#070a20">
-<link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/moondruidgarrison/">
+<link rel="canonical" href="https://mustdesigngames.mattdanusergrant.com/moondruidguardians/">
 <style>
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#070a20;
@@ -142,7 +142,7 @@
 
 <div id="hud">
   <div class="hrow">
-    <div id="phase">The grove sleeps<small>Moon Druid Garrison</small></div>
+    <div id="phase">The grove sleeps<small>Moon Druid Guardians</small></div>
     <div>
       <div id="res">☾ 0 · ⬡ 0 <span class="vig">✦ 0/10</span></div>
       <div id="ctl">
@@ -169,7 +169,7 @@
 <div id="sheet"><div id="card"></div></div>
 
 <div id="grove" class="ov"><div class="ovwrap">
-  <h1>Moon Druid Garrison</h1>
+  <h1>Moon Druid Guardians</h1>
   <p class="tag">The vigil of the Lastlight Grove</p>
   <div class="lore" id="lore">High on the Vigil Moor stands the <b>Lastlight Grove</b> — last garrison of the
     Circle of the Waking Moon, druids who bound themselves into living wood to keep one light burning.
@@ -1027,7 +1027,7 @@ function syncHud(force){
   $('phase').innerHTML=(R.phase==='respite'
     ?'Respite — night '+(R.night+1)+(boss?' 🌕':'')+' in '+Math.ceil(R.phaseT)+'s'
     :'Night '+R.night+(boss?' 🌕':'')+' — the Gloam')+
-    '<small>'+(R.phase==='respite'&&R.previewStr?'coming: '+R.previewStr:'Moon Druid Garrison')+'</small>';
+    '<small>'+(R.phase==='respite'&&R.previewStr?'coming: '+R.previewStr:'Moon Druid Guardians')+'</small>';
   const elder=R.buildings[0];
   if(elder){const f=elder.hp/elder.maxHp;
     $('ebfill').style.width=(f*100)+'%';

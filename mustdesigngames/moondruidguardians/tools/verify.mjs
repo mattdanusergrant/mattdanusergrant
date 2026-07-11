@@ -1,4 +1,4 @@
-// verify.mjs — headless invariant suite for Moon Druid Garrison. Boots the game in
+// verify.mjs — headless invariant suite for Moon Druid Guardians. Boots the game in
 // Chromium (Playwright) and asserts core behaviour, so a baked build can be checked
 // against the same invariants as the source. The art layer is optional: run against
 // index.html (procedural, ART_* null) or dist/index.html (baked, ART_* filled).

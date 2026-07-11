@@ -1,4 +1,4 @@
-// bake.mjs — Modular Digital Goods → Moon Druid Garrison real-art build.
+// bake.mjs — Modular Digital Goods → Moon Druid Guardians real-art build.
 //
 // Headless: reuses the project's Playwright/Chromium (no native image deps). Reads the
 // licensed packs from the PRIVATE `modulardigitalgoods` repo, composites the Vigil Moor
