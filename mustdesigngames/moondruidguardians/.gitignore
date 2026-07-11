@@ -1,3 +1,4 @@
 # Baked real-art builds (embed licensed assets) — deploy via Cloudflare direct upload,
 # NEVER commit to this public repo. See ConductiveOS 07_projects/modulardigitalgoods/README.md.
 dist/
+.wrangler/
