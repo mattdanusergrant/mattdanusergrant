@@ -14,7 +14,7 @@ Each file is `shots/<slug>.jpg`, ~1000×625, `object-fit: cover`.
 | Tools              | `make-dope-grooves.jpg`           | `/tool.html?app=makedopegrooves`    | present |
 | Tools              | `markdown-document-generator.jpg` | `/resume-builder.html`              | present |
 | Projects           | `invisible-ink.jpg`               | https://itsinvisible.ink            | pending |
-| Projects           | `keeping-cadence.jpg`             | https://mattdanusergrant.github.io/keeping-cadence/ | pending (link 404s — fix first) |
+| Projects           | `keeping-cadence.jpg`             | https://www.keepingcadence.com      | pending |
 | Projects           | `dank-omphalos.jpg`               | https://dankomphalos.com            | pending |
 
 The three **Projects** shots are external sites: capture them from a local machine

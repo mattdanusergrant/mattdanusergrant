@@ -36,7 +36,7 @@ const GROUPS = {
   ],
   projects: [ // external — capture locally, see NOTE above
     { slug: 'invisible-ink',   url: 'https://itsinvisible.ink/' },
-    { slug: 'keeping-cadence', url: 'https://mattdanusergrant.github.io/keeping-cadence/' },
+    { slug: 'keeping-cadence', url: 'https://www.keepingcadence.com/' },
     { slug: 'dank-omphalos',   url: 'https://dankomphalos.com/' },
   ],
 };
