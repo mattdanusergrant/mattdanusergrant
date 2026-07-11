@@ -16,8 +16,8 @@
     --line:#EBE4D3; --line-2:#D6CBB2;
     --shadow:0 1px 0 rgba(60,45,20,.03),0 12px 30px rgba(80,55,20,.10);
     --shadow-hover:0 18px 44px rgba(80,55,20,.16);
-    /* coloured chrome — a bright golden DAWN yellow frames the light play field; dark warm text on it */
-    --bar:#F5C518; --bar-ink:#3A2E08; --bar-muted:#7A6216; --bar-line:rgba(58,44,8,.22);
+    /* coloured chrome — a light, sunny DAWN yellow frames the light play field; dark warm text on it */
+    --bar:#F7DA63; --bar-ink:#3A2E08; --bar-muted:#7C6620; --bar-line:rgba(58,44,8,.20);
   }
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease}
@@ -30,17 +30,19 @@
   .bar .trade{font-size:12px;color:var(--bar-ink);background:rgba(95,190,110,.18);border:1.5px solid rgba(95,190,110,.5);border-radius:999px;padding:3px 8px;white-space:nowrap;font-weight:600;flex-shrink:0;cursor:default}
   @media(max-width:680px){.bar .region,.bar .trade{display:none}}
   .bar .spacer{flex:1}
-  .rci{display:flex;gap:9px;align-items:flex-end}
-  .meter{display:flex;flex-direction:column;align-items:center;gap:3px;width:20px}
+  .rci{display:flex;gap:13px;align-items:flex-end}
+  .meter{display:flex;flex-direction:column;align-items:center;gap:3px;width:18px}
   .meter .bar{width:100%;height:26px;background:var(--line);border-radius:3px;overflow:hidden;position:relative;display:flex;align-items:flex-end}
   .meter .bar i{display:block;width:100%;height:8%;transition:height .5s ease,opacity .3s}
   .meter b{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.02em}
   @media(max-width:600px){.rci{display:none}}
-  .stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05;min-width:82px}
+  .stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05;width:92px;flex:none}   /* fixed width → the number never reflows the bar as it changes */
   .stat .n{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(16px,4.4vw,22px);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
   .stat .l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
   .res{display:flex;gap:9px}
-  .rstat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05;gap:1px;min-width:40px}
+  .rstat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05;gap:1px;width:66px;flex:none}   /* fixed → wide values (e.g. +35,809) don't grow the box and wiggle the row */
+  .rstat .rl{white-space:nowrap}
+  .rstat .rn{white-space:nowrap}
   .rstat .rn{font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;transition:color .3s}
   .rstat .rl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:3px}
   .rstat .rl .dot{width:7px;height:7px;border-radius:2px}
@@ -112,7 +114,7 @@
   .stat .l{color:var(--bar-muted)}
   .rstat .rn{color:var(--bar-ink)}
   .rstat .rl{color:var(--bar-muted)}
-  .meter .bar{background:var(--bar-line)}
+  .meter .bar{background:rgba(255,255,255,.34);box-shadow:inset 0 0 0 1px rgba(58,44,8,.14)}   /* clean light slot on the yellow bar (was a muddy dark block that read as a shadow) */
   .meter b{color:var(--bar-muted)}
   .goal .gl{color:var(--bar-muted)}
   .goal .gbar{background:var(--bar-line)}
