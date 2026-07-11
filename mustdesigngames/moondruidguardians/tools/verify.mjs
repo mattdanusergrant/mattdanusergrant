@@ -7,7 +7,7 @@
 //
 // Exits non-zero if any check fails.
 
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+import { chromium } from './_pw.mjs';
 import { resolve } from 'path';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };

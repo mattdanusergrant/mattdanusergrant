@@ -1,0 +1,74 @@
+name: Deploy Moon Druid Guardians (real-art)
+
+# Bakes the real-art build of Moon Druid Guardians and deploys it to its Tier-3 Cloudflare
+# Pages project (direct upload). The licensed art lives in the PRIVATE modulardigitalgoods
+# repo, so this never commits art — it checks the packs out at build time, bakes, and
+# uploads the single dist/ file. Manual (workflow_dispatch) by design: art lives in another
+# repo, so pushes here can't know when the art changed. One click in the Actions tab.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   MDG_ASSETS_TOKEN      fine-grained PAT, read-only Contents on mattdanusergrant/modulardigitalgoods
+#   CLOUDFLARE_API_TOKEN  Cloudflare token with Account · Cloudflare Pages · Edit
+#   CLOUDFLARE_ACCOUNT_ID Cloudflare account id (not secret, but kept here for convenience)
+
+on:
+  workflow_dispatch:
+    inputs:
+      maps:
+        description: 'Level JSON filenames in modulardigitalgoods/tools/map-editor/examples/ (comma-separated). One map = single level; several = an in-game picker pack.'
+        default: 'lastlight-clearing.json,elderwood-grove.json,moonpetal-meadow.json'
+      project:
+        description: 'Cloudflare Pages project name'
+        default: 'moondruidguardians'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mustdesigngames/moondruidguardians
+    steps:
+      - name: Checkout game repo
+        uses: actions/checkout@v4
+
+      - name: Checkout private asset repo
+        uses: actions/checkout@v4
+        with:
+          repository: mattdanusergrant/modulardigitalgoods
+          token: ${{ secrets.MDG_ASSETS_TOKEN }}
+          path: _assets
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install playwright
+          npx playwright install --with-deps chromium
+
+      - name: Bake real-art build
+        env:
+          PACKS: ${{ github.workspace }}/_assets/packs
+          EXDIR: ${{ github.workspace }}/_assets/tools/map-editor/examples
+          MAPS_IN: ${{ inputs.maps }}
+        run: |
+          set -e
+          node tools/bake.mjs --packs "$PACKS" --game index.html --out dist/index.html
+          IFS=',' read -ra M <<< "$MAPS_IN"
+          if [ "${#M[@]}" -le 1 ]; then
+            node tools/level-bake.mjs --map "$EXDIR/${M[0]}" --game dist/index.html --out dist/index.html --packs "$PACKS"
+          else
+            LIST=""; for m in "${M[@]}"; do LIST="$LIST,$EXDIR/$m"; done; LIST="${LIST#,}"
+            node tools/levels-bake.mjs --maps "$LIST" --game dist/index.html --out dist/index.html --packs "$PACKS"
+          fi
+          rm -f dist/_debug-atlas.png
+
+      - name: Verify build
+        run: node tools/verify.mjs --game dist/index.html
+
+      - name: Deploy to Cloudflare Pages (direct upload)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 pages deploy dist --project-name "${{ inputs.project }}" --branch main

@@ -9,7 +9,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname, join, basename } from 'path';
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+import { chromium } from './_pw.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
 const MAPS = (arg('--maps') || '').split(',').map(s => s.trim()).filter(Boolean);
