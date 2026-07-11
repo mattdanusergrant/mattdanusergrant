@@ -310,6 +310,8 @@
   }catch(e){return [];}})();
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
   var ZONES={res:1,com:1,ind:1,fac:1,tower:1};
+  var FOOT={res:2,com:2,ind:2,fac:2,tower:2};        // each zone building is ONE 2×2 building (anchor cell + 3 'sub' members)
+  function footOf(t){return FOOT[t]||1;}
   var POWER_OUT=2700;                              // each power station outputs a LOT (3×3 footprint)
   var POWERUSE={res:2,com:2,ind:3,fac:4,tower:6,bank:2,port:3};   // power drawn per building level
   var powerGen=0, powerUse=0, powerOK=true;        // city-wide power budget (generated vs consumed)
@@ -564,13 +566,22 @@
     return true;}
   function layPlant(c,r){var cs=plantCells(c,r);for(var i=0;i<cs.length;i++){var g=grid[idx(cs[i][0],cs[i][1])];g.t='power';g.lvl=1;g.grow=0;}}
   function plantTopLeft(c,r){var tc=c,tr=r;while(isPower(tc-1,tr))tc--;while(isPower(tc,tr-1))tr--;return [tc,tr];}
+  // ---- multi-cell zone buildings: anchor (top-left) holds the building; the other cells are 'sub' members ----
+  function blockFits(c,r,f){for(var dr=0;dr<f;dr++)for(var dc=0;dc<f;dc++){var a=c+dc,b=r+dr;if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;}return true;}
+  function layZone(c,r,t,f){var g0=grid[idx(c,r)];g0.t=t;g0.lvl=0;g0.grow=0;g0.foot=f;   // one building over an f×f footprint
+    for(var dr=0;dr<f;dr++)for(var dc=0;dc<f;dc++){if(!dc&&!dr)continue;var g=grid[idx(c+dc,r+dr)];g.t='sub';g.ax=c;g.ay=r;g.lvl=0;g.grow=0;}}
+  function zoneAnchor(c,r){var g=grid[idx(c,r)];return (g.t==='sub')?[g.ax,g.ay]:[c,r];}   // any cell of a building → its anchor
+  function clearZone(c,r){var an=zoneAnchor(c,r),ac=an[0],ar=an[1],ag=grid[idx(ac,ar)],f=ag.foot||1,ref=Math.round((COST[ag.t]||0)*REFUND);
+    for(var dr=0;dr<f;dr++)for(var dc=0;dc<f;dc++){if(!inB(ac+dc,ar+dr))continue;var g=grid[idx(ac+dc,ar+dr)];g.t='empty';g.lvl=0;g.grow=0;g.foot=undefined;}
+    return ref;}
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
     if(brush==='bulldoze'){
       if(cell.t==='empty'&&!cell.rail)return;
-      if(cell.t==='power'){var tl=plantTopLeft(c,r),cs=plantCells(tl[0],tl[1]),refunded=false;   // remove the whole 2×2 station
+      if(cell.t==='power'){var tl=plantTopLeft(c,r),cs=plantCells(tl[0],tl[1]),refunded=false;   // remove the whole 3×3 station
         for(var b=0;b<cs.length;b++){if(isPower(cs[b][0],cs[b][1])){var pg=grid[idx(cs[b][0],cs[b][1])];if(!refunded){treasury+=Math.round((COST.power||0)*REFUND);refunded=true;}pg.t='empty';pg.lvl=0;pg.grow=0;}}}
+      else if(cell.t==='sub'||FOOT[cell.t]){treasury+=clearZone(c,r);}                            // a 2×2 zone building — clear the whole block (from any of its cells)
       else{var ref=0;if(cell.rail){ref+=Math.round((COST.rail||0)*REFUND);cell.rail=false;}   // clears the whole cell (rail overlay + whatever's under it)
         if(cell.t!=='empty'){ref+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;}treasury+=ref;}
       updateCashUI();dirty=true;svcDirty=true;scheduleSave();return;
@@ -626,10 +637,17 @@
     var cost=COST[brush]||0; if(!canAfford(cost))return null;
     spend(cost);cell.t=brush;cell.lvl=0;cell.grow=0;return true;}                // zones start at level 0 and grow
   function commitLine(a,b){
-    if(a.c===b.c&&a.r===b.r&&inB(a.c,a.r)){                                      // single-cell "line" on an existing same-type zone → level it up
-      var g=grid[idx(a.c,a.r)];if(g.t===brush&&ZONES[brush]){lastPaint=-1;paintAt(a.c,a.r);return;}}
-    var path=linePath(a,b),any=false,broke=false;
-    for(var i=0;i<path.length;i++){var r=placeLineCell(path[i][0],path[i][1]);if(r===null){broke=true;break;}if(r)any=true;}
+    if(a.c===b.c&&a.r===b.r&&inB(a.c,a.r)&&ZONES[brush]){                        // single-cell "line" on an existing same-type building → level it up
+      var an=zoneAnchor(a.c,a.r),ag=grid[idx(an[0],an[1])];
+      if(ag.t===brush){lastPaint=-1;paintAt(an[0],an[1]);return;}}
+    var path=linePath(a,b),any=false,broke=false,i;
+    if(ZONES[brush]){                                                            // zones: tile 2×2 buildings along the path (skip cells that would overlap/not fit)
+      if(!unlocked(brush))return;var f=footOf(brush),cost=COST[brush]||0;
+      for(i=0;i<path.length;i++){var pc=path[i][0],pr=path[i][1];if(!blockFits(pc,pr,f))continue;
+        if(!canAfford(cost)){broke=true;break;}spend(cost);layZone(pc,pr,brush,f);any=true;}
+    }else{
+      for(i=0;i<path.length;i++){var rr=placeLineCell(path[i][0],path[i][1]);if(rr===null){broke=true;break;}if(rr)any=true;}
+    }
     if(any){dirty=true;svcDirty=true;scheduleSave();}
     if(broke)denyToast();}
   function cancelLine(){lineAnchor=null;dirty=true;}
@@ -719,6 +737,7 @@
       else if(g.rail)col=MMRAIL;                                     // rail overlay (incl. level crossings) shows as rail
       else if(g.t==='empty')col=MMTERR[g.terr]||'#bcd6ad';
       else if(g.t==='highway')col='#6b6256';
+      else if(g.t==='sub')col=SWATCH[grid[idx(g.ax,g.ay)].t]||'#888888';   // member of a 2×2 building → its anchor's colour
       else col=SWATCH[g.t]||'#888888';
       var rgb=hex2rgb(col),p=(r*WORLD+c)*4;d[p]=rgb[0];d[p+1]=rgb[1];d[p+2]=rgb[2];d[p+3]=255;}
     mmoc.putImageData(img,0,0);
@@ -809,10 +828,13 @@
   }
   // what's blocking a zone from growing? '' = nothing (grows)
   function blocker(c,r){
-    if(!nearConnected(c,r))return 'disc';
-    if(!powered[idx(c,r)])return 'pow';
-    if(!watered[idx(c,r)])return 'wat';
-    var t=grid[idx(c,r)].t;
+    var g=grid[idx(c,r)],f=g.foot||1,dc,dr,okC=false,okP=false,okW=false;   // a 2×2 building is served if ANY of its cells reaches the network
+    for(dr=0;dr<f;dr++)for(dc=0;dc<f;dc++){var a=c+dc,b=r+dr;if(!inB(a,b))continue;var ii=idx(a,b);
+      if(nearConnected(a,b))okC=true; if(powered[ii])okP=true; if(watered[ii])okW=true;}
+    if(!okC)return 'disc';
+    if(!okP)return 'pow';
+    if(!okW)return 'wat';
+    var t=g.t;
     if(t==='com'&&!(goodsStock>0.01||goodsHealthy))return 'goods';  // shops need Goods
     if(t==='fac'&&!(matStock>0.01||matHealthy))return 'mat';        // factories need Materials
     return '';
@@ -1174,9 +1196,9 @@
     ctx.fillStyle=pal.transitBody;ctx.fillRect(px(x+CELL/2-5),py(y+4),10,px(6*s));   // route sign board
     ctx.fillStyle=pal.transitSign;ctx.fillRect(px(x+CELL/2-3),py(y+6),6,2);          // sign stripe
   }
-  function drawHighrise(x,y,cell){                          // dense residential: a tall slab with lit windows
-    var lvl=cell.lvl,s=growScale(cell),pxs=Math.max(2,Math.round(CELL/12));
-    var w=px((5+lvl*0.4)*pxs*s),h=px((6+lvl*3)*pxs*s),bx=px(x+(CELL-w)/2),by=px(y+CELL-4-h);
+  function drawHighrise(x,y,cell,span){                     // dense residential: a tall slab with lit windows
+    span=span||1;var lvl=cell.lvl,s=growScale(cell),pxs=Math.max(2,Math.round(CELL/12))*span,W=CELL*span;
+    var w=px((5+lvl*0.4)*pxs*s),h=px((6+lvl*3)*pxs*s),bx=px(x+(W-w)/2),by=px(y+W-4-h);
     ctx.fillStyle=pal.side;ctx.fillRect(bx+pxs,by+h,w,pxs);                    // shadow
     ctx.fillStyle=pal.towerRes[Math.min(4,lvl-1)];ctx.fillRect(bx,by,w,h);    // slab
     ctx.fillStyle=pal.towerResTop;ctx.fillRect(bx,by,w,Math.max(2,px(pxs*0.8)));  // crown
@@ -1185,27 +1207,27 @@
     for(var wy=0;sy+wy*(ws+gap)<by+h-pxs;wy++)for(var wx=0;sx+wx*(ws+gap)<bx+w-pxs;wx++){if(((cell.seed>>((wx+wy*3)&15))&3)!==0)ctx.fillRect(px(sx+wx*(ws+gap)),px(sy+wy*(ws+gap)),ws,ws);}
     ctx.fillStyle=pal.side;ctx.fillRect(bx,by,1,h);ctx.fillRect(bx+w-1,by,1,h);ctx.fillRect(bx,by,w,1);
   }
-  function buildingBase(x,y,cell,lvl){var pxs=Math.max(2,Math.round(CELL/12));var w=(4+lvl)*pxs,h=(3+lvl*1.9)*pxs,s=growScale(cell);w*=s;h*=s;w=px(w);h=px(h);return {bx:px(x+(CELL-w)/2),by:px(y+CELL-4-h),w:w,h:h,pxs:pxs};}
+  function buildingBase(x,y,cell,lvl,span){span=span||1;var pxs=Math.max(2,Math.round(CELL/12))*span;var w=(4+lvl)*pxs,h=(3+lvl*1.9)*pxs,s=growScale(cell);w*=s;h*=s;w=px(w);h=px(h);var W=CELL*span;return {bx:px(x+(W-w)/2),by:px(y+W-4-h),w:w,h:h,pxs:pxs};}
   function windows(b,cols_,rows_,seed,color){ctx.fillStyle=color;var ws=Math.max(2,px(b.pxs*0.9)),gap=b.pxs*0.7,sx=b.bx+b.pxs,sy=b.by+Math.round(b.pxs*2.4);
     for(var wy=0;wy<rows_;wy++)for(var wx=0;wx<cols_;wx++){var lx=sx+wx*(ws+gap),ly=sy+wy*(ws+gap);if(lx+ws<=b.bx+b.w-b.pxs*0.6&&ly+ws<=b.by+b.h-b.pxs*0.6&&((seed>>(wx+wy*3))&3)!==0)ctx.fillRect(px(lx),px(ly),ws,ws);}}
   function outline(b){ctx.fillStyle=pal.side;ctx.fillRect(b.bx,b.by,b.w,1);ctx.fillRect(b.bx,b.by+b.h-1,b.w,1);ctx.fillRect(b.bx,b.by,1,b.h);ctx.fillRect(b.bx+b.w-1,b.by,1,b.h);}
   function shadow(b){ctx.fillStyle=pal.side;ctx.fillRect(b.bx+b.pxs,b.by+b.h,b.w,b.pxs);}
-  function drawHome(x,y,cell){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl);shadow(b);ctx.fillStyle=pal.res[lvl-1];ctx.fillRect(b.bx,b.by,b.w,b.h);
+  function drawHome(x,y,cell,span){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl,span);shadow(b);ctx.fillStyle=pal.res[lvl-1];ctx.fillRect(b.bx,b.by,b.w,b.h);
     var roofH=Math.round(b.pxs*(1.6+((cell.seed>>4)&1)));ctx.fillStyle=pal.resRoof[lvl-1];
     for(var i=0;i<roofH;i++){var inset=Math.round(i/roofH*b.w*0.42);ctx.fillRect(b.bx+inset,b.by-roofH+i,b.w-inset*2,1);}
     outline(b);windows(b,lvl,lvl+1,cell.seed,pal.win);
     ctx.fillStyle=pal.door;var dw=Math.max(2,b.pxs),dh=Math.max(3,px(b.pxs*1.6));ctx.fillRect(px(b.bx+b.w/2-dw/2),b.by+b.h-dh,dw,dh);}
-  function drawShop(x,y,cell){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl);shadow(b);ctx.fillStyle=pal.com[lvl-1];ctx.fillRect(b.bx,b.by,b.w,b.h);
+  function drawShop(x,y,cell,span){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl,span);shadow(b);ctx.fillStyle=pal.com[lvl-1];ctx.fillRect(b.bx,b.by,b.w,b.h);
     ctx.fillStyle=pal.comRoof;ctx.fillRect(b.bx,b.by,b.w,Math.round(b.pxs*1.2));
     var ay=b.by+b.h-Math.round(b.pxs*2.4);ctx.fillStyle=pal.awning[cell.seed%pal.awning.length];ctx.fillRect(b.bx,ay,b.w,Math.max(2,px(b.pxs*0.9)));
     outline(b);windows(b,lvl+1,lvl,cell.seed,pal.win);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fillRect(b.bx+b.pxs,b.by+b.h-Math.round(b.pxs*1.5),b.w-b.pxs*2,Math.max(2,px(b.pxs*0.8)));}
-  function drawWorks(x,y,cell){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl);b.bx=px(b.bx-b.pxs*0.6);b.w=px(b.w+b.pxs*1.2);b.by=px(b.by+b.h*0.12);b.h=px(b.h*0.88);shadow(b);
+  function drawWorks(x,y,cell,span){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl,span);b.bx=px(b.bx-b.pxs*0.6);b.w=px(b.w+b.pxs*1.2);b.by=px(b.by+b.h*0.12);b.h=px(b.h*0.88);shadow(b);
     ctx.fillStyle=pal.ind[lvl-1];ctx.fillRect(b.bx,b.by,b.w,b.h);ctx.fillStyle=pal.indRoof;ctx.fillRect(b.bx,b.by,b.w,Math.round(b.pxs*1.1));outline(b);
     var sx=b.bx+((cell.seed&1)?b.w-Math.round(b.pxs*1.6):Math.round(b.pxs*0.6)),sh=Math.round(b.pxs*(2+lvl));
     ctx.fillStyle=pal.stack;ctx.fillRect(sx,b.by-sh,Math.max(2,px(b.pxs*0.8)),sh);
     ctx.fillStyle=pal.smoke;ctx.beginPath();ctx.arc(sx+1,b.by-sh-2,Math.max(2,b.pxs*0.9),0,6.2832);ctx.fill();
     windows(b,lvl+1,Math.max(1,lvl-1),cell.seed,'rgba(255,255,255,.66)');}
-  function drawFactory(x,y,cell){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl);
+  function drawFactory(x,y,cell,span){var lvl=cell.lvl,b=buildingBase(x,y,cell,lvl,span);
     b.bx=px(b.bx-b.pxs*0.5);b.w=px(b.w+b.pxs);           // a touch wider than a house
     shadow(b);ctx.fillStyle=pal.fac[lvl-1];ctx.fillRect(b.bx,b.by,b.w,b.h);
     ctx.fillStyle=pal.facRoof;ctx.fillRect(b.bx,b.by,b.w,Math.round(b.pxs*1.2));outline(b);
@@ -1223,16 +1245,17 @@
 
   // ---- placement preview + inspect ----
   var BUILDB={res:1,com:1,ind:1,fac:1,park:1,power:1,solar:1,water:1,bank:1,port:1,tower:1,transit:1};
-  function drawBuildingSprite(x,y,cell){var t=cell.t;
-    if(t==='park')return drawPark(x,y,cell); if(t==='power')return drawPlant(x,y,cell,2);
+  function drawBuildingSprite(x,y,cell,span){var t=cell.t;span=span||1;
+    if(t==='park')return drawPark(x,y,cell); if(t==='power')return drawPlant(x,y,cell,span);
     if(t==='solar')return drawSolar(x,y,cell); if(t==='transit')return drawTransit(x,y,cell);
     if(t==='water')return drawTower(x,y,cell); if(t==='bank')return drawBank(x,y,cell); if(t==='port')return drawPort(x,y,cell);
-    if(t==='res')return drawHome(x,y,cell); if(t==='tower')return drawHighrise(x,y,cell);
-    if(t==='com')return drawShop(x,y,cell); if(t==='ind')return drawWorks(x,y,cell); if(t==='fac')return drawFactory(x,y,cell);}
+    if(t==='res')return drawHome(x,y,cell,span); if(t==='tower')return drawHighrise(x,y,cell,span);
+    if(t==='com')return drawShop(x,y,cell,span); if(t==='ind')return drawWorks(x,y,cell,span); if(t==='fac')return drawFactory(x,y,cell,span);}
   function canPlaceBrushHere(c,r){if(!inB(c,r))return false;var g=grid[idx(c,r)];
-    if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.rail)return false;
     if(!unlocked(brush))return false;
     if(brush==='power')return plantFits(c,r)&&canAfford(COST.power||0);
+    if(FOOT[brush])return blockFits(c,r,footOf(brush))&&canAfford(COST[brush]||0);   // a 2×2 zone needs a clear 2×2
+    if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.rail)return false;
     if(g.t!=='empty')return false; return canAfford(COST[brush]||0);}
   var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',solar:'Solar array',water:'Water tower',bank:'Bank',port:'Port',transit:'Transit stop'};
   var TERRLABEL={plains:'Grassland',forest:'Forest',mountain:'Mountain',water:'Water'};
@@ -1264,6 +1287,7 @@
     return h;}
   var inspectEl=document.getElementById('inspect');
   function updateInspect(){if(brush!=='inspect'||!hoverCell||!inB(hoverCell.c,hoverCell.r)){if(inspectEl)inspectEl.hidden=true;return;}
+    if(grid[idx(hoverCell.c,hoverCell.r)].t==='sub'){var an=zoneAnchor(hoverCell.c,hoverCell.r);inspectEl.innerHTML=tileInfo(an[0],an[1]);inspectEl.hidden=false;return;}   // show the building's info from any of its cells
     inspectEl.innerHTML=tileInfo(hoverCell.c,hoverCell.r);inspectEl.hidden=false;}
 
   function draw(){
@@ -1286,7 +1310,7 @@
     for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(cell&&cell.rail)drawRail(c*CELL,r*CELL,c,r);}
     // structures
     for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){
-      cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway')continue;
+      cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway'||t==='sub')continue;   // 'sub' cells are drawn by their anchor
       x=c*CELL;y=r*CELL;
       if(t==='park'){drawPark(x,y,cell);continue;}
       if(t==='power'){if(isPower(c-1,r)||isPower(c,r-1))continue;    // draw the plant once, at the block's top-left anchor
@@ -1296,9 +1320,10 @@
       if(t==='water'){drawTower(x,y,cell);continue;}
       if(t==='bank'){drawBank(x,y,cell);continue;}
       if(t==='port'){drawPort(x,y,cell);continue;}
-      // zones: draw lot/building, then a cue for what's missing
-      if(cell.lvl<1){ctx.fillStyle=pal.lot;ctx.fillRect(x+2,y+2,CELL-4,CELL-4);}
-      else if(t==='res')drawHome(x,y,cell);else if(t==='tower')drawHighrise(x,y,cell);else if(t==='com')drawShop(x,y,cell);else if(t==='ind')drawWorks(x,y,cell);else drawFactory(x,y,cell);
+      // zones: draw lot/building at the building's footprint, then a cue for what's missing
+      var zf=cell.foot||1, ZW=CELL*zf;
+      if(cell.lvl<1){ctx.fillStyle=pal.lot;ctx.fillRect(x+2,y+2,ZW-4,ZW-4);}
+      else if(t==='res')drawHome(x,y,cell,zf);else if(t==='tower')drawHighrise(x,y,cell,zf);else if(t==='com')drawShop(x,y,cell,zf);else if(t==='ind')drawWorks(x,y,cell,zf);else drawFactory(x,y,cell,zf);
       if(cell.lvl<MAXLVL){var bl=connected?blocker(c,r):'';if(bl)drawCue(x,y,bl);}
     }
     // cars on top
@@ -1323,17 +1348,19 @@
     // building placement ghost — preview every build tool before you click (hidden once a zone line is
     // anchored, so the row path shows); over an existing same-type building it previews the NEXT level.
     if(!OBSERVE&&BUILDB[brush]&&!lineAnchor&&hoverCell&&inB(hoverCell.c,hoverCell.r)&&!(dragStart&&panned)){
-      var gc=hoverCell.c,gr=hoverCell.r,span=brush==='power'?PLANT_N:1,gg=grid[idx(gc,gr)];
+      var gc=hoverCell.c,gr=hoverCell.r,span=brush==='power'?PLANT_N:footOf(brush);
+      if(ZONEK[brush]){var an=zoneAnchor(gc,gr);gc=an[0];gr=an[1];}   // resolve to the building's anchor for zone previews
+      var gg=grid[idx(gc,gr)];
       if(ZONEK[brush]&&gg.t===brush&&gg.lvl<MAXLVL){                 // upgrade preview → next level
         var ready=blocker(gc,gr)===''&&canAfford(COST[brush]||0),col=ready?SWATCH[brush]:'#D6A94E';
-        ctx.globalAlpha=0.5;drawBuildingSprite(gc*CELL,gr*CELL,{t:brush,lvl:gg.lvl+1,grow:0,seed:gg.seed,pulse:-9999,terr:gg.terr});
-        ctx.globalAlpha=0.95;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2,gr*CELL+2,CELL-4,CELL-4);
+        ctx.globalAlpha=0.5;drawBuildingSprite(gc*CELL,gr*CELL,{t:brush,lvl:gg.lvl+1,grow:0,seed:gg.seed,pulse:-9999,terr:gg.terr},span);
+        ctx.globalAlpha=0.95;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2,gr*CELL+2,CELL*span-4,CELL*span-4);
         ctx.fillStyle=col;ctx.font='700 10px Inter,sans-serif';ctx.fillText('▲'+(gg.lvl+1),gc*CELL+4,gr*CELL+12);ctx.globalAlpha=1;
       } else if(ZONEK[brush]&&gg.t===brush){                          // already at max level
-        ctx.globalAlpha=0.9;ctx.strokeStyle='#C7A24A';ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2.5,gr*CELL+2.5,CELL-5,CELL-5);
+        ctx.globalAlpha=0.9;ctx.strokeStyle='#C7A24A';ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2.5,gr*CELL+2.5,CELL*span-5,CELL*span-5);
         ctx.fillStyle='#C7A24A';ctx.font='700 9px Inter,sans-serif';ctx.fillText('MAX',gc*CELL+4,gr*CELL+11);ctx.globalAlpha=1;
       } else if(canPlaceBrushHere(gc,gr)){                            // fresh placement ghost
-        ctx.globalAlpha=0.5;drawBuildingSprite(gc*CELL,gr*CELL,{t:brush,lvl:ZONEK[brush]?2:1,grow:0,seed:((gc*73856)^(gr*19349))>>>0,pulse:-9999,terr:gg.terr});
+        ctx.globalAlpha=0.5;drawBuildingSprite(gc*CELL,gr*CELL,{t:brush,lvl:ZONEK[brush]?2:1,grow:0,seed:((gc*73856)^(gr*19349))>>>0,pulse:-9999,terr:gg.terr},span);
         ctx.globalAlpha=0.95;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2,gr*CELL+2,CELL*span-4,CELL*span-4);ctx.globalAlpha=1;
       } else {ctx.globalAlpha=0.9;ctx.strokeStyle='#D0704A';ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2.5,gr*CELL+2.5,CELL*span-5,CELL*span-5);
         ctx.beginPath();ctx.moveTo(gc*CELL+6,gr*CELL+6);ctx.lineTo((gc+span)*CELL-6,(gr+span)*CELL-6);ctx.moveTo((gc+span)*CELL-6,gr*CELL+6);ctx.lineTo(gc*CELL+6,(gr+span)*CELL-6);ctx.stroke();ctx.globalAlpha=1;}
@@ -1355,12 +1382,17 @@
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
   window.addEventListener('pagehide',function(){save();});   // flush on leave — a debounced save may still be pending
-  function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0]);}
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:7,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out}));}catch(e){}}
+  function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];
+      if(g&&g.t!=='highway'&&g.t!=='sub'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,g.foot||1]);}   // save anchors only; 'sub' members are reconstructed on load
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;}
-    list.forEach(function(a){var c=a[0],r=a[1];if(inB(c,r)){var g=grid[idx(c,r)];if(g.t==='highway')return;if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];}});
+    list.forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
+      if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
+      var f=a[5]||1;
+      if(FOOT[a[2]]&&f>1){if(!blockFits(c,r,f))return;layZone(c,r,a[2],f);g.lvl=a[3]||0;g.pulse=-9999;}   // rebuild the 2×2 building (anchor + members)
+      else{g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];g.foot=f>1?f:undefined;}});
     dirty=true;}catch(e){}}
 
   // ---- animation loop ----
