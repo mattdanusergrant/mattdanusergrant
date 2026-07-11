@@ -67,11 +67,11 @@
     S.grid=ng;S.gen++;if(pop===0||S.gen-S.seedGen>140)seed(cols,rows);
   }
 
-  var cell=8;
+  var cell=4;
   function resize(){
     var w=canvas.clientWidth,h=canvas.clientHeight;
     canvas.width=w*DPR;canvas.height=h*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
-    cell=Math.max(5,Math.round(Math.min(w,h)/60));
+    cell=Math.max(3,Math.round(Math.min(w,h)/120));
     var cols=Math.max(8,Math.floor(w/cell)),rows=Math.max(8,Math.floor(h/cell));
     if(S.cols!==cols||S.rows!==rows||!S.grid)seed(cols,rows);
   }

@@ -632,7 +632,7 @@
           hil(x+xi/2+yi,y+xj/2+yj,-yi/2,-yj/2,-xi/2,-xj/2,n-1);
         })(w/2-m/2,h/2-m/2,m,0,0,m,order);
       }
-      var pts=S.pts,N=pts.length,cyc=12,ph=(t%cyc)/cyc,draw=Math.min(1,ph/0.82);   // trace out over 82% of the loop, then hold full
+      var pts=S.pts,N=pts.length,cyc=12,draw=Math.min(1,t/(cyc*0.82));   // trace once to full, then hold — no restart
       var upto=draw*(N-1),full=Math.floor(upto),frac=upto-full,i;
       ctx.shadowBlur=0;ctx.lineCap='round';ctx.lineJoin='round';   // no preview ghost — the pen writes the curve onto black
       ctx.strokeStyle=col(0,0.92);ctx.lineWidth=1.7;
@@ -728,7 +728,7 @@
     var FIB_T=(function(){var g=[1,1,2,3,5,8,13,21,34,55,89,144],a=0,o=[];for(var i=0;i<g.length;i++){a+=g[i];o.push(a);}return o;})();
     // Conway's Game of Life - the final reveal: MUST DESIGN GAMES.
     SK.life=function(w,h,t){
-      var cell=Math.max(5,Math.round(Math.min(w,h)/60)),cols=Math.max(8,Math.floor(w/cell)),rows=Math.max(8,Math.floor(h/cell)),S=lifeS;
+      var cell=Math.max(3,Math.round(Math.min(w,h)/120)),cols=Math.max(8,Math.floor(w/cell)),rows=Math.max(8,Math.floor(h/cell)),S=lifeS;
       function seed(){S.grid=[];for(var y=0;y<rows;y++){var row=[];for(var x=0;x<cols;x++)row.push(Math.random()<0.15?1:0);S.grid.push(row);}S.cols=cols;S.rows=rows;S.seedGen=S.gen||0;}
       if(S.cols!==cols||S.rows!==rows||!S.grid){S.gen=0;S.phase=0;S.lastT=t;seed();}
       // One generation of Conway's Life.
