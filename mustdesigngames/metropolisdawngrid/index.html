@@ -193,7 +193,7 @@
     <canvas id="city"></canvas>
     <canvas id="minimap" title="Overview — click or drag to jump the camera"></canvas>
     <div class="mm-legend" id="mmlegend">
-      <span><i style="background:#6b6256"></i>Freeway</span>
+      <span><i style="background:#8A7550"></i>Freeway</span>
       <span><i style="background:#9c968a"></i>Road</span>
       <span><i style="background:#6f6552"></i>Rail</span>
       <span><i style="background:#a9cbe4"></i>Water</span>
@@ -465,7 +465,7 @@
   var PAL={
     light:{
       road:'#B9B3A2',curb:'#9E9788',lane:'#EFEADB',
-      hw:'#8E887B',hwMed:'#E7C24A',hwLane:'#F1ECDD',
+      hw:'#9A8A69',hwMed:'#E7C24A',hwLane:'#F5EFDD',hwGlow:'#F3C24A',
       res:['#7EB277','#63A05C','#4C8047','#3C6E39','#2E5A2C'],resRoof:['#B85C4A','#A8503E','#8F4433','#79392C','#663025'],win:'#FBF6E6',door:'#6B4A38',
       com:['#6C9FCB','#5589BB','#41709C','#345C82','#284A6B'],comRoof:'#33587C',awning:['#E4A65A','#D98F6E','#7FB0C4'],
       ind:['#D2A45C','#BF8F45','#A9792F','#916627','#78541F'],indRoof:'#7E5B24',stack:'#8A8378',smoke:'rgba(120,110,95,.5)',
@@ -747,7 +747,7 @@
       if(!g)col='#bcd6ad';
       else if(g.rail)col=MMRAIL;                                     // rail overlay (incl. level crossings) shows as rail
       else if(g.t==='empty')col=MMTERR[g.terr]||'#bcd6ad';
-      else if(g.t==='highway')col='#6b6256';
+      else if(g.t==='highway')col='#8A7550';
       else if(g.t==='sub')col=SWATCH[grid[idx(g.ax,g.ay)].t]||'#888888';   // member of a 2×2 building → its anchor's colour
       else col=SWATCH[g.t]||'#888888';
       var rgb=hex2rgb(col),p=(r*WORLD+c)*4;d[p]=rgb[0];d[p+1]=rgb[1];d[p+2]=rgb[2];d[p+3]=255;}
@@ -1081,6 +1081,38 @@
     if(isRoadCell(c,r-1))ctx.fillRect(x+CELL/2-4,y,8,3);
     if(isRoadCell(c+1,r))ctx.fillRect(x+CELL-3,y+CELL/2-4,3,8);
     if(isRoadCell(c-1,r))ctx.fillRect(x,y+CELL/2-4,3,8);
+    if(c===HWGC&&r===HWGR){                                                    // the interchange: a warm DAWN gateway plaza
+      ctx.fillStyle='rgba(243,194,74,.22)';ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
+      ctx.strokeStyle=pal.hwGlow;ctx.lineWidth=1.5;ctx.strokeRect(x+2.5,y+2.5,CELL-5,CELL-5);
+    }
+  }
+  // the parent hub this region's freeway runs toward — a deterministic solarpunk name per world location
+  var HUBPRE=['Auro','Sol','Helio','Ember','Ceres','Vela','Lumen','Meri','Verd','Orin','Zeph','Cyra','Thal','Nyla','Astra','Sere'],
+      HUBSUF=['dale','crest','haven','reach','gate','forge','spire','vale','march','ridge','helm','bourne','mere','fell'];
+  function hubName(){var i=Math.floor(vnoise(WOX+71,WOY+3,3)*997)%HUBPRE.length,j=Math.floor(vnoise(WOX+7,WOY+83,4)*997)%HUBSUF.length;return HUBPRE[i]+HUBSUF[j];}
+  function rrect(x,y,w,h,rad){if(ctx.roundRect){ctx.beginPath();ctx.roundRect(x,y,w,h,rad);}else{ctx.beginPath();ctx.rect(x,y,w,h);}}
+  // an overhead gateway sign at the interchange — arrow toward the hub, hub name — so the direction reads as "→ toward [Hub]"
+  function drawGateSign(){
+    if(!inB(HWGC,HWGR))return;
+    var out=hwDirVec(), perp=[out[1],out[0]];
+    var cxp=(HWGC+0.5)*CELL - perp[0]*CELL*1.25, cyp=(HWGR+0.5)*CELL - perp[1]*CELL*1.25;   // lift the sign off the road, to one side
+    var name=hubName().toUpperCase();
+    ctx.save();
+    ctx.font='700 '+Math.round(CELL*0.4)+'px system-ui,-apple-system,"Segoe UI",sans-serif';
+    ctx.textBaseline='middle';ctx.textAlign='left';
+    var tw=ctx.measureText(name).width, arrowW=CELL*0.5, padX=CELL*0.34, gap=CELL*0.2;
+    var w=arrowW+gap+tw+padX*2, h=CELL*0.8, x=cxp-w/2, y=cyp-h/2;
+    ctx.fillStyle='rgba(30,26,14,.18)';rrect(x+1.5,y+2.5,w,h,h*0.28);ctx.fill();             // soft drop shadow
+    ctx.fillStyle='#2E6A5D';rrect(x,y,w,h,h*0.28);ctx.fill();                                 // warm solar-green sign
+    ctx.lineWidth=Math.max(1,CELL*0.05);ctx.strokeStyle=pal.hwGlow;ctx.stroke();               // gold border
+    var ax=x+padX+arrowW/2, s=arrowW/2;                                                        // arrow points toward the hub (the out direction)
+    ctx.fillStyle=pal.hwGlow;ctx.beginPath();
+    ctx.moveTo(ax+out[0]*s, cyp+out[1]*s);
+    ctx.lineTo(ax-out[0]*s-perp[0]*s*0.8, cyp-out[1]*s-perp[1]*s*0.8);
+    ctx.lineTo(ax-out[0]*s+perp[0]*s*0.8, cyp-out[1]*s+perp[1]*s*0.8);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='#FBF6E6';ctx.fillText(name, x+padX+arrowW+gap, cyp+CELL*0.02);
+    ctx.restore();
   }
   // thin roads: a half-width street running through the cell centre (with a slim sidewalk), so streets
   // read as streets and buildings stay full-size. A cross of arms toward each connected neighbour.
@@ -1380,6 +1412,7 @@
     if(brush==='inspect'&&hoverCell&&inB(hoverCell.c,hoverCell.r)){var ic=hoverCell.c,ir=hoverCell.r;
       ctx.strokeStyle='rgba(25,35,50,.85)';ctx.lineWidth=2;ctx.strokeRect(ic*CELL+1.5,ir*CELL+1.5,CELL-3,CELL-3);
       ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.strokeRect(ic*CELL+3,ir*CELL+3,CELL-6,CELL-6);}
+    drawGateSign();                                                 // overhead "→ toward [Hub]" sign at the interchange
     ctx.restore();
     mmRender();                                                     // overlay the minimap + viewport box each redraw
   }
