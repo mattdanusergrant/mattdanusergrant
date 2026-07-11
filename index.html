@@ -124,10 +124,15 @@
   .shelf{display:grid;grid-template-columns:repeat(auto-fit,minmax(214px,1fr));gap:14px}
   .tile{
     background:var(--paper);border:1.5px solid var(--line);border-radius:14px;
-    padding:18px 18px 16px;display:flex;flex-direction:column;
+    padding:18px 18px 16px;display:flex;flex-direction:column;overflow:hidden;
     box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s;
   }
   .tile:hover{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow-hover)}
+  .tile-shot{
+    display:block;margin:-18px -18px 14px;width:calc(100% + 36px);
+    aspect-ratio:16/10;object-fit:cover;background:var(--bg);
+    border-bottom:1.5px solid var(--line);
+  }
   .tile h3{
     font-family:'Fraunces',serif;font-weight:500;font-size:19px;
     letter-spacing:-0.01em;line-height:1.2;margin:0 0 7px;color:var(--ink);
@@ -315,16 +320,19 @@
     </div>
     <div class="shelf">
       <article class="tile">
+        <img class="tile-shot" src="/shots/metropolis-dawn-grid.jpg" alt="Metropolis Dawn Grid gameplay" loading="lazy" decoding="async" width="1000" height="625">
         <h3>Metropolis<br>Dawn<br>Grid</h3>
         <p>A city builder on one shared world. Run the supply chain, lay rail, and ship surplus by train to your neighbours.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://mustdesigngames.mattdanusergrant.com/metropolisdawngrid/" target="_blank" rel="noopener">Play</a></div>
       </article>
       <article class="tile">
+        <img class="tile-shot" src="/shots/moon-druid-guardians.jpg" alt="Moon Druid Guardians gameplay" loading="lazy" decoding="async" width="1000" height="625">
         <h3>Moon<br>Druid<br>Guardians</h3>
         <p>A defensive base-builder under the moon. Grow a druid garrison around the Elderbough and hold the grove against the Gloam, night after night.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://moondruidguardians.mattdanusergrant.com/" target="_blank" rel="noopener">Play</a></div>
       </article>
       <article class="tile">
+        <img class="tile-shot" src="/shots/match-deck-gateway.jpg" alt="Match Deck Gateway gameplay" loading="lazy" decoding="async" width="1000" height="625">
         <h3>Match<br>Deck<br>Gateway</h3>
         <p>Build and playtest browser card games on one shared engine — then deal your creation to friends over a room code.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://mustdesigngames.mattdanusergrant.com/matchdeckgateway/">Play</a></div>
@@ -339,16 +347,19 @@
     </div>
     <div class="shelf">
       <article class="tile">
+        <img class="tile-shot" src="/shots/math-draws-graphics.jpg" alt="Math Draws Graphics tool" loading="lazy" decoding="async" width="1000" height="625">
         <h3>Math<br>Draws<br>Graphics</h3>
         <p>Two tools for making pictures with code: live-editable math sketches, and a pixel-art sprite editor.</p>
         <div class="btn-row"><a class="btn btn-play" href="https://mathdrawsgraphics.mattdanusergrant.com/">Open</a></div>
       </article>
       <article class="tile">
+        <img class="tile-shot" src="/shots/make-dope-grooves.jpg" alt="Make Dope Grooves tool" loading="lazy" decoding="async" width="1000" height="625">
         <h3>Make<br>Dope<br>Grooves</h3>
         <p>Write a whole song as code — drums, bass, melodies, chords — and it plays back live in your browser.</p>
         <div class="btn-row"><a class="btn btn-play" href="/tool.html?app=makedopegrooves">Open</a></div>
       </article>
       <article class="tile">
+        <img class="tile-shot" src="/shots/markdown-document-generator.jpg" alt="Markdown Document Generator resume builder" loading="lazy" decoding="async" width="1000" height="625">
         <h3>Markdown<br>Document<br>Generator</h3>
         <p>A plain-text resume builder: write on the left, watch a clean, ATS-safe resume build on the right. Save to PDF.</p>
         <div class="btn-row"><a class="btn btn-play" href="/resume-builder.html">Open</a></div>
