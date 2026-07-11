@@ -1091,17 +1091,22 @@
       HUBSUF=['dale','crest','haven','reach','gate','forge','spire','vale','march','ridge','helm','bourne','mere','fell'];
   function hubName(){var i=Math.floor(vnoise(WOX+71,WOY+3,3)*997)%HUBPRE.length,j=Math.floor(vnoise(WOX+7,WOY+83,4)*997)%HUBSUF.length;return HUBPRE[i]+HUBSUF[j];}
   function rrect(x,y,w,h,rad){if(ctx.roundRect){ctx.beginPath();ctx.roundRect(x,y,w,h,rad);}else{ctx.beginPath();ctx.rect(x,y,w,h);}}
-  // an overhead gateway sign at the interchange — arrow toward the hub, hub name — so the direction reads as "→ toward [Hub]"
+  // a boundary sign where the freeway runs OFF the map toward the hub — only seen when you scroll to that edge
   function drawGateSign(){
-    if(!inB(HWGC,HWGR))return;
     var out=hwDirVec(), perp=[out[1],out[0]];
-    var cxp=(HWGC+0.5)*CELL - perp[0]*CELL*1.25, cyp=(HWGR+0.5)*CELL - perp[1]*CELL*1.25;   // lift the sign off the road, to one side
+    var ec = out[0]<0?0 : out[0]>0?cols-1 : HWGC;                                            // the freeway's off-map end
+    var er = out[1]<0?0 : out[1]>0?rows-1 : HWGR;
+    if(!inB(ec,er))return;
     var name=hubName().toUpperCase();
     ctx.save();
     ctx.font='700 '+Math.round(CELL*0.4)+'px system-ui,-apple-system,"Segoe UI",sans-serif';
     ctx.textBaseline='middle';ctx.textAlign='left';
     var tw=ctx.measureText(name).width, arrowW=CELL*0.5, padX=CELL*0.34, gap=CELL*0.2;
-    var w=arrowW+gap+tw+padX*2, h=CELL*0.8, x=cxp-w/2, y=cyp-h/2;
+    var w=arrowW+gap+tw+padX*2, h=CELL*0.8;
+    var bx=(ec+0.5)*CELL + out[0]*CELL*0.5, by=(er+0.5)*CELL + out[1]*CELL*0.5;               // midpoint of the edge cell's outer face
+    var inN=(out[0]!==0?w/2:h/2)+CELL*1.9;                                                    // sit ~2 cells inside the boundary (clears the edge UI; road runs past it off-map)…
+    var cxp=bx - out[0]*inN - perp[0]*CELL*1.2, cyp=by - out[1]*inN - perp[1]*CELL*1.2;       // …and lift it off the road
+    var x=cxp-w/2, y=cyp-h/2;
     ctx.fillStyle='rgba(30,26,14,.18)';rrect(x+1.5,y+2.5,w,h,h*0.28);ctx.fill();             // soft drop shadow
     ctx.fillStyle='#2E6A5D';rrect(x,y,w,h,h*0.28);ctx.fill();                                 // warm solar-green sign
     ctx.lineWidth=Math.max(1,CELL*0.05);ctx.strokeStyle=pal.hwGlow;ctx.stroke();               // gold border
