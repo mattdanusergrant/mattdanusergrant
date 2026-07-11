@@ -498,20 +498,31 @@
   // crossroads (rare hub tiles). Positions are rows/cols-independent so a resize won't move the road
   // onto your buildings. It's laid clear across — bridging water, cutting through mountains — so it
   // reads as continuous, the way a highway runs through the many tiles of the world.
-  var HWROW=0, HWCOL=0, HWSHAPE='H';
+  // Hub-and-spoke world: a region no longer has a freeway plowing edge-to-edge through its lakes and
+  // ranges. Instead ONE freeway arrives from the compass direction that faces the parent hub and
+  // terminates at an INTERCHANGE near the buildable centre — the city's single link to the world.
+  // The interchange lane is slid to the clearest ground; roads/rail join it via the usual perpendicular ramp.
+  var HWDIR='W', HWGC=0, HWGR=0;
+  function hwDirVec(){return HWDIR==='W'?[-1,0]:HWDIR==='E'?[1,0]:HWDIR==='N'?[0,-1]:[0,1];}   // OUTWARD — toward the hub / map edge
   function hwGeom(){
-    HWROW=Math.max(4,Math.min(rows-5, Math.round(rows*0.5+(vnoise(WOX+13,WOY+29,7)-0.5)*24)));   // near the middle of the world
-    HWCOL=Math.max(5,Math.min(cols-6, Math.round(cols*0.5+(vnoise(WOX+41,WOY+7,7)-0.5)*28)));
-    var s=vnoise(WOX+5,WOY+61,5);
-    HWSHAPE = s<0.42?'H' : s<0.74?'V' : s<0.90?'L' : 'X';   // mostly straight, some bends, rare crossroads
+    var d=vnoise(WOX+5,WOY+61,5);
+    HWDIR = d<0.25?'W':d<0.5?'E':d<0.72?'N':'S';                                                // which way the freeway comes in from
+    HWGC = Math.max(6,Math.min(cols-7, Math.round(cols*0.5+(vnoise(WOX+41,WOY+7,7)-0.5)*22)));  // interchange near the centre, region-jittered
+    HWGR = Math.max(6,Math.min(rows-7, Math.round(rows*0.5+(vnoise(WOX+13,WOY+29,7)-0.5)*22)));
   }
   function ensureHighway(){
     hwGeom();
-    for(var i=0;i<grid.length;i++){if(grid[i]&&grid[i].t==='highway'){grid[i].t='empty';grid[i].lvl=0;grid[i].grow=0;}}  // clear a stale corridor (may shift on resize)
-    var lay=function(c,r){if(c>=0&&c<cols&&r>=0&&r<rows){var g=grid[idx(c,r)];g.t='highway';g.lvl=0;g.grow=0;}}, c, r;
-    if(HWSHAPE==='H'||HWSHAPE==='X'){for(c=0;c<cols;c++)lay(c,HWROW);}            // west↔east arm
-    if(HWSHAPE==='V'||HWSHAPE==='X'){for(r=0;r<rows;r++)lay(HWCOL,r);}            // north↔south arm
-    if(HWSHAPE==='L'){for(c=0;c<=HWCOL;c++)lay(c,HWROW);for(r=HWROW;r<rows;r++)lay(HWCOL,r);}  // enters west, bends south
+    for(var i=0;i<grid.length;i++){if(grid[i]&&grid[i].t==='highway'){grid[i].t='empty';grid[i].lvl=0;grid[i].grow=0;}}  // clear a stale gateway (stable across resize)
+    var out=hwDirVec(), perp=[out[1],out[0]], c, r;
+    var best=[HWGC,HWGR], bestBad=1e9;                                            // slide the interchange along the perpendicular to the clearest near-lane
+    for(var off=-5;off<=5;off++){
+      var pc=HWGC+perp[0]*off, pr=HWGR+perp[1]*off, bad=Math.abs(off)*0.01;       // faint bias back toward the noise-preferred lane
+      for(var k=0;k<10;k++){var cc=pc+out[0]*k, rr=pr+out[1]*k; if(!inB(cc,rr)){bad+=9;continue;} if(noBuild(grid[idx(cc,rr)].terr))bad++;}
+      if(bad<bestBad){bestBad=bad;best=[pc,pr];}
+    }
+    HWGC=best[0];HWGR=best[1];
+    var lay=function(c,r){if(inB(c,r)){var g=grid[idx(c,r)];g.t='highway';g.lvl=0;g.grow=0;}};
+    for(c=HWGC,r=HWGR;inB(c,r);c+=out[0],r+=out[1])lay(c,r);                      // interchange (start) → runs out to the edge, arriving from the hub
   }
   function isHwy(c,r){return inB(c,r)&&grid[idx(c,r)].t==='highway';}
   function isRoadCell(c,r){return inB(c,r)&&grid[idx(c,r)].t==='road';}
@@ -1424,8 +1435,8 @@
     // where streets meet it. Building types follow a supply-chain-balanced quota so every city can
     // actually convert Materials → Goods → exports (fac ≥ ind), while Works still favour the peaks.
     var TARGET=[4,6,10,30,64,92][tier], half=Math.min((cols>>1)-2, 7+tier*2);
-    var CR=(HWSHAPE==='V')?Math.floor(rows/2):HWROW;                    // block centre tracks the corridor
-    var CC=(HWSHAPE==='H')?Math.floor(cols/2):HWCOL;
+    var CR=HWGR;                                                        // block centre sits on the interchange
+    var CC=HWGC;
     var c0=Math.max(1,CC-half), c1=Math.min(cols-2,CC+half), c, placed=0, maxOff=1;
     var want={res:Math.round(TARGET*0.46),com:Math.max(1,Math.round(TARGET*0.14)),ind:Math.max(1,Math.round(TARGET*0.18)),fac:Math.max(1,Math.round(TARGET*0.22))};
     var cnt={res:0,com:0,ind:0,fac:0};
@@ -1438,7 +1449,7 @@
     // On a horizontal freeway arm, set the streets BACK one row (buildings abut the freeway, streets
     // beyond) so no road runs alongside it; the city joins the freeway only at a few punched ramps.
     // Vertical arms need no setback — the cross-streets meet them perpendicular already.
-    var hArm=(HWSHAPE==='H'||HWSHAPE==='X'||HWSHAPE==='L');
+    var hArm=(HWDIR==='W'||HWDIR==='E');                               // freeway runs E–W → set streets back off it
     for(var off=1;off<Math.max(rows,cols)&&placed<TARGET;off++){
       var street = hArm ? (off%2===0) : (off%2===1);
       for(var s=0;s<2;s++){var r=CR+(s?-1:1)*off; if(r<1||r>rows-2)continue;
@@ -1448,12 +1459,12 @@
       }
     }
     if(hArm){                                                          // punch discrete perpendicular on/off-ramps through to the setback street
-      for(var s2=-1;s2<=1;s2+=2){var fr=HWROW+s2, st=HWROW+2*s2;
+      for(var s2=-1;s2<=1;s2+=2){var fr=HWGR+s2, st=HWGR+2*s2;
         if(fr<1||fr>rows-2||st<1||st>rows-2)continue;
         var step=Math.max(5,Math.round((c1-c0)/2)), made=0;
         for(var rc=c0+Math.floor(step/2);rc<=c1;rc+=step){
-          if(isHwy(rc,HWROW)&&isRoadCell(rc,st)&&!noBuild(grid[idx(rc,fr)].terr)){placeAt(rc,fr,'road',0);made++;}}
-        if(!made)for(var rc2=c0;rc2<=c1;rc2++){if(isHwy(rc2,HWROW)&&isRoadCell(rc2,st)&&!noBuild(grid[idx(rc2,fr)].terr)){placeAt(rc2,fr,'road',0);break;}}
+          if(isHwy(rc,HWGR)&&isRoadCell(rc,st)&&!noBuild(grid[idx(rc,fr)].terr)){placeAt(rc,fr,'road',0);made++;}}
+        if(!made)for(var rc2=c0;rc2<=c1;rc2++){if(isHwy(rc2,HWGR)&&isRoadCell(rc2,st)&&!noBuild(grid[idx(rc2,fr)].terr)){placeAt(rc2,fr,'road',0);break;}}
       }
     }
     var ur=Math.min(rows-3,CR+maxOff+1);                               // infrastructure past the built area, scaled so the city runs a surplus
@@ -1473,7 +1484,7 @@
   // ---- boot ----
   readTheme();
   window.addEventListener('resize',resize);
-  resize();initWorld();ensureHighway();centerCam(HWCOL,HWROW);   // build the fixed world, lay the corridor, aim the camera at it
+  resize();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // build the fixed world, lay the gateway, aim the camera at the interchange
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
   else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }   // density ceiling + tech follow the loaded tier
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();
