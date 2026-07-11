@@ -67,6 +67,16 @@
   .mm-legend span{display:flex;align-items:center;gap:3px}
   .mm-legend i{width:9px;height:9px;border-radius:2px;display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
   @media(max-width:640px){.mm-legend{display:none}}
+  .objectives{position:absolute;left:14px;top:14px;z-index:5;width:222px;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:9px 11px 10px}
+  .objectives .obj-h{font-family:'Fraunces',serif;font-weight:600;font-size:12.5px;color:var(--ink);margin-bottom:7px;display:flex;align-items:center;gap:5px}
+  .objectives .obj-h b{margin-left:auto;font-family:system-ui,sans-serif;font-size:9.5px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+  .obj-l{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .obj-l li{display:flex;flex-direction:column;gap:3px}
+  .obj-txt{font-size:11px;color:var(--ink-2);font-weight:500;line-height:1.25}
+  .obj-bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+  .obj-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#E7A93E,#5FBE6E);border-radius:3px;transition:width .45s ease}
+  .obj-rew{align-self:flex-end;font-size:9.5px;font-weight:700;color:#3E8E6E;letter-spacing:.03em}
+  @media(max-width:640px){.objectives{display:none}}
   canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
   .toast{position:absolute;top:16px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:14px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;white-space:normal;max-width:min(560px,88vw);text-align:center;line-height:1.35;z-index:5}
   .toast.on{opacity:1;transform:translate(-50%,0)}
@@ -205,6 +215,7 @@
       <div class="tutor-h"><span class="tutor-t">Your first city</span><button class="tutor-skip" id="tutor-skip" type="button">Skip</button></div>
       <ol class="tutor-l" id="tutor-l"></ol>
     </div>
+    <div class="objectives" id="objectives" hidden><div class="obj-h">📋 Contracts <b id="obj-done"></b></div><ul class="obj-l" id="obj-l"></ul></div>
     <div class="obs" id="obs" hidden><b>👁 Observing an AI-run city</b> · read-only — <a href="world/">← back to the world</a></div>
     <div class="obs warn" id="insolvent" hidden><b>⚠ Insolvent</b> · income can’t cover upkeep — export Goods or <b>Clear</b> costly buildings to climb out</div>
     <div class="inspect" id="inspect" hidden></div>
@@ -767,7 +778,7 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -917,7 +928,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    updatePop();economy();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();manageCars();manageTrains();tutorTick();
+    _tickN++;updatePop();economy();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -971,6 +982,50 @@
     var pf=(popTarget-prevP)/(nx.n-prevP), cf=nx.cash>prevC?(treasury-prevC)/(nx.cash-prevC):1;
     goalFill.style.width=(Math.max(0,Math.min(1,Math.min(pf,cf)))*100)+'%';}
   function showToast(label,n){toastEl.innerHTML=label+' <b>'+n.toLocaleString()+' people</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);}
+
+  // ---- civic contracts: rotating medium-term objectives that give the loop direction + a reward ----
+  var contracts=[], contractsDone=0, CONTRACT_N=3, _census={}, _censusAt=-1, _tickN=0, _objSig='', _hubShort=null;
+  function hubShort(){return _hubShort||(_hubShort=hubName());}
+  function censusCount(t){if(_censusAt!==_tickN){_census={};for(var i=0;i<grid.length;i++){var g=grid[i];if(g&&g.t)_census[g.t]=(_census[g.t]||0)+1;}_censusAt=_tickN;}return _census[t]||0;}
+  function niceNum(x){x=Math.max(1,Math.round(x));var mag=Math.pow(10,Math.floor(Math.log10(x)));var step=mag>=1000?500:mag>=100?100:mag>=10?10:5;return Math.round(x/step)*step||step;}
+  var CDEF={
+    pop:    {icon:'🏘',mk:function(){var t=niceNum(popTarget*1.35+150);return {text:'House '+t.toLocaleString()+' citizens',target:t};},val:function(){return popTarget;}},
+    surplus:{icon:'📈',mk:function(){var t=Math.max(50,niceNum((maxMS+1)*70));return {text:'Run a ₵'+t.toLocaleString()+'/mo surplus',target:t};},val:function(){return netRate;}},
+    reserve:{icon:'🏦',mk:function(){var t=niceNum(treasury*1.4+(maxMS+1)*1600+900);return {text:'Bank ₵'+t.toLocaleString()+' in the treasury',target:t};},val:function(){return treasury;}},
+    xport:  {icon:'📦',mk:function(){var t=niceNum(8+(maxMS+1)*7);return {text:'Ship '+t+' Goods/mo to '+hubShort(),target:t};},val:function(){return exportRate;}},
+    transit:{icon:'🚉',mk:function(){return {text:'Cut congestion below 20%',target:20,inv:true};},val:function(){return congestion*100;},avail:function(){return congestion>0.28;}},
+    parks:  {icon:'🌳',mk:function(){var t=censusCount('park')+3;return {text:'Open '+t+' Parks',target:t};},val:function(){return censusCount('park');}},
+    facs:   {icon:'🏭',mk:function(){var t=censusCount('fac')+2;return {text:'Operate '+t+' Factories',target:t};},val:function(){return censusCount('fac');},avail:function(){return maxMS>=2;}}
+  };
+  function newContract(avoid){var keys=[],k;for(k in CDEF){if(avoid.indexOf(k)>=0)continue;var d=CDEF[k];if(d.avail&&!d.avail())continue;keys.push(k);}
+    if(!keys.length)return null;k=keys[Math.floor(Math.random()*keys.length)];var m=CDEF[k].mk();
+    return {key:k,text:m.text,target:m.target,inv:!!m.inv,reward:Math.round(niceNum(200+(maxMS+1)*260)*(m.inv?1.5:1))};}
+  function fillContracts(){var guard=0;while(contracts.length<CONTRACT_N&&guard++<24){var av=contracts.map(function(c){return c.key;}),nc=newContract(av);if(!nc)break;contracts.push(nc);}}
+  function contractToast(c){toastEl.innerHTML='✅ Contract complete — <b>'+c.text+'</b> · +₵'+c.reward.toLocaleString();toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3400);}
+  function evalContracts(){
+    if(OBSERVE||maxMS<0||tutorActive){renderContracts();return;}
+    if(!contracts.length){fillContracts();if(contracts.length)scheduleSave();}   // persist freshly-issued contracts
+    var changed=false;
+    for(var i=0;i<contracts.length;i++){var c=contracts[i],v=CDEF[c.key].val(),done=c.inv?(v<=c.target):(v>=c.target);
+      if(done){treasury+=c.reward;contractsDone++;contractToast(c);
+        var av=contracts.map(function(x){return x.key;});av.splice(i,1);var nc=newContract(av);
+        if(nc)contracts[i]=nc;else{contracts.splice(i,1);i--;}changed=true;}}
+    if(changed){updateCashUI();scheduleSave();}
+    renderContracts();
+  }
+  function renderContracts(){var box=document.getElementById('objectives'),ul=document.getElementById('obj-l');if(!box||!ul)return;
+    if(OBSERVE||maxMS<0||tutorActive||!contracts.length){box.hidden=true;_objSig='';return;}
+    box.hidden=false;var doneEl=document.getElementById('obj-done');if(doneEl)doneEl.textContent=contractsDone?contractsDone+' done':'';
+    var sig=contracts.map(function(c){return c.key+c.target+c.reward;}).join('|');
+    if(sig!==_objSig){_objSig=sig;var html='';
+      for(var i=0;i<contracts.length;i++){var c=contracts[i],d=CDEF[c.key];
+        html+='<li><span class="obj-txt">'+d.icon+' '+c.text+'</span><span class="obj-bar"><i></i></span><span class="obj-rew">+₵'+c.reward.toLocaleString()+'</span></li>';}
+      ul.innerHTML=html;}
+    var bars=ul.querySelectorAll('.obj-bar > i');
+    for(var j=0;j<contracts.length;j++){var c2=contracts[j],v2=CDEF[c2.key].val(),
+      pf=c2.inv?(v2<=c2.target?1:Math.max(0,Math.min(1,(100-v2)/(100-c2.target)))):Math.max(0,Math.min(1,v2/c2.target));
+      if(bars[j])bars[j].style.width=(pf*100).toFixed(1)+'%';}
+  }
 
   // ---- guided first-run: a short objective path that teaches the loop as you play ----
   var TUTOR_KEY='mdg-tutor-done';
@@ -1433,10 +1488,13 @@
   window.addEventListener('pagehide',function(){save();});   // flush on leave — a debounced save may still be pending
   function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];
       if(g&&g.t!=='highway'&&g.t!=='sub'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,g.foot||1]);}   // save anchors only; 'sub' members are reconstructed on load
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out}));}catch(e){}}
+    var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
-    if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;}
+    if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
+      if(Array.isArray(d.ct))contracts=d.ct.filter(function(a){return CDEF[a[0]];}).map(function(a){return {key:a[0],target:a[1],reward:a[2],inv:!!a[3],text:a[4]};});
+      if(typeof d.cd==='number')contractsDone=d.cd;}
     list.forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
       if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
       var f=a[5]||1;
@@ -1525,7 +1583,7 @@
   resize();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // build the fixed world, lay the gateway, aim the camera at the interchange
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
   else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }   // density ceiling + tech follow the loaded tier
-  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();
+  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var gg0=grid[idx(c0,r0)];if(gg0.t==='road'||gg0.t==='highway')roadList.push([c0,r0]);if(gg0.rail||gg0.t==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
   if(!AI&&tutorActive)showTutor();
