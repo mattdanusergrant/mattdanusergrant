@@ -34,6 +34,7 @@ ok('building roster intact (9)', rosters.b === 9);
 ok('unit roster intact (6)', rosters.u === 6);
 ok('foe roster intact (6)', rosters.f === 6);
 
+try { await page.click('#lvlpick #lc button', { timeout: 800 }); } catch {} // dismiss level picker (pack builds)
 try { await page.click('#begin', { timeout: 1500 }); } catch {}
 const boot = await page.evaluate(() => { const r = window.MDG.R(); return { light: r.light, elderHp: r.buildings.find(b => b.id === 'elder')?.hp, night: r.night }; });
 ok('run boots with starting light', boot.light > 0);

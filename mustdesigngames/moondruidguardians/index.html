@@ -318,9 +318,12 @@ function metaMods(){return {
 };}
 
 // ════════════════════════════ WORLD — space ═══════════════════════════════
-const LEVEL=null; // injected by tools/level-bake.mjs from a map-editor level: {home:{x,y}, knoll:{x,y,r}, nodes:[{kind,nm,x,y,far}]}
-const WD=1600,HT=1000,EX=LEVEL&&LEVEL.home?LEVEL.home.x:430,EY=LEVEL&&LEVEL.home?LEVEL.home.y:650; // home corner (lower-left)
-const KNOLL=LEVEL&&LEVEL.knoll?LEVEL.knoll:{x:1240,y:330,r:170};    // fallow knoll — where the Elderseed may root
+const LEVEL=null;  // injected by tools/level-bake.mjs — one level: {home:{x,y}, knoll:{x,y,r}, nodes:[…], blocked:{w,h,cells}}
+const LEVELS=null; // injected by tools/levels-bake.mjs — a pack: [{name, terrain, home, knoll, nodes, blocked}, …]
+const _LI=LEVELS?Math.max(0,Math.min(LEVELS.length-1,parseInt((location.hash.match(/lvl=(\d+)/)||[])[1])||0)):0;
+const ACTIVE=LEVELS?LEVELS[_LI]:LEVEL; // the level in play (picked via #lvl=N when a pack is baked)
+const WD=1600,HT=1000,EX=ACTIVE&&ACTIVE.home?ACTIVE.home.x:430,EY=ACTIVE&&ACTIVE.home?ACTIVE.home.y:650; // home corner (lower-left)
+const KNOLL=ACTIVE&&ACTIVE.knoll?ACTIVE.knoll:{x:1240,y:330,r:170};    // fallow knoll — where the Elderseed may root
 let W,H,DPR,SC,OX,OY,dangerGrad=null;
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
   cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -333,7 +336,7 @@ addEventListener('resize',resize);resize();
 const s2w=(sx,sy)=>({x:(sx-OX)/SC,y:(sy-OY)/SC});
 const BUILD_MAX=380; // home build ring around the Elderbough
 let MOUSE=null;      // last cursor position in world coords
-const NODES=LEVEL&&LEVEL.nodes?LEVEL.nodes:[
+const NODES=ACTIVE&&ACTIVE.nodes?ACTIVE.nodes:[
   {kind:'well',nm:'Lightwell',x:180,y:330},
   {kind:'copse',nm:'Elderwood copse',x:140,y:840},
   {kind:'well',nm:'Lightwell',x:1400,y:240,far:true},
@@ -446,8 +449,22 @@ const ART_MAP=null;     // { key:[sx,sy,sw,sh], ... } sprite rects within ART_AT
 const ART={sheet:null,ready:false,terrain:null,terrReady:false};
 function artInit(){try{
   if(ART_ATLAS&&ART_MAP){const im=new Image();im.onload=()=>{ART.sheet=im;ART.ready=true;};im.src=ART_ATLAS;}
-  if(ART_TERRAIN){const im=new Image();im.onload=()=>{ART.terrain=im;ART.terrReady=true;};im.src=ART_TERRAIN;}
+  const _terr=(LEVELS&&ACTIVE)?ACTIVE.terrain:ART_TERRAIN; // a level pack carries its terrain per-level
+  if(_terr){const im=new Image();im.onload=()=>{ART.terrain=im;ART.terrReady=true;};im.src=_terr;}
 }catch(e){}}
+// level-select overlay — only when a level pack (LEVELS) was baked in
+function showPicker(){ if(!LEVELS||!LEVELS.length) return;
+  const ov=document.createElement('div'); ov.id='lvlpick';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(8,10,14,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#e6edf3;font-family:system-ui,-apple-system,sans-serif;padding:20px;overflow:auto';
+  ov.innerHTML='<div style="font-family:Georgia,serif;font-size:26px;letter-spacing:.02em">Choose your moor</div><div id="lc" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:980px"></div>';
+  document.body.appendChild(ov); const lc=ov.querySelector('#lc');
+  LEVELS.forEach((L,i)=>{ const card=document.createElement('button');
+    card.style.cssText='background:#161b22;border:2px solid '+(i===_LI?'#6fb3ff':'#2b3540')+';border-radius:12px;padding:8px;cursor:pointer;color:#e6edf3;width:266px;font:inherit;transition:border-color .12s';
+    card.onmouseenter=()=>card.style.borderColor='#6fb3ff'; card.onmouseleave=()=>{if(i!==_LI)card.style.borderColor='#2b3540';};
+    card.innerHTML='<img src="'+L.terrain+'" style="width:250px;height:156px;object-fit:cover;border-radius:7px;image-rendering:pixelated;display:block"><div style="padding:9px 2px 3px;font-size:15px">'+(L.name||('Moor '+(i+1)))+(i===_LI?' ✓':'')+'</div>';
+    card.onclick=()=>{ if(i===_LI) ov.remove(); else { location.hash='lvl='+i; location.reload(); } };
+    lc.appendChild(card); });
+}
 // Draw sprite `key` centred at (cx,cy), longest side ≈ size px. Returns false when no
 // sprite is available → caller falls back to the existing emoji / procedural path.
 function sprite(key,cx,cy,size){
@@ -481,6 +498,7 @@ function mkBuilding(id,x,y){const d=BUILDS[id];
 function canPlaceAt(id,x,y){
   const d=BUILDS[id];
   if(x<20||x>WD-20||y<20||y>HT-20)return false;
+  if(isBlocked(x,y))return false; // impassable terrain from the level's blocked grid
   if(id==='seed'){
     if(Math.hypot(x-KNOLL.x,y-KNOLL.y)>KNOLL.r)return false;}
   else{
@@ -540,6 +558,37 @@ function dmgMul(){let m=R.mods.dmg;
 function moveTo(e,tx,ty,spd,dt){const dx=tx-e.x,dy=ty-e.y,l=Math.hypot(dx,dy);
   if(l<4)return true;const st=spd*dt;if(st>=l){e.x=tx;e.y=ty;return true;}
   e.x+=dx/l*st;e.y+=dy/l*st;return false;}
+// ── walkability: is a world point on the level's impassable grid? ──
+function isBlocked(x,y){const bl=ACTIVE&&ACTIVE.blocked;if(!bl||!bl.cells)return false;
+  const c=Math.floor(x/(WD/bl.w)),r=Math.floor(y/(HT/bl.h));
+  if(c<0||r<0||c>=bl.w||r>=bl.h)return false;return !!bl.cells[r*bl.w+c];}
+// ── flow-field toward home over walkable cells — foes route around blocked terrain ──
+let FLOW=null;
+function buildFlow(){FLOW=null;const bl=ACTIVE&&ACTIVE.blocked;if(!bl||!bl.cells||!bl.cells.some(Boolean))return;
+  const gw=bl.w,gh=bl.h,cw=WD/gw,ch=HT/gh,N=gw*gh,B=bl.cells;
+  const hc=Math.min(gw-1,Math.max(0,Math.floor(EX/cw))),hr=Math.min(gh-1,Math.max(0,Math.floor(EY/ch)));
+  const dist=new Float64Array(N).fill(Infinity),start=hr*gw+hc;if(B[start])return;
+  dist[start]=0;const q=[start];
+  for(let h=0;h<q.length;h++){const cur=q[h],cc=cur%gw,cr=(cur/gw)|0,nd=dist[cur]+1;
+    for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=cc+dx,ny=cr+dy;
+      if(nx<0||ny<0||nx>=gw||ny>=gh)continue;const ni=ny*gw+nx;
+      if(B[ni]||dist[ni]<=nd)continue;dist[ni]=nd;q.push(ni);}}
+  const dir=new Array(N);
+  for(let i=0;i<N;i++){if(B[i]||dist[i]===Infinity){dir[i]=null;continue;}
+    const cc=i%gw,cr=(i/gw)|0;let best=dist[i],bx=0,by=0;
+    for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=cc+dx,ny=cr+dy;
+      if(nx<0||ny<0||nx>=gw||ny>=gh)continue;const ni=ny*gw+nx;if(B[ni])continue;
+      if(dist[ni]<best){best=dist[ni];bx=dx;by=dy;}}
+    const l=Math.hypot(bx,by)||1;dir[i]=(bx||by)?{x:bx/l,y:by/l}:null;}
+  FLOW={gw,gh,cw,ch,dir,B};}
+function flowMove(f,spd,dt){ if(!FLOW)return moveTo(f,EX,EY,spd,dt);
+  const gc=Math.min(FLOW.gw-1,Math.max(0,Math.floor(f.x/FLOW.cw))),gr=Math.min(FLOW.gh-1,Math.max(0,Math.floor(f.y/FLOW.ch)));
+  const d=FLOW.dir[gr*FLOW.gw+gc];
+  if(!d||Math.hypot(f.x-EX,f.y-EY)<Math.max(FLOW.cw,FLOW.ch)*1.5)return moveTo(f,EX,EY,spd,dt);
+  const st=spd*dt,nx=f.x+d.x*st,ny=f.y+d.y*st;
+  const bc=Math.min(FLOW.gw-1,Math.max(0,Math.floor(nx/FLOW.cw))),br=Math.min(FLOW.gh-1,Math.max(0,Math.floor(ny/FLOW.ch)));
+  if(FLOW.B[br*FLOW.gw+bc]){f.x+=d.x*st*0.35;f.y+=d.y*st*0.35;return false;}
+  f.x=nx;f.y=ny;return false;}
 function nearestFoe(p,rng,air){let best=null,bd=rng*rng;
   for(const f of R.foes){if(f.hp<=0)continue;if(!air&&FOES[f.type].fly)continue;
     const dd=d2(p,f);if(dd<bd){bd=dd;best=f;}}
@@ -700,7 +749,8 @@ function foeUpdate(f,dt){
         if(f.tg.bld)hurtBld(f.tg,d.dmg*mul);else hurt(f.tg,d.dmg*en);
         if(d.rng)beam(f,f.tg,'#8f6fd0');}}}
   }else{const s=f.goal==='seed'?seedBld():null;
-    moveTo(f,s?s.x:EX,s?s.y:EY,d.spd*f.aspd,dt);}}
+    if(s||FOES[f.type].fly)moveTo(f,s?s.x:EX,s?s.y:EY,d.spd*f.aspd,dt);
+    else flowMove(f,d.spd*f.aspd,dt);}}
 
 function update(dt){
   if(!R||R.over||R.waiting)return;
@@ -1393,6 +1443,7 @@ function botTick(){
 // ════════════════════════════ test surface ════════════════════════════════
 window.MDG={
   R:()=>R,meta:()=>meta,BAL,DATA:{BUILDS,UNITS,FOES,TREE,MILES},
+  ACTIVE:()=>ACTIVE,FLOW:()=>FLOW,blockedAt:isBlocked,LEVELS:()=>LEVELS,
   step:sec=>{let s=sec;while(s>0){update(Math.min(STEP,s));s-=STEP;}},
   forceNight:n=>{R.night=n-1;R.done=Math.max(R.done,n-1);R.foes=[];R.queue=[];
     R.nextQueue=null;R.previewStr='';
@@ -1408,7 +1459,9 @@ window.MDG={
 loadMeta();
 paintTerrain();
 artInit();
+buildFlow();
 showGrove();
+showPicker();
 requestAnimationFrame(loop);
 </script>
 </body>

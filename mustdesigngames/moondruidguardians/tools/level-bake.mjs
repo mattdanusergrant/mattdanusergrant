@@ -47,6 +47,8 @@ const LEVEL = {};
 if (home) LEVEL.home = home;
 if (knollM) { const p = px(knollM.c, knollM.r); LEVEL.knoll = { x: p.x, y: p.y, r: 170 }; }
 if (nodes.length) LEVEL.nodes = nodes;
+if (map.blocked && map.blocked.length === map.w * map.h && map.blocked.some(Boolean))
+  LEVEL.blocked = { w: map.w, h: map.h, cells: map.blocked }; // impassable grid → foe flow-field + build blocking
 
 // render the map's tiles into a terrain image
 const srcs = SHEET_FILES.map(f => { try { return dataURI(join(PACKS, 'szadi-wetland', '_PNG', f)); } catch { return null; } });
