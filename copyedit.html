@@ -28,10 +28,22 @@
   .chip{font-family:'Fraunces',serif;font-size:13px;font-weight:500;border-radius:999px;padding:7px 14px;border:1.5px solid var(--line-2);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
   .chip:hover{border-color:var(--ink);color:var(--ink)}
   .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-  .pg{margin-top:34px}
+  .stats{margin:22px 0 4px;display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:start}
+  @media(max-width:720px){.stats{grid-template-columns:1fr}}
+  .hero-tile{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:18px 26px;box-shadow:var(--shadow);min-width:200px}
+  .hero-num{font-family:'Fraunces',serif;font-weight:500;font-size:44px;letter-spacing:-0.02em;line-height:1;font-variant-numeric:tabular-nums}
+  .hero-sub{display:block;margin-top:6px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .stat-t{width:100%;border-collapse:collapse;font-size:14px}
+  .stat-t td{padding:6px 0;border-bottom:1px solid var(--line)}
+  .stat-t tr:last-child td{border-bottom:none}
+  .stat-t .n{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;white-space:nowrap;padding-left:16px}
+  .stat-t .sub{color:var(--muted);font-size:12.5px;padding-left:10px;white-space:nowrap}
+  .grp-h{font-family:'Fraunces',serif;font-weight:500;font-size:26px;letter-spacing:-0.01em;margin:46px 0 0;padding-bottom:8px;border-bottom:1.5px solid var(--line-2)}
+  .pg{margin-top:30px}
   .pg-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .pg-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:-0.01em;margin:0}
+  .pg-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:19px;letter-spacing:-0.01em;margin:0}
   .pg-head .path{font-size:12.5px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
+  .pg-head .wc{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-left:auto;white-space:nowrap}
   .row{display:grid;grid-template-columns:170px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);align-items:start}
   @media(max-width:640px){.row{grid-template-columns:1fr}}
   .meta{font-size:12px;color:var(--muted);line-height:1.45;padding-top:4px}
@@ -67,6 +79,11 @@
   <b>Export edits</b> and send the downloaded file back to Matt; nothing here changes the
   live site directly. Keep inline styling like <em>italics</em> unless it's wrong.</p>
 
+  <div class="stats" id="stats" hidden>
+    <div class="hero-tile"><span class="hero-num" id="total-words">—</span><span class="hero-sub">words across the site</span></div>
+    <table class="stat-t" aria-label="Words per section"><tbody id="stat-rows"></tbody></table>
+  </div>
+
   <div class="toolbar">
     <input id="q" type="search" placeholder="Filter copy… (e.g. 'designer', 'Play', 'Neon')" />
     <button class="chip" id="only-edited">Edited only</button>
@@ -87,18 +104,55 @@
 <script>
 (function(){
   'use strict';
-  /* Pages that carry human copy. Redirect stubs and app shells are excluded on purpose.
-     Games/tools subsites have their own copy and are out of scope for the desk. */
+  /* Every non-redirect page in the repo that renders human copy. Redirect stubs are
+     excluded; this desk excludes itself. New pages must be added here to appear. */
   var PAGES=[
-    {path:'/index.html', label:'Homepage'},
-    {path:'/consulting.html', label:'Consulting'},
-    {path:'/resume.html', label:'Resume'},
-    {path:'/404.html', label:'404 page'},
-    {path:'/case-studies/building-with-ai.html', label:'Case study — One designer, the whole stack'},
-    {path:'/case-studies/building-this-site.html', label:'Case study — The site that shows its own making'},
-    {path:'/case-studies/access-control-in-sql.html', label:'Case study — Access control as architecture'},
-    {path:'/case-studies/keeping-cadence-no-server.html', label:'Case study — Multi-tenant SaaS, no server'},
-    {path:'/case-studies/living-atlas-fantasy-rpg.html', label:'Case study — A living atlas (shelved)'}
+    {g:'Main site', path:'/index.html', label:'Homepage'},
+    {g:'Main site', path:'/consulting.html', label:'Consulting'},
+    {g:'Main site', path:'/resume.html', label:'Resume'},
+    {g:'Main site', path:'/resume-builder.html', label:'Resume Builder (app shell)'},
+    {g:'Main site', path:'/tool.html', label:'Tool frame (app shell)'},
+    {g:'Main site', path:'/404.html', label:'404 page'},
+    {g:'Main site', path:'/mdg.html', label:'MDG Workshop (backstage)'},
+    {g:'Case studies', path:'/case-studies/building-with-ai.html', label:'One designer, the whole stack'},
+    {g:'Case studies', path:'/case-studies/building-this-site.html', label:'The site that shows its own making'},
+    {g:'Case studies', path:'/case-studies/access-control-in-sql.html', label:'Access control as architecture'},
+    {g:'Case studies', path:'/case-studies/keeping-cadence-no-server.html', label:'Multi-tenant SaaS, no server (shelved)'},
+    {g:'Case studies', path:'/case-studies/living-atlas-fantasy-rpg.html', label:'A living atlas (shelved)'},
+    {g:'Tools', path:'/mathdrawsgraphics/index.html', label:'Math Draws Graphics — hub'},
+    {g:'Tools', path:'/mathdrawsgraphics/code-art/index.html', label:'Math Draws Graphics — Code Art'},
+    {g:'Tools', path:'/mathdrawsgraphics/pixel-art/index.html', label:'Math Draws Graphics — Pixel Art'},
+    {g:'Tools', path:'/makedopegrooves/index.html', label:'Make Dope Grooves'},
+    {g:'Tools', path:'/makedopegrooves/crafter.html', label:'Make Dope Grooves — Code Crafter'},
+    {g:'Arcade', path:'/mustdesigngames/index.html', label:'Must Design Games — gallery'},
+    {g:'Arcade', path:'/mustdesigngames/account/index.html', label:'Arcade — account'},
+    {g:'Games', path:'/mustdesigngames/metropolisdawngrid/index.html', label:'Metropolis Dawn Grid'},
+    {g:'Games', path:'/mustdesigngames/metropolisdawngrid/world/index.html', label:'Metropolis Dawn Grid — world view'},
+    {g:'Games', path:'/mustdesigngames/moondruidguardians/index.html', label:'Moon Druid Guardians'},
+    {g:'Games', path:'/mustdesigngames/mossdapplegrove/index.html', label:'Moss Dapple Grove'},
+    {g:'Games', path:'/mustdesigngames/mosslings/index.html', label:'Mosslings'},
+    {g:'Games', path:'/mustdesigngames/matchdeckgateway/index.html', label:'Match Deck Gateway'},
+    {g:'Games', path:'/mustdesigngames/keeprippingpacks/index.html', label:'Keep Ripping Packs'},
+    {g:'Games', path:'/mustdesigngames/sigil-tactics/index.html', label:'Sigil Tactics'},
+    {g:'Games', path:'/mustdesigngames/switchback-td/index.html', label:'Switchback TD'},
+    {g:'Games', path:'/mustdesigngames/matgo/index.html', label:'Matgo'},
+    {g:'Games', path:'/mustdesigngames/baduk-bets/index.html', label:'Baduk Bets'},
+    {g:'Games', path:'/mustdesigngames/bannerfall/index.html', label:'Bannerfall'},
+    {g:'Games', path:'/mustdesigngames/airwolf/index.html', label:'Airwolf'},
+    {g:'Games', path:'/mustdesigngames/word-pounce/index.html', label:'Word Pounce'},
+    {g:'Games', path:'/mustdesigngames/rhythm-rpg/index.html', label:'Rhythm RPG'},
+    {g:'Games', path:'/mustdesigngames/honk-beach/index.html', label:'Honk Beach'},
+    {g:'Games', path:'/mustdesigngames/grand-theft-apples/index.html', label:'Grand Theft Apples'},
+    {g:'Games', path:'/mustdesigngames/eat-monkey-eat/index.html', label:'Eat Monkey Eat'},
+    {g:'Games', path:'/mustdesigngames/split-system/index.html', label:'Split System'},
+    {g:'Games', path:'/mustdesigngames/berm-burner/index.html', label:'Berm Burner'},
+    {g:'Games', path:'/mustdesigngames/groundwork/index.html', label:'Groundwork'},
+    {g:'Games', path:'/mustdesigngames/jabber-jawbreaker/index.html', label:'Jabber Jawbreaker'},
+    {g:'Games', path:'/mustdesigngames/prism-pond/index.html', label:'Prism Pond'},
+    {g:'Games', path:'/mustdesigngames/apple-tree-lane/index.html', label:'Apple Tree Lane'},
+    {g:'Games', path:'/mustdesigngames/bloom-again/index.html', label:'Bloom Again'},
+    {g:'Apex game copies', path:'/games/ronin-survivor/index.html', label:'Ronin Survivor (apex copy)'},
+    {g:'Apex game copies', path:'/games/mosslings/index.html', label:'Mosslings (apex copy)'}
   ];
   var SEL='h1,h2,h3,h4,p,li,figcaption,blockquote,dt,dd,.eyebrow,a.btn,.more-text';
   var LS='copydesk:';
@@ -159,14 +213,51 @@
     return out;
   }
 
+  function words(s){var m=s.trim().match(/\S+/g);return m?m.length:0;}
+  function rowWords(r){
+    if(!r.edEl)return words(r.original.replace(/<[^>]+>/g,' '));
+    return words(r.edEl.textContent);
+  }
+  function updateStats(){
+    var byGroup={},order=[],total=0;
+    rows.forEach(function(r){
+      var p=PAGES.find(function(x){return x.path===r.page;}); if(!p)return;
+      if(!byGroup[p.g]){byGroup[p.g]={w:0,pages:{}};order.push(p.g);}
+      var w=rowWords(r);
+      byGroup[p.g].w+=w; byGroup[p.g].pages[r.page]=(byGroup[p.g].pages[r.page]||0)+w; total+=w;
+    });
+    document.getElementById('total-words').textContent=total.toLocaleString();
+    var tb=document.getElementById('stat-rows'); tb.innerHTML='';
+    order.forEach(function(g){
+      var v=byGroup[g],n=Object.keys(v.pages).length;
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+esc(g)+'<span class="sub">'+n+(n===1?' page':' pages')+'</span></td>'+
+        '<td class="n">'+v.w.toLocaleString()+' words</td>';
+      tb.appendChild(tr);
+    });
+    document.getElementById('stats').hidden=false;
+    Object.keys(pageWc).forEach(function(path){
+      var w=0; rows.forEach(function(r){if(r.page===path)w+=rowWords(r);});
+      pageWc[path].textContent=w.toLocaleString()+' words';
+    });
+  }
+  var pageWc={};
+  var statsT=null;
+  function queueStats(){clearTimeout(statsT);statsT=setTimeout(updateStats,250);}
+
   function render(){
     var desk=document.getElementById('desk'); desk.innerHTML='';
     var byPage={};
     rows.forEach(function(r){(byPage[r.page]=byPage[r.page]||[]).push(r);});
+    var lastGroup=null;
     PAGES.forEach(function(p){
       var list=byPage[p.path]; if(!list||!list.length)return;
+      if(p.g!==lastGroup){lastGroup=p.g;
+        var gh=document.createElement('h2'); gh.className='grp-h'; gh.textContent=p.g;
+        desk.appendChild(gh);}
       var sec=document.createElement('section'); sec.className='pg';
-      sec.innerHTML='<div class="pg-head"><h2>'+esc(p.label)+'</h2><span class="path">'+esc(p.path)+'</span></div>';
+      sec.innerHTML='<div class="pg-head"><h2>'+esc(p.label)+'</h2><span class="path">'+esc(p.path)+'</span><span class="wc"></span></div>';
+      pageWc[p.path]=sec.querySelector('.wc');
       list.forEach(function(r){
         var row=document.createElement('div'); row.className='row'+(r.verified?'':' manual');
         row.innerHTML='<div class="meta"><span class="tag">'+esc(r.tag)+'</span>'+
@@ -186,7 +277,7 @@
           row.classList.toggle('dirty',dirty);
           if(dirty)localStorage.setItem(LS+r.page+'#'+r.idx,cur);
           else localStorage.removeItem(LS+r.page+'#'+r.idx);
-          refreshCount();
+          refreshCount(); queueStats();
         }
         ed.addEventListener('input',sync);
         ed.addEventListener('blur',sync);
@@ -198,7 +289,7 @@
       });
       desk.appendChild(sec);
     });
-    refreshCount();
+    refreshCount(); updateStats();
   }
 
   function dirtyRows(){return rows.filter(function(r){return r.el && r.el.classList.contains('dirty');});}
