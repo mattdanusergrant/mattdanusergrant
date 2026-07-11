@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Copy Desk · Matt Danuser-Grant</title>
+<meta name="description" content="Backstage copy-editing desk — every line of copy on the site, editable in one place." />
+<meta name="robots" content="noindex, nofollow" />
+<script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/site.css" />
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:96px}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 28px 40px}
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0 0;font-size:14px;color:var(--muted)}
+  .nav .brand{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--ink)}
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(30px,5vw,44px);letter-spacing:-0.02em;margin:44px 0 0}
+  .lede{color:var(--muted);font-size:15.5px;max-width:640px;margin:12px 0 8px}
+  .lede b{color:var(--ink)}
+  .toolbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 0 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1.5px solid var(--line)}
+  #q{flex:1;min-width:200px;font:inherit;font-size:14.5px;color:var(--ink);background:var(--paper);border:1.5px solid var(--line-2);border-radius:999px;padding:9px 16px}
+  #q:focus{outline:none;border-color:var(--ink)}
+  .chip{font-family:'Fraunces',serif;font-size:13px;font-weight:500;border-radius:999px;padding:7px 14px;border:1.5px solid var(--line-2);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .chip:hover{border-color:var(--ink);color:var(--ink)}
+  .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .pg{margin-top:34px}
+  .pg-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .pg-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:22px;letter-spacing:-0.01em;margin:0}
+  .pg-head .path{font-size:12.5px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
+  .row{display:grid;grid-template-columns:170px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);align-items:start}
+  @media(max-width:640px){.row{grid-template-columns:1fr}}
+  .meta{font-size:12px;color:var(--muted);line-height:1.45;padding-top:4px}
+  .meta .tag{display:inline-block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;border:1px solid var(--line-2);border-radius:6px;padding:1px 6px;margin-bottom:4px}
+  .meta .ctx{display:block}
+  .ed{min-height:1.4em;font-size:15px;line-height:1.5;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:10px 13px;transition:border-color .15s}
+  .ed:focus{outline:none;border-color:var(--ink)}
+  .ed:empty::before{content:'(empty)';color:var(--muted)}
+  .row.dirty .ed{border-color:#3c8c5a;box-shadow:0 0 0 1px #3c8c5a inset}
+  .row.dirty .meta::after{content:'edited';color:#3c8c5a;font-weight:600;display:block;margin-top:3px}
+  .row.manual .meta::before{content:'⚠ manual';color:#b4543a;display:block;font-weight:600;margin-bottom:3px}
+  .rv{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0;display:none}
+  .row.dirty .rv{display:inline}
+  .rv:hover{color:#b4543a}
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--paper);border-top:1.5px solid var(--line);box-shadow:0 -8px 30px rgba(15,16,28,.08)}
+  .bar-in{max-width:960px;margin:0 auto;padding:12px 28px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #count{font-family:'Fraunces',serif;font-size:15px;font-weight:500}
+  .btn{font-family:'Fraunces',serif;font-size:13.5px;font-weight:500;border-radius:999px;padding:8px 18px;cursor:pointer;border:1.5px solid var(--ink);background:var(--ink);color:var(--bg)}
+  .btn.ghost{background:transparent;color:var(--muted);border-color:var(--line-2)}
+  .btn.ghost:hover{border-color:var(--ink);color:var(--ink)}
+  .btn:disabled{opacity:.4;cursor:default}
+  #status{font-size:13px;color:var(--muted)}
+  .loading{color:var(--muted);margin-top:40px;font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav"><a class="brand" href="/">Matt Danuser-Grant</a><span>Copy Desk</span></nav>
+
+  <h1>Copy Desk</h1>
+  <p class="lede">Every line of copy on the site, editable in one place. Edit any box —
+  changes save as a draft <b>in this browser</b> automatically. When you're done, click
+  <b>Export edits</b> and send the downloaded file back to Matt; nothing here changes the
+  live site directly. Keep inline styling like <em>italics</em> unless it's wrong.</p>
+
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Filter copy… (e.g. 'designer', 'Play', 'Neon')" />
+    <button class="chip" id="only-edited">Edited only</button>
+  </div>
+
+  <div id="desk"><p class="loading">Loading site copy…</p></div>
+</div>
+
+<div class="bar"><div class="bar-in">
+  <span id="count">0 edits</span>
+  <span style="flex:1"></span>
+  <span id="status"></span>
+  <button class="btn ghost" id="clear">Discard all drafts</button>
+  <button class="btn ghost" id="copy">Copy JSON</button>
+  <button class="btn" id="export" disabled>Export edits</button>
+</div></div>
+
+<script>
+(function(){
+  'use strict';
+  /* Pages that carry human copy. Redirect stubs and app shells are excluded on purpose.
+     Games/tools subsites have their own copy and are out of scope for the desk. */
+  var PAGES=[
+    {path:'/index.html', label:'Homepage'},
+    {path:'/consulting.html', label:'Consulting'},
+    {path:'/resume.html', label:'Resume'},
+    {path:'/404.html', label:'404 page'},
+    {path:'/case-studies/building-with-ai.html', label:'Case study — One designer, the whole stack'},
+    {path:'/case-studies/building-this-site.html', label:'Case study — The site that shows its own making'},
+    {path:'/case-studies/access-control-in-sql.html', label:'Case study — Access control as architecture'},
+    {path:'/case-studies/keeping-cadence-no-server.html', label:'Case study — Multi-tenant SaaS, no server'},
+    {path:'/case-studies/living-atlas-fantasy-rpg.html', label:'Case study — A living atlas (shelved)'}
+  ];
+  var SEL='h1,h2,h3,h4,p,li,figcaption,blockquote,dt,dd,.eyebrow,a.btn,.more-text';
+  var LS='copydesk:';
+  var rows=[]; // {page,label,idx,tag,ctx,original,verified,occ,el,base}
+
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  /* The DOM normalizes named entities (&mdash; -> —) so innerHTML never matches a
+     source that spells them as entities. Match either form. Mirrored in
+     tools/apply-copy-edits.mjs — keep the two lists in sync. */
+  var TYPO=[['—','mdash'],['–','ndash'],['’','rsquo'],['‘','lsquo'],
+            ['“','ldquo'],['”','rdquo'],['…','hellip'],
+            ['←','larr'],['→','rarr'],['·','middot']];
+  function patternToRegex(pat){
+    var s=pat.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    TYPO.forEach(function(t){s=s.split(t[0]).join('(?:'+t[0]+'|&'+t[1]+';)');});
+    return new RegExp(s,'g');
+  }
+  function countMatches(raw,pat){var m=raw.match(patternToRegex(pat));return m?m.length:0;}
+
+  function contextOf(el){
+    // nearest prior heading or labelled section — a human hint, not used by the apply script
+    var sec=el.closest('section');
+    var h=null,n=el;
+    while(n && n!==document){ var p=n.previousElementSibling;
+      while(p){ if(/^H[1-4]$/.test(p.tagName)){h=p;break} p=p.previousElementSibling; }
+      if(h)break; n=n.parentElement; if(n && /^H[1-4]$/.test(n.tagName)){h=n;break} }
+    var bits=[];
+    if(sec){var al=sec.getAttribute('aria-label')||''; var ah=sec.getAttribute('aria-labelledby');
+      if(ah){var he=sec.querySelector('#'+CSS.escape(ah)); if(he)bits.push(he.textContent.trim());}
+      else if(al)bits.push(al);}
+    if(h && bits.indexOf(h.textContent.trim())<0)bits.push(h.textContent.trim());
+    return bits.join(' › ').slice(0,80);
+  }
+
+  function extract(page,raw){
+    var doc=new DOMParser().parseFromString(raw,'text/html');
+    var seen={}; var out=[];
+    var els=[].slice.call(doc.querySelectorAll(SEL)).filter(function(el){
+      if(el.closest('[data-no-copyedit],script,style,nav,#intro'))return false;
+      if(!el.textContent.trim())return false;
+      if(el.querySelector(SEL))return false; // leaf copy only — parents excluded
+      return true;
+    });
+    els.forEach(function(el,i){
+      var inner=el.innerHTML;
+      var pat='>'+inner+'<';
+      var occTotal=countMatches(raw,pat);
+      var key=pat; seen[key]=(seen[key]||0);
+      var occ=seen[key]; seen[key]++;
+      out.push({page:page.path,label:page.label,idx:i,tag:el.tagName.toLowerCase(),
+        ctx:contextOf(el),original:inner,verified:occTotal>0 && occ<occTotal,occ:occ});
+    });
+    // page <title> as a special row
+    var t=doc.querySelector('title');
+    if(t)out.unshift({page:page.path,label:page.label,idx:-1,tag:'title',ctx:'browser tab title',
+      original:t.textContent,verified:countMatches(raw,'<title>'+t.textContent+'</title>')>0,occ:0,type:'title'});
+    return out;
+  }
+
+  function render(){
+    var desk=document.getElementById('desk'); desk.innerHTML='';
+    var byPage={};
+    rows.forEach(function(r){(byPage[r.page]=byPage[r.page]||[]).push(r);});
+    PAGES.forEach(function(p){
+      var list=byPage[p.path]; if(!list||!list.length)return;
+      var sec=document.createElement('section'); sec.className='pg';
+      sec.innerHTML='<div class="pg-head"><h2>'+esc(p.label)+'</h2><span class="path">'+esc(p.path)+'</span></div>';
+      list.forEach(function(r){
+        var row=document.createElement('div'); row.className='row'+(r.verified?'':' manual');
+        row.innerHTML='<div class="meta"><span class="tag">'+esc(r.tag)+'</span>'+
+          (r.ctx?'<span class="ctx">'+esc(r.ctx)+'</span>':'')+
+          '<button class="rv" type="button">↩ revert</button></div>';
+        var ed=document.createElement('div'); ed.className='ed'; ed.contentEditable='true'; ed.spellcheck=true;
+        if(r.type==='title')ed.textContent=r.original; else ed.innerHTML=r.original;
+        row.appendChild(ed);
+        r.el=row; r.edEl=ed;
+        r.base=r.type==='title'?ed.textContent:ed.innerHTML; // post-normalization baseline
+        // restore draft
+        var d=localStorage.getItem(LS+r.page+'#'+r.idx);
+        if(d!==null){ if(r.type==='title')ed.textContent=d; else ed.innerHTML=d; }
+        function sync(){
+          var cur=r.type==='title'?ed.textContent:ed.innerHTML;
+          var dirty=cur!==r.base;
+          row.classList.toggle('dirty',dirty);
+          if(dirty)localStorage.setItem(LS+r.page+'#'+r.idx,cur);
+          else localStorage.removeItem(LS+r.page+'#'+r.idx);
+          refreshCount();
+        }
+        ed.addEventListener('input',sync);
+        ed.addEventListener('blur',sync);
+        row.querySelector('.rv').addEventListener('click',function(){
+          if(r.type==='title')ed.textContent=r.base; else ed.innerHTML=r.base; sync();
+        });
+        sync();
+        sec.appendChild(row);
+      });
+      desk.appendChild(sec);
+    });
+    refreshCount();
+  }
+
+  function dirtyRows(){return rows.filter(function(r){return r.el && r.el.classList.contains('dirty');});}
+
+  function buildExport(){
+    return {tool:'copy-desk',site:'mattdanusergrant.com',generated:new Date().toISOString(),
+      edits:dirtyRows().map(function(r){
+        return {page:r.page,type:r.type||'element',tag:r.tag,context:r.ctx,occurrence:r.occ,
+          verified:r.verified,original:r.original,
+          edited:r.type==='title'?r.edEl.textContent:r.edEl.innerHTML};
+      })};
+  }
+  window.__copydesk={rows:rows,buildExport:buildExport}; // test hook
+
+  function refreshCount(){
+    var n=dirtyRows().length;
+    document.getElementById('count').textContent=n+(n===1?' edit':' edits');
+    document.getElementById('export').disabled=!n;
+  }
+
+  document.getElementById('export').addEventListener('click',function(){
+    var blob=new Blob([JSON.stringify(buildExport(),null,2)],{type:'application/json'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='copy-edits-'+new Date().toISOString().slice(0,10)+'.json';
+    a.click(); URL.revokeObjectURL(a.href);
+    document.getElementById('status').textContent='Exported — send the file to Matt.';
+  });
+  document.getElementById('copy').addEventListener('click',function(){
+    navigator.clipboard.writeText(JSON.stringify(buildExport(),null,2)).then(function(){
+      document.getElementById('status').textContent='JSON copied to clipboard.';
+    });
+  });
+  document.getElementById('clear').addEventListener('click',function(){
+    if(!confirm('Discard all draft edits in this browser?'))return;
+    Object.keys(localStorage).forEach(function(k){if(k.indexOf(LS)===0)localStorage.removeItem(k);});
+    location.reload();
+  });
+  document.getElementById('q').addEventListener('input',function(){
+    var q=this.value.toLowerCase();
+    rows.forEach(function(r){ if(!r.el)return;
+      r.el.style.display=(!q||(r.original+' '+r.ctx+' '+r.edEl.textContent).toLowerCase().indexOf(q)>=0)?'':'none';});
+  });
+  document.getElementById('only-edited').addEventListener('click',function(){
+    this.classList.toggle('on');
+    var on=this.classList.contains('on');
+    rows.forEach(function(r){ if(!r.el)return;
+      r.el.style.display=(on && !r.el.classList.contains('dirty'))?'none':'';});
+  });
+
+  Promise.all(PAGES.map(function(p){
+    return fetch(p.path).then(function(r){return r.text();}).then(function(raw){return extract(p,raw);})
+      .catch(function(){return [];});
+  })).then(function(lists){
+    rows=[].concat.apply([],lists);
+    window.__copydesk.rows=rows;
+    render();
+  });
+})();
+</script>
+</body>
+</html>
