@@ -431,7 +431,7 @@ function renderHome(){
   view.innerHTML='';
   view.appendChild(el('p','lede','Build and playtest card games in the browser — a shared engine (real 52-card deck, poker hand evaluator, online multiplayer) with a dozen games and design tools plugged in. Tap one to play, spin up a variant, then deal it to friends over a room code.'));
   // Classics = established real-world card games; everything else is an original design or deck tool.
-  const CLASSICS=new Set(['holdem','mau']);
+  const CLASSICS=new Set(['holdem','blackjack','mau','solitaire']);
   const sections=[
     { name:'Classics', pip:'♠', pk:'blk', list:GAMES.filter(g=>CLASSICS.has(g.id)) },
     { name:'Custom',   pip:'♦', pk:'red', list:GAMES.filter(g=>!CLASSICS.has(g.id)) },
@@ -2161,6 +2161,182 @@ GAMES.push({
     arow.appendChild(save); arow.appendChild(reset);
     root.appendChild(arow);
     root.appendChild(el('p','muted','CMYK values are an <b>uncalibrated</b> RGB→CMYK reference for your print shop — confirm against their ICC profile before proofing. The deck now ships in Four-Colour by default.'));
+  }
+});
+
+/* ============================================================
+   GAME — BLACKJACK (21)  (1 player vs dealer CPU, standard 52)
+   Hit/Stand; dealer draws to 17; naturals pay 3:2. Fixed 10-chip bet.
+   ============================================================ */
+GAMES.push({
+  id:'blackjack', title:'Blackjack', players:'1 vs dealer', tag:'casino · standard 52',
+  chips:[{k:'poker',t:'21'},{k:'poker',t:'vs dealer'}],
+  blurb:'Hit or stand against the house. Dealer draws to 17 and a natural pays 3:2 — the casino classic on the shared deck.',
+  mount(root){
+    const BET=10; let bank=100;
+    let deck=[], you=[], dealer=[], phase='idle', msg='Deal a hand to begin.';
+    root.innerHTML=`
+      <div class="row" style="justify-content:space-between"><span class="pill" id="bank"></span><span class="pill" id="bet"></span></div>
+      <div class="felt" style="margin-top:10px">
+        <div class="h2" style="color:#eaf6ee">Dealer <span class="muted" id="dtot"></span></div><div class="hand lg" id="dealer" style="min-height:96px"></div>
+        <div class="h2" style="color:#eaf6ee">You <span class="muted" id="ytot"></span></div><div class="hand lg" id="you" style="min-height:96px"></div>
+      </div>
+      <div class="center" id="msg" style="min-height:26px;margin:12px 0;font-weight:800"></div>
+      <div class="row" id="ctl" style="justify-content:center"></div>`;
+    const $=s=>root.querySelector(s);
+    const val = cards => { let t=0,a=0; for(const c of cards){ t += c.r==='A'?11:(['K','Q','J'].includes(c.r)?10:c.v); if(c.r==='A')a++; } while(t>21&&a){ t-=10; a--; } return t; };
+    const isBJ = c => c.length===2 && val(c)===21;
+    function deal(){
+      if(bank<BET){ bank=100; toast('Rebuy — bankroll reset to 100.'); }
+      deck=shuffle(makeDeck()); you=[deck.pop(),deck.pop()]; dealer=[deck.pop(),deck.pop()];
+      phase='player'; msg='Your move — hit or stand.';
+      if(isBJ(you)||isBJ(dealer)) settle(); else render();
+    }
+    function hit(){ you.push(deck.pop()); if(val(you)>=21) settle(); else render(); }
+    function settle(){
+      if(val(you)<=21 && !isBJ(you)){ while(val(dealer)<17) dealer.push(deck.pop()); }
+      const y=val(you), d=val(dealer), yb=isBJ(you), db=isBJ(dealer);
+      let delta, res;
+      if(yb&&db){ delta=0; res='Push — both blackjack.'; }
+      else if(yb){ delta=Math.round(BET*1.5); res='Blackjack! Pays 3:2.'; }
+      else if(db){ delta=-BET; res='Dealer blackjack.'; }
+      else if(y>21){ delta=-BET; res='Bust — you lose.'; }
+      else if(d>21){ delta=BET; res='Dealer busts — you win!'; }
+      else if(y>d){ delta=BET; res='You win!'; }
+      else if(y<d){ delta=-BET; res='Dealer wins.'; }
+      else { delta=0; res='Push.'; }
+      bank+=delta; phase='done';
+      msg=res+(delta>0?` +${delta}`:delta<0?` ${delta}`:'');
+      render();
+    }
+    function render(){
+      $('#bank').textContent=`Bankroll ${bank}`; $('#bet').textContent=`Bet ${BET}`;
+      const hideHole = phase==='player';
+      const de=$('#dealer'), ye=$('#you'); de.innerHTML=''; ye.innerHTML='';
+      dealer.forEach((c,i)=> de.appendChild(cardEl(c,{lg:true, faceUp:!(hideHole&&i===1)})));
+      you.forEach(c=> ye.appendChild(cardEl(c,{lg:true})));
+      $('#dtot').textContent = dealer.length ? (hideHole?`showing ${val([dealer[0]])}`:`(${val(dealer)})`) : '';
+      $('#ytot').textContent = you.length ? `(${val(you)})` : '';
+      $('#msg').textContent = msg;
+      const ctl=$('#ctl'); ctl.innerHTML='';
+      if(phase==='player'){
+        const h=el('button','btn','Hit'); h.onclick=hit;
+        const s=el('button','btn alt','Stand'); s.onclick=settle;
+        ctl.append(h,s);
+      } else {
+        const d=el('button','btn', phase==='idle'?'Deal':'Play again'); d.onclick=deal; ctl.append(d);
+      }
+    }
+    render();
+  }
+});
+
+/* ============================================================
+   GAME — SOLITAIRE (Klondike)  (1 player, standard 52)
+   Tap a face-up card (takes the run below it), then tap a pile or foundation
+   to drop. Draw one from the stock (tap to recycle). Auto-collect to finish.
+   ============================================================ */
+GAMES.push({
+  id:'solitaire', title:'Solitaire', players:'1 player', tag:'klondike · standard 52',
+  chips:[{k:'poker',t:'klondike'},{k:'poker',t:'solo'}],
+  blurb:'The classic Klondike — build the four suits up from Ace to King. Tap a card then a destination; draw from the stock and auto-collect when you’re home.',
+  mount(root){
+    const ORD={A:1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,J:11,Q:12,K:13};
+    const SU=['S','H','D','C'];
+    let stock,waste,found,piles,sel,won;
+    function start(){
+      const d=shuffle(makeDeck());
+      piles=[]; for(let i=0;i<7;i++){ const p=[]; for(let j=0;j<=i;j++) p.push({c:d.pop(),up:j===i}); piles.push(p); }
+      stock=d.map(c=>({c,up:false})); waste=[]; found={S:[],H:[],D:[],C:[]}; sel=null; won=false; render();
+    }
+    const topFound = s => found[s][found[s].length-1];
+    const canToFound = c => { const f=found[c.s]; return f.length ? ORD[c.r]===ORD[f[f.length-1].c.r]+1 : c.r==='A'; };
+    const canToPile = (c,i) => { const p=piles[i]; if(!p.length) return c.r==='K'; const t=p[p.length-1]; return t.up && t.c.color!==c.color && ORD[t.c.r]===ORD[c.r]+1; };
+    function flipLast(i){ const p=piles[i]; if(p.length && !p[p.length-1].up) p[p.length-1].up=true; }
+    function checkWin(){ won = SU.every(s=>found[s].length===13); if(won) toast('You cleared the board! 🎉'); }
+    function draw(){
+      if(stock.length){ const n=stock.pop(); n.up=true; waste.push(n); }
+      else { stock = waste.reverse().map(x=>({c:x.c,up:false})); waste=[]; }
+      sel=null; render();
+    }
+    function clickWaste(){ if(!waste.length) return; sel=(sel&&sel.src==='waste')?null:{src:'waste'}; render(); }
+    function clickFound(s){
+      if(!sel){ render(); return; }
+      const single = sel.src==='waste' || sel.idx===piles[sel.i].length-1;
+      const c = sel.src==='waste' ? waste[waste.length-1].c : piles[sel.i][sel.idx].c;
+      if(single && canToFound(c)){
+        found[c.s].push({c,up:true});
+        if(sel.src==='waste') waste.pop(); else { const i=sel.i; piles[i].pop(); flipLast(i); }
+        sel=null; checkWin();
+      } else sel=null;
+      render();
+    }
+    function clickCard(i,idx){
+      const p=piles[i];
+      if(sel){
+        if(sel.src==='pile'&&sel.i===i){ sel = sel.idx===idx?null:{src:'pile',i,idx}; render(); return; }
+        tryDropPile(i); return;
+      }
+      if(p[idx].up){ sel={src:'pile',i,idx}; render(); }
+    }
+    function clickPile(i){ if(sel) tryDropPile(i); }
+    function tryDropPile(i){
+      const run = sel.src==='waste' ? [waste[waste.length-1]] : piles[sel.i].slice(sel.idx);
+      if(canToPile(run[0].c,i)){
+        run.forEach(x=>x.up=true); piles[i].push(...run);
+        if(sel.src==='waste') waste.pop(); else { const s=sel.i; piles[s].length=sel.idx; flipLast(s); }
+        sel=null; checkWin();
+      } else sel=null;
+      render();
+    }
+    function autoCollect(){
+      let moved=true;
+      while(moved){ moved=false;
+        if(waste.length && canToFound(waste[waste.length-1].c)){ const c=waste[waste.length-1].c; found[c.s].push({c,up:true}); waste.pop(); moved=true; continue; }
+        for(let i=0;i<7;i++){ const p=piles[i]; if(p.length){ const t=p[p.length-1]; if(t.up && canToFound(t.c)){ found[t.c.s].push({c:t.c,up:true}); p.pop(); flipLast(i); moved=true; } } }
+      }
+      sel=null; checkWin(); render();
+    }
+    const slot = label => { const s=el('div','slot'); if(label) s.textContent=label; return s; };
+    function render(){
+      root.innerHTML='';
+      const bar=el('div','row'); bar.style.cssText='justify-content:space-between;margin-bottom:10px';
+      const left=el('div','row');
+      const nw=el('button','btn alt sm','New game'); nw.onclick=start;
+      const ac=el('button','btn sm','⤴ Auto-collect'); ac.onclick=autoCollect;
+      left.append(nw,ac);
+      bar.append(left, el('span','muted', won?'Solved! 🎉':`Home ${SU.reduce((n,s)=>n+found[s].length,0)}/52`));
+      root.appendChild(bar);
+
+      const wrap=el('div'); wrap.style.cssText='overflow-x:auto';
+      const table=el('div','felt'); table.style.cssText='min-width:430px';
+      const top=el('div','row'); top.style.cssText='justify-content:space-between;align-items:flex-start;gap:10px';
+      const tl=el('div','row');
+      const stockEl = stock.length ? cardEl(null,{faceUp:false}) : slot('↻');
+      stockEl.style.cursor='pointer'; stockEl.onclick=draw; tl.appendChild(stockEl);
+      const wasteEl = waste.length ? cardEl(waste[waste.length-1].c) : slot('');
+      wasteEl.style.cursor='pointer'; wasteEl.onclick=clickWaste;
+      if(sel&&sel.src==='waste') wasteEl.classList.add('sel'); tl.appendChild(wasteEl);
+      const tr=el('div','row');
+      SU.forEach(s=>{ const f=topFound(s); const fe=f?cardEl(f.c):slot(SUIT[s].sym); fe.style.cursor='pointer'; fe.onclick=()=>clickFound(s); tr.appendChild(fe); });
+      top.append(tl,tr); table.appendChild(top);
+
+      const cols=el('div','row'); cols.style.cssText='align-items:flex-start;gap:8px;margin-top:12px';
+      piles.forEach((p,i)=>{
+        const col=el('div'); col.style.cssText='position:relative;min-height:82px;width:54px;flex:0 0 auto';
+        if(!p.length){ const s=slot(''); s.style.cursor='pointer'; s.onclick=()=>clickPile(i); col.appendChild(s); }
+        p.forEach((o,idx)=>{
+          const ce=cardEl(o.c,{faceUp:o.up}); ce.style.marginTop = idx?'-56px':'0';
+          if(o.up){ ce.classList.add('playable'); ce.onclick=(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); clickCard(i,idx); }; }
+          if(sel&&sel.src==='pile'&&sel.i===i&&idx>=sel.idx) ce.classList.add('sel');
+          col.appendChild(ce);
+        });
+        cols.appendChild(col);
+      });
+      table.appendChild(cols); wrap.appendChild(table); root.appendChild(wrap);
+      if(won) root.appendChild(el('div','big center','🎉 You cleared the board!'));
+    }
+    start();
   }
 });
 
