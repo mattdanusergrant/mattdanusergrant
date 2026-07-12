@@ -281,6 +281,9 @@
         <div class="tool" data-brush="bank"><span class="sw" data-sw="bank"></span>Bank<span class="key">B</span></div>
         <div class="tool" data-brush="port"><span class="sw" data-sw="port"></span>Port<span class="key">P</span></div>
         <div class="tool" data-brush="tower"><span class="sw" data-sw="tower"></span>Tower<span class="key">T</span></div>
+        <div class="tool" data-brush="mon1" title="Earned at 3 contracts — nearby buildings grow +25%"><span class="sw" data-sw="mon1"></span>Monument<span class="key">🏆</span></div>
+        <div class="tool" data-brush="mon2" title="Earned at 6 contracts — a triple-strength solar tower with a growth aura"><span class="sw" data-sw="mon2"></span>Beacon<span class="key">🏆</span></div>
+        <div class="tool" data-brush="mon3" title="Earned at 10 contracts — the whole city grows +15%"><span class="sw" data-sw="mon3"></span>Observatory<span class="key">🏆</span></div>
       </div></div>
     <div class="cat" data-cat="policy" id="polcat" title="Budget &amp; policy — set the tax rate, enact ordinances"><span class="cico">⚖️</span><span class="clabel">Policy</span>
       <div class="catmenu polmenu" id="polmenu"></div></div>
@@ -356,11 +359,12 @@
   var waterGen=0, waterUse=0, waterOK=true;        // city-wide water budget
   var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
   var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
-  var congestion=0, trafficDemand=0, trafficCap=0;      // public-transport pressure: trips generated vs road + transit capacity
+  var congestion=0, trafficDemand=0, trafficCap=0;
+  var auraMap=null, obsBuilt=false;                    // landmark growth aura + Observatory city-wide lift      // public-transport pressure: trips generated vs road + transit capacity
   var TRIPW={res:1,tower:2,com:1.5,ind:1.2,fac:1.2};     // trips generated per building level (a growing city needs to move people)
 
   // ---- economy: everything costs money; a working city earns it; debt charges interest ----
-  var COST={road:4,rail:10,transit:110,res:15,com:25,ind:35,fac:60,park:20,power:120,solar:80,water:100,bank:180,port:140,tower:200,bulldoze:0};
+  var COST={road:4,rail:10,transit:110,res:15,com:25,ind:35,fac:60,park:20,power:120,solar:80,water:100,bank:180,port:140,tower:200,mon1:0,mon2:0,mon3:0,bulldoze:0};
   var UPKEEP={power:8,solar:1,water:6,road:0.2,rail:0.3,transit:4,bank:4,port:5,tower:3};  // ₵/month (solar is clean & cheap to run; a fossil station costs more)
   var TAX={res:6,com:5,ind:3,fac:3,tower:14};           // ₵/month per building level (Towers are dense = high tax)
   var CASH_START=1500, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;
@@ -371,6 +375,9 @@
   // tier at which each tool unlocks (index into MS: 0=Hamlet,1=Village,…); absent = available from start.
   // Start bare — just Road, Homes, Power, Water — and research the rest by growing through the tiers.
   var TIER_UNLOCK={com:0,solar:1,park:2,ind:2,rail:3,fac:3,transit:4,bank:5,port:6,tower:7};
+  // landmarks are earned with completed CONTRACTS, not tiers — free to place once earned
+  var LMARK={mon1:3,mon2:6,mon3:10};
+  var LMARK_NAME={mon1:'🗿 Monument',mon2:'🌞 Solar Beacon',mon3:'🔭 Star Observatory'};
   // ---- researched tech: passive efficiency upgrades earned by chartering tiers (the "sick new tech") ----
   var TECH={smartGrid:{t:4,n:'Smart Grid',d:'power use −25%'},rooftopSolar:{t:5,n:'Rooftop Solar',d:'solar output +40%'},
             metroNet:{t:6,n:'Metro Network',d:'transit capacity +60%'},waterReclaim:{t:7,n:'Water Reclamation',d:'water use −25%'},
@@ -387,7 +394,7 @@
   var BANK_CREDIT=2000, BANK_RATE=0.02, BANK_CAP=50;    // each Bank: +credit ceiling, + interest on reserves (capped)
   var PORT_BOOST=0.6;                                   // each Port: +60% export revenue
   var treasury=CASH_START, netRate=0, bankCount=0;
-  function unlocked(b){var t=TIER_UNLOCK[b];return t===undefined||maxMS>=t;}   // no entry = always available
+  function unlocked(b){if(LMARK[b])return contractsDone>=LMARK[b];var t=TIER_UNLOCK[b];return t===undefined||maxMS>=t;}   // landmarks gate on contracts; no entry = always available
   function creditFloor(){return -(CREDIT_BASE+CREDIT_PER_TIER*(maxMS+1)+BANK_CREDIT*bankCount);}   // borrowing power grows with tiers + Banks
   function canAfford(c){return treasury-c>=creditFloor();}
   function spend(c){treasury-=c;updateCashUI();}
@@ -524,7 +531,7 @@
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
     }
   };
-  var SWATCH={road:'#9c968a',rail:'#8A8272',transit:'#3E8E7E',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',solar:'#2E6DA4',water:'#4C88B8',bank:'#3E8E6E',port:'#4C7EA8',tower:'#4E8C8C',bulldoze:'#c96a5a'};
+  var SWATCH={road:'#9c968a',rail:'#8A8272',transit:'#3E8E7E',res:'#63A05C',com:'#5589BB',ind:'#BF8F45',fac:'#7C6CB0',park:'#4A8341',power:'#D9AE52',solar:'#2E6DA4',water:'#4C88B8',bank:'#3E8E6E',port:'#4C7EA8',tower:'#4E8C8C',mon1:'#B8A88A',mon2:'#E7C24A',mon3:'#7C6CB0',bulldoze:'#c96a5a'};
 
   function themeName(){return 'light';}   // light-only — the game owns its palette
   function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
@@ -655,7 +662,7 @@
     }
     if(cell.t!=='empty')return;                           // never overwrite an existing building — Clear the lot first
     if(!canAfford(cost)){denyToast();return;}
-    spend(cost);cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'||brush==='port'||brush==='solar'||brush==='transit'?1:0);cell.grow=0;
+    spend(cost);cell.t=brush;cell.lvl=(brush==='park'||brush==='bank'||brush==='port'||brush==='solar'||brush==='transit'||LMARK[brush]?1:0);cell.grow=0;
     dirty=true;svcDirty=true;scheduleSave();return true;                     // a building was placed → up() reverts to the selector
   }
   function denyUpgrade(bl){var now=performance.now();if(now-_denyT<1500)return;_denyT=now;
@@ -746,13 +753,13 @@
     if(curToolEl)curToolEl.textContent=TOOLNAME[b]||b;
     Array.prototype.forEach.call(tools.querySelectorAll('.cat'),function(c){c.classList.toggle('hascur',!!c.querySelector('.tool[data-brush="'+b+'"].sel'));});}
   function selectBrush(b){
-    if(!unlocked(b)){var ms=MS[TIER_UNLOCK[b]];toastEl.innerHTML='Unlocks at <b>'+(ms?ms.l:'a later tier')+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);return;}
+    if(!unlocked(b)){if(LMARK[b]){toastEl.innerHTML='Earned by contracts — <b>'+(LMARK[b]-contractsDone)+' more</b> to unlock';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);return;}var ms=MS[TIER_UNLOCK[b]];toastEl.innerHTML='Unlocks at <b>'+(ms?ms.l:'a later tier')+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2000);return;}
     brush=b;cancelLine();Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){el.classList.toggle('sel',el.getAttribute('data-brush')===b);});if(LINE[b])lineHint(b);
     reflectTool(b);closeMenus();
     if(b!=='inspect')document.getElementById('inspect').hidden=true; else updateInspect();dirty=true;}
   function updateToolLocks(){Array.prototype.forEach.call(tools.querySelectorAll('.tool'),function(el){var b=el.getAttribute('data-brush');var lk=!unlocked(b);el.classList.toggle('locked',lk);
     var key=el.querySelector('.key'),lock=el.querySelector('.lock');
-    if(lk){if(key)key.style.display='none';if(!lock){lock=document.createElement('span');lock.className='lock';el.appendChild(lock);}lock.textContent='🔒 '+MS[TIER_UNLOCK[b]].l;}
+    if(lk){if(key)key.style.display='none';if(!lock){lock=document.createElement('span');lock.className='lock';el.appendChild(lock);}lock.textContent=LMARK[b]?('🔒 '+LMARK[b]+' contracts'):('🔒 '+MS[TIER_UNLOCK[b]].l);}
     else{if(key)key.style.display='';if(lock)lock.remove();}});}
   tools.addEventListener('click',function(e){
     var t=e.target.closest('.tool');
@@ -837,12 +844,18 @@
     for(var si=0;si<n;si++){var gs=grid[si];if(!gs)continue;var stt=gs.t;
       if(stt==='power'){gen+=(POWER_OUT/9)*EVMOD.power;seedNet(si,pnet,pq);}         // a 3×3 station = 9 cells → POWER_OUT total
       if(stt==='solar'){gen+=SOLAR_OUT*solarMult*EVMOD.solar;seedNet(si,pnet,pq);} // clean 1×1 array — Rooftop Solar tech boosts it
+      if(stt==='mon2'){gen+=SOLAR_OUT*3*solarMult*EVMOD.solar;seedNet(si,pnet,pq);}   // the Solar Beacon is a triple-strength array
       if(stt==='water'){wgen+=WATER_OUT;seedNet(si,wnet,wq);}
       if(gs.terr==='water'){if(seedNet(si,wnet,wq))wgen+=WATER_PER_TILE;}}   // a coast/lake tile adds capacity only where it meets a road
     function flow(net,que){var h=0;while(h<que.length){var id=que[h++],c=id%cols,r=(id/cols)|0,nn=[[c-1,r],[c+1,r],[c,r-1],[c,r+1]];
       for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'&&!net[ni]){net[ni]=1;que.push(ni);}}}}
     flow(pnet,pq);flow(wnet,wq);
-    var use=0,wuse=0;for(var di=0;di<n;di++){var gd=grid[di];if(!gd)continue;if(POWERUSE[gd.t])use+=POWERUSE[gd.t]*(gd.lvl||1);if(WATERUSE[gd.t])wuse+=WATERUSE[gd.t]*(gd.lvl||1);}
+    var use=0,wuse=0,lms=[];obsBuilt=false;
+    for(var di=0;di<n;di++){var gd=grid[di];if(!gd)continue;if(POWERUSE[gd.t])use+=POWERUSE[gd.t]*(gd.lvl||1);if(WATERUSE[gd.t])wuse+=WATERUSE[gd.t]*(gd.lvl||1);
+      if(gd.t==='mon1'||gd.t==='mon2')lms.push(di);else if(gd.t==='mon3')obsBuilt=true;}
+    auraMap=null;
+    if(lms.length){auraMap={};for(var li=0;li<lms.length;li++){var lc=lms[li]%cols,lr=(lms[li]/cols)|0;
+      for(var ar=Math.max(0,lr-5);ar<=Math.min(rows-1,lr+5);ar++)for(var ac=Math.max(0,lc-5);ac<=Math.min(cols-1,lc+5);ac++)auraMap[idx(ac,ar)]=0.25;}}   // landmark aura: growth +25% within 5 cells
     use=Math.round(use*powerUseMult*(POL.sm?0.9:1));wuse=Math.round(wuse*waterUseMult);   // Solar Mandate trims demand   // Smart Grid / Water Reclamation techs cut demand
     powerGen=Math.round(gen);powerUse=use;powerOK=(gen>=use);          // city-wide power budget
     waterGen=Math.round(wgen);waterUse=wuse;waterOK=(wgen>=wuse);       // city-wide water budget
@@ -954,6 +967,8 @@
       if(cell.t==='ind'&&matWanted)rate=1;               // Works speed up when Materials are short
       if(complement(c,r,cell.t))rate*=1.6;
       rate*=(1-congestion*0.6)*EVMOD.growth*TAXP[POL.tax].gr;               // gridlock throttles growth; events can surge or stall it
+      if(auraMap&&auraMap[idx(c,r)])rate*=1+auraMap[idx(c,r)];           // landmark aura
+      if(obsBuilt)rate*=1.15;                                            // the Observatory lifts the whole city
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
@@ -963,7 +978,7 @@
   // ---- population, demand UI, milestones ----
   var popEl=document.getElementById('pop'),popShown=0,popTarget=0;
   function updatePop(){var p=0;for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-    if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='tower')p+=g.lvl*g.lvl*135;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;}
+    if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='tower')p+=g.lvl*g.lvl*135;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;else if(LMARK[g.t])p+=60;}
     p+=Math.round(exportRate*35);                         // trade income from rail exports sustains extra population
     popTarget=p;}
   var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp'),terrEl=document.getElementById('terrb'),terrStat=document.getElementById('terrstat');
@@ -1037,6 +1052,8 @@
     var changed=false;
     for(var i=0;i<contracts.length;i++){var c=contracts[i],v=CDEF[c.key].val(),done=c.inv?(v<=c.target):(v>=c.target);
       if(done){treasury+=c.reward;contractsDone++;contractToast(c);
+        if(LMARK.mon1===contractsDone||LMARK.mon2===contractsDone||LMARK.mon3===contractsDone){var lm=contractsDone===3?'mon1':contractsDone===6?'mon2':'mon3';updateToolLocks();
+          setTimeout((function(n){return function(){toastEl.innerHTML='🏆 Landmark earned — <b>'+n+'</b> is yours to place (Civic menu, free)';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},4200);};})(LMARK_NAME[lm]),1600);}
         var av=contracts.map(function(x){return x.key;});av.splice(i,1);var nc=newContract(av);
         if(nc)contracts[i]=nc;else{contracts.splice(i,1);i--;}changed=true;}}
     if(changed){updateCashUI();scheduleSave();}
@@ -1472,20 +1489,43 @@
     else if(kind==='goods'){ctx.fillStyle=pal.cueGood;ctx.fillRect(cx-2,y+5,4,1);ctx.fillRect(cx-2,y+8,4,1);ctx.fillRect(cx-2,y+5,1,4);ctx.fillRect(cx+1,y+5,1,4);}}  // hollow box = Goods
 
   // ---- placement preview + inspect ----
-  var BUILDB={res:1,com:1,ind:1,fac:1,park:1,power:1,solar:1,water:1,bank:1,port:1,tower:1,transit:1};
+  var BUILDB={res:1,com:1,ind:1,fac:1,park:1,power:1,solar:1,water:1,bank:1,port:1,tower:1,transit:1,mon1:1,mon2:1,mon3:1};
+  function drawLandmark(x,y,t){                             // earned showpieces — each unmistakably NOT a normal building
+    var m=CELL/2;
+    ctx.fillStyle=pal.side;ctx.fillRect(x+7,y+CELL-6,CELL-14,3);              // ground shadow
+    if(t==='mon1'){                                                           // Monument: plinth + obelisk, gold tip
+      ctx.fillStyle='#8F8574';ctx.fillRect(x+9,y+CELL-9,CELL-18,5);           // plinth
+      ctx.fillStyle='#B8A88A';ctx.fillRect(x+m-3,y+7,6,CELL-16);              // shaft
+      ctx.fillStyle='#D6C9A8';ctx.fillRect(x+m-3,y+7,2,CELL-16);              // lit face
+      ctx.fillStyle=pal.hwGlow;ctx.beginPath();ctx.moveTo(x+m-3,y+8);ctx.lineTo(x+m,y+3);ctx.lineTo(x+m+3,y+8);ctx.closePath();ctx.fill();   // gold cap
+    } else if(t==='mon2'){                                                    // Solar Beacon: slim tower crowned by a sun disc
+      ctx.fillStyle='#8F8574';ctx.fillRect(x+m-6,y+CELL-8,12,4);
+      ctx.fillStyle='#B79A55';ctx.fillRect(x+m-2,y+12,4,CELL-20);
+      ctx.fillStyle=pal.hwGlow;ctx.beginPath();ctx.arc(x+m,y+10,5.5,0,6.284);ctx.fill();     // the sun
+      ctx.strokeStyle='rgba(243,194,74,.55)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(x+m,y+10,8.5,0,6.284);ctx.stroke();                            // glow ring
+      ctx.fillStyle='#FBF6E6';ctx.fillRect(x+m-1,y+9,2,2);                                    // hot core
+    } else {                                                                  // Star Observatory: dome with a slit + star
+      ctx.fillStyle='#6E6455';ctx.fillRect(x+8,y+CELL-10,CELL-16,6);          // base
+      ctx.fillStyle='#8A7CB8';ctx.beginPath();ctx.arc(x+m,y+CELL-10,m-8,3.1416,0);ctx.fill(); // dome
+      ctx.fillStyle='#4B3D77';ctx.fillRect(x+m-1.5,y+CELL-10-(m-8),3,m-8);    // slit
+      ctx.fillStyle=pal.hwGlow;ctx.fillRect(x+m-1,y+5,2,2);ctx.fillRect(x+m-2,y+6,4,1)/*star*/;ctx.fillRect(x+m-1,y+4,2,1);
+    }
+  }
   function drawBuildingSprite(x,y,cell,span){var t=cell.t;span=span||1;
     if(t==='park')return drawPark(x,y,cell); if(t==='power')return drawPlant(x,y,cell,span);
     if(t==='solar')return drawSolar(x,y,cell); if(t==='transit')return drawTransit(x,y,cell);
     if(t==='water')return drawTower(x,y,cell); if(t==='bank')return drawBank(x,y,cell); if(t==='port')return drawPort(x,y,cell);
     if(t==='res')return drawHome(x,y,cell,span); if(t==='tower')return drawHighrise(x,y,cell,span);
-    if(t==='com')return drawShop(x,y,cell,span); if(t==='ind')return drawWorks(x,y,cell,span); if(t==='fac')return drawFactory(x,y,cell,span);}
+    if(t==='com')return drawShop(x,y,cell,span); if(t==='ind')return drawWorks(x,y,cell,span); if(t==='fac')return drawFactory(x,y,cell,span);
+    if(LMARK[t])return drawLandmark(x,y,t);}
   function canPlaceBrushHere(c,r){if(!inB(c,r))return false;var g=grid[idx(c,r)];
     if(!unlocked(brush))return false;
     if(brush==='power')return plantFits(c,r)&&canAfford(COST.power||0);
     if(FOOT[brush])return blockFits(c,r,footOf(brush))&&canAfford(COST[brush]||0);   // a 2×2 zone needs a clear 2×2
     if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.rail)return false;
     if(g.t!=='empty')return false; return canAfford(COST[brush]||0);}
-  var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',solar:'Solar array',water:'Water tower',bank:'Bank',port:'Port',transit:'Transit stop'};
+  var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',solar:'Solar array',water:'Water tower',bank:'Bank',port:'Port',transit:'Transit stop',mon1:'Monument',mon2:'Solar Beacon',mon3:'Star Observatory'};
   var TERRLABEL={plains:'Grassland',forest:'Forest',mountain:'Mountain',water:'Water'};
   var ZONEK={res:1,com:1,ind:1,fac:1,tower:1};
   function yn(v){return v?'<span class="ok">yes</span>':'<span class="no">no</span>';}
@@ -1548,6 +1588,7 @@
       if(t==='water'){drawTower(x,y,cell);continue;}
       if(t==='bank'){drawBank(x,y,cell);continue;}
       if(t==='port'){drawPort(x,y,cell);continue;}
+      if(LMARK[t]){drawLandmark(x,y,t);continue;}
       // zones: draw lot/building at the building's footprint, then a cue for what's missing
       var zf=cell.foot||1, ZW=CELL*zf;
       if(cell.lvl<1){ctx.fillStyle=pal.lot;ctx.fillRect(x+2,y+2,ZW-4,ZW-4);}
