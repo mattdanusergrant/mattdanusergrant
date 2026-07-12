@@ -1829,7 +1829,7 @@
     if(isLineBrush()&&hoverCell){
       var ps=lineAnchor;
       if(ps&&ZONES[brush]){                                            // zone drag: preview the ROW of 2×2 blocks, stepping by the footprint
-        var zf=footOf(brush),za=zoneAnchors(ps,hoverCell);
+        var zf=footOf(brush),za=zoneAnchors(ps,hoverCell,zf);
         for(var zi=0;zi<za.length;zi++){var ac=za[zi][0],ar=za[zi][1],fits=blockFits(ac,ar,zf);
           if(fits){ctx.globalAlpha=0.5;drawBuildingSprite(ac*CELL,ar*CELL,{t:brush,lvl:2,grow:0,seed:((ac*73856)^(ar*19349))>>>0,pulse:-9999,terr:inB(ac,ar)?grid[idx(ac,ar)].terr:'plains'},zf);}
           ctx.globalAlpha=0.95;ctx.strokeStyle=fits?SWATCH[brush]:'#D0704A';ctx.lineWidth=2;ctx.strokeRect(ac*CELL+2,ar*CELL+2,CELL*zf-4,CELL*zf-4);ctx.globalAlpha=1;}
