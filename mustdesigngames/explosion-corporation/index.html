@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Explosion Corporation</title>
+<style>
+  :root { --amber:#ffb454; --danger:#ff5a4d; --steel:#8fa3b0; --ink:#0c1116; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:#0c1116; color:#e8eef2;
+    font-family:"Segoe UI",Roboto,system-ui,sans-serif; overflow:hidden; }
+  #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  canvas { display:block; background:#161d24; touch-action:none; max-width:100%; max-height:100%; }
+  .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; text-align:center; gap:14px; padding:24px;
+    background:rgba(8,11,15,.82); backdrop-filter:blur(2px); z-index:10; }
+  .overlay.hidden { display:none; }
+  h1 { margin:0; font-size:clamp(30px,7vw,58px); letter-spacing:.06em; font-weight:800;
+    color:var(--amber); text-shadow:0 2px 0 #7a4a12, 0 0 22px rgba(255,180,84,.35); }
+  h1 .b { color:var(--danger); text-shadow:0 2px 0 #7a1a12, 0 0 22px rgba(255,90,77,.35); }
+  .tag { color:#9db0bd; max-width:560px; line-height:1.5; font-size:clamp(13px,2.6vw,16px); }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center; }
+  button { font:inherit; font-weight:700; cursor:pointer; border:0; border-radius:12px;
+    padding:12px 20px; background:var(--amber); color:#20140a; letter-spacing:.02em;
+    box-shadow:0 3px 0 #8a5a1a; transition:transform .05s; }
+  button:active { transform:translateY(2px); box-shadow:0 1px 0 #8a5a1a; }
+  button.ghost { background:#22303b; color:#cfe0ea; box-shadow:0 3px 0 #10181f; }
+  button.sel { outline:3px solid var(--amber); }
+  .levels { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  .levels button { min-width:150px; text-align:center; }
+  .lil { font-size:12px; opacity:.7; font-weight:600; }
+  .foot { position:fixed; bottom:8px; width:100%; text-align:center; font-size:11px; color:#5f7480; z-index:5; }
+  .keycap { display:inline-block; background:#22303b; border:1px solid #3a4c58; border-radius:5px;
+    padding:0 6px; margin:0 1px; font-size:12px; color:#cfe0ea; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+
+<!-- TITLE -->
+<div id="title" class="overlay">
+  <h1>EXPLOSION <span class="b">CORPORATION</span></h1>
+  <div class="tag">An unmanned hazmat hauler is barrelling down its route — and it detonates on contact with <b>anything</b>.
+    Your wrecking crew has to <b>flatten every building in its lane</b> before it arrives. Co-op demolition.</div>
+  <div class="row">
+    <button id="mode1" class="ghost sel">1 Player <span class="lil">(+ AI crew)</span></button>
+    <button id="mode2" class="ghost">2 Players <span class="lil">(local co-op)</span></button>
+  </div>
+  <div class="levels" id="levelPick"></div>
+  <div class="tag" id="ctrlHint"></div>
+  <button id="startBtn">START DEMOLITION</button>
+</div>
+
+<!-- WIN / LOSE -->
+<div id="end" class="overlay hidden">
+  <h1 id="endTitle"></h1>
+  <div class="tag" id="endBody"></div>
+  <div class="row">
+    <button id="againBtn">Try Again</button>
+    <button id="menuBtn" class="ghost">Level Select</button>
+  </div>
+</div>
+
+<div class="foot" id="foot"></div>
+
+<script>
+(() => {
+"use strict";
+const DBG = new URLSearchParams(location.search).has("dbg");
+
+// ---------- virtual arena (fits any screen, letterboxed) ----------
+const W = 1000, H = 640;
+const cvs = document.getElementById("c"), ctx = cvs.getContext("2d");
+let scale = 1, offX = 0, offY = 0;
+function fit(){
+  const vw = window.innerWidth, vh = window.innerHeight;
+  scale = Math.min(vw / W, vh / H);
+  cvs.width = Math.round(W * scale); cvs.height = Math.round(H * scale);
+  offX = 0; offY = 0;
+}
+window.addEventListener("resize", fit); fit();
+
+// ---------- levels ----------
+// path: polyline the carrier follows (arena coords). b: buildings {x,y,w,h,hp}.
+// A building "blocks" if its rect intersects the swept carrier lane.
+const CARRIER = { w: 74, h: 46 };            // hauler body
+const LANE_PAD = 10;                          // extra half-width around body for the danger lane
+function mk(x,y,w,h,hp){ return {x,y,w,h,hp0:hp,hp,dead:false}; }
+
+const LEVELS = [
+  {
+    name:"Riverside Row", tint:"#20303a", par:34,
+    path:[[70,320],[930,320]],
+    speed:40,
+    b:[ mk(300,300,60,60,60), mk(470,296,66,66,70), mk(640,300,60,60,60),
+        // flavour (off-lane, optional score)
+        mk(300,150,54,54,50), mk(640,470,54,54,50), mk(470,470,50,50,45) ]
+  },
+  {
+    name:"Dogleg Yards", tint:"#26222f", par:44,
+    path:[[70,150],[500,150],[500,500],[930,500]],
+    speed:40,
+    b:[ mk(250,130,60,60,70), mk(400,132,58,58,65),        // top run
+        mk(478,300,64,64,80),                               // the bend blocker
+        mk(650,480,60,60,70), mk(800,482,58,58,65),         // bottom run
+        mk(200,430,52,52,50), mk(760,150,52,52,50) ]
+  },
+  {
+    name:"Refinery Gauntlet", tint:"#2c2622", par:56, hard:true,
+    path:[[70,540],[300,540],[300,120],[700,120],[700,540],[930,540]],
+    speed:44,
+    b:[ mk(180,520,56,56,75), mk(285,330,60,60,90),
+        mk(430,100,58,58,80), mk(560,102,58,58,80),
+        mk(682,320,60,60,90), mk(820,520,56,56,75),
+        mk(500,300,64,64,60) /* central tower, optional */ ]
+  }
+];
+
+// ---------- game state ----------
+const S = { screen:"title", mode:1, levelIx:0 };
+let g = null;  // live game
+
+const best = {};
+try { Object.assign(best, JSON.parse(localStorage.getItem("ec_best")||"{}")); } catch(e){}
+
+function laneSegments(path){
+  const half = CARRIER.h/2 + LANE_PAD, segs=[];
+  for(let i=0;i<path.length-1;i++){
+    const [ax,ay]=path[i], [bx,by]=path[i+1];
+    segs.push({ax,ay,bx,by,half, horiz: Math.abs(bx-ax) >= Math.abs(by-ay)});
+  }
+  return segs;
+}
+// does an AABB building touch the carrier's swept lane?
+function inLane(b, segs){
+  for(const s of segs){
+    const minx=Math.min(s.ax,s.bx)-s.half, maxx=Math.max(s.ax,s.bx)+s.half;
+    const miny=Math.min(s.ay,s.by)-s.half, maxy=Math.max(s.ay,s.by)+s.half;
+    if(b.x < maxx && b.x+b.w > minx && b.y < maxy && b.y+b.h > miny) return true;
+  }
+  return false;
+}
+
+function pathLength(path){ let L=0; for(let i=0;i<path.length-1;i++){ L+=Math.hypot(path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]); } return L; }
+function pointAt(path, d){ // distance along polyline -> {x,y,ang}
+  for(let i=0;i<path.length-1;i++){
+    const [ax,ay]=path[i], [bx,by]=path[i+1];
+    const seg=Math.hypot(bx-ax,by-ay);
+    if(d<=seg || i===path.length-2){
+      const t=Math.max(0,Math.min(1,d/seg));
+      return { x:ax+(bx-ax)*t, y:ay+(by-ay)*t, ang:Math.atan2(by-ay,bx-ax) };
+    }
+    d-=seg;
+  }
+}
+
+function newGame(){
+  const lv = LEVELS[S.levelIx];
+  const segs = laneSegments(lv.path);
+  const buildings = lv.b.map(o=>({ ...o, hp:o.hp0, dead:false, blocks:false, hit:0 }));
+  buildings.forEach(b=> b.blocks = inLane(b, segs));
+  const start = pointAt(lv.path, 40);
+  const nP = S.mode;
+  const rigs = [];
+  const spawns = [ {x:120,y:H/2-70}, {x:120,y:H/2+70} ];
+  for(let i=0;i<2;i++){
+    rigs.push({
+      id:i, x:spawns[i].x, y:spawns[i].y, vx:0, vy:0, ang:0,
+      human: i < nP, color: i===0 ? "#4fd0e0" : "#ffd24f",
+      botTarget:null, ram:0
+    });
+  }
+  g = {
+    lv, segs, buildings, rigs,
+    carrier: { d: 40, ...start, alive:true, speed: lv.speed },
+    pathLen: pathLength(lv.path),
+    startDelay: lv.delay ?? 5,   // seconds the hauler idles before rolling
+    t:0, particles:[], shake:0, over:null, started:false
+  };
+}
+
+// ---------- input ----------
+const keys = {};
+const P1 = { up:"KeyW", down:"KeyS", left:"KeyA", right:"KeyD" };
+const P2 = { up:"ArrowUp", down:"ArrowDown", left:"ArrowLeft", right:"ArrowRight" };
+addEventListener("keydown", e=>{
+  keys[e.code]=true;
+  if([ "ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space" ].includes(e.code)) e.preventDefault();
+});
+addEventListener("keyup", e=>{ keys[e.code]=false; });
+
+function humanAxis(map){
+  return { x:(keys[map.right]?1:0)-(keys[map.left]?1:0), y:(keys[map.down]?1:0)-(keys[map.up]?1:0) };
+}
+// injectable input for headless testing
+let INJECT = {}; // id -> {x,y}
+
+function botAxis(rig){
+  // pick nearest STANDING BLOCKING building; if none, nearest standing building; drive at its centre.
+  let best=null, bd=1e9, list=g.buildings.filter(b=>!b.dead);
+  const blockers = list.filter(b=>b.blocks);
+  const pool = blockers.length ? blockers : list;
+  for(const b of pool){
+    const cx=b.x+b.w/2, cy=b.y+b.h/2, d=Math.hypot(cx-rig.x, cy-rig.y);
+    if(d<bd){ bd=d; best={x:cx,y:cy}; }
+  }
+  if(!best) return {x:0,y:0};
+  const dx=best.x-rig.x, dy=best.y-rig.y, m=Math.hypot(dx,dy)||1;
+  return { x:dx/m, y:dy/m };
+}
+
+// ---------- physics ----------
+const ACC = 1500, MAXV = 340, FRICT = 4.2, R = 17;
+const RAM_MIN = 130;          // closing speed above which a charge lands a bonus hit
+const GRIND = 62;             // damage/sec while a rig drives into a building
+const IMPACT_K = 0.7;         // bonus damage per (closing-speed over RAM_MIN)
+
+function circleAABB(px,py,r,b){ // returns overlap push vector or null
+  const nx=Math.max(b.x, Math.min(px, b.x+b.w));
+  const ny=Math.max(b.y, Math.min(py, b.y+b.h));
+  const dx=px-nx, dy=py-ny, d2=dx*dx+dy*dy;
+  if(d2 > r*r) return null;
+  const d=Math.sqrt(d2)||0.0001;
+  return { nx:dx/d, ny:dy/d, pen:r-d };
+}
+
+function burst(x,y,n,col){ for(let i=0;i<n;i++){ const a=Math.random()*7, s=40+Math.random()*220;
+  g.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.4+Math.random()*.5,col}); } }
+
+function update(dt){
+  if(!g || g.over) { if(g) stepParticles(dt); return; }
+  g.t += dt;
+
+  // rigs
+  for(const rig of g.rigs){
+    let ax = rig.human ? humanAxis(rig.id===0?P1:P2) : botAxis(rig);
+    if(INJECT[rig.id]) ax = INJECT[rig.id];
+    const m = Math.hypot(ax.x,ax.y);
+    if(m>0){ ax={x:ax.x/m,y:ax.y/m}; rig.ang = Math.atan2(ax.y,ax.x); }
+    rig.vx += ax.x*ACC*dt; rig.vy += ax.y*ACC*dt;
+    const sp = Math.hypot(rig.vx,rig.vy);
+    if(sp>MAXV){ rig.vx*=MAXV/sp; rig.vy*=MAXV/sp; }
+    // friction
+    const f = Math.max(0, 1 - FRICT*dt); rig.vx*=f; rig.vy*=f;
+    rig.x += rig.vx*dt; rig.y += rig.vy*dt;
+    // arena bounds
+    rig.x=Math.max(R,Math.min(W-R,rig.x)); rig.y=Math.max(R,Math.min(H-R,rig.y));
+    rig.ram = Math.max(0, rig.ram-dt*4);
+
+    // vs buildings — a rig is a bulldozer: it GRINDS through while driving into a
+    // wall, and lands a bonus hit when it charges in at speed.
+    for(const b of g.buildings){
+      if(b.dead) continue;
+      const c=circleAABB(rig.x,rig.y,R,b);
+      if(!c) continue;
+      rig.x += c.nx*c.pen; rig.y += c.ny*c.pen;
+      const dot=rig.vx*c.nx+rig.vy*c.ny;          // <0 = moving into the wall
+      const impact=Math.max(0,-dot);               // inward closing speed
+      if(dot<0){ rig.vx -= dot*c.nx; rig.vy -= dot*c.ny; }  // cancel inward vel (no bounce)
+      const drive=Math.max(0, -(ax.x*c.nx + ax.y*c.ny));    // 0..1, pushing into it
+      const dmg = drive*GRIND*dt + (impact>RAM_MIN ? (impact-RAM_MIN)*IMPACT_K*dt : 0);
+      if(dmg>0){
+        b.hp -= dmg; b.hit=0.18;
+        rig.ram = Math.min(1, rig.ram + drive*.7 + (impact>RAM_MIN?.6:0));
+        if(b.hp<=0){ b.dead=true; g.shake=Math.min(1,g.shake+.5);
+          burst(b.x+b.w/2,b.y+b.h/2, 26, b.blocks?"#ff8a5a":"#9fb4c0"); }
+        else if(Math.random()<.25) burst(rig.x+c.nx*R,rig.y+c.ny*R,2,"#c9d6de");
+      }
+    }
+  }
+  // rig-rig soft separation
+  const a=g.rigs[0], bb=g.rigs[1];
+  const dx=bb.x-a.x, dy=bb.y-a.y, d=Math.hypot(dx,dy);
+  if(d>0 && d<R*2){ const p=(R*2-d)/2, nx=dx/d, ny=dy/d;
+    a.x-=nx*p; a.y-=ny*p; bb.x+=nx*p; bb.y+=ny*p; }
+
+  // carrier
+  const car=g.carrier;
+  if(car.alive && g.t > g.startDelay){
+    car.d += car.speed*dt;
+    const pt=pointAt(g.lv.path, car.d); car.x=pt.x; car.y=pt.y; car.ang=pt.ang;
+    // win?
+    if(car.d >= g.pathLen-2){ finish(true); }
+    else {
+      // detonate on contact with any standing building
+      const cw=CARRIER.w/2, ch=CARRIER.h/2;
+      for(const b of g.buildings){
+        if(b.dead) continue;
+        if(Math.abs(b.x+b.w/2 - car.x) < cw+b.w/2 && Math.abs(b.y+b.h/2 - car.y) < ch+b.h/2){
+          car.alive=false; finish(false); g.shake=1;
+          burst(car.x,car.y, 60, "#ffb454"); burst(car.x,car.y, 40, "#ff5a4d");
+          break;
+        }
+      }
+    }
+  }
+  stepParticles(dt);
+  g.shake=Math.max(0,g.shake-dt*2.2);
+}
+function stepParticles(dt){
+  for(const p of g.particles){ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=.92; p.vy*=.92; p.life-=dt; }
+  g.particles = g.particles.filter(p=>p.life>0);
+}
+
+function finish(win){
+  if(g.over) return;
+  const blockersLeft = g.buildings.filter(b=>b.blocks && !b.dead).length;
+  const cleared = g.buildings.filter(b=>b.dead).length;
+  const totalB = g.buildings.length;
+  const rollT = Math.max(0, g.t - g.startDelay);
+  g.over = { win, time:rollT, blockersLeft, cleared, totalB };
+  const lv=g.lv, key=lv.name;
+  if(win){
+    const prev=best[key];   // best = most buildings wrecked in a winning run
+    if(prev==null || cleared>prev){ best[key]=cleared; try{localStorage.setItem("ec_best",JSON.stringify(best));}catch(e){} }
+  }
+  if(!DBG) showEnd();
+}
+
+// ---------- render ----------
+function render(){
+  ctx.save();
+  ctx.scale(scale,scale);
+  const sh=g?g.shake:0, sx=(Math.random()-.5)*10*sh, sy=(Math.random()-.5)*10*sh;
+  ctx.translate(sx,sy);
+  // ground
+  ctx.fillStyle = g? g.lv.tint : "#161d24";
+  ctx.fillRect(-20,-20,W+40,H+40);
+  if(!g){ ctx.restore(); return; }
+
+  // grid
+  ctx.strokeStyle="rgba(255,255,255,.035)"; ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<=H;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // danger lane
+  const path=g.lv.path, half=CARRIER.h/2+LANE_PAD;
+  ctx.strokeStyle="rgba(255,90,77,.16)"; ctx.lineWidth=half*2; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath(); ctx.moveTo(path[0][0],path[0][1]); for(let i=1;i<path.length;i++) ctx.lineTo(path[i][0],path[i][1]); ctx.stroke();
+  ctx.setLineDash([12,14]); ctx.strokeStyle="rgba(255,90,77,.5)"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(path[0][0],path[0][1]); for(let i=1;i<path.length;i++) ctx.lineTo(path[i][0],path[i][1]); ctx.stroke();
+  ctx.setLineDash([]);
+  // goal
+  const goal=pointAt(path,g.pathLen);
+  ctx.fillStyle="#3ad07a"; ctx.font="bold 13px system-ui"; ctx.textAlign="center";
+  ctx.fillRect(goal.x-4,goal.y-half,8,half*2); ctx.fillText("GOAL",goal.x,goal.y-half-8);
+
+  // buildings
+  for(const b of g.buildings){
+    if(b.dead){ ctx.fillStyle="rgba(120,130,140,.28)";
+      ctx.fillRect(b.x+4,b.y+4,b.w-8,b.h-8);
+      ctx.fillStyle="rgba(150,160,170,.4)";
+      for(let i=0;i<4;i++) ctx.fillRect(b.x+6+((i*13)%(b.w-14)), b.y+8+((i*17)%(b.h-16)), 7,7);
+      continue;
+    }
+    const frac=b.hp/b.hp0;
+    const base = b.blocks ? [255,120,90] : [150,168,182];
+    const c = base.map(v=>Math.round(v*(0.5+0.5*frac)));
+    ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
+    if(b.hit>0){ ctx.fillStyle="#fff"; b.hit-=1/60; }
+    ctx.fillRect(b.x,b.y,b.w,b.h);
+    // windows
+    ctx.fillStyle="rgba(0,0,0,.22)";
+    for(let yy=b.y+8; yy<b.y+b.h-6; yy+=14) for(let xx=b.x+7; xx<b.x+b.w-6; xx+=14) ctx.fillRect(xx,yy,7,8);
+    // blocker outline
+    if(b.blocks){ ctx.strokeStyle="#ff5a4d"; ctx.lineWidth=2.5; ctx.strokeRect(b.x-1,b.y-1,b.w+2,b.h+2); }
+    // hp bar
+    ctx.fillStyle="rgba(0,0,0,.5)"; ctx.fillRect(b.x,b.y-6,b.w,4);
+    ctx.fillStyle= b.blocks? "#ff8a5a":"#9fdcff"; ctx.fillRect(b.x,b.y-6,b.w*frac,4);
+  }
+
+  // carrier
+  const car=g.carrier;
+  if(car.alive){
+    ctx.save(); ctx.translate(car.x,car.y); ctx.rotate(car.ang);
+    // danger pulse
+    const pulse=0.5+0.5*Math.sin(g.t*7);
+    ctx.fillStyle=`rgba(255,90,77,${.10+.10*pulse})`;
+    ctx.fillRect(-CARRIER.w/2-8,-CARRIER.h/2-8,CARRIER.w+16,CARRIER.h+16);
+    // body
+    ctx.fillStyle="#c9ced2"; ctx.fillRect(-CARRIER.w/2,-CARRIER.h/2,CARRIER.w,CARRIER.h);
+    // hazard stripes
+    ctx.fillStyle="#ffb454";
+    for(let i=-CARRIER.w/2; i<CARRIER.w/2-6; i+=18) ctx.fillRect(i, -CARRIER.h/2, 9, CARRIER.h);
+    ctx.fillStyle="#20140a"; ctx.font="bold 11px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText("☢", CARRIER.w/2-14, 0);
+    // cab
+    ctx.fillStyle="#2a343c"; ctx.fillRect(CARRIER.w/2-14,-CARRIER.h/2,14,CARRIER.h);
+    ctx.restore();
+    ctx.textBaseline="alphabetic";
+  }
+
+  // rigs
+  for(const rig of g.rigs){
+    ctx.save(); ctx.translate(rig.x,rig.y); ctx.rotate(rig.ang);
+    if(rig.ram>0){ ctx.fillStyle=`rgba(255,255,255,${.25*rig.ram})`; ctx.beginPath(); ctx.arc(0,0,R+8,0,7); ctx.fill(); }
+    // body
+    ctx.fillStyle=rig.color; ctx.strokeStyle="rgba(0,0,0,.35)"; ctx.lineWidth=2;
+    roundRect(-R,-R+3,R*2,R*2-6,6); ctx.fill(); ctx.stroke();
+    // blade
+    ctx.fillStyle="#e9eef2"; ctx.fillRect(R-3,-R+2,7,R*2-4);
+    // eye/dir
+    ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(R-14,-4,8,8);
+    ctx.restore();
+    // label
+    ctx.fillStyle=rig.color; ctx.font="bold 10px system-ui"; ctx.textAlign="center";
+    ctx.fillText(rig.human? ("P"+(rig.id+1)) : "AI", rig.x, rig.y-R-5);
+  }
+
+  // particles
+  for(const p of g.particles){ ctx.globalAlpha=Math.max(0,p.life*1.6); ctx.fillStyle=p.col;
+    ctx.fillRect(p.x-2,p.y-2,4,4); }
+  ctx.globalAlpha=1;
+
+  // HUD
+  drawHUD();
+  ctx.restore();
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+function drawHUD(){
+  const blockersLeft=g.buildings.filter(b=>b.blocks&&!b.dead).length;
+  const total=g.buildings.filter(b=>b.blocks).length;
+  // top strip
+  ctx.fillStyle="rgba(8,11,15,.55)"; ctx.fillRect(0,0,W,34);
+  ctx.textAlign="left"; ctx.fillStyle="#ffb454"; ctx.font="bold 15px system-ui";
+  ctx.fillText(g.lv.name, 14, 22);
+  ctx.textAlign="center"; ctx.fillStyle= blockersLeft? "#ff8a5a":"#3ad07a"; ctx.font="bold 15px system-ui";
+  ctx.fillText(blockersLeft? `LANE BLOCKERS LEFT: ${blockersLeft}/${total}` : "LANE CLEAR — LET IT ROLL", W/2, 22);
+  ctx.textAlign="right";
+  const pre = g.t < g.startDelay;
+  if(pre){ ctx.fillStyle="#ffb454"; ctx.font="bold 15px system-ui";
+    ctx.fillText("HAULER ROLLS IN "+Math.ceil(g.startDelay-g.t), W-14, 22); }
+  else { ctx.fillStyle="#cfe0ea"; ctx.font="bold 15px system-ui";
+    ctx.fillText((g.t-g.startDelay).toFixed(1)+"s", W-14, 22); }
+  // big pre-roll banner
+  if(pre){ ctx.textAlign="center"; ctx.fillStyle="rgba(255,180,84,.9)"; ctx.font="bold 46px system-ui";
+    ctx.fillText("GET READY — CLEAR THE RED LANE", W/2, H/2-40);
+    ctx.font="bold 90px system-ui"; ctx.fillStyle="#ffb454";
+    ctx.fillText(Math.ceil(g.startDelay-g.t), W/2, H/2+50); }
+  // carrier progress bar
+  const frac=Math.min(1,g.carrier.d/g.pathLen);
+  ctx.fillStyle="rgba(255,255,255,.1)"; ctx.fillRect(14,H-16,W-28,7);
+  ctx.fillStyle= blockersLeft? "#ff5a4d":"#3ad07a"; ctx.fillRect(14,H-16,(W-28)*frac,7);
+  ctx.fillStyle="#c9ced2"; ctx.fillRect(14+(W-28)*frac-2,H-19,4,13);
+}
+
+// ---------- loop ----------
+let last=0;
+function frame(t){
+  const dt=Math.min(.05,(t-last)/1000)||0; last=t;
+  if(g && g.started) update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- UI wiring ----------
+const $=id=>document.getElementById(id);
+const titleEl=$("title"), endEl=$("end");
+function renderLevelPick(){
+  const wrap=$("levelPick"); wrap.innerHTML="";
+  LEVELS.forEach((lv,i)=>{
+    const b=document.createElement("button");
+    b.className="ghost"+(i===S.levelIx?" sel":"");
+    const bt = best[lv.name]!=null ? `<div class="lil">best ${best[lv.name]}/${lv.b.length} wrecked</div>` : `<div class="lil">${lv.b.length} buildings</div>`;
+    b.innerHTML = `${lv.name}${lv.hard?' <span class="lil">★</span>':''}${bt}`;
+    b.onclick=()=>{ S.levelIx=i; renderLevelPick(); };
+    wrap.appendChild(b);
+  });
+}
+function updateCtrlHint(){
+  $("ctrlHint").innerHTML = S.mode===2
+    ? `<b>P1</b> <span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span> &nbsp; <b>P2</b> <span class="keycap">↑</span><span class="keycap">↓</span><span class="keycap">←</span><span class="keycap">→</span> &nbsp;— build speed to smash. Clear the red lane before the ☢ hauler reaches GOAL.`
+    : `Drive with <span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span> (or arrows). An AI rig helps. Build up speed to smash buildings — clear the red lane before the ☢ hauler reaches GOAL.`;
+}
+$("mode1").onclick=()=>{ S.mode=1; $("mode1").classList.add("sel"); $("mode2").classList.remove("sel"); updateCtrlHint(); };
+$("mode2").onclick=()=>{ S.mode=2; $("mode2").classList.add("sel"); $("mode1").classList.remove("sel"); updateCtrlHint(); };
+$("startBtn").onclick=start;
+$("againBtn").onclick=()=>{ endEl.classList.add("hidden"); start(); };
+$("menuBtn").onclick=()=>{ endEl.classList.add("hidden"); titleEl.classList.remove("hidden"); S.screen="title"; renderLevelPick(); };
+
+function start(){
+  titleEl.classList.add("hidden"); endEl.classList.add("hidden");
+  S.screen="play"; newGame(); g.started=true;
+}
+function showEnd(){
+  S.screen="end";
+  const o=g.over;
+  $("endTitle").innerHTML = o.win ? 'ROUTE&nbsp;<span class="b" style="color:#3ad07a;text-shadow:none">CLEARED</span>'
+                                  : '💥&nbsp;<span class="b">DETONATED</span>';
+  const key=g.lv.name, bst=best[key];
+  $("endBody").innerHTML = o.win
+    ? `The hauler rolled through clean. You wrecked <b>${o.cleared}/${o.totalB}</b> buildings` +
+      (o.cleared===o.totalB?` — <b style="color:#3ad07a">TOTAL DEMOLITION!</b>`:` <span class="lil">(the red lane was enough — extra buildings are bonus score)</span>`) +
+      (bst!=null?` <div class="lil">best ${bst}/${o.totalB} wrecked</div>`:"")
+    : `The hauler hit a standing building in its lane and went up. <b>${o.blockersLeft}</b> blocker(s) still in the way — clear the whole red lane next time.`;
+  endEl.classList.remove("hidden");
+}
+
+updateCtrlHint(); renderLevelPick();
+$("foot").innerHTML = "Explosion Corporation · local prototype · online co-op demolition";
+
+// ---------- debug hook (headless verification) ----------
+if(DBG){
+  window.EC = {
+    start, newGame, get g(){ return g; }, get state(){ return S; }, LEVELS,
+    setLevel:i=>{ S.levelIx=i; }, setMode:m=>{ S.mode=m; },
+    inject:(id,x,y)=>{ INJECT[id]={x,y}; }, clearInject:id=>{ delete INJECT[id]; },
+    step:(dt)=>{ if(g){ g.started=true; update(dt); } },
+    status:()=>{ if(!g) return {none:true};
+      return { t:g.t, over:g.over, carrierD:g.carrier.d, pathLen:g.pathLen,
+        blockersLeft:g.buildings.filter(b=>b.blocks&&!b.dead).length,
+        buildings:g.buildings.map(b=>({x:b.x,y:b.y,dead:b.dead,blocks:b.blocks,hp:Math.round(b.hp)})),
+        rigs:g.rigs.map(r=>({id:r.id,x:Math.round(r.x),y:Math.round(r.y)})) }; }
+  };
+  console.log("[EC] debug hook ready");
+}
+})();
+</script>
+</body>
+</html>
