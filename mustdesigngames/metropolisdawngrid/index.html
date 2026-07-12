@@ -404,7 +404,7 @@
   var COST={road:4,rail:10,transit:110,res:15,com:25,ind:35,fac:60,park:20,power:120,solar:80,water:100,bank:180,port:140,tower:200,mon1:0,mon2:0,mon3:0,bulldoze:0};
   var UPKEEP={power:8,solar:1,water:6,road:0.2,rail:0.3,transit:4,bank:4,port:5,tower:3};  // ₵/month (solar is clean & cheap to run; a fossil station costs more)
   var TAX={res:6,com:5,ind:3,fac:3,tower:14};           // ₵/month per building level (Towers are dense = high tax)
-  var CASH_START=6000, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;   // generous starting buffer so the first city is stress-free (the service sink still bites as you grow)
+  var CASH_START=10000, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;   // generous starting buffer so the first city is stress-free (the service sink still bites as you grow)
   // public services scale with population — the sink that ends infinite wealth. First ~400 residents free
   // (early game breathes); past that every resident costs, so a big city must fund itself with exports &
   // commerce (tax-per-head falls as density rises), not just sprawl. Net income stays tight, never runaway.
@@ -732,6 +732,19 @@
     else{while(r!==b.r){r+=sr;cells.push([c,r]);}while(c!==b.c){c+=sc;cells.push([c,r]);}}
     return cells;
   }
+  // zone line: an L of f×f blocks stepping by the footprint (so 2×2 buildings tile cleanly, not 1×1)
+  function zoneAnchors(a,b,f){
+    var out=[],dc=b.c-a.c,dr=b.r-a.r,sc=dc<0?-1:1,sr=dr<0?-1:1,i;
+    var nc=Math.floor(Math.abs(dc)/f), nr=Math.floor(Math.abs(dr)/f);   // whole f-steps on each axis
+    if(Math.abs(dc)>=Math.abs(dr)){
+      for(i=0;i<=nc;i++)out.push([a.c+sc*f*i, a.r]);                     // long leg: horizontal
+      var lc=a.c+sc*f*nc; for(i=1;i<=nr;i++)out.push([lc, a.r+sr*f*i]);  // then turn down/up from the corner
+    }else{
+      for(i=0;i<=nr;i++)out.push([a.c, a.r+sr*f*i]);                     // long leg: vertical
+      var lr=a.r+sr*f*nr; for(i=1;i<=nc;i++)out.push([a.c+sc*f*i, lr]);
+    }
+    return out;
+  }
   function placeLineCell(c,r){if(!inB(c,r))return false;var cell=grid[idx(c,r)];
     if(cell.t==='highway')return false;                                         // freeway fixed; water→bridge, mountain→tunnel
     if(brush==='rail'){                                                         // rail is an overlay — can cross a road (level crossing); water = a bridge
@@ -750,9 +763,9 @@
       var an=zoneAnchor(a.c,a.r),ag=grid[idx(an[0],an[1])];
       if(ag.t===brush){lastPaint=-1;paintAt(an[0],an[1]);return;}}
     var path=linePath(a,b),any=false,broke=false,i;
-    if(ZONES[brush]){                                                            // zones: tile 2×2 buildings along the path (skip cells that would overlap/not fit)
-      if(!unlocked(brush))return;var f=footOf(brush),cost=COST[brush]||0;
-      for(i=0;i<path.length;i++){var pc=path[i][0],pr=path[i][1];if(!blockFits(pc,pr,f))continue;
+    if(ZONES[brush]){                                                            // zones: tile f×f buildings along the path, stepping by the footprint (clean 2×2 tiling)
+      if(!unlocked(brush))return;var f=footOf(brush),cost=COST[brush]||0,anchors=zoneAnchors(a,b,f);
+      for(i=0;i<anchors.length;i++){var pc=anchors[i][0],pr=anchors[i][1];if(!blockFits(pc,pr,f))continue;
         if(!canAfford(cost)){broke=true;break;}spend(cost);layZone(pc,pr,brush,f);any=true;}
     }else{
       for(i=0;i<path.length;i++){var rr=placeLineCell(path[i][0],path[i][1]);if(rr===null){broke=true;break;}if(rr)any=true;}
@@ -1776,7 +1789,12 @@
     // line-tool preview (road/rail/zoning): ghost the L-path from the pending start to the cursor
     if(isLineBrush()&&hoverCell){
       var ps=lineAnchor;
-      if(ps){var pp=linePath(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
+      if(ps&&ZONES[brush]){                                            // zone drag: preview the ROW of 2×2 blocks, stepping by the footprint
+        var zf=footOf(brush),za=zoneAnchors(ps,hoverCell);
+        for(var zi=0;zi<za.length;zi++){var ac=za[zi][0],ar=za[zi][1],fits=blockFits(ac,ar,zf);
+          if(fits){ctx.globalAlpha=0.5;drawBuildingSprite(ac*CELL,ar*CELL,{t:brush,lvl:2,grow:0,seed:((ac*73856)^(ar*19349))>>>0,pulse:-9999,terr:inB(ac,ar)?grid[idx(ac,ar)].terr:'plains'},zf);}
+          ctx.globalAlpha=0.95;ctx.strokeStyle=fits?SWATCH[brush]:'#D0704A';ctx.lineWidth=2;ctx.strokeRect(ac*CELL+2,ar*CELL+2,CELL*zf-4,CELL*zf-4);ctx.globalAlpha=1;}
+      } else if(ps){var pp=linePath(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
         for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway')continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
         ctx.globalAlpha=1;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(ps.c*CELL+2.5,ps.r*CELL+2.5,CELL-5,CELL-5);
       } else if(inB(hoverCell.c,hoverCell.r)&&(brush==='road'||brush==='rail')){var hcl=grid[idx(hoverCell.c,hoverCell.r)];   // zones show the building ghost below instead
