@@ -190,6 +190,29 @@
   (function loadHome(){try{var h=JSON.parse(localStorage.getItem(HOME_KEY)||'null');
     if(h&&typeof h.lat==='number'&&typeof h.lon==='number'){CITIES[0].lat=h.lat;CITIES[0].lon=h.lon;}}catch(e){}})();
 
+  // ---- online layer (optional, offline-first): the SHARED WORLD — real players' claims persist and appear here ----
+  var MDG_BACKEND=(function(){try{var q=new URLSearchParams(location.search).get('backend');if(q)return q.replace(/\/+$/,'');var ls=localStorage.getItem('mdg-backend');if(ls)return ls.replace(/\/+$/,'');}catch(e){}return '';})();
+  var MDG_TOKEN=(function(){try{var t=localStorage.getItem('mdg-token');if(!t||!/^[A-Za-z0-9_-]{12,64}$/.test(t)){t=(Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9]/g,'');while(t.length<16)t+='0';t=t.slice(0,32);localStorage.setItem('mdg-token',t);}return t;}catch(e){return '';}})();
+  var _remoteKeys={};                                                          // plot keys already represented in CITIES (dedupe)
+  function netFetchWorld(){if(!MDG_BACKEND)return;
+    try{fetch(MDG_BACKEND+'/v1/world').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d||!d.cities)return;var changed=false,mine=null,i;
+      for(i=1;i<CITIES.length;i++){var hp=plotOf(CITIES[i].lat,CITIES[i].lon);if(hp)_remoteKeys[hp.key]=1;}   // hubs + known remotes
+      for(i=0;i<d.cities.length;i++){var c=d.cities[i];if(c.hub)continue;       // hub seed already in CITIES
+        var cp=plotOf(c.lat,c.lon);if(!cp)continue;
+        if(c.owner&&c.owner===MDG_TOKEN){mine=c;continue;}                       // my own claim → my city
+        if(_remoteKeys[cp.key])continue;
+        _remoteKeys[cp.key]=1;CITIES.push({name:c.name,lat:c.lat,lon:c.lon,tier:c.tier||1,remote:true});changed=true;}
+      if(mine){var myp=plotOf(mine.lat,mine.lon),cur=plotOf(CITIES[0].lat,CITIES[0].lon);   // adopt my server claim (cross-device)
+        if(!cur||cur.key!==myp.key){CITIES[0].lat=mine.lat;CITIES[0].lon=mine.lon;if(mine.name)CITIES[0].name=mine.name;saveHome();changed=true;}}
+      if(changed){NET=null;tilesDirty();}
+    }).catch(function(){});}catch(e){}}
+  function netClaim(loc,region,cb){if(!MDG_BACKEND||!MDG_TOKEN){cb({netfail:true});return;}
+    try{fetch(MDG_BACKEND+'/v1/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:MDG_TOKEN,name:(region||CITIES[0].name||'Your City'),lat:loc.lat,lon:loc.lon,ts:Date.now()})})
+      .then(function(r){return r.json().then(function(d){return {status:r.status,d:d};});})
+      .then(function(x){if(x.status===200&&x.d&&x.d.ok)cb({ok:true,city:x.d.city});else cb({reject:(x.d&&x.d.error)||'claim rejected'});})
+      .catch(function(){cb({netfail:true});});}catch(e){cb({netfail:true});}}
+
   // ---- regions & plots: the world is a grid of SOLID land / SOLID ocean squares ----
   // Each land square is a REGION holding a PLOTS×PLOTS grid of city plots. Hover a land square for
   // its info; click it to open the Region view and claim an open plot. The settlement rule (see
@@ -506,12 +529,23 @@
 
   // found / relocate your city at a clicked spot — moves the marker, saves it, offers to build there
   var fcard=document.getElementById('fcard');
-  function foundHere(loc,hub,region){
-    CITIES[0].lat=loc.lat;CITIES[0].lon=loc.lon;saveHome();NET=null;hoverTile=null;tilesDirty();   // your plot moved → rebuild the claim network
-    document.getElementById('fc-msg').innerHTML='<b>'+siteSpec(loc.lat,loc.lon)+'</b><br>'
+  function commitFound(lat,lon,hub,region){
+    CITIES[0].lat=lat;CITIES[0].lon=lon;saveHome();NET=null;hoverTile=null;tilesDirty();   // your plot moved → rebuild the claim network
+    document.getElementById('fc-msg').innerHTML='<b>'+siteSpec(lat,lon)+'</b><br>'
       +(hub?'Claims an open plot'+(region?' of <b>'+region+'</b>':'')+', bordering the <b>'+hub+'</b> network — trade reaches you from day one. ':'')
       +'Your terrain — and what you can make cheaply — is set by where you settle. Drop in and build, or keep looking.';
     fcard.classList.add('on');
+  }
+  function foundHere(loc,hub,region){
+    if(MDG_BACKEND&&MDG_TOKEN){                                                 // server-authoritative claim in the shared world
+      netClaim(loc,region,function(res){
+        if(res.ok){commitFound(res.city.lat,res.city.lon,hub,region);netFetchWorld();}
+        else if(res.reject){showWToast('⛔ '+res.reject);}                       // e.g. another player took it first — real contention
+        else commitFound(loc.lat,loc.lon,hub,region);                          // network failure → claim locally, sync later
+      });
+      return;
+    }
+    commitFound(loc.lat,loc.lon,hub,region);                                    // offline: local-only, exactly as before
   }
   document.getElementById('fc-build').addEventListener('click',function(){fcard.classList.remove('on');var p=proj(CITIES[0].lat,CITIES[0].lon);startDive(p.sx,p.sy,CITIES[0]);});
   document.getElementById('fc-cancel').addEventListener('click',function(){fcard.classList.remove('on');});
@@ -541,6 +575,8 @@
 
   readTheme(); paintLegend();
   window.addEventListener('resize',resize); resize();
+  netFetchWorld();                                                            // pull the shared world once at boot…
+  if(MDG_BACKEND)setInterval(netFetchWorld,60000);                           // …and refresh so new neighbours appear without a reload
   requestAnimationFrame(frame);
 })();
 </script>
