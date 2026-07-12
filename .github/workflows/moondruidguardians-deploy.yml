@@ -15,8 +15,8 @@ on:
   workflow_dispatch:
     inputs:
       maps:
-        description: 'Level JSON filenames in modulardigitalgoods/tools/map-editor/examples/ (comma-separated). One map = single level; several = an in-game picker pack.'
-        default: 'lastlight-clearing.json,elderwood-grove.json,moonpetal-meadow.json'
+        description: '"moor" = the stock game (no picker). Or level JSON filenames from modulardigitalgoods/tools/map-editor/examples/ (comma-separated): one = a single custom level, several = an in-game picker pack.'
+        default: 'moor'
       project:
         description: 'Cloudflare Pages project name'
         default: 'moondruidguardians'
@@ -56,16 +56,23 @@ jobs:
         env:
           PACKS: ${{ github.workspace }}/_assets/packs
           EXDIR: ${{ github.workspace }}/_assets/tools/map-editor/examples
-          MAPS_IN: ${{ inputs.maps || 'lastlight-clearing.json,elderwood-grove.json,moonpetal-meadow.json' }}
+          # Default (and push trigger) deploys the real hand-designed moor — the canonical
+          # game. Pass maps via "Run workflow" to ship a single custom level or a picker pack;
+          # "moor" (or empty) means the stock moor with no level picker.
+          MAPS_IN: ${{ inputs.maps || 'moor' }}
         run: |
           set -e
           node tools/bake.mjs --packs "$PACKS" --game index.html --out dist/index.html
-          IFS=',' read -ra M <<< "$MAPS_IN"
-          if [ "${#M[@]}" -le 1 ]; then
-            node tools/level-bake.mjs --map "$EXDIR/${M[0]}" --game dist/index.html --out dist/index.html --packs "$PACKS"
+          if [ -z "$MAPS_IN" ] || [ "$MAPS_IN" = "moor" ]; then
+            echo "moor-only build (stock game, no level maps)"
           else
-            LIST=""; for m in "${M[@]}"; do LIST="$LIST,$EXDIR/$m"; done; LIST="${LIST#,}"
-            node tools/levels-bake.mjs --maps "$LIST" --game dist/index.html --out dist/index.html --packs "$PACKS"
+            IFS=',' read -ra M <<< "$MAPS_IN"
+            if [ "${#M[@]}" -le 1 ]; then
+              node tools/level-bake.mjs --map "$EXDIR/${M[0]}" --game dist/index.html --out dist/index.html --packs "$PACKS"
+            else
+              LIST=""; for m in "${M[@]}"; do LIST="$LIST,$EXDIR/$m"; done; LIST="${LIST#,}"
+              node tools/levels-bake.mjs --maps "$LIST" --game dist/index.html --out dist/index.html --packs "$PACKS"
+            fi
           fi
           rm -f dist/_debug-atlas.png
 
