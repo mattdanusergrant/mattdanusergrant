@@ -342,6 +342,44 @@
   'use strict';
   var canvas=document.getElementById('city'), ctx=canvas.getContext('2d');
   var CELL=32, WORLD=256, cols=WORLD, rows=WORLD, dpr=1;   // fixed, standardized world; the view is a camera onto it
+  // ================= HEX GRID (pointy-top, odd-r offset) =================
+  // The world is now a honeycomb. The (c,r) array stays; geometry changes:
+  // CELL = hex WIDTH. Odd rows shift +half a cell; rows step 0.866*CELL vertically.
+  // One building per hex — the hex IS the plot.
+  var SQRT3=Math.sqrt(3);
+  var HEXR2=CELL/SQRT3, VSTEP=HEXR2*1.5, CELLH=HEXR2*2;    // circumradius · row step · bounding-box height
+  function hx(c,r){return (c+(r&1)*0.5)*CELL;}             // bounding-box left
+  function hy(r){return r*VSTEP;}                          // bounding-box top
+  function hcx(c,r){return hx(c,r)+CELL/2;}                // hex centre
+  function hcy(r){return hy(r)+HEXR2;}
+  function nbs(c,r){var odd=r&1;                           // the 6 hex neighbours (odd-r)
+    return odd?[[c+1,r],[c-1,r],[c+1,r-1],[c,r-1],[c+1,r+1],[c,r+1]]
+              :[[c+1,r],[c-1,r],[c,r-1],[c-1,r-1],[c,r+1],[c-1,r+1]];}
+  function hexPath(x,y,inset){                             // trace the hex outline from its bounding-box top-left
+    var i=inset||0, mx=x+CELL/2, my=y+HEXR2, w=CELL/2-i, ra=HEXR2-i*1.1547;
+    ctx.moveTo(mx,my-ra);ctx.lineTo(mx+w,my-ra/2);ctx.lineTo(mx+w,my+ra/2);
+    ctx.lineTo(mx,my+ra);ctx.lineTo(mx-w,my+ra/2);ctx.lineTo(mx-w,my-ra/2);ctx.closePath();}
+  function cellAt(px_,py_){                                // world px → hex (nearest centre = Voronoi)
+    var r0=Math.round((py_-HEXR2)/VSTEP), best={c:-9,r:-9}, bd=1e9;
+    for(var r=r0-1;r<=r0+1;r++){var c0=Math.floor(px_/CELL-(r&1)*0.5-0.5);
+      for(var k=0;k<=1;k++){var c=c0+k,dx=px_-hcx(c,r),dy=py_-hcy(r),d=dx*dx+dy*dy;
+        if(d<bd){bd=d;best={c:c,r:r};}}}
+    return best;}
+  function hexLine(a,b){                                   // hex line (cube lerp + round) — the road/zone drag path
+    function cu(c,r){var q=c-((r-(r&1))>>1);return [q,-q-r,r];}
+    var A=cu(a.c,a.r),B=cu(b.c,b.r),out=[];
+    var N=Math.max(Math.abs(A[0]-B[0]),Math.abs(A[1]-B[1]),Math.abs(A[2]-B[2]));
+    for(var i=0;i<=N;i++){var t=N?i/N:0;
+      var fx=A[0]+(B[0]-A[0])*t, fy=A[1]+(B[1]-A[1])*t, fz=A[2]+(B[2]-A[2])*t;
+      var rx=Math.round(fx),ry=Math.round(fy),rz=Math.round(fz);
+      var ddx=Math.abs(rx-fx),ddy=Math.abs(ry-fy),ddz=Math.abs(rz-fz);
+      if(ddx>ddy&&ddx>ddz)rx=-ry-rz; else if(ddy>ddz)ry=-rx-rz; else rz=-rx-ry;
+      out.push([rx+((rz-(rz&1))>>1), rz]);}
+    return out;}
+  // draw a sprite meant for a CELL×CELL square INSIDE the hex: scale to the inscribed square (~0.73)
+  var SPR=2/(1+SQRT3);
+  function spriteIn(c,r,fn){ctx.save();ctx.translate(hcx(c,r),hcy(r));ctx.scale(SPR,SPR);ctx.translate(-CELL/2,-CELL/2);fn(0,0);ctx.restore();}
+  // ========================================================================
   var camX=0, camY=0, VCOLS=0, VROWS=0, keys={};           // camera (top-left world cell, float) + visible span + held keys
   var zoom=1, ZMIN=0.5, ZMAX=3, stW=0, stH=0;              // mousewheel/UI zoom (screen scale) + stage size in CSS px
   var grid=[], brush='road', lastPaint=-1, dirty=true, svcDirty=false, lastPulseAt=-9999;
@@ -385,9 +423,9 @@
     try{fetch(MDG_BACKEND+'/v1/city?token='+encodeURIComponent(MDG_TOKEN)+'&slug='+encodeURIComponent(netSlug())).then(function(r){return r.ok?r.json():null;}).then(function(d){
       if(!d||!d.blob)return;try{JSON.parse(d.blob);ioImporting=true;clearTimeout(saveTimer);localStorage.setItem(SAVE_KEY,d.blob);location.reload();}catch(e){}}).catch(function(){});}catch(e){}}
   var ZONES={res:1,com:1,ind:1,fac:1,tower:1};
-  var FOOT={res:2,com:2,ind:2,fac:2,tower:2};        // each zone building is ONE 2×2 building (anchor cell + 3 'sub' members)
-  function footOf(t){return FOOT[t]||1;}
-  var POWER_OUT=2700;                              // each power station outputs a LOT (3×3 footprint)
+  var FOOT={};                                       // HEX WORLD: every building is exactly ONE hex — the hex IS the plot
+  function footOf(t){return 1;}
+  var POWER_OUT=2700;                              // each power station outputs a LOT (one big hex plant)
   var POWERUSE={res:2,com:2,ind:3,fac:4,tower:6,bank:2,port:3};   // power drawn per building level
   var powerGen=0, powerUse=0, powerOK=true;        // city-wide power budget (generated vs consumed)
   var WATER_OUT=1000, WATER_PER_TILE=180;          // each tower's output; each coast/lake tile feeding a road adds some
@@ -546,7 +584,8 @@
   function terrainAt(c,r){if(r<=0)return 'plains';return terrClass(c+WOX,r+WOY);}   // highway row stays buildable/clear
   function noBuild(t){return t==='water'||t==='mountain';}     // water & mountains can't be built on
   function nearMountain(c,r){                                  // a Works next to a peak mines its ore (+80%)
-    for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){if(!dc&&!dr)continue;var a=c+dc,b=r+dr;
+    var nn=nbs(c,r);
+    for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];
       if(inB(a,b)&&grid[idx(a,b)].terr==='mountain')return true;}
     return false;
   }
@@ -636,21 +675,21 @@
   }
   function isHwy(c,r){return inB(c,r)&&grid[idx(c,r)].t==='highway';}
   function isRoadCell(c,r){return inB(c,r)&&grid[idx(c,r)].t==='road';}
+  function touchesHwy(c,r){var nb=nbs(c,r);for(var k=0;k<6;k++)if(isHwy(nb[k][0],nb[k][1]))return true;return false;}
   function seedRampIfEmpty(){
-    // if there are no roads yet, drop a short on-ramp against the corridor — a 2-cell stub running
-    // PERPENDICULAR away from the freeway (a real ramp), so the player starts correctly connected.
+    // if there are no roads yet, drop a short on-ramp against the corridor — a 2-hex stub running
+    // AWAY from the freeway (a real ramp), so the player starts correctly connected.
     for(var i=0;i<grid.length;i++)if(grid[i]&&grid[i].t==='road')return;
-    var mid=Math.floor(cols/2), midr=Math.floor(rows/2), dirs=[[1,0],[-1,0],[0,1],[0,-1]], cand=[];
+    var mid=Math.floor(cols/2), midr=Math.floor(rows/2), cand=[];
     for(var r=1;r<rows-1;r++)for(var c=1;c<cols-1;c++){var g=grid[idx(c,r)];
       if(g.t!=='empty'||noBuild(g.terr))continue;
-      if(!(isHwy(c-1,r)||isHwy(c+1,r)||isHwy(c,r-1)||isHwy(c,r+1)))continue;      // must touch the corridor
+      if(!touchesHwy(c,r))continue;                                              // must touch the corridor
       cand.push([c,r,Math.abs(c-mid)+Math.abs(r-midr)]);}
     cand.sort(function(a,b){return a[2]-b[2];});                                  // nearest the middle first
-    for(var ci=0;ci<cand.length;ci++){var bc=cand[ci][0],br=cand[ci][1],fd=null;
-      for(var k=0;k<4;k++)if(isHwy(bc+dirs[k][0],br+dirs[k][1])){fd=dirs[k];break;}
-      if(!fd)continue; var ec=bc-fd[0],er=br-fd[1];                              // the cell one step AWAY from the freeway
-      if(inB(ec,er)&&grid[idx(ec,er)].t==='empty'&&!noBuild(grid[idx(ec,er)].terr)){
-        grid[idx(bc,br)].t='road';grid[idx(ec,er)].t='road';break;}             // commit only a full 2-cell ramp
+    for(var ci=0;ci<cand.length;ci++){var bc=cand[ci][0],br=cand[ci][1];
+      var away=nbs(bc,br).filter(function(n){var g2=inB(n[0],n[1])&&grid[idx(n[0],n[1])];   // 2nd hex: clear ground pointing AWAY from the freeway
+        return g2&&g2.t==='empty'&&!noBuild(g2.terr)&&!touchesHwy(n[0],n[1]);});
+      if(away.length){grid[idx(bc,br)].t='road';grid[idx(away[0][0],away[0][1])].t='road';break;}   // commit only a full 2-hex ramp
     }
     dirty=true;
   }
@@ -658,7 +697,7 @@
   // ---- sizing ----
   function initWorld(){grid=new Array(cols*rows);for(var r=0;r<rows;r++)for(var c=0;c<cols;c++)grid[idx(c,r)]=newCell(c,r);}
   function clampCam(){camX=Math.max(0,Math.min(Math.max(0,cols-VCOLS),camX));camY=Math.max(0,Math.min(Math.max(0,rows-VROWS),camY));}
-  function recomputeView(){VCOLS=stW/(CELL*zoom);VROWS=stH/(CELL*zoom);clampCam();}   // visible cells shrink as you zoom in
+  function recomputeView(){VCOLS=stW/(CELL*zoom);VROWS=stH/(VSTEP*zoom);clampCam();}   // hex rows pack at VSTEP vertically
   function centerCam(c,r){camX=c-VCOLS/2;camY=r-VROWS/2;clampCam();}
   function resize(){
     var st=canvas.parentNode.getBoundingClientRect();
@@ -670,47 +709,37 @@
   function setZoom(nz,mx,my){                                   // zoom, keeping the world point under (mx,my) fixed
     nz=Math.max(ZMIN,Math.min(ZMAX,nz)); if(nz===zoom)return;
     if(mx===undefined){mx=stW/2;my=stH/2;}
-    var wx=camX+mx/(CELL*zoom), wy=camY+my/(CELL*zoom);
+    var wx=camX+mx/(CELL*zoom), wy=camY+my/(VSTEP*zoom);
     zoom=nz;recomputeView();
-    camX=wx-mx/(CELL*zoom);camY=wy-my/(CELL*zoom);clampCam();dirty=true;updateZoomUI();
+    camX=wx-mx/(CELL*zoom);camY=wy-my/(VSTEP*zoom);clampCam();dirty=true;updateZoomUI();
   }
   // ---- interaction ----
   function cellFromEvent(e){var p=screenPx(e);
-    return {c:Math.floor(camX+p.x/(CELL*zoom)),r:Math.floor(camY+p.y/(CELL*zoom))};}   // screen → world cell, through camera + zoom
-  // power station is a 2×2 footprint
-  var PLANT_N=3;                                   // power stations are a 3×3 footprint
+    return cellAt(camX*CELL+p.x/zoom, camY*VSTEP+p.y/zoom);}   // screen → world px → nearest hex
+  // HEX WORLD: a power station is ONE hex (a big plant fills it)
   function isPower(c,r){return inB(c,r)&&grid[idx(c,r)].t==='power';}
-  function plantCells(c,r){var o=[];for(var dr=0;dr<PLANT_N;dr++)for(var dc=0;dc<PLANT_N;dc++)o.push([c+dc,r+dr]);return o;}
-  function plantFits(c,r){var cs=plantCells(c,r);for(var i=0;i<cs.length;i++){var a=cs[i][0],b=cs[i][1];if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;}
-    // no orthogonal contact with another station — keeps every block unambiguous to select, draw, and clear
-    for(var d=0;d<PLANT_N;d++){if(isPower(c-1,r+d)||isPower(c+PLANT_N,r+d)||isPower(c+d,r-1)||isPower(c+d,r+PLANT_N))return false;}
-    return true;}
-  function layPlant(c,r){var cs=plantCells(c,r);for(var i=0;i<cs.length;i++){var g=grid[idx(cs[i][0],cs[i][1])];g.t='power';g.lvl=1;g.grow=0;}}
-  function plantTopLeft(c,r){var tc=c,tr=r;while(isPower(tc-1,tr))tc--;while(isPower(tc,tr-1))tr--;return [tc,tr];}
-  // ---- multi-cell zone buildings: anchor (top-left) holds the building; the other cells are 'sub' members ----
-  function blockFits(c,r,f){for(var dr=0;dr<f;dr++)for(var dc=0;dc<f;dc++){var a=c+dc,b=r+dr;if(!inB(a,b))return false;var g=grid[idx(a,b)];if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;}return true;}
-  function layZone(c,r,t,f){var g0=grid[idx(c,r)];g0.t=t;g0.lvl=0;g0.grow=0;g0.foot=f;   // one building over an f×f footprint
-    for(var dr=0;dr<f;dr++)for(var dc=0;dc<f;dc++){if(!dc&&!dr)continue;var g=grid[idx(c+dc,r+dr)];g.t='sub';g.ax=c;g.ay=r;g.lvl=0;g.grow=0;}}
-  function zoneAnchor(c,r){var g=grid[idx(c,r)];return (g.t==='sub')?[g.ax,g.ay]:[c,r];}   // any cell of a building → its anchor
-  function clearZone(c,r){var an=zoneAnchor(c,r),ac=an[0],ar=an[1],ag=grid[idx(ac,ar)],f=ag.foot||1,ref=Math.round((COST[ag.t]||0)*REFUND);
-    for(var dr=0;dr<f;dr++)for(var dc=0;dc<f;dc++){if(!inB(ac+dc,ar+dr))continue;var g=grid[idx(ac+dc,ar+dr)];g.t='empty';g.lvl=0;g.grow=0;g.foot=undefined;}
-    return ref;}
+  function plantFits(c,r){if(!inB(c,r))return false;var g=grid[idx(c,r)];return g.t==='empty'&&!g.rail&&!noBuild(g.terr);}
+  function layPlant(c,r){var g=grid[idx(c,r)];g.t='power';g.lvl=1;g.grow=0;}
+  // every building occupies exactly one hex — no anchors, no sub-cells, no multi-cell blocks
+  function blockFits(c,r,f){return plantFits(c,r);}
+  function layZone(c,r,t,f){var g0=grid[idx(c,r)];g0.t=t;g0.lvl=0;g0.grow=0;}
+  function zoneAnchor(c,r){return [c,r];}
+  function clearZone(c,r){var g=grid[idx(c,r)],ref=Math.round((COST[g.t]||0)*REFUND);
+    g.t='empty';g.lvl=0;g.grow=0;g.foot=undefined;return ref;}
   function paintAt(c,r){
     if(!inB(c,r))return;var i=idx(c,r);if(i===lastPaint)return;lastPaint=i;var cell=grid[i];
     if(cell.t==='highway')return;                         // highway is fixed, can't be edited
     if(brush==='bulldoze'){
       if(cell.t==='empty'&&!cell.rail)return;
-      if(cell.t==='power'){var tl=plantTopLeft(c,r),cs=plantCells(tl[0],tl[1]),refunded=false;   // remove the whole 3×3 station
-        for(var b=0;b<cs.length;b++){if(isPower(cs[b][0],cs[b][1])){var pg=grid[idx(cs[b][0],cs[b][1])];if(!refunded){treasury+=Math.round((COST.power||0)*REFUND);refunded=true;}pg.t='empty';pg.lvl=0;pg.grow=0;}}}
-      else if(cell.t==='sub'||FOOT[cell.t]){treasury+=clearZone(c,r);}                            // a 2×2 zone building — clear the whole block (from any of its cells)
-      else{var ref=0;if(cell.rail){ref+=Math.round((COST.rail||0)*REFUND);cell.rail=false;}   // clears the whole cell (rail overlay + whatever's under it)
-        if(cell.t!=='empty'){ref+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;}treasury+=ref;}
+      var ref=0;if(cell.rail){ref+=Math.round((COST.rail||0)*REFUND);cell.rail=false;}   // clears the hex (rail overlay + whatever's on it)
+      if(cell.t!=='empty'){ref+=Math.round((COST[cell.t]||0)*REFUND);cell.t='empty';cell.lvl=0;cell.grow=0;cell.foot=undefined;}
+      treasury+=ref;
       updateCashUI();dirty=true;svcDirty=true;scheduleSave();return;
     }
     if(noBuild(cell.terr))return;                         // buildings can't sit on water or mountains
     if(cell.t==='road'||cell.rail)return;                 // can't build over a road or rail (they're infrastructure)
     if(!unlocked(brush))return;
-    if(brush==='power'){                                  // 2×2 station: needs a clear 2×2, charged once
+    if(brush==='power'){                                  // one big plant per hex
       if(cell.t==='power')return;
       if(!plantFits(c,r)){denyToast();return;}
       if(!canAfford(COST.power||0)){denyToast();return;}
@@ -737,26 +766,9 @@
   //      occupied); a single-cell "line" on an existing same-type zone levels it up (click-to-upgrade). ----
   var LINE={road:1,rail:1,res:1,com:1,ind:1,fac:1};
   function isLineBrush(){return !!LINE[brush];}
-  function linePath(a,b){                              // L-shaped path, long leg first
-    var cells=[],c=a.c,r=a.r,dc=b.c-a.c,dr=b.r-a.r,sc=dc<0?-1:1,sr=dr<0?-1:1;
-    cells.push([c,r]);
-    if(Math.abs(dc)>=Math.abs(dr)){while(c!==b.c){c+=sc;cells.push([c,r]);}while(r!==b.r){r+=sr;cells.push([c,r]);}}
-    else{while(r!==b.r){r+=sr;cells.push([c,r]);}while(c!==b.c){c+=sc;cells.push([c,r]);}}
-    return cells;
-  }
+  function linePath(a,b){return hexLine(a,b);}         // HEX WORLD: the drag path is the straight hex line (always 6-connected)
   // zone line: an L of f×f blocks stepping by the footprint (so 2×2 buildings tile cleanly, not 1×1)
-  function zoneAnchors(a,b,f){
-    var out=[],dc=b.c-a.c,dr=b.r-a.r,sc=dc<0?-1:1,sr=dr<0?-1:1,i;
-    var nc=Math.floor(Math.abs(dc)/f), nr=Math.floor(Math.abs(dr)/f);   // whole f-steps on each axis
-    if(Math.abs(dc)>=Math.abs(dr)){
-      for(i=0;i<=nc;i++)out.push([a.c+sc*f*i, a.r]);                     // long leg: horizontal
-      var lc=a.c+sc*f*nc; for(i=1;i<=nr;i++)out.push([lc, a.r+sr*f*i]);  // then turn down/up from the corner
-    }else{
-      for(i=0;i<=nr;i++)out.push([a.c, a.r+sr*f*i]);                     // long leg: vertical
-      var lr=a.r+sr*f*nr; for(i=1;i<=nc;i++)out.push([a.c+sc*f*i, lr]);
-    }
-    return out;
-  }
+  function zoneAnchors(a,b,f){return hexLine(a,b);}   // HEX WORLD: a zoning drag lays one building per hex along the hex line
   function placeLineCell(c,r){if(!inB(c,r))return false;var cell=grid[idx(c,r)];
     if(cell.t==='highway')return false;                                         // freeway fixed; water→bridge, mountain→tunnel
     if(brush==='rail'){                                                         // rail is an overlay — can cross a road (level crossing); water = a bridge
@@ -795,7 +807,7 @@
     if(!hoverCell||p.c!==hoverCell.c||p.r!==hoverCell.r){hoverCell=p;dirty=true;updateInspect();}   // hover changed → redraw ghost/highlight + inspect
     if(dragStart){var dx=e.clientX-dragStart.sx,dy=e.clientY-dragStart.sy;
       if(!panned&&Math.abs(dx)+Math.abs(dy)>PAN_THRESH)panned=true;
-      if(panned){camX=dragStart.cx-dx/(CELL*zoom);camY=dragStart.cy-dy/(CELL*zoom);clampCam();dirty=true;}}}
+      if(panned){camX=dragStart.cx-dx/(CELL*zoom);camY=dragStart.cy-dy/(VSTEP*zoom);clampCam();dirty=true;}}}
   function up(e){
     if(!dragStart)return;var p=cellFromEvent(e),wasPan=panned;dragStart=null;panned=false;
     if(wasPan){dirty=true;return;}                                  // it was a pan — don't build
@@ -873,7 +885,6 @@
       else if(g.rail)col=MMRAIL;                                     // rail overlay (incl. level crossings) shows as rail
       else if(g.t==='empty')col=MMTERR[g.terr]||'#bcd6ad';
       else if(g.t==='highway')col='#8A7550';
-      else if(g.t==='sub')col=SWATCH[grid[idx(g.ax,g.ay)].t]||'#888888';   // member of a 2×2 building → its anchor's colour
       else col=SWATCH[g.t]||'#888888';
       var rgb=hex2rgb(col),p=(r*WORLD+c)*4;d[p]=rgb[0];d[p+1]=rgb[1];d[p+2]=rgb[2];d[p+3]=255;}
     mmoc.putImageData(img,0,0);
@@ -904,31 +915,35 @@
     // BFS from highway through drivable cells → connected road network
     // A surface road may only ENTER the freeway through a proper on/off-ramp — a road that meets the
     // freeway perpendicular (continues away from it). A road running alongside the freeway can't merge.
+    // a road may only ENTER the freeway through a real on-ramp: a road hex that continues onward
+    // (has a road neighbour of its own that isn't against the corridor). A lone stub can't merge.
+    function ramps(a,bb){var nn=nbs(a,bb);for(var k=0;k<6;k++){var na=nn[k][0],nbb=nn[k][1];
+      if(isRoadCell(na,nbb)&&!isHwy(na,nbb))return true;}return false;}
     var q=[];for(var hi=0;hi<n;hi++){if(grid[hi]&&grid[hi].t==='highway'){connected[hi]=1;q.push(hi);}}
     var head=0;
     while(head<q.length){
       var id=q[head++],cc=id%cols,cr=(id/cols)|0,curHw=grid[id].t==='highway';
-      var nb=[[cc-1,cr],[cc+1,cr],[cc,cr-1],[cc,cr+1]];
-      for(var k=0;k<4;k++){var a=nb[k][0],bb=nb[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb),nt=grid[ni].t;if(connected[ni])continue;
+      var nb=nbs(cc,cr);
+      for(var k=0;k<6;k++){var a=nb[k][0],bb=nb[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb),nt=grid[ni].t;if(connected[ni])continue;
         if(nt==='highway'){connected[ni]=1;q.push(ni);}
         else if(nt==='road'){
-          if(curHw){if(isRoadCell(a+(a-cc),bb+(bb-cr))){connected[ni]=1;q.push(ni);}}  // freeway→road only via a perpendicular ramp
+          if(curHw){if(ramps(a,bb)){connected[ni]=1;q.push(ni);}}                      // freeway→road only via a real ramp
           else{connected[ni]=1;q.push(ni);}                                            // road→road: normal
         }}
     }
     // utilities are delivered along the road/highway network from their sources — roads carry power & water
     var pnet=new Uint8Array(n), wnet=new Uint8Array(n), pq=[], wq=[], gen=0, wgen=0;
-    function seedNet(i,net,que){net[i]=1;var c=i%cols,r=(i/cols)|0,nn=[[c-1,r],[c+1,r],[c,r-1],[c,r+1]],hit=false;
-      for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'){hit=true;if(!net[ni]){net[ni]=1;que.push(ni);}}}
+    function seedNet(i,net,que){net[i]=1;var c=i%cols,r=(i/cols)|0,nn=nbs(c,r),hit=false;
+      for(var k=0;k<6;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'){hit=true;if(!net[ni]){net[ni]=1;que.push(ni);}}}
       return hit;}   // utilities distribute over local ROADS (not the freeway); did the source touch one?
     for(var si=0;si<n;si++){var gs=grid[si];if(!gs)continue;var stt=gs.t;
-      if(stt==='power'){gen+=(POWER_OUT/9)*EVMOD.power;seedNet(si,pnet,pq);}         // a 3×3 station = 9 cells → POWER_OUT total
+      if(stt==='power'){gen+=POWER_OUT*EVMOD.power;seedNet(si,pnet,pq);}             // one hex plant → full POWER_OUT
       if(stt==='solar'){gen+=SOLAR_OUT*solarMult*EVMOD.solar;seedNet(si,pnet,pq);} // clean 1×1 array — Rooftop Solar tech boosts it
       if(stt==='mon2'){gen+=SOLAR_OUT*3*solarMult*EVMOD.solar;seedNet(si,pnet,pq);}   // the Solar Beacon is a triple-strength array
       if(stt==='water'){wgen+=WATER_OUT;seedNet(si,wnet,wq);}
       if(gs.terr==='water'){if(seedNet(si,wnet,wq))wgen+=WATER_PER_TILE;}}   // a coast/lake tile adds capacity only where it meets a road
-    function flow(net,que){var h=0;while(h<que.length){var id=que[h++],c=id%cols,r=(id/cols)|0,nn=[[c-1,r],[c+1,r],[c,r-1],[c,r+1]];
-      for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'&&!net[ni]){net[ni]=1;que.push(ni);}}}}
+    function flow(net,que){var h=0;while(h<que.length){var id=que[h++],c=id%cols,r=(id/cols)|0,nn=nbs(c,r);
+      for(var k=0;k<6;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'&&!net[ni]){net[ni]=1;que.push(ni);}}}}
     flow(pnet,pq);flow(wnet,wq);
     var use=0,wuse=0,lms=[];obsBuilt=false;
     for(var di=0;di<n;di++){var gd=grid[di];if(!gd)continue;if(POWERUSE[gd.t])use+=POWERUSE[gd.t]*(gd.lvl||1);if(WATERUSE[gd.t])wuse+=WATERUSE[gd.t]*(gd.lvl||1);
@@ -939,8 +954,8 @@
     use=Math.round(use*powerUseMult*(POL.sm?0.9:1));wuse=Math.round(wuse*waterUseMult);   // Solar Mandate trims demand   // Smart Grid / Water Reclamation techs cut demand
     powerGen=Math.round(gen);powerUse=use;powerOK=(gen>=use);          // city-wide power budget
     waterGen=Math.round(wgen);waterUse=wuse;waterOK=(wgen>=wuse);       // city-wide water budget
-    function borders(net,c,r){return (inB(c-1,r)&&net[idx(c-1,r)])||(inB(c+1,r)&&net[idx(c+1,r)])||(inB(c,r-1)&&net[idx(c,r-1)])||(inB(c,r+1)&&net[idx(c,r+1)]);}
-    function bordersWater(c,r){return (inB(c-1,r)&&grid[idx(c-1,r)].terr==='water')||(inB(c+1,r)&&grid[idx(c+1,r)].terr==='water')||(inB(c,r-1)&&grid[idx(c,r-1)].terr==='water')||(inB(c,r+1)&&grid[idx(c,r+1)].terr==='water');}
+    function borders(net,c,r){var nn=nbs(c,r);for(var k=0;k<6;k++){var a=nn[k][0],bb=nn[k][1];if(inB(a,bb)&&net[idx(a,bb)])return true;}return false;}
+    function bordersWater(c,r){var nn=nbs(c,r);for(var k=0;k<6;k++){var a=nn[k][0],bb=nn[k][1];if(inB(a,bb)&&grid[idx(a,bb)].terr==='water')return true;}return false;}
     for(var r=0;r<rows;r++)for(var cx=0;cx<cols;cx++){var i2=idx(cx,r);   // served if bordering a live network (gated by the budget); a building on the coast gets free water
       if(powerOK&&borders(pnet,cx,r))powered[i2]=1;
       if(bordersWater(cx,r)||(waterOK&&borders(wnet,cx,r)))watered[i2]=1;}
@@ -948,11 +963,13 @@
     railConn=new Uint8Array(n);connectedRailCount=0;railToWorld=false;
     var rq=[];for(var hj=0;hj<n;hj++){if(grid[hj]&&grid[hj].t==='highway'){railConn[hj]=1;rq.push(hj);}}  // seed rail from the corridor too
     var rhd=0;
-    while(rhd<rq.length){var id2=rq[rhd++],cc2=id2%cols,cr2=(id2/cols)|0,curHw2=grid[id2].t==='highway',nb2=[[cc2-1,cr2],[cc2+1,cr2],[cc2,cr2-1],[cc2,cr2+1]];
-      for(var k2=0;k2<4;k2++){var a2=nb2[k2][0],b2=nb2[k2][1];if(!inB(a2,b2))continue;var ni2=idx(a2,b2),g2=grid[ni2];if(railConn[ni2])continue;
+    function railSpur(a,bb){var nn=nbs(a,bb);for(var k=0;k<6;k++){var na=nn[k][0],nbb=nn[k][1];   // a real spur: the rail continues beyond the corridor
+      if(inB(na,nbb)&&grid[idx(na,nbb)].rail&&!isHwy(na,nbb))return true;}return false;}
+    while(rhd<rq.length){var id2=rq[rhd++],cc2=id2%cols,cr2=(id2/cols)|0,curHw2=grid[id2].t==='highway',nb2=nbs(cc2,cr2);
+      for(var k2=0;k2<6;k2++){var a2=nb2[k2][0],b2=nb2[k2][1];if(!inB(a2,b2))continue;var ni2=idx(a2,b2),g2=grid[ni2];if(railConn[ni2])continue;
         if(g2.t==='highway'){railConn[ni2]=1;rq.push(ni2);}
         else if(g2.rail){
-          if(curHw2){var bx=a2+(a2-cc2),by=b2+(b2-cr2);if(inB(bx,by)&&grid[idx(bx,by)].rail){railConn[ni2]=1;rq.push(ni2);}}  // rail joins the freeway only via a perpendicular spur
+          if(curHw2){if(railSpur(a2,b2)){railConn[ni2]=1;rq.push(ni2);}}  // rail joins the freeway only via a real spur
           else{railConn[ni2]=1;rq.push(ni2);}
         }}}
     for(var i3=0;i3<n;i3++){if(railConn[i3]&&grid[i3]&&grid[i3].rail){connectedRailCount++;railToWorld=true;}}
@@ -966,15 +983,14 @@
     congestion=trips>0?Math.max(0,Math.min(1,(trips-trafficCap)/trips)):0;
     congestion=Math.max(0,Math.min(1,congestion+EVMOD.congest-(POL.cp?0.12:0)));   // an active event can spike or relieve the jam   // 0 = free-flowing, 1 = total gridlock
   }
-  function nearConnected(c,r){
-    return (inB(c-1,r)&&connected[idx(c-1,r)])||(inB(c+1,r)&&connected[idx(c+1,r)])||
-           (inB(c,r-1)&&connected[idx(c,r-1)])||(inB(c,r+1)&&connected[idx(c,r+1)]);
+  function nearConnected(c,r){var nn=nbs(c,r);
+    for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];if(inB(a,b)&&connected[idx(a,b)])return true;}
+    return false;
   }
   // what's blocking a zone from growing? '' = nothing (grows)
   function blocker(c,r){
-    var g=grid[idx(c,r)],f=g.foot||1,dc,dr,okC=false,okP=false,okW=false;   // a 2×2 building is served if ANY of its cells reaches the network
-    for(dr=0;dr<f;dr++)for(dc=0;dc<f;dc++){var a=c+dc,b=r+dr;if(!inB(a,b))continue;var ii=idx(a,b);
-      if(nearConnected(a,b))okC=true; if(powered[ii])okP=true; if(watered[ii])okW=true;}
+    var g=grid[idx(c,r)],ii=idx(c,r);                    // one hex per building — served on its own hex
+    var okC=nearConnected(c,r), okP=!!powered[ii], okW=!!watered[ii];
     if(!okC)return 'disc';
     if(!okP)return 'pow';
     if(!okW)return 'wat';
@@ -1019,8 +1035,9 @@
 
   function complement(c,r,t){
     var wants=(t==='res'||t==='tower')?{com:1,ind:1,park:1}:{res:1,park:1};
-    for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){if(!dc&&!dr)continue;
-      if(inB(c+dc,r+dr)){var n=grid[idx(c+dc,r+dr)];if(n.lvl>0&&wants[n.t])return true;}}
+    var nn=nbs(c,r);
+    for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];
+      if(inB(a,b)){var n=grid[idx(a,b)];if(n.lvl>0&&wants[n.t])return true;}}
     return false;
   }
   var MAXLVL=1,demand={res:0,com:0,ind:0},demTot=0;   // level ceiling is tier-gated (densCap); starts low-rise
@@ -1430,7 +1447,7 @@
 
   // ---- ambient cars (drive roads + highway) ----
   var cars=[];
-  function adjDrive(c,r){var o=[];if(drivable(c-1,r))o.push([c-1,r]);if(drivable(c+1,r))o.push([c+1,r]);if(drivable(c,r-1))o.push([c,r-1]);if(drivable(c,r+1))o.push([c,r+1]);return o;}
+  function adjDrive(c,r){var o=[],nn=nbs(c,r);for(var k=0;k<6;k++)if(drivable(nn[k][0],nn[k][1]))o.push(nn[k]);return o;}
   function spawnCar(){if(!roadList.length)return null;var s=roadList[(Math.random()*roadList.length)|0],a=adjDrive(s[0],s[1]);var t=a.length?a[(Math.random()*a.length)|0]:s;return {cc:s[0],cr:s[1],tc:t[0],tr:t[1],p:Math.random(),tint:(Math.random()*pal.car.length)|0};}
   function manageCars(){var want=Math.max(0,Math.min(18,Math.floor(roadList.length/9)+Math.floor(congestion*11)));   // a jammed city crowds its streets with cars
     while(cars.length<want){var c=spawnCar();if(!c)break;cars.push(c);}while(cars.length>want)cars.pop();}
@@ -1449,7 +1466,7 @@
 
   // ---- freight trains (run the rail network + highway) ----
   function isRail(c,r){if(!inB(c,r))return false;var g=grid[idx(c,r)];return g.rail||g.t==='highway';}
-  function adjRail(c,r){var o=[];if(isRail(c-1,r))o.push([c-1,r]);if(isRail(c+1,r))o.push([c+1,r]);if(isRail(c,r-1))o.push([c,r-1]);if(isRail(c,r+1))o.push([c,r+1]);return o;}
+  function adjRail(c,r){var o=[],nn=nbs(c,r);for(var k=0;k<6;k++)if(isRail(nn[k][0],nn[k][1]))o.push(nn[k]);return o;}
   function spawnTrain(){if(!railList.length)return null;var s=railList[(Math.random()*railList.length)|0],a=adjRail(s[0],s[1]);var t=a.length?a[(Math.random()*a.length)|0]:[s[0],s[1]];
     return {trail:[[s[0],s[1]],[s[0],s[1]],[s[0],s[1]]],tgt:t,p:Math.random()};}
   function manageTrains(){var want=Math.max(0,Math.min(6,Math.floor(railList.length/6)));while(trains.length<want){var t=spawnTrain();if(!t)break;trains.push(t);}while(trains.length>want)trains.pop();}
@@ -1464,43 +1481,43 @@
         tr.tgt=a.length?a[(Math.random()*a.length)|0]:[tr.trail[0][0],tr.trail[0][1]];}
     }
   }
-  function tseg(a,b,p){return {x:(a[0]+(b[0]-a[0])*p+0.5)*CELL, y:(a[1]+(b[1]-a[1])*p+0.5)*CELL};}
+  function tseg(a,b,p){var ax=hcx(a[0],a[1]),ay=hcy(a[1]),bx=hcx(b[0],b[1]),by=hcy(b[1]);
+    return {x:ax+(bx-ax)*p, y:ay+(by-ay)*p};}   // interpolate between hex CENTRES
 
   // ---- rendering ----
   function px(v){return Math.round(v);}
   function easeOutBack(p){var c1=1.70158,c3=c1+1;return 1+c3*Math.pow(p-1,3)+c1*Math.pow(p-1,2);}
   function growScale(cell){var t=performance.now()-cell.pulse;if(t<0||t>=380)return 1;return Math.max(0,easeOutBack(t/380));}
   function drawGridPaper(vx0,vy0,vx1,vy1){
-    ctx.fillStyle=C.bg;ctx.fillRect(vx0*CELL,vy0*CELL,(vx1-vx0)*CELL,(vy1-vy0)*CELL);
-    // terrain under the grid: grasslands default, blue water, grey mountains (with a peak), dark-green forest
-    for(var tr=vy0;tr<vy1;tr++)for(var tc=vx0;tc<vx1;tc++){var g=grid[idx(tc,tr)];if(!g)continue;
-      var tt=g.terr,gx=tc*CELL,gy=tr*CELL;
-      ctx.fillStyle=tt==='water'?pal.terrWater:tt==='mountain'?pal.terrMountain:tt==='forest'?pal.terrForest:pal.terrGrass;
-      ctx.fillRect(gx,gy,CELL,CELL);
-      if(tt==='mountain'){var mx=gx+CELL/2;ctx.fillStyle=pal.terrPeak;ctx.beginPath();ctx.moveTo(mx,gy+7);ctx.lineTo(mx+8,gy+CELL-8);ctx.lineTo(mx-8,gy+CELL-8);ctx.closePath();ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.moveTo(mx,gy+7);ctx.lineTo(mx+3,gy+13);ctx.lineTo(mx-3,gy+13);ctx.closePath();ctx.fill();}}
-    ctx.lineWidth=1;
-    for(var c=vx0;c<=vx1;c++){ctx.strokeStyle=(c%5===0)?C.line2:C.line;ctx.beginPath();ctx.moveTo(px(c*CELL)+0.5,vy0*CELL);ctx.lineTo(px(c*CELL)+0.5,vy1*CELL);ctx.stroke();}
-    for(var r=vy0;r<=vy1;r++){ctx.strokeStyle=(r%5===0)?C.line2:C.line;ctx.beginPath();ctx.moveTo(vx0*CELL,px(r*CELL)+0.5);ctx.lineTo(vx1*CELL,px(r*CELL)+0.5);ctx.stroke();}
+    ctx.fillStyle=C.bg;ctx.fillRect(vx0*CELL-CELL,vy0*VSTEP-CELLH,(vx1-vx0+2)*CELL,(vy1-vy0)*VSTEP+2*CELLH);
+    // the honeycomb: 4 batched fills (one per terrain) + one stroke pass for the whole grid
+    var batches={grass:[],water:[],mountain:[],forest:[]},tr,tc,g;
+    for(tr=vy0;tr<vy1;tr++)for(tc=vx0;tc<vx1;tc++){g=grid[idx(tc,tr)];if(!g)continue;
+      var tt=g.terr;(tt==='water'?batches.water:tt==='mountain'?batches.mountain:tt==='forest'?batches.forest:batches.grass).push([tc,tr]);}
+    function fillBatch(list,color){if(!list.length)return;ctx.beginPath();
+      for(var i=0;i<list.length;i++)hexPath(hx(list[i][0],list[i][1]),hy(list[i][1]));
+      ctx.fillStyle=color;ctx.fill();}
+    fillBatch(batches.grass,pal.terrGrass);fillBatch(batches.water,pal.terrWater);
+    fillBatch(batches.mountain,pal.terrMountain);fillBatch(batches.forest,pal.terrForest);
+    ctx.beginPath();                                              // one stroke pass = the hex grid paper
+    for(tr=vy0;tr<vy1;tr++)for(tc=vx0;tc<vx1;tc++)hexPath(hx(tc,tr),hy(tr));
+    ctx.strokeStyle=C.line;ctx.lineWidth=1;ctx.stroke();
+    for(var mi=0;mi<batches.mountain.length;mi++){var mc=batches.mountain[mi][0],mr=batches.mountain[mi][1];   // peaks
+      var mx=hcx(mc,mr),myy=hcy(mr);
+      ctx.fillStyle=pal.terrPeak;ctx.beginPath();ctx.moveTo(mx,myy-9);ctx.lineTo(mx+8,myy+8);ctx.lineTo(mx-8,myy+8);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.moveTo(mx,myy-9);ctx.lineTo(mx+3,myy-3);ctx.lineTo(mx-3,myy-3);ctx.closePath();ctx.fill();}
   }
   function drawHighway(x,y,c,r){
-    ctx.fillStyle=pal.hw;ctx.fillRect(x,y,CELL,CELL);
-    var H=isHwy(c-1,r)||isHwy(c+1,r), V=isHwy(c,r-1)||isHwy(c,r+1);            // orientation from the corridor's neighbours
-    if(!H&&!V)H=true;                                                          // lone cell: default horizontal
-    ctx.fillStyle=pal.hwLane;                                                  // edge lanes along each running direction
-    if(H){ctx.fillRect(x,y+3,CELL,1);ctx.fillRect(x,y+CELL-4,CELL,1);}
-    if(V){ctx.fillRect(x+3,y,1,CELL);ctx.fillRect(x+CELL-4,y,1,CELL);}
-    ctx.fillStyle=pal.hwMed;                                                   // centre dashes (skip at a junction)
-    if(H&&!V)for(var dx=1;dx<CELL-2;dx+=8)ctx.fillRect(x+dx,y+CELL/2-1,5,2);
-    else if(V&&!H)for(var dy=1;dy<CELL-2;dy+=8)ctx.fillRect(x+CELL/2-1,y+dy,2,5);
-    ctx.fillStyle=pal.hw;                                                      // on-ramp: blend toward an adjoining city road
-    if(isRoadCell(c,r+1))ctx.fillRect(x+CELL/2-4,y+CELL-3,8,3);
-    if(isRoadCell(c,r-1))ctx.fillRect(x+CELL/2-4,y,8,3);
-    if(isRoadCell(c+1,r))ctx.fillRect(x+CELL-3,y+CELL/2-4,3,8);
-    if(isRoadCell(c-1,r))ctx.fillRect(x,y+CELL/2-4,3,8);
+    ctx.beginPath();hexPath(x,y,1);ctx.fillStyle=pal.hw;ctx.fill();            // the freeway fills its hex
+    strokeArms(c,r,isHwy,pal.hw,17);                                           // heavy carriageway arms along the corridor
+    strokeArms(c,r,isHwy,pal.hwLane,13);                                       // edge lanes
+    strokeArms(c,r,isHwy,pal.hw,10);
+    ctx.fillStyle=pal.hwMed;ctx.beginPath();ctx.arc(hcx(c,r),hcy(r),2,0,6.2832);ctx.fill();   // gold centre stud
+    strokeArms(c,r,function(a,b){return isRoadCell(a,b);},pal.hw,7);           // on-ramp blend toward adjoining city roads
     if(c===HWGC&&r===HWGR){                                                    // the interchange: a warm DAWN gateway plaza
-      ctx.fillStyle='rgba(243,194,74,.22)';ctx.fillRect(x+2,y+2,CELL-4,CELL-4);
-      ctx.strokeStyle=pal.hwGlow;ctx.lineWidth=1.5;ctx.strokeRect(x+2.5,y+2.5,CELL-5,CELL-5);
+      ctx.beginPath();hexPath(x,y,2);
+      ctx.fillStyle='rgba(243,194,74,.22)';ctx.fill();
+      ctx.strokeStyle=pal.hwGlow;ctx.lineWidth=1.5;ctx.stroke();
     }
   }
   // the parent hub this region's freeway runs toward — a deterministic solarpunk name per world location
@@ -1520,7 +1537,7 @@
     ctx.textBaseline='middle';ctx.textAlign='left';
     var tw=ctx.measureText(name).width, arrowW=CELL*0.5, padX=CELL*0.34, gap=CELL*0.2;
     var w=arrowW+gap+tw+padX*2, h=CELL*0.8;
-    var bx=(ec+0.5)*CELL + out[0]*CELL*0.5, by=(er+0.5)*CELL + out[1]*CELL*0.5;               // midpoint of the edge cell's outer face
+    var bx=hcx(ec,er) + out[0]*CELL*0.5, by=hcy(er) + out[1]*CELLH*0.5;                       // midpoint of the edge hex's outer face
     var inN=(out[0]!==0?w/2:h/2)+CELL*1.9;                                                    // sit ~2 cells inside the boundary (clears the edge UI; road runs past it off-map)…
     var cxp=bx - out[0]*inN - perp[0]*CELL*1.2, cyp=by - out[1]*inN - perp[1]*CELL*1.2;       // …and lift it off the road
     var x=cxp-w/2, y=cyp-h/2;
@@ -1536,58 +1553,37 @@
     ctx.fillStyle='#FBF6E6';ctx.fillText(name, x+padX+arrowW+gap, cyp+CELL*0.02);
     ctx.restore();
   }
-  // thin roads: a half-width street running through the cell centre (with a slim sidewalk), so streets
-  // read as streets and buildings stay full-size. A cross of arms toward each connected neighbour.
-  function roadCross(x,y,h,N,S,E,W){var m=CELL/2;
-    ctx.fillRect(x+m-h,y+m-h,h*2,h*2);
-    if(N)ctx.fillRect(x+m-h,y,h*2,m);if(S)ctx.fillRect(x+m-h,y+m,h*2,m);
-    if(E)ctx.fillRect(x+m,y+m-h,m,h*2);if(W)ctx.fillRect(x,y+m-h,m,h*2);}
-  function drawDeck(x,y,c,r,N,S,E,W){                    // a deck under road/rail crossing an obstacle
-    var t=grid[idx(c,r)].terr;
-    if(t==='water'){ctx.fillStyle='#8a7f6a';roadCross(x,y,12,N,S,E,W);ctx.fillStyle='#b0a58d';roadCross(x,y,11,N,S,E,W);}   // bridge deck over water
-    else if(t==='mountain'){ctx.fillStyle='#6f6c72';roadCross(x,y,12,N,S,E,W);ctx.fillStyle='#8f8b90',roadCross(x,y,11,N,S,E,W);   // rock cutting through the mountain
-      ctx.fillStyle='rgba(0,0,0,.28)';if(E||W){ctx.fillRect(x,y+CELL/2-11,CELL,2);ctx.fillRect(x,y+CELL/2+9,CELL,2);} if(N||S){ctx.fillRect(x+CELL/2-11,y,2,CELL);ctx.fillRect(x+CELL/2+9,y,2,CELL);}}}   // shaded portal walls
-  // a subtle shadow where a mountain tunnel opens to daylight — the road/rail plunges into dark at the portal mouth
-  function tunnelMouths(x,y,c,r,N,S,E,W){
-    if(grid[idx(c,r)].terr!=='mountain')return;
-    var mm=CELL/2,D=9,g;
-    if(E&&!(inB(c+1,r)&&grid[idx(c+1,r)].terr==='mountain')){g=ctx.createLinearGradient(x+CELL,0,x+CELL-D,0);g.addColorStop(0,'rgba(10,8,12,.5)');g.addColorStop(1,'rgba(10,8,12,0)');ctx.fillStyle=g;ctx.fillRect(x+CELL-D,y+mm-9,D,18);}
-    if(W&&!(inB(c-1,r)&&grid[idx(c-1,r)].terr==='mountain')){g=ctx.createLinearGradient(x,0,x+D,0);g.addColorStop(0,'rgba(10,8,12,.5)');g.addColorStop(1,'rgba(10,8,12,0)');ctx.fillStyle=g;ctx.fillRect(x,y+mm-9,D,18);}
-    if(S&&!(inB(c,r+1)&&grid[idx(c,r+1)].terr==='mountain')){g=ctx.createLinearGradient(0,y+CELL,0,y+CELL-D);g.addColorStop(0,'rgba(10,8,12,.5)');g.addColorStop(1,'rgba(10,8,12,0)');ctx.fillStyle=g;ctx.fillRect(x+mm-9,y+CELL-D,18,D);}
-    if(N&&!(inB(c,r-1)&&grid[idx(c,r-1)].terr==='mountain')){g=ctx.createLinearGradient(0,y,0,y+D);g.addColorStop(0,'rgba(10,8,12,.5)');g.addColorStop(1,'rgba(10,8,12,0)');ctx.fillStyle=g;ctx.fillRect(x+mm-9,y,18,D);}
-  }
+  // HEX ROADS: streets are arm-spokes from the hex centre toward each connected neighbour —
+  // the natural hex idiom. Bridges/tunnels tint the arms; a lone cell reads as a plaza dot.
+  function armsPath(c,r,pred){var cx0=hcx(c,r),cy0=hcy(r),nn=nbs(c,r),any=false;
+    ctx.beginPath();
+    for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];if(!pred(a,b))continue;any=true;
+      ctx.moveTo(cx0,cy0);ctx.lineTo((cx0+hcx(a,b))/2,(cy0+hcy(b))/2);}
+    return any;}
+  function strokeArms(c,r,pred,color,width){var any=armsPath(c,r,pred);
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';
+    if(any)ctx.stroke();
+    else{ctx.fillStyle=color;ctx.beginPath();ctx.arc(hcx(c,r),hcy(r),width/2,0,6.2832);ctx.fill();}
+    return any;}
+  function deckTint(c,r){var t=grid[idx(c,r)].terr;return t==='water'?'#8a7f6a':t==='mountain'?'#6f6c72':null;}
   function drawRoad(x,y,c,r){
-    var N=drivable(c,r-1),S=drivable(c,r+1),E=drivable(c+1,r),W=drivable(c-1,r),m=CELL/2;
-    drawDeck(x,y,c,r,N,S,E,W);
-    ctx.fillStyle=pal.curb;roadCross(x,y,9,N,S,E,W);      // slim sidewalk shoulder
-    ctx.fillStyle=pal.road;roadCross(x,y,7,N,S,E,W);      // road surface (~half the cell wide)
-    ctx.fillStyle=pal.lane;                               // centre dashes along a straight run
-    if((E||W)&&!(N||S))for(var dx=3;dx<CELL-3;dx+=7)ctx.fillRect(x+dx,y+m,3,1);
-    else if((N||S)&&!(E||W))for(var dy=3;dy<CELL-3;dy+=7)ctx.fillRect(x+m,y+dy,1,3);
-    if(!grid[idx(c,r)].rail)tunnelMouths(x,y,c,r,N,S,E,W);   // portal shadow (skip on a crossing — drawRail adds it on top of the tracks)
+    var deck=deckTint(c,r);
+    if(deck)strokeArms(c,r,drivable,deck,15);                          // bridge/tunnel deck under the street
+    strokeArms(c,r,drivable,pal.curb,11);                              // slim sidewalk shoulder
+    strokeArms(c,r,drivable,pal.road,8);                               // road surface
+    ctx.fillStyle=pal.lane;ctx.beginPath();ctx.arc(hcx(c,r),hcy(r),1.4,0,6.2832);ctx.fill();   // centre stud
   }
   function drawRail(x,y,c,r){
-    var N=isRail(c,r-1),S=isRail(c,r+1),E=isRail(c+1,r),W=isRail(c-1,r),m=CELL/2;
-    if(grid[idx(c,r)].t!=='road')drawDeck(x,y,c,r,N,S,E,W);          // deck if a rail-only bridge (a crossing already has the road's deck)
-    ctx.fillStyle=pal.railBed;roadCross(x,y,7,N,S,E,W);              // thin ballast bed (matches the road width)
-    var h=E||W||(!N&&!S), v=N||S;
-    ctx.fillStyle=pal.tie;
-    if(h)for(var tx=x+2;tx<x+CELL-2;tx+=5)ctx.fillRect(tx,y+m-5,2,10);
-    if(v)for(var ty=y+2;ty<y+CELL-2;ty+=5)ctx.fillRect(x+m-5,ty,10,2);
-    ctx.fillStyle=pal.rail;
-    if(h){ctx.fillRect(x,y+m-4,CELL,1.5);ctx.fillRect(x,y+m+3,CELL,1.5);}
-    if(v){ctx.fillRect(x+m-4,y,1.5,CELL);ctx.fillRect(x+m+3,y,1.5,CELL);}
-    if(grid[idx(c,r)].t==='road'){                                   // level crossing: red-and-white barrier marks flanking the track
-      var vRail=(N||S)&&!(E||W);                                     // track runs vertically → barriers left/right on the road
-      ctx.fillStyle='#D8452F';ctx.fillRect(x+m-1,y+m-1,2,2);         // a small red centre bolt
-      ctx.fillStyle='#E9E4D6';
-      if(vRail){ctx.fillRect(x+m-9,y+m-6,2,12);ctx.fillRect(x+m+7,y+m-6,2,12);}   // white posts either side of the tracks
-      else{ctx.fillRect(x+m-6,y+m-9,12,2);ctx.fillRect(x+m-6,y+m+7,12,2);}
-      ctx.fillStyle='#D8452F';
-      if(vRail){ctx.fillRect(x+m-9,y+m-6,2,3);ctx.fillRect(x+m+7,y+m+3,2,3);}     // red tips (crossbuck feel)
-      else{ctx.fillRect(x+m-6,y+m-9,3,2);ctx.fillRect(x+m+3,y+m+7,3,2);}
+    var deck=(grid[idx(c,r)].t!=='road')?deckTint(c,r):null;
+    if(deck)strokeArms(c,r,isRail,deck,13);                            // rail-only bridge/tunnel deck
+    strokeArms(c,r,isRail,pal.railBed,8);                              // ballast bed
+    strokeArms(c,r,isRail,pal.tie,5);                                  // ties read as a darker core
+    strokeArms(c,r,isRail,pal.rail,1.6);                               // the running rail
+    if(grid[idx(c,r)].t==='road'){                                     // level crossing: red centre bolt + white posts
+      var m1=hcx(c,r),m2=hcy(r);
+      ctx.fillStyle='#E9E4D6';ctx.fillRect(m1-7,m2-2,2,4);ctx.fillRect(m1+5,m2-2,2,4);
+      ctx.fillStyle='#D8452F';ctx.fillRect(m1-1,m2-1,2,2);
     }
-    tunnelMouths(x,y,c,r,N,S,E,W);   // portal shadow on top of the tracks (mountain tunnels only)
   }
   function py(v){return Math.round(v);}
   function drawPark(x,y,cell){
@@ -1741,10 +1737,8 @@
     if(LMARK[t])return drawLandmark(x,y,t);}
   function canPlaceBrushHere(c,r){if(!inB(c,r))return false;var g=grid[idx(c,r)];
     if(!unlocked(brush))return false;
-    if(brush==='power')return plantFits(c,r)&&canAfford(COST.power||0);
-    if(FOOT[brush])return blockFits(c,r,footOf(brush))&&canAfford(COST[brush]||0);   // a 2×2 zone needs a clear 2×2
     if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.rail)return false;
-    if(g.t!=='empty')return false; return canAfford(COST[brush]||0);}
+    if(g.t!=='empty')return false; return canAfford(COST[brush]||0);}   // one clear hex is all any building needs
   var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',solar:'Solar array',water:'Water tower',bank:'Bank',port:'Port',transit:'Transit stop',mon1:'Monument',mon2:'Solar Beacon',mon3:'Star Observatory'};
   var TERRLABEL={plains:'Grassland',forest:'Forest',mountain:'Mountain',water:'Water'};
   var ZONEK={res:1,com:1,ind:1,fac:1,tower:1};
@@ -1769,55 +1763,58 @@
       h+=why?'<div class="no">⏸ '+why+'</div>':(g.lvl<MAXLVL?'<div class="ok">▲ growing</div>':'<div class="ok">✓ maxed</div>');
       if(t==='ind')h+='<div class="ik">'+(nearMountain(c,r)?'By a mountain — +80% ore':g.terr==='forest'?'On forest — +40% timber':'No terrain boost')+'</div>';
     } else {
-      var desc={park:'Lifts nearby land',power:'Generates power for the grid (2×2)',solar:'Clean power — cheap to run, boosted by Rooftop Solar tech',water:'Supplies water to the grid',bank:'Raises your credit ceiling + earns interest',port:'Boosts export revenue',transit:'Moves people — relieves traffic so a dense city keeps growing'}[t];
+      var desc={park:'Lifts nearby land',power:'Generates power for the grid',solar:'Clean power — cheap to run, boosted by Rooftop Solar tech',water:'Supplies water to the grid',bank:'Raises your credit ceiling + earns interest',port:'Boosts export revenue',transit:'Moves people — relieves traffic so a dense city keeps growing'}[t];
       if(desc)h+='<div class="ik">'+desc+'</div>';
       h+='<div><span class="ik">On the road grid</span> '+yn(nearConnected(c,r))+'</div>';}
     return h;}
   var inspectEl=document.getElementById('inspect');
   function updateInspect(){if(brush!=='inspect'||!hoverCell||!inB(hoverCell.c,hoverCell.r)){if(inspectEl)inspectEl.hidden=true;return;}
-    if(grid[idx(hoverCell.c,hoverCell.r)].t==='sub'){var an=zoneAnchor(hoverCell.c,hoverCell.r);inspectEl.innerHTML=tileInfo(an[0],an[1]);inspectEl.hidden=false;return;}   // show the building's info from any of its cells
     inspectEl.innerHTML=tileInfo(hoverCell.c,hoverCell.r);inspectEl.hidden=false;}
 
   function draw(){
     if(!cols)return;
     ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;
-    ctx.scale(zoom,zoom);ctx.translate(-camX*CELL,-camY*CELL);       // camera: zoom, then shift the world under the fixed view
-    var vx0=Math.max(0,Math.floor(camX)),vy0=Math.max(0,Math.floor(camY));   // only iterate the visible window
-    var vx1=Math.min(cols,Math.ceil(camX+VCOLS)+1),vy1=Math.min(rows,Math.ceil(camY+VROWS)+1);
+    ctx.scale(zoom,zoom);ctx.translate(-camX*CELL,-camY*VSTEP);      // camera: zoom, then shift the world under the fixed view
+    var vx0=Math.max(0,Math.floor(camX)-1),vy0=Math.max(0,Math.floor(camY)-1);   // one extra ring: odd rows shift half a hex
+    var vx1=Math.min(cols,Math.ceil(camX+VCOLS)+2),vy1=Math.min(rows,Math.ceil(camY+VROWS)+2);
     drawGridPaper(vx0,vy0,vx1,vy1);
     var c,r,cell,x,y;
     // coverage overlay for the active utility brush (so placement is legible)
     if((brush==='power'||brush==='water')&&(brush==='power'?powered:watered)){
       var arr=brush==='power'?powered:watered;
-      ctx.fillStyle=brush==='power'?'rgba(224,169,62,.15)':'rgba(76,154,209,.15)';
-      for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++)if(arr[idx(c,r)])ctx.fillRect(c*CELL+1,r*CELL+1,CELL-2,CELL-2);
+      ctx.beginPath();
+      for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++)if(arr[idx(c,r)])hexPath(hx(c,r),hy(r),1);
+      ctx.fillStyle=brush==='power'?'rgba(224,169,62,.15)':'rgba(76,154,209,.15)';ctx.fill();
     }
     // roads + highway first, then rail on top (so a level crossing shows the track over the road)
-    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(!cell)continue;x=c*CELL;y=r*CELL;
+    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(!cell)continue;x=hx(c,r);y=hy(r);
       if(cell.t==='highway')drawHighway(x,y,c,r);else if(cell.t==='road')drawRoad(x,y,c,r);}
-    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(cell&&cell.rail)drawRail(c*CELL,r*CELL,c,r);}
-    // structures
+    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(cell&&cell.rail)drawRail(hx(c,r),hy(r),c,r);}
+    // structures — every building is one hex: hex lot base + the sprite scaled into the inscribed square
     for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){
-      cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway'||t==='sub')continue;   // 'sub' cells are drawn by their anchor
-      x=c*CELL;y=r*CELL;
-      if(t==='park'){drawPark(x,y,cell);continue;}
-      if(t==='power'){if(isPower(c-1,r)||isPower(c,r-1))continue;    // draw the plant once, at the block's top-left anchor
-        var span=(isPower(c+2,r)&&isPower(c,r+2)&&isPower(c+2,r+2))?3:(isPower(c+1,r)&&isPower(c,r+1))?2:1;drawPlant(x,y,cell,span);continue;}
-      if(t==='solar'){drawSolar(x,y,cell);continue;}
-      if(t==='transit'){drawTransit(x,y,cell);continue;}
-      if(t==='water'){drawTower(x,y,cell);continue;}
-      if(t==='bank'){drawBank(x,y,cell);continue;}
-      if(t==='port'){drawPort(x,y,cell);continue;}
-      if(LMARK[t]){drawLandmark(x,y,t);continue;}
-      // zones: draw lot/building at the building's footprint, then a cue for what's missing
-      var zf=cell.foot||1, ZW=CELL*zf;
-      if(cell.lvl<1){ctx.fillStyle=pal.lot;ctx.fillRect(x+2,y+2,ZW-4,ZW-4);}
-      else if(t==='res')drawHome(x,y,cell,zf);else if(t==='tower')drawHighrise(x,y,cell,zf);else if(t==='com')drawShop(x,y,cell,zf);else if(t==='ind')drawWorks(x,y,cell,zf);else drawFactory(x,y,cell,zf);
-      if(cell.lvl<MAXLVL){var bl=connected?blocker(c,r):'';if(bl)drawCue(x,y,bl);}
+      cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway')continue;
+      x=hx(c,r);y=hy(r);
+      var CC=cell;
+      if(t==='park'){spriteIn(c,r,function(sx,sy){drawPark(sx,sy,CC);});continue;}
+      if(t==='power'){spriteIn(c,r,function(sx,sy){drawPlant(sx,sy,CC,1);});continue;}
+      if(t==='solar'){spriteIn(c,r,function(sx,sy){drawSolar(sx,sy,CC);});continue;}
+      if(t==='transit'){spriteIn(c,r,function(sx,sy){drawTransit(sx,sy,CC);});continue;}
+      if(t==='water'){spriteIn(c,r,function(sx,sy){drawTower(sx,sy,CC);});continue;}
+      if(t==='bank'){spriteIn(c,r,function(sx,sy){drawBank(sx,sy,CC);});continue;}
+      if(t==='port'){spriteIn(c,r,function(sx,sy){drawPort(sx,sy,CC);});continue;}
+      if(LMARK[t]){spriteIn(c,r,function(sx,sy){drawLandmark(sx,sy,t);});continue;}
+      // zones: hex lot while unbuilt, then the building; a cue for what's missing
+      if(cell.lvl<1){ctx.beginPath();hexPath(x,y,2);ctx.fillStyle=pal.lot;ctx.fill();}
+      else spriteIn(c,r,function(sx,sy){
+        if(t==='res')drawHome(sx,sy,CC,1);else if(t==='tower')drawHighrise(sx,sy,CC,1);
+        else if(t==='com')drawShop(sx,sy,CC,1);else if(t==='ind')drawWorks(sx,sy,CC,1);else drawFactory(sx,sy,CC,1);});
+      if(cell.lvl<MAXLVL){var bl=connected?blocker(c,r):'';if(bl)drawCue(x,y+ (CELLH-CELL)/2,bl);}
     }
-    // cars on top
+    // cars on top — gliding between hex centres
     var jamCol=congestion>0.6?'#D8452F':congestion>0.35?'#E0A93E':null;   // amber → red as the streets choke
-    for(var i=0;i<cars.length;i++){var car=cars[i];var fx=(car.cc+(car.tc-car.cc)*car.p+0.5)*CELL,fy=(car.cr+(car.tr-car.cr)*car.p+0.5)*CELL;ctx.fillStyle=jamCol||pal.car[car.tint];ctx.fillRect(px(fx-2),px(fy-2),4,4);}
+    for(var i=0;i<cars.length;i++){var car=cars[i];
+      var pt=tseg([car.cc,car.cr],[car.tc,car.tr],car.p);
+      ctx.fillStyle=jamCol||pal.car[car.tint];ctx.fillRect(px(pt.x-2),px(pt.y-2),4,4);}
     // freight trains: engine + a Materials car + a Goods car, trailing along the rails
     for(var ti=0;ti<trains.length;ti++){var tr=trains[ti];
       var e=tseg(tr.trail[0],tr.tgt,tr.p),c1=tseg(tr.trail[1]||tr.trail[0],tr.trail[0],tr.p),c2=tseg(tr.trail[2]||tr.trail[1]||tr.trail[0],tr.trail[1]||tr.trail[0],tr.p);
@@ -1825,51 +1822,56 @@
       ctx.fillStyle=pal.cueGood;ctx.fillRect(px(c2.x-3),px(c2.y-3),5,5);
       ctx.fillStyle=pal.trainEngine;ctx.fillRect(px(e.x-3),px(e.y-3),6,6);
     }
-    // line-tool preview (road/rail/zoning): ghost the L-path from the pending start to the cursor
+    // line-tool preview (road/rail/zoning): ghost the hex line from the pending start to the cursor
     if(isLineBrush()&&hoverCell){
       var ps=lineAnchor;
-      if(ps&&ZONES[brush]){                                            // zone drag: preview the ROW of 2×2 blocks, stepping by the footprint
-        var zf=footOf(brush),za=zoneAnchors(ps,hoverCell,zf);
-        for(var zi=0;zi<za.length;zi++){var ac=za[zi][0],ar=za[zi][1],fits=blockFits(ac,ar,zf);
-          if(fits){ctx.globalAlpha=0.5;drawBuildingSprite(ac*CELL,ar*CELL,{t:brush,lvl:2,grow:0,seed:((ac*73856)^(ar*19349))>>>0,pulse:-9999,terr:inB(ac,ar)?grid[idx(ac,ar)].terr:'plains'},zf);}
-          ctx.globalAlpha=0.95;ctx.strokeStyle=fits?SWATCH[brush]:'#D0704A';ctx.lineWidth=2;ctx.strokeRect(ac*CELL+2,ar*CELL+2,CELL*zf-4,CELL*zf-4);ctx.globalAlpha=1;}
-      } else if(ps){var pp=linePath(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
-        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway')continue;ctx.fillRect(qc*CELL+3,qr*CELL+3,CELL-6,CELL-6);}
-        ctx.globalAlpha=1;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(ps.c*CELL+2.5,ps.r*CELL+2.5,CELL-5,CELL-5);
+      if(ps&&ZONES[brush]){                                            // zone drag: one ghost building per hex along the line
+        var za=hexLine(ps,hoverCell);
+        for(var zi=0;zi<za.length;zi++){var ac=za[zi][0],ar=za[zi][1],fits=inB(ac,ar)&&blockFits(ac,ar,1);
+          if(fits){ctx.globalAlpha=0.5;(function(ac,ar){spriteIn(ac,ar,function(sx,sy){
+            drawBuildingSprite(sx,sy,{t:brush,lvl:2,grow:0,seed:((ac*73856)^(ar*19349))>>>0,pulse:-9999,terr:grid[idx(ac,ar)].terr},1);});})(ac,ar);}
+          ctx.globalAlpha=0.95;ctx.beginPath();hexPath(hx(ac,ar),hy(ar),2);
+          ctx.strokeStyle=fits?SWATCH[brush]:'#D0704A';ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;}
+      } else if(ps){var pp=hexLine(ps,hoverCell);ctx.globalAlpha=0.5;ctx.fillStyle=SWATCH[brush];
+        ctx.beginPath();
+        for(var qi=0;qi<pp.length;qi++){var qc=pp[qi][0],qr=pp[qi][1];if(!inB(qc,qr))continue;var qcl=grid[idx(qc,qr)];if(qcl.t==='highway')continue;hexPath(hx(qc,qr),hy(qr),4);}
+        ctx.fill();ctx.globalAlpha=1;
+        ctx.beginPath();hexPath(hx(ps.c,ps.r),hy(ps.r),3);ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.stroke();
       } else if(inB(hoverCell.c,hoverCell.r)&&(brush==='road'||brush==='rail')){var hcl=grid[idx(hoverCell.c,hoverCell.r)];   // zones show the building ghost below instead
-        if(hcl&&hcl.t!=='highway'){ctx.globalAlpha=0.6;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.strokeRect(hoverCell.c*CELL+3.5,hoverCell.r*CELL+3.5,CELL-7,CELL-7);ctx.globalAlpha=1;}}
+        if(hcl&&hcl.t!=='highway'){ctx.globalAlpha=0.6;ctx.beginPath();hexPath(hx(hoverCell.c,hoverCell.r),hy(hoverCell.r),4);
+          ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=1.5;ctx.stroke();ctx.globalAlpha=1;}}
     }
     // building placement ghost — preview every build tool before you click (hidden once a zone line is
     // anchored, so the row path shows); over an existing same-type building it previews the NEXT level.
     if(!OBSERVE&&BUILDB[brush]&&!lineAnchor&&hoverCell&&inB(hoverCell.c,hoverCell.r)&&!(dragStart&&panned)){
-      var gc=hoverCell.c,gr=hoverCell.r,span=brush==='power'?PLANT_N:footOf(brush);
-      if(ZONEK[brush]){var an=zoneAnchor(gc,gr);gc=an[0];gr=an[1];}   // resolve to the building's anchor for zone previews
-      var gg=grid[idx(gc,gr)];
+      var gc=hoverCell.c,gr=hoverCell.r;
+      var gg=grid[idx(gc,gr)],ghx=hx(gc,gr),ghy=hy(gr);
       if(ZONEK[brush]&&gg.t===brush&&gg.lvl<MAXLVL){                 // upgrade preview → next level
         var ready=blocker(gc,gr)===''&&canAfford(COST[brush]||0),col=ready?SWATCH[brush]:'#D6A94E';
-        ctx.globalAlpha=0.5;drawBuildingSprite(gc*CELL,gr*CELL,{t:brush,lvl:gg.lvl+1,grow:0,seed:gg.seed,pulse:-9999,terr:gg.terr},span);
-        ctx.globalAlpha=0.95;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2,gr*CELL+2,CELL*span-4,CELL*span-4);
-        ctx.fillStyle=col;ctx.font='700 10px Inter,sans-serif';ctx.fillText('▲'+(gg.lvl+1),gc*CELL+4,gr*CELL+12);ctx.globalAlpha=1;
+        ctx.globalAlpha=0.5;spriteIn(gc,gr,function(sx,sy){drawBuildingSprite(sx,sy,{t:brush,lvl:gg.lvl+1,grow:0,seed:gg.seed,pulse:-9999,terr:gg.terr},1);});
+        ctx.globalAlpha=0.95;ctx.beginPath();hexPath(ghx,ghy,2);ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+        ctx.fillStyle=col;ctx.font='700 10px Inter,sans-serif';ctx.fillText('▲'+(gg.lvl+1),ghx+6,ghy+10);ctx.globalAlpha=1;
       } else if(ZONEK[brush]&&gg.t===brush){                          // already at max level
-        ctx.globalAlpha=0.9;ctx.strokeStyle='#C7A24A';ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2.5,gr*CELL+2.5,CELL*span-5,CELL*span-5);
-        ctx.fillStyle='#C7A24A';ctx.font='700 9px Inter,sans-serif';ctx.fillText('MAX',gc*CELL+4,gr*CELL+11);ctx.globalAlpha=1;
+        ctx.globalAlpha=0.9;ctx.beginPath();hexPath(ghx,ghy,2);ctx.strokeStyle='#C7A24A';ctx.lineWidth=2;ctx.stroke();
+        ctx.fillStyle='#C7A24A';ctx.font='700 9px Inter,sans-serif';ctx.fillText('MAX',ghx+6,ghy+10);ctx.globalAlpha=1;
       } else if(canPlaceBrushHere(gc,gr)){                            // fresh placement ghost
-        ctx.globalAlpha=0.5;drawBuildingSprite(gc*CELL,gr*CELL,{t:brush,lvl:ZONEK[brush]?2:1,grow:0,seed:((gc*73856)^(gr*19349))>>>0,pulse:-9999,terr:gg.terr},span);
-        ctx.globalAlpha=0.95;ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2,gr*CELL+2,CELL*span-4,CELL*span-4);ctx.globalAlpha=1;
-      } else {ctx.globalAlpha=0.9;ctx.strokeStyle='#D0704A';ctx.lineWidth=2;ctx.strokeRect(gc*CELL+2.5,gr*CELL+2.5,CELL*span-5,CELL*span-5);
-        ctx.beginPath();ctx.moveTo(gc*CELL+6,gr*CELL+6);ctx.lineTo((gc+span)*CELL-6,(gr+span)*CELL-6);ctx.moveTo((gc+span)*CELL-6,gr*CELL+6);ctx.lineTo(gc*CELL+6,(gr+span)*CELL-6);ctx.stroke();ctx.globalAlpha=1;}
+        ctx.globalAlpha=0.5;spriteIn(gc,gr,function(sx,sy){drawBuildingSprite(sx,sy,{t:brush,lvl:ZONEK[brush]?2:1,grow:0,seed:((gc*73856)^(gr*19349))>>>0,pulse:-9999,terr:gg.terr},1);});
+        ctx.globalAlpha=0.95;ctx.beginPath();hexPath(ghx,ghy,2);ctx.strokeStyle=SWATCH[brush];ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;
+      } else {ctx.globalAlpha=0.9;ctx.beginPath();hexPath(ghx,ghy,2);ctx.strokeStyle='#D0704A';ctx.lineWidth=2;ctx.stroke();
+        var xx=hcx(gc,gr),yy=hcy(gr),s8=CELL*0.22;
+        ctx.beginPath();ctx.moveTo(xx-s8,yy-s8);ctx.lineTo(xx+s8,yy+s8);ctx.moveTo(xx+s8,yy-s8);ctx.lineTo(xx-s8,yy+s8);ctx.stroke();ctx.globalAlpha=1;}
     }
-    // inspect highlight — outline the tile under the cursor
+    // inspect highlight — outline the hex under the cursor
     if(brush==='inspect'&&hoverCell&&inB(hoverCell.c,hoverCell.r)){var ic=hoverCell.c,ir=hoverCell.r;
-      ctx.strokeStyle='rgba(25,35,50,.85)';ctx.lineWidth=2;ctx.strokeRect(ic*CELL+1.5,ir*CELL+1.5,CELL-3,CELL-3);
-      ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.strokeRect(ic*CELL+3,ir*CELL+3,CELL-6,CELL-6);}
+      ctx.beginPath();hexPath(hx(ic,ir),hy(ir),1);ctx.strokeStyle='rgba(25,35,50,.85)';ctx.lineWidth=2;ctx.stroke();
+      ctx.beginPath();hexPath(hx(ic,ir),hy(ir),3);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.stroke();}
     drawGateSign();                                                 // overhead "→ toward [Hub]" sign at the interchange
     var tint=todTint();
     if(tint){ctx.fillStyle='rgba('+tint[0]+','+tint[1]+','+tint[2]+','+tint[3]+')';
-      ctx.fillRect(vx0*CELL,vy0*CELL,(vx1-vx0)*CELL,(vy1-vy0)*CELL);}       // the sky wash over the visible world
+      ctx.fillRect(vx0*CELL-CELL,vy0*VSTEP-CELLH,(vx1-vx0+2)*CELL,(vy1-vy0)*VSTEP+2*CELLH);}   // the sky wash over the visible world
     if(isNight()){ctx.fillStyle='rgba(243,194,74,.85)';                      // streetlights wake up after dark
       for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){var lg=grid[idx(c,r)];
-        if(lg&&(lg.t==='road'||lg.t==='highway')&&((c*7+r*13)%4===0))ctx.fillRect(c*CELL+CELL/2-1.5,r*CELL+CELL/2-1.5,3,3);}}
+        if(lg&&(lg.t==='road'||lg.t==='highway')&&((c*7+r*13)%4===0))ctx.fillRect(hcx(c,r)-1.5,hcy(r)-1.5,3,3);}}
     ctx.restore();
     mmRender();                                                     // overlay the minimap + viewport box each redraw
   }
@@ -1884,13 +1886,14 @@
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
   window.addEventListener('pagehide',function(){save();});   // flush on leave — a debounced save may still be pending
   function save(){if(OBSERVE||ioImporting)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];
-      if(g&&g.t!=='highway'&&g.t!=='sub'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,g.foot||1]);}   // save anchors only; 'sub' members are reconstructed on load
+      if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,1]);}   // one hex per building
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
-    var payload=JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
+    var payload=JSON.stringify({v:9,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
     localStorage.setItem(SAVE_KEY,payload);netSaveCity(payload);}catch(e){}}   // mirror to the cloud (throttled, offline-safe)
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
-    var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
+    if(!Array.isArray(d)&&d.v!==9){try{localStorage.removeItem(SAVE_KEY);}catch(e2){}return;}   // HEX WORLD: square-era saves (v<9) start fresh
+    var list=Array.isArray(d)?[]:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
       if(Array.isArray(d.ct))contracts=d.ct.filter(function(a){return CDEF[a[0]];}).map(function(a){return {key:a[0],target:a[1],reward:a[2],inv:!!a[3],text:a[4]};});
       if(typeof d.cd==='number')contractsDone=d.cd;
@@ -1901,9 +1904,7 @@
       evalEventMods();}
     list.forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
       if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
-      var f=a[5]||1;
-      if(FOOT[a[2]]&&f>1){if(!blockFits(c,r,f))return;layZone(c,r,a[2],f);g.lvl=a[3]||0;g.pulse=-9999;}   // rebuild the 2×2 building (anchor + members)
-      else{g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];g.foot=f>1?f:undefined;}});
+      g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];});
     dirty=true;}catch(e){}}
 
   // ---- animation loop ----
@@ -1974,10 +1975,12 @@
     for(var pc=c0;pc<=c1&&made<nPow;pc+=4){if(plantFits(pc,ur)){layPlant(pc,ur);made++;}}   // enough 3×3 stations (step past the footprint + gap)
     if(!made)for(var pf=c0;pf<=c1;pf++){if(plantFits(pf,ur)){layPlant(pf,ur);made++;break;}}
     for(var wm=0,wc=c0+1;wc<=c1&&wm<nWat;wc+=4){if(placeAt(wc,ur+2>rows-2?ur:ur+2,'water',0))wm++;}   // enough water towers
-    for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail spur: a short perpendicular line joining the corridor, so exports flow
-      var hc=hi%cols,hr=(hi/cols)|0,dd=[[0,1],[0,-1],[1,0],[-1,0]],done=false;
-      for(var d=0;d<4;d++){var a=hc+dd[d][0],bq=hr+dd[d][1],a2=hc+2*dd[d][0],b2=hr+2*dd[d][1];
-        if(inB(a,bq)&&inB(a2,b2)&&grid[idx(a,bq)].t==='empty'&&!noBuild(grid[idx(a,bq)].terr)&&grid[idx(a2,b2)].t==='empty'&&!noBuild(grid[idx(a2,b2)].terr)){placeAt(a,bq,'rail',0);placeAt(a2,b2,'rail',0);done=true;break;}}
+    for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail spur: a short line joining the corridor, so exports flow
+      var hc=hi%cols,hr=(hi/cols)|0,hnn=nbs(hc,hr),done=false;
+      for(var d=0;d<6;d++){var a=hnn[d][0],bq=hnn[d][1];
+        if(!inB(a,bq)||grid[idx(a,bq)].t!=='empty'||noBuild(grid[idx(a,bq)].terr))continue;
+        var far=nbs(a,bq).filter(function(n2){return inB(n2[0],n2[1])&&grid[idx(n2[0],n2[1])].t==='empty'&&!noBuild(grid[idx(n2[0],n2[1])].terr)&&!isHwy(n2[0],n2[1])&&!touchesHwy(n2[0],n2[1]);});
+        if(far.length){placeAt(a,bq,'rail',0);placeAt(far[0][0],far[0][1],'rail',0);done=true;break;}}
       if(done)break;}
   }
 
@@ -2021,6 +2024,21 @@
       toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3600);
     },REGION?3600:200);
   }
+  // strictly-gated E2E driver (only when ?e2e=1) — deterministic hooks for the test harness.
+  // Never active in normal play; exposes hex geometry so tests don't re-derive it.
+  if(new URLSearchParams(location.search).get('e2e')==='1'){window.__dbg={
+    ramp:function(){var o=[];for(var i=0;i<grid.length;i++)if(grid[i]&&grid[i].t==='road')o.push([i%cols,(i/cols)|0]);return o;},
+    place:function(c,r,t,f){if(!inB(c,r))return false;var g=grid[idx(c,r)];
+      if(t==='road'){if(g.t!=='empty'||noBuild(g.terr))return false;g.t='road';return true;}
+      if(g.t!=='empty'||g.rail||noBuild(g.terr))return false;
+      g.t=t;g.lvl=(t==='park'||t==='bank'||t==='port'||t==='solar'||t==='transit'||t==='power'||t==='water')?1:0;g.grow=0;return true;},
+    buildable:function(c,r){return inB(c,r)&&grid[idx(c,r)].t==='empty'&&!grid[idx(c,r)].rail&&!noBuild(grid[idx(c,r)].terr);},
+    sync:function(){computeServices();dirty=true;svcDirty=true;scheduleSave();},
+    reasons:function(){var o={};for(var i=0;i<grid.length;i++){var g=grid[i];if(!g||!ZONES[g.t])continue;var b=blocker(i%cols,(i/cols)|0);o[b||'ok']=(o[b||'ok']||0)+1;}return o;},
+    nbs:function(c,r){return nbs(c,r);},cellAt:function(x,y){return cellAt(x,y);},
+    center:function(c,r){return {x:hcx(c,r),y:hcy(r)};},cam:function(){return {camX:camX,camY:camY,zoom:zoom};},
+    brush:function(){return brush;},grid:function(c,r){return inB(c,r)?grid[idx(c,r)]:null;}
+  };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
 

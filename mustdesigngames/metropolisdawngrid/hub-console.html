@@ -135,12 +135,22 @@
 <script>
 (function(){
   "use strict";
-  // ---- plot math: MUST match worker.js / world/index.html ----
-  var TS=6, PLOTS=4, PP=TS/PLOTS, PCOLS=60*PLOTS, PROWS=24*PLOTS;
+  // ---- plot math: MUST match worker.js / world/index.html (HEX, pointy-top, odd-r) ----
+  var HEXW=6, HEXVS=4.5, HEXR=3, PCOLS=60, PROWS=32;
+  function plotCenter(pi,pj){ var lon=-180+HEXR+pi*HEXW+(pj&1)*(HEXW/2); return {lat:pj*HEXVS-69, lon:((lon+540)%360)-180}; }
   function plotOf(lat,lon){ if(lat<-72||lat>=72) return null;
-    var pj=Math.floor((lat+72)/PP), pi=Math.floor((((lon+180)%360)+360)%360/PP)%PCOLS; return {pi:pi,pj:pj,key:pi+','+pj}; }
-  function plotCenter(pi,pj){ return {lat:pj*PP-72+PP/2, lon:pi*PP-180+PP/2}; }
-  function plotNbs(pi,pj){ var o=[[(pi+1)%PCOLS,pj],[(pi+PCOLS-1)%PCOLS,pj]]; if(pj>0)o.push([pi,pj-1]); if(pj<PROWS-1)o.push([pi,pj+1]); return o; }
+    var best=null,bd=1e9,r0=Math.floor((lat+72)/HEXVS);
+    for(var pj=Math.max(0,r0-1);pj<=Math.min(PROWS-1,r0+1);pj++){
+      var c0=Math.floor((((lon+180-HEXR-(pj&1)*(HEXW/2))%360)+360)%360/HEXW);
+      for(var k=0;k<=1;k++){var pi=((c0+k)%PCOLS+PCOLS)%PCOLS,ctr=plotCenter(pi,pj);
+        var dLon=Math.abs(((lon-ctr.lon+540)%360)-180),dLat=lat-ctr.lat,d=dLon*dLon+dLat*dLat;
+        if(d<bd){bd=d;best={pi:pi,pj:pj,key:pi+','+pj};}}}
+    return best; }
+  function plotNbs(pi,pj){ var odd=pj&1,W=function(c){return ((c%PCOLS)+PCOLS)%PCOLS;};
+    var o=[[W(pi+1),pj],[W(pi-1),pj]];
+    if(pj>0){o.push([W(pi+odd),pj-1]);o.push([W(pi-1+odd),pj-1]);}
+    if(pj<PROWS-1){o.push([W(pi+odd),pj+1]);o.push([W(pi-1+odd),pj+1]);}
+    return o; }
   var SEED_HUBS=[['New Sprawlton',32,-46],['Gridholm',-8,38],['Port Zoning',-30,-18],['Fort Density',48,70],['Lake Parcel',6,128],['Trade Junction',-22,96],['Old Commons',24,182],['Mount Civic',-46,150]];
 
   var $=function(id){return document.getElementById(id);};

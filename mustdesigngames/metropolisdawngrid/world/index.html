@@ -96,7 +96,7 @@
     <p class="eyebrow">Concept · world model</p>
     <h1>Metropolis<br>Dawn<br>Grid</h1>
     <p>One shared world. Everyone builds on the same planet-sized grid — and you keep expanding until you run into your neighbours.</p>
-    <p class="tag"><b>Click your city</b> to drop in and build. Click an <b>AI-run city</b> to see what it trades — and visit to walk its streets. <b>Hover any land square</b> for its Region, and <b>click it</b> to see the city plots inside — new cities must claim a plot bordering a megacity, or a city already connected to one. The AI cities <b>grow over time</b>.</p>
+    <p class="tag"><b>Click your city</b> to drop in and build. Click an <b>AI-run city</b> to see what it trades — and visit to walk its streets. <b>Hover any land hex</b> for its Region, and <b>click an open hex</b> to found your city there — new cities must border a hub's territory, so communities spread as honeycombs. The AI cities <b>grow over time</b>.</p>
   </div>
 
   <div id="fade"></div>
@@ -113,9 +113,9 @@
     <div class="row"><span class="dot" id="lg-you"></span> Your city</div>
     <div class="row"><span class="dot" id="lg-them"></span> AI-run cities</div>
     <div class="row" id="lg-hubrow" hidden><span class="dot" id="lg-hub"></span> <span id="lg-hublabel">Your hub</span></div>
-    <div class="row"><span class="dot" id="lg-frontier"></span> Region with open plots</div>
+    <div class="row"><span class="dot" id="lg-frontier"></span> Open hex — claimable</div>
   </div>
-  <div class="hint">drag to spin · hover a land square · click it to open the Region and claim a plot</div>
+  <div class="hint">drag to spin · hover a land hex · click an open hex to claim it</div>
 
   <div class="stage"><canvas id="globe"></canvas></div>
 
@@ -295,28 +295,38 @@
       .catch(function(){cb({netfail:true});});}catch(e){cb({netfail:true});}}
 
   // ---- regions & plots: the world is a grid of SOLID land / SOLID ocean squares ----
-  // Each land square is a REGION holding a PLOTS×PLOTS grid of city plots. Hover a land square for
+  // Each land HEX is a region holding exactly one city plot. Hover a land hex for
   // its info; click it to open the Region view and claim an open plot. The settlement rule (see
   // 07_projects/municipal-district-grid/2026-07-10-settlement-claims.md) now lives at PLOT level:
   // a plot is claimable iff it borders a megacity, or a city already connected to one (AI cities
   // stand in as the connected hub network; your city chains in when it borders it).
-  var TS=6, TROWS=24, TCOLS=60;                        // 6° squares between ±72° — double the old grid per axis
-  var PLOTS=4, PP=TS/PLOTS, PCOLS=TCOLS*PLOTS, PROWS=TROWS*PLOTS;   // 4×4 city plots per region
-  function tileOf(lat,lon){if(lat<-72||lat>=72)return null;
-    var tj=Math.floor((lat+72)/TS), ti=Math.floor((((lon+180)%360+360)%360)/TS)%TCOLS;
-    return {ti:ti,tj:tj,key:ti+','+tj};}
-  function tileCenter(ti,tj){return {lat:tj*TS-72+TS/2, lon:ti*TS-180+TS/2};}
+  // HEX WORLD — pointy-top hexes in lon/lat space, odd-r offset. One hex = one region
+  // = one claimable plot. 60 cols (6° wide, wrapping) × 32 rows (4.5° steps, ±72° band).
+  // MUST match backend/worker.js exactly (authoritative plot math).
+  var HEXW=6, HEXVS=4.5, HEXR=3;
+  var PCOLS=60, PROWS=32, TCOLS=PCOLS, TROWS=PROWS;    // tile == plot == hex now
+  function plotCenter(pi,pj){var lon=-180+HEXR+pi*HEXW+(pj&1)*(HEXW/2);
+    return {lat:pj*HEXVS-69, lon:((lon+540)%360)-180};}
+  function plotOf(lat,lon){if(lat<-72||lat>=72)return null;   // nearest hex centre = exact Voronoi assignment
+    var best=null,bd=1e9,r0=Math.floor((lat+72)/HEXVS);
+    for(var pj=Math.max(0,r0-1);pj<=Math.min(PROWS-1,r0+1);pj++){
+      var c0=Math.floor((((lon+180-HEXR-(pj&1)*(HEXW/2))%360)+360)%360/HEXW);
+      for(var k=0;k<=1;k++){var pi=((c0+k)%PCOLS+PCOLS)%PCOLS,ctr=plotCenter(pi,pj);
+        var dLon=Math.abs(((lon-ctr.lon+540)%360)-180),dLat=lat-ctr.lat,d=dLon*dLon+dLat*dLat;
+        if(d<bd){bd=d;best={pi:pi,pj:pj,ti:pi,tj:pj,key:pi+','+pj};}}}
+    return best;}
+  function plotNbs(pi,pj){var odd=pj&1,Wr=function(c){return ((c%PCOLS)+PCOLS)%PCOLS;};
+    var o=[[Wr(pi+1),pj],[Wr(pi-1),pj]];
+    if(pj>0){o.push([Wr(pi+odd),pj-1]);o.push([Wr(pi-1+odd),pj-1]);}
+    if(pj<PROWS-1){o.push([Wr(pi+odd),pj+1]);o.push([Wr(pi-1+odd),pj+1]);}
+    return o;}
+  function tileOf(lat,lon){return plotOf(lat,lon);}     // aliases: region == hex
+  function tileCenter(ti,tj){return plotCenter(ti,tj);}
   var _landCache={};
   function noiseLand(ti,tj){var k=ti+','+tj,v=_landCache[k];
     if(v===undefined)v=_landCache[k]=(tnoise(ti,tj,6)*0.65+tnoise(ti+31,tj+17,3)*0.35)>0.45;   // ~60% land: continents with real oceans
     return v;}
-  function landTile(ti,tj){if(!NET)buildNetwork();return !!NET.cityTiles[ti+','+tj]||noiseLand(ti,tj);}   // a city's region is always land
-  function plotOf(lat,lon){if(lat<-72||lat>=72)return null;
-    var pj=Math.floor((lat+72)/PP), pi=Math.floor((((lon+180)%360+360)%360)/PP)%PCOLS;
-    return {pi:pi,pj:pj,key:pi+','+pj};}
-  function plotCenter(pi,pj){return {lat:pj*PP-72+PP/2, lon:pi*PP-180+PP/2};}
-  function plotNbs(pi,pj){var o=[[(pi+1)%PCOLS,pj],[(pi+PCOLS-1)%PCOLS,pj]];
-    if(pj>0)o.push([pi,pj-1]); if(pj<PROWS-1)o.push([pi,pj+1]); return o;}
+  function landTile(ti,tj){if(!NET)buildNetwork();return !!NET.cityTiles[ti+','+tj]||noiseLand(ti,tj);}   // a city's hex is always land
   var NET=null;                                        // rebuilt lazily; invalidated when your city moves
   function buildNetwork(){
     var occ={}, conn={}, cityTiles={}, i, t;
@@ -336,19 +346,20 @@
     else if(!WORLD_INVITEONLY){for(sk in conn)seeds.push(sk);}
     for(var s=0;s<seeds.length;s++){var kp=seeds[s].split(','),pi=+kp[0],pj=+kp[1],nb=plotNbs(pi,pj);
       for(var n=0;n<nb.length;n++){var nk=nb[n][0]+','+nb[n][1];if(occ[nk]||avail[nk])continue;
-        var rti=Math.floor(nb[n][0]/PLOTS),rtj=Math.floor(nb[n][1]/PLOTS);
-        if(!(cityTiles[rti+','+rtj]||noiseLand(rti,rtj)))continue;
-        avail[nk]={hub:(occ[seeds[s]].city?occ[seeds[s]].city.name:conn[seeds[s]]),hubId:occ[seeds[s]].hubId};}}
-    var regionAvail={}, regionCities={};               // per-region rollups for the map + tooltip
-    for(var a in avail){var ap=a.split(','),ak=Math.floor(+ap[0]/PLOTS)+','+Math.floor(+ap[1]/PLOTS);regionAvail[ak]=(regionAvail[ak]||0)+1;}
-    for(var o in occ){var op=o.split(','),ok=Math.floor(+op[0]/PLOTS)+','+Math.floor(+op[1]/PLOTS);(regionCities[ok]=regionCities[ok]||[]).push(occ[o]);}
+        // any bordering hex is claimable — settling a water hex RECLAIMS it (it renders as land once yours)
+        avail[nk]={hub:(occ[seeds[s]].city?occ[seeds[s]].city.name:conn[seeds[s]]),hubId:occ[seeds[s]].hubId,water:!(cityTiles[nk]||noiseLand(nb[n][0],nb[n][1]))};}}
+    // hex == region now, so the per-region rollups are just direct views of occ/avail
+    var regionAvail={}, regionCities={};
+    for(var a in avail)regionAvail[a]=1;
+    for(var o in occ)regionCities[o]=[occ[o]];
     NET={occ:occ,conn:conn,avail:avail,cityTiles:cityTiles,regionAvail:regionAvail,regionCities:regionCities};
   }
-  // fast tile projection: tile corners live on a shared 3° vertex grid, computed once per frame
-  // with two trig calls per unique angle — tiles then reference vertices by index (no per-tile proj)
-  var VLA=TROWS*2+1, VLO=TCOLS*2+1;                    // 3° steps: 49 lat rows × 121 lon cols
+  // fast hex projection: every hex corner lands exactly on a shared 1.5°-lat × 3°-lon vertex
+  // lattice, computed once per frame with two trig calls per unique angle — hexes then
+  // reference vertices by index (no per-hex projection)
+  var VLA=99, VLO=TCOLS*2+1;                           // 99 lat rows (1.5° from -73.5) × 121 lon cols (3°)
   var _cosLa=new Float64Array(VLA), _sinLa=new Float64Array(VLA);
-  (function(){for(var li=0;li<VLA;li++){var la=(li*3-72)*PI/180;_cosLa[li]=Math.cos(la);_sinLa[li]=Math.sin(la);}})();
+  (function(){for(var li=0;li<VLA;li++){var la=(li*1.5-73.5)*PI/180;_cosLa[li]=Math.cos(la);_sinLa[li]=Math.sin(la);}})();
   var _vsx=new Float32Array(VLA*VLO), _vsy=new Float32Array(VLA*VLO), _vz=new Float32Array(VLA*VLO);
   function computeVGrid(){
     var cp=Math.cos(pitch), sp=Math.sin(pitch), lo, li, i;
@@ -356,12 +367,14 @@
       for(li=0;li<VLA;li++){var x=_cosLa[li]*sLo, y=_sinLa[li], z=_cosLa[li]*cLo;
         i=li*VLO+lo;_vsx[i]=cx+x*R;_vsy[i]=cy-(y*cp-z*sp)*R;_vz[i]=y*sp+z*cp;}}
   }
-  function tileVerts(ti,tj){                           // 8 boundary vertex ids, or null if behind the limb
-    var b=tj*2*VLO+ti*2, m=b+VLO, t=m+VLO;
-    var ids=[b,b+1,b+2,m+2,t+2,t+1,t,m], mz=1;
-    for(var i=0;i<8;i++)if(_vz[ids[i]]<mz)mz=_vz[ids[i]];
+  function _w121(lo){return lo>120?lo-120:lo<0?lo+120:lo;}   // the lon seam duplicates col 0 at col 120
+  function hexCtrId(pi,pj){return (3*pj+3)*VLO+_w121(2*pi+(pj&1)+1);}
+  function tileVerts(pi,pj){                           // 6 hex-corner vertex ids (N,NE,SE,S,SW,NW), or null if behind the limb
+    var cLi=3*pj+3, cLo=2*pi+(pj&1)+1, E=_w121(cLo+1), Wo=_w121(cLo-1);
+    var ids=[(cLi+2)*VLO+cLo,(cLi+1)*VLO+E,(cLi-1)*VLO+E,(cLi-2)*VLO+cLo,(cLi-1)*VLO+Wo,(cLi+1)*VLO+Wo], mz=1;
+    for(var i=0;i<6;i++)if(_vz[ids[i]]<mz)mz=_vz[ids[i]];
     return mz>0.005?ids:null;}
-  function addQuad(ids){ctx.moveTo(_vsx[ids[0]],_vsy[ids[0]]);for(var i=1;i<8;i++)ctx.lineTo(_vsx[ids[i]],_vsy[ids[i]]);ctx.closePath();}
+  function addQuad(ids){ctx.moveTo(_vsx[ids[0]],_vsy[ids[0]]);for(var i=1;i<ids.length;i++)ctx.lineTo(_vsx[ids[i]],_vsy[ids[i]]);ctx.closePath();}
   var hoverTile=null;
   // the tile layer is the raster-heavy part (~750 quads) — render it to an offscreen canvas every
   // few frames and blit in between; markers, labels and trade pulses stay at full frame rate
@@ -379,7 +392,7 @@
     computeVGrid();
     var landQ=[],waterQ=[],ti,tj,k,q;
     for(tj=0;tj<TROWS;tj++)for(ti=0;ti<TCOLS;ti++){
-      if(_vz[(tj*2+1)*VLO+ti*2+1]<=0.005)continue;     // cull by the tile's centre vertex
+      if(_vz[hexCtrId(ti,tj)]<=0.005)continue;         // cull by the hex's centre vertex
       q=tileVerts(ti,tj);if(!q)continue;
       (landTile(ti,tj)?landQ:waterQ).push(q);
     }
@@ -412,39 +425,37 @@
     var spec=_tipSpec[k];if(!spec){var c=tileCenter(ti,tj);spec=_tipSpec[k]=siteSpec(c.lat,c.lon);}
     return {name:regionName(ti,tj),spec:spec,cities:NET.regionCities[k]||[],open:NET.regionAvail[k]||0};}
   var rtip=document.getElementById('rtip');
-  function showTip(e,ti,tj){if(!rtip)return;var inf=regionInfo(ti,tj);
+  function showTip(e,ti,tj){if(!rtip)return;var inf=regionInfo(ti,tj),k=ti+','+tj,o=NET.occ[k];
     rtip.innerHTML='<b>'+inf.name+'</b><br>'+inf.spec+'<br>'
-      +(inf.cities.length?inf.cities.length+(inf.cities.length>1?' cities':' city')+' · ':'')
-      +(inf.open?'<b>'+inf.open+' plot'+(inf.open>1?'s':'')+' open</b> — click to claim':(inf.cities.length?'no open plots':'beyond the frontier — no open plots'));
+      +(o?(o.you?'<b>your city</b> — click to build':'<b>'+((o.city&&o.city.name)||'a city')+'</b>'+(o.hubId?' · '+(o.hubId===myHubId()?'your hub':'claimed territory'):''))
+         :inf.open?'<b>open hex</b> — click to claim':'beyond the frontier');
     rtip.style.left=(e.clientX+14)+'px';rtip.style.top=(e.clientY+12)+'px';rtip.hidden=false;}
   function hideTip(){if(rtip)rtip.hidden=true;}
-  // region view: the plot grid — claim an open plot, visit a city, or see what's locked
+  // hex view: one hex = one region = one plot. Claim it, visit its city, or see why it's locked.
   var rcard=document.getElementById('rcard');
   function openRegion(ti,tj){
-    var inf=regionInfo(ti,tj);
+    var inf=regionInfo(ti,tj),k=ti+','+tj,o=NET.occ[k],a=NET.avail[k];
     document.getElementById('rc-name').textContent=inf.name;
     document.getElementById('rc-msg').innerHTML=inf.spec+'<br>'
-      +(WORLD_INVITEONLY&&!myHubId()
+      +(o?(o.you?'This hex is <b>your city</b>.':'This hex belongs to <b>'+esc((o.city&&o.city.name)||'a city')+'</b>.')
+        :WORLD_INVITEONLY&&!myHubId()
           ?'This world is <b>invite-only</b> — <b>Join a hub</b> (top-right) with a creator’s code to found your city in their community.'
-          :inf.open?'<b>'+inf.open+' plot'+(inf.open>1?'s':'')+'</b> open to claim'+(myHubId()?' — grow out of your hub’s territory.':' — new cities must border the megacity network.')
-                :(myHubId()?'No open plots bordering your hub here — expand from a plot next to your community.':'No open plots here — this region is beyond the frontier for now.'));
-    var grid=document.getElementById('rc-plots');grid.innerHTML='';
-    for(var py=PLOTS-1;py>=0;py--)for(var px=0;px<PLOTS;px++){   // north row first
-      var pi=ti*PLOTS+px,pj=tj*PLOTS+py,k=pi+','+pj,o=NET.occ[k],a=NET.avail[k];
-      var cell=document.createElement('button');cell.type='button';cell.className='plot';
-      if(o){cell.classList.add(o.you?'you':'city');cell.textContent=o.you?'◉':'●';
-        cell.title=o.you?'Your city — click to build':(o.city.name+' — click for details');
-        (function(o){cell.addEventListener('click',function(){rcard.classList.remove('on');
-          if(o.you){var pp=proj(CITIES[0].lat,CITIES[0].lon);startDive(pp.sx,pp.sy,CITIES[0]);}
-          else showNeighbour(o.city);});})(o);}
-      else if(a){cell.classList.add('open');cell.textContent='+';
-        cell.title='Open plot — claim it (borders '+a.hub+')';
-        (function(pi,pj,a,inf){cell.addEventListener('click',function(){rcard.classList.remove('on');
-          var cc=plotCenter(pi,pj);foundHere({lat:cc.lat,lon:cc.lon},a.hub,inf.name);});})(pi,pj,a,inf);}
-      else{cell.classList.add('locked');cell.title='Beyond the frontier — a new city must border the network';}
-      grid.appendChild(cell);}
+        :a?'This hex is <b>open</b> — it borders '+esc(a.hub)+(myHubId()?' in your hub’s territory.':' on the connected network.')
+          :(myHubId()?'Beyond your frontier — expand from a hex bordering your community.':'Beyond the frontier — a new city must border the network.'));
+    var grid=document.getElementById('rc-plots');grid.innerHTML='';grid.style.display='none';
+    var act=document.createElement('div');act.className='nc-actions';act.style.marginBottom='14px';
+    function btn(label,ghost,fn){var b=document.createElement('button');b.type='button';if(ghost)b.className='ghost';b.textContent=label;b.addEventListener('click',function(){rcard.classList.remove('on');fn();});act.appendChild(b);}
+    if(o&&o.you)btn('Build here →',false,function(){var pp=proj(CITIES[0].lat,CITIES[0].lon);startDive(pp.sx,pp.sy,CITIES[0]);});
+    else if(o)btn('View '+((o.city&&o.city.name)||'city')+' →',false,function(){showNeighbour(o.city);});
+    else if(a)(function(a,inf){btn('Found your city here →',false,function(){var cc=plotCenter(ti,tj);foundHere({lat:cc.lat,lon:cc.lon},a.hub,inf.name);});})(a,inf);
+    if(act.childNodes.length)grid.parentNode.insertBefore(act,grid);
     rcard.classList.add('on');
+    rcard._act=act;   // remove on close so buttons don't accumulate
   }
+  (function(){var _origClose=function(){if(rcard._act&&rcard._act.parentNode)rcard._act.parentNode.removeChild(rcard._act);rcard._act=null;};
+    rcard.addEventListener('transitionend',function(){if(!rcard.classList.contains('on'))_origClose();});
+    var obs=new MutationObserver(function(){if(!rcard.classList.contains('on'))_origClose();});
+    obs.observe(rcard,{attributes:true,attributeFilter:['class']});})();
   document.getElementById('rc-close').addEventListener('click',function(){rcard.classList.remove('on');});
   rcard.addEventListener('click',function(e){if(e.target.id==='rcard')rcard.classList.remove('on');});
   var wtoastEl=document.getElementById('wtoast'), wtoastT=0;
@@ -543,14 +554,18 @@
     ctx.save();
     ctx.fillStyle=P.bg; ctx.strokeStyle=P.line2; ctx.lineWidth=1.5;
     roundRect(ix,iy,iw,ih,10); ctx.fill(); ctx.stroke();
-    // grid paper
+    // hex paper — the surface is a honeycomb now
+    var hr=cell/1.9, vs=hr*1.5, hw2=hr*0.866;
+    function insetHex(hxp,hyp){ctx.moveTo(hxp,hyp-hr);ctx.lineTo(hxp+hw2,hyp-hr/2);ctx.lineTo(hxp+hw2,hyp+hr/2);ctx.lineTo(hxp,hyp+hr);ctx.lineTo(hxp-hw2,hyp+hr/2);ctx.lineTo(hxp-hw2,hyp-hr/2);ctx.closePath();}
     ctx.strokeStyle=P.line; ctx.lineWidth=1; ctx.beginPath();
-    for(var gx=ix+10;gx<ix+iw-6;gx+=cell){ctx.moveTo(gx,iy+24);ctx.lineTo(gx,iy+ih-10);}
-    for(var gy=iy+24;gy<iy+ih-6;gy+=cell){ctx.moveTo(ix+10,gy);ctx.lineTo(ix+iw-10,gy);}
+    for(var hrow=0;hrow<5;hrow++)for(var hcol=0;hcol<9;hcol++){
+      var hxp=ix+16+hcol*(hw2*2)+(hrow&1)*hw2, hyp=iy+30+hrow*vs;
+      if(hxp<ix+iw-10&&hyp<iy+ih-8)insetHex(hxp,hyp);}
     ctx.stroke();
-    // a few pixel buildings
-    var b=[[0,1,'#5F9A5A'],[1,1,'#5285B6'],[2,0,'#BF8F45'],[3,1,'#7C6CB0'],[1,2,'#5F9A5A'],[4,2,'#5285B6']];
-    b.forEach(function(o){var bx=ix+12+o[0]*cell,by=iy+26+o[1]*cell;ctx.fillStyle=o[2];ctx.fillRect(bx+2,by+2,cell-5,cell-5);});
+    // a few hex buildings
+    var b=[[1,1,'#5F9A5A'],[2,1,'#5285B6'],[3,0,'#BF8F45'],[4,1,'#7C6CB0'],[2,2,'#5F9A5A'],[5,2,'#5285B6']];
+    b.forEach(function(o){var bx=ix+16+o[0]*(hw2*2)+(o[1]&1)*hw2,by=iy+30+o[1]*vs;
+      ctx.fillStyle=o[2];ctx.beginPath();insetHex(bx,by);ctx.fill();});
     ctx.fillStyle=P.muted||P.line2; ctx.font="600 11px 'Inter',sans-serif"; ctx.fillStyle=cssVar('--muted');
     ctx.fillText('Surface — build here',ix+12,iy+16);
     ctx.restore();
@@ -567,7 +582,7 @@
     if(dragging){var dx=e.clientX-lastX,dy=e.clientY-lastY;movedDist+=Math.abs(dx)+Math.abs(dy);yaw+=dx*0.35;pitch=clamp(pitch+dy*0.006);lastX=e.clientX;lastY=e.clientY;hoverTile=null;hideTip();}
     else if(mode==='world'){var loc=unproj(s.x,s.y),t=loc&&tileOf(loc.lat,loc.lon);
       if(!NET)buildNetwork();
-      var land=!!(t&&landTile(t.ti,t.tj)), nh=land?t.key:null;
+      var land=!!(t&&(landTile(t.ti,t.tj)||NET.avail[t.key])), nh=land?t.key:null;   // claimable water hexes are hoverable too (reclaim)
       if(nh!==hoverTile){hoverTile=nh;tilesDirty();}                       // highlight + tooltip for the land square under the cursor
       if(land)showTip(e,t.ti,t.tj);else hideTip();
       canvas.style.cursor=hittest(s.x,s.y)?'pointer':land?'pointer':'grab';}}
@@ -576,8 +591,8 @@
       if(c){hideTip();if(c.you)startDive(s.x,s.y,c);else showNeighbour(c);return;}
       var loc=unproj(s.x,s.y);if(!loc)return;
       var t=tileOf(loc.lat,loc.lon);if(!NET)buildNetwork();
-      if(t&&landTile(t.ti,t.tj)){hideTip();openRegion(t.ti,t.tj);}         // land square → open the Region and its plots
-      else if(t)showWToast('🌊 Open ocean <b>— cities settle on land squares</b>');}}
+      if(t&&(landTile(t.ti,t.tj)||NET.avail[t.key])){hideTip();openRegion(t.ti,t.tj);}   // land hex, or claimable water (reclaim)
+      else if(t)showWToast('🌊 Open water <b>— beyond the frontier. Territory reclaims the sea hex by hex.</b>');}}
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
 
   var diveCity=null;

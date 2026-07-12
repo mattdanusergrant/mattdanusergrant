@@ -35,8 +35,11 @@
  */
 
 // ---- world grid: MUST match world/index.html exactly (authoritative plot math) ----
-var TS = 6, TROWS = 24, TCOLS = 60;
-var PLOTS = 4, PP = TS / PLOTS, PCOLS = TCOLS * PLOTS, PROWS = TROWS * PLOTS;   // 240 × 96 plots
+// HEX WORLD: pointy-top hexes in lon/lat space, odd-r offset. Each hex plot is 6° of
+// longitude wide; rows step 4.5° of latitude (odd rows shifted +3° lon). 60 cols wrap
+// the globe; 32 rows span the ±72° habitable band. One city per hex.
+var HEXW = 6, HEXVS = 4.5, HEXR = 3;              // width°, row step°, vertical radius°
+var PCOLS = 60, PROWS = 32;                        // 60 × 32 hex plots
 
 // The AI megacity seed network — connected scenery, present in every world. These are
 // NOT joinable hubs (no owner, no codes); human hub players are stored in KV.
@@ -51,17 +54,32 @@ var SEED_HUBS = [
   { name: 'Mount Civic', lat: -46, lon: 150, tier: 2 }
 ];
 
-function plotOf(lat, lon) {
-  if (lat < -72 || lat >= 72) return null;
-  var pj = Math.floor((lat + 72) / PP);
-  var pi = Math.floor(((((lon + 180) % 360) + 360) % 360) / PP) % PCOLS;
-  return { pi: pi, pj: pj, key: pi + ',' + pj };
+function plotCenter(pi, pj) {
+  var lon = -180 + HEXR + pi * HEXW + (pj & 1) * (HEXW / 2);
+  return { lat: pj * HEXVS - 69, lon: ((lon + 540) % 360) - 180 };
 }
-function plotCenter(pi, pj) { return { lat: pj * PP - 72 + PP / 2, lon: pi * PP - 180 + PP / 2 }; }
+function plotOf(lat, lon) {
+  // nearest hex CENTER = exact Voronoi assignment on the (stretched) hex lattice
+  if (lat < -72 || lat >= 72) return null;
+  var best = null, bd = 1e9, r0 = Math.floor((lat + 72) / HEXVS);
+  for (var pj = Math.max(0, r0 - 1); pj <= Math.min(PROWS - 1, r0 + 1); pj++) {
+    var c0 = Math.floor((((lon + 180 - HEXR - (pj & 1) * (HEXW / 2)) % 360) + 360) % 360 / HEXW);
+    for (var k = 0; k <= 1; k++) {
+      var pi = ((c0 + k) % PCOLS + PCOLS) % PCOLS;
+      var ctr = plotCenter(pi, pj);
+      var dLon = Math.abs(((lon - ctr.lon + 540) % 360) - 180), dLat = lat - ctr.lat;
+      var d = dLon * dLon + dLat * dLat;
+      if (d < bd) { bd = d; best = { pi: pi, pj: pj, key: pi + ',' + pj }; }
+    }
+  }
+  return best;
+}
 function plotNbs(pi, pj) {
-  var o = [[(pi + 1) % PCOLS, pj], [(pi + PCOLS - 1) % PCOLS, pj]];   // E/W wrap around the globe
-  if (pj > 0) o.push([pi, pj - 1]);
-  if (pj < PROWS - 1) o.push([pi, pj + 1]);
+  // 6 hex neighbours (odd-r offset), wrapping E/W around the globe
+  var odd = pj & 1, W = function (c) { return ((c % PCOLS) + PCOLS) % PCOLS; };
+  var o = [[W(pi + 1), pj], [W(pi - 1), pj]];
+  if (pj > 0) { o.push([W(pi + odd), pj - 1]); o.push([W(pi - 1 + odd), pj - 1]); }
+  if (pj < PROWS - 1) { o.push([W(pi + odd), pj + 1]); o.push([W(pi - 1 + odd), pj + 1]); }
   return o;
 }
 
