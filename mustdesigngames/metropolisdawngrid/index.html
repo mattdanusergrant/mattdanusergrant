@@ -126,6 +126,13 @@
   .polmenu .ord.on{border-color:#3E8E6E;background:rgba(95,190,110,.10)}
   .polmenu .ord.locked{opacity:.45;cursor:default}
   .polmenu .ord .tick{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--line-2);flex:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#FBF6E6}
+  .setmenu{min-width:214px;gap:5px}
+  .themerow{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:2px}
+  .themerow .sw-t{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:5px 2px 4px;border-radius:8px;border:1.5px solid transparent}
+  .themerow .sw-t:hover{border-color:var(--line-2)}
+  .themerow .sw-t.on{border-color:#3E8E6E;background:rgba(95,190,110,.12)}
+  .themerow .sw-t .chip{width:38px;height:16px;border-radius:5px;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.16)}
+  .themerow .sw-t .nm{font-size:9px;font-weight:600;color:var(--ink-2);letter-spacing:.02em}
   .polmenu .ord.on .tick{background:#3E8E6E;border-color:#3E8E6E}
   .curtool{font-family:'Fraunces',serif;font-size:13px;color:var(--bar-ink);font-weight:600;white-space:nowrap}
   @media(max-width:560px){.clabel{display:none}.cat{min-width:0;padding:6px 9px}.curtool{display:none}}
@@ -266,10 +273,6 @@
       <div class="catmenu"><span class="menuhd">Tools</span>
         <div class="tool" data-brush="inspect"><span class="ico">🔍</span>Inspect<span class="key">`</span></div>
         <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
-        <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
-        <div class="tool" data-act="import" title="Paste a share code to load a city"><span class="ico">📥</span>Import city</div>
-        <div class="tool" data-act="stats" title="City history — population, treasury, congestion over time"><span class="ico">📊</span>Stats</div>
-        <div class="tool" data-act="ach" title="Achievements — earned across every city you build"><span class="ico">🏅</span>Awards</div>
       </div></div>
     <div class="cat" data-cat="transport"><span class="cico">🛣️</span><span class="clabel">Transport</span>
       <div class="catmenu"><span class="menuhd">Transport</span>
@@ -302,6 +305,15 @@
       </div></div>
     <div class="cat" data-cat="policy" id="polcat" title="Budget &amp; policy — set the tax rate, enact ordinances"><span class="cico">⚖️</span><span class="clabel">Policy</span>
       <div class="catmenu polmenu" id="polmenu"></div></div>
+    <div class="cat" data-cat="settings" id="setcat" title="Settings — theme, stats, awards, save data"><span class="cico">⚙️</span><span class="clabel">Settings</span>
+      <div class="catmenu setmenu"><span class="menuhd">Settings</span>
+        <div class="tool" data-act="stats" title="City history — population, treasury, congestion"><span class="ico">📊</span>Stats</div>
+        <div class="tool" data-act="ach" title="Achievements — earned across every city you build"><span class="ico">🏅</span>Awards</div>
+        <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
+        <div class="tool" data-act="import" title="Paste a share code to load a city"><span class="ico">📥</span>Import city</div>
+        <span class="pol-sec" style="margin-top:7px">Theme</span>
+        <div class="themerow" id="themerow"></div>
+      </div></div>
     <span class="spacer"></span>
     <span class="curtool" id="curtool" title="Current tool">Road</span>
     <button class="reset" id="reset" type="button">Reset</button>
@@ -1349,6 +1361,33 @@
     if(od){e.stopPropagation();if(od.getAttribute('data-lk'))return;var k=od.getAttribute('data-ord');
       POL[k]=!POL[k];renderPolicy();svcDirty=true;scheduleSave();return;}
     renderPolicy();});                                     // opening the chip (or any other click inside) refreshes the panel
+
+  // ---- Settings menu: theme selector (every bar colour we've tried) + the moved Stats/Awards/Export/Import ----
+  var THEMES={
+    espresso:{n:'Espresso',bar:'#2E2620',ink:'#F4EADA',muted:'#B7A78F',line:'rgba(244,234,218,.16)'},
+    terracotta:{n:'Terracotta',bar:'#D5765A',ink:'#FDF1E6',muted:'#F7D3C1',line:'rgba(253,241,230,.24)'},
+    orange:{n:'Orange',bar:'#F3993C',ink:'#3A2410',muted:'#7E4E1E',line:'rgba(58,36,16,.20)'},
+    gold:{n:'Gold',bar:'#F7DA63',ink:'#3A2E08',muted:'#7C6620',line:'rgba(58,44,8,.20)'},
+    bright:{n:'Bright',bar:'#F5C518',ink:'#3A2E08',muted:'#7A6216',line:'rgba(58,44,8,.22)'},
+    slate:{n:'Slate',bar:'#223442',ink:'#EDF2F7',muted:'#96A8B7',line:'rgba(255,255,255,.14)'}
+  };
+  var THEME_KEY='mdg-theme';
+  var curTheme=(function(){try{var t=localStorage.getItem(THEME_KEY);return THEMES[t]?t:'espresso';}catch(e){return 'espresso';}})();
+  function applyTheme(k){if(!THEMES[k])return;curTheme=k;var t=THEMES[k],rs=document.documentElement.style;
+    rs.setProperty('--bar',t.bar);rs.setProperty('--bar-ink',t.ink);rs.setProperty('--bar-muted',t.muted);rs.setProperty('--bar-line',t.line);
+    try{localStorage.setItem(THEME_KEY,k);}catch(e){}
+    var row=document.getElementById('themerow');if(row)Array.prototype.forEach.call(row.children,function(el){el.classList.toggle('on',el.getAttribute('data-theme')===k);});
+    dirty=true;}
+  function buildThemeRow(){var row=document.getElementById('themerow');if(!row)return;var h='',k;
+    for(k in THEMES){var t=THEMES[k];h+='<div class="sw-t'+(k===curTheme?' on':'')+'" data-theme="'+k+'" title="'+t.n+'"><span class="chip" style="background:'+t.bar+'"></span><span class="nm">'+t.n+'</span></div>';}
+    row.innerHTML=h;}
+  document.getElementById('setcat').addEventListener('click',function(e){
+    var sw=e.target.closest('[data-theme]');
+    if(sw){e.stopPropagation();applyTheme(sw.getAttribute('data-theme'));return;}
+    var act=e.target.closest('[data-act]');
+    if(act){e.stopPropagation();closeMenus();ioOpen(act.getAttribute('data-act'));return;}   // Stats/Awards/Export/Import
+  });
+  buildThemeRow(); applyTheme(curTheme);                    // restore the saved theme on boot
 
   // ---- guided first-run: a short objective path that teaches the loop as you play ----
   var TUTOR_KEY='mdg-tutor-done';
