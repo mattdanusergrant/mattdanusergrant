@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>MDG — Hub Console</title>
+<style>
+  :root{
+    --bg:#0f171e; --panel:#18242e; --panel2:#1f2e3a; --line:rgba(255,255,255,.10);
+    --ink:#EDF2F7; --muted:#93a6b6; --accent:#5AA9E6; --gold:#F7DA63; --good:#5FCf80; --bad:#E06B54;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 'Inter',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.2px}
+  header .tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+  .wrap{max-width:1040px;margin:0 auto;padding:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:0 0 18px}
+  .card h2{font-size:14px;margin:0 0 14px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.6px}
+  label{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:9px 11px;font:inherit}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:0 0 12px}
+  .row.tight{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+  button{background:var(--accent);color:#08131c;border:0;border-radius:9px;padding:9px 16px;font:600 14px/1 'Inter',sans-serif;cursor:pointer}
+  button:hover{filter:brightness(1.08)} button:active{transform:translateY(1px)}
+  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  button.sm{padding:6px 11px;font-size:12px}
+  .muted{color:var(--muted)} .good{color:var(--good)} .bad{color:var(--bad)}
+  .msg{font-size:13px;margin:8px 0 0;min-height:18px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
+  code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font:12px/1.6 ui-monospace,Menlo,monospace;word-break:break-all}
+  .chip{display:inline-block;font-size:11px;border-radius:999px;padding:1px 8px;border:1px solid var(--line)}
+  .chip.patron{color:var(--gold);border-color:rgba(247,218,99,.4)}
+  .chip.open{color:var(--accent);border-color:rgba(90,169,230,.4)}
+  .codes{margin:6px 0 0;display:flex;flex-wrap:wrap;gap:6px}
+  .tabs{display:flex;gap:8px;margin:0 0 16px}
+  .tabs button{background:transparent;border:1px solid var(--line);color:var(--muted)}
+  .tabs button.on{background:var(--panel);color:var(--ink);border-color:var(--accent)}
+  .hint{font-size:12px;color:var(--muted);margin:2px 0 10px}
+  .copy{cursor:pointer;border-bottom:1px dashed var(--muted)}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌆 Metropolis Dawn Grid — Hub Console</h1>
+  <span class="tag">operator / hub owner tool</span>
+</header>
+<div class="wrap">
+
+  <div class="card">
+    <h2>Connection</h2>
+    <div class="row">
+      <div><label>Backend URL</label><input id="backend" placeholder="https://mdg-world.<you>.workers.dev"></div>
+      <div><label>Admin key <span class="muted">(operator only — leave blank for owner mode)</span></label><input id="adminkey" type="password" placeholder="ADMIN_KEY secret"></div>
+    </div>
+    <div class="hint">Stored only in this browser (localStorage). The admin key never leaves your machine except as a Bearer header to your own backend.</div>
+    <div class="msg" id="connmsg"></div>
+  </div>
+
+  <div class="tabs">
+    <button id="tab-admin" class="on" data-tab="admin">Operator (admin)</button>
+    <button id="tab-owner" data-tab="owner">Hub owner</button>
+  </div>
+
+  <!-- ================= ADMIN ================= -->
+  <div id="pane-admin">
+    <div class="card">
+      <h2>Invite a hub player</h2>
+      <div class="hint">Mint a hub for an influencer (e.g. City Planner Plays). Their community grows out of this hub. You get back an <b>owner token</b> to hand them — they use it in "Hub owner" mode to mint their own invite codes.</div>
+      <div class="row">
+        <div style="grid-column:1/-1"><label>Hub / influencer name</label><input id="h-name" placeholder="City Planner Plays"></div>
+      </div>
+      <div class="row">
+        <div><label>Patreon URL <span class="muted">(for patron codes)</span></label><input id="h-patreon" placeholder="https://patreon.com/cityplannerplays"></div>
+        <div><label>Handle</label><input id="h-handle" placeholder="@CityPlannerPlays"></div>
+        <div><label>Prestige tier</label><select id="h-tier"><option value="3">3 — City</option><option value="2">2 — Town</option><option value="4" selected>4 — Metropolis</option><option value="5">5 — Megacity</option></select></div>
+      </div>
+      <div class="row tight">
+        <div><label>Latitude</label><input id="h-lat" placeholder="48.75"></div>
+        <div><label>Longitude</label><input id="h-lon" placeholder="72.75"></div>
+        <div><label>Place near…</label>
+          <select id="h-near"><option value="">— pick a seed hub —</option></select>
+        </div>
+        <div style="display:flex;align-items:flex-end"><button class="ghost" id="h-findspot" type="button">Find an open plot</button></div>
+      </div>
+      <button id="h-mint">Mint hub</button>
+      <div class="msg" id="mintmsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Hubs <button class="ghost sm" id="refresh" style="float:right">Refresh</button></h2>
+      <div id="hublist"><div class="muted">Connect + refresh to list hubs.</div></div>
+    </div>
+  </div>
+
+  <!-- ================= OWNER ================= -->
+  <div id="pane-owner" style="display:none">
+    <div class="card">
+      <h2>Your hub</h2>
+      <div class="hint">Paste the <b>owner token</b> the operator gave you. You can mint invite codes for your community — share <span class="chip open">open</span> codes publicly, and <span class="chip patron">patron</span> codes inside a patrons-only Patreon post.</div>
+      <div class="row">
+        <div><label>Hub ID</label><input id="o-hubid" placeholder="city-planner-plays"></div>
+        <div><label>Owner token</label><input id="o-token" placeholder="your owner token"></div>
+        <div style="display:flex;align-items:flex-end"><button class="ghost" id="o-load" type="button">Load hub</button></div>
+      </div>
+      <div class="msg" id="ownermsg"></div>
+      <div id="ownerinfo"></div>
+    </div>
+    <div class="card" id="o-codecard" style="display:none">
+      <h2>Mint an invite code</h2>
+      <div class="row tight">
+        <div><label>Kind</label><select id="o-kind"><option value="open">open — share anywhere</option><option value="patron">patron — Patreon-locked</option></select></div>
+        <div><label>Max uses</label><input id="o-max" value="100"></div>
+        <div><label>Custom code <span class="muted">(optional)</span></label><input id="o-code" placeholder="CITYPLANNER"></div>
+        <div><label>Note</label><input id="o-note" placeholder="e.g. pinned comment"></div>
+      </div>
+      <button id="o-gen">Generate code</button>
+      <div class="msg" id="genmsg"></div>
+      <div id="o-codes" class="codes"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+(function(){
+  "use strict";
+  // ---- plot math: MUST match worker.js / world/index.html ----
+  var TS=6, PLOTS=4, PP=TS/PLOTS, PCOLS=60*PLOTS, PROWS=24*PLOTS;
+  function plotOf(lat,lon){ if(lat<-72||lat>=72) return null;
+    var pj=Math.floor((lat+72)/PP), pi=Math.floor((((lon+180)%360)+360)%360/PP)%PCOLS; return {pi:pi,pj:pj,key:pi+','+pj}; }
+  function plotCenter(pi,pj){ return {lat:pj*PP-72+PP/2, lon:pi*PP-180+PP/2}; }
+  function plotNbs(pi,pj){ var o=[[(pi+1)%PCOLS,pj],[(pi+PCOLS-1)%PCOLS,pj]]; if(pj>0)o.push([pi,pj-1]); if(pj<PROWS-1)o.push([pi,pj+1]); return o; }
+  var SEED_HUBS=[['New Sprawlton',32,-46],['Gridholm',-8,38],['Port Zoning',-30,-18],['Fort Density',48,70],['Lake Parcel',6,128],['Trade Junction',-22,96],['Old Commons',24,182],['Mount Civic',-46,150]];
+
+  var $=function(id){return document.getElementById(id);};
+  var LS={get:function(k){try{return localStorage.getItem(k)||'';}catch(e){return '';}},set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+  $('backend').value=LS.get('mdg-console-backend'); $('adminkey').value=LS.get('mdg-console-admin');
+  $('backend').addEventListener('input',function(){LS.set('mdg-console-backend',this.value.trim());});
+  $('adminkey').addEventListener('input',function(){LS.set('mdg-console-admin',this.value);});
+  function base(){return $('backend').value.trim().replace(/\/+$/,'');}
+  function adminHdrs(){return {'Content-Type':'application/json','Authorization':'Bearer '+$('adminkey').value};}
+  function msg(el,text,cls){el.className='msg '+(cls||'');el.textContent=text;}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  // seed-hub dropdown
+  var near=$('h-near'); SEED_HUBS.forEach(function(h,i){var o=document.createElement('option');o.value=i;o.textContent=h[0];near.appendChild(o);});
+
+  // tabs
+  document.querySelectorAll('.tabs button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('.tabs button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on');
+    $('pane-admin').style.display=b.dataset.tab==='admin'?'':'none';
+    $('pane-owner').style.display=b.dataset.tab==='owner'?'':'none';
+  });});
+
+  // ---- find an open plot near a chosen seed hub (uses live /v1/world occupancy) ----
+  $('h-findspot').addEventListener('click',function(){
+    if(!base())return msg($('mintmsg'),'Set the backend URL first.','bad');
+    var idx=near.value; if(idx==='')return msg($('mintmsg'),'Pick a seed hub to place near.','bad');
+    msg($('mintmsg'),'Finding an open plot…','muted');
+    fetch(base()+'/v1/world').then(function(r){return r.json();}).then(function(d){
+      var occ={}; (d.cities||[]).forEach(function(c){var p=plotOf(c.lat,c.lon);if(p)occ[p.key]=1;});
+      // BFS outward from the seed hub for the nearest open plot
+      var seed=SEED_HUBS[idx], sp=plotOf(seed[1],seed[2]);
+      var seen={}, q=[[sp.pi,sp.pj]]; seen[sp.key]=1; var found=null, guard=0;
+      while(q.length&&guard++<4000){ var cur=q.shift(); var nbs=plotNbs(cur[0],cur[1]);
+        for(var i=0;i<nbs.length;i++){var k=nbs[i][0]+','+nbs[i][1]; if(seen[k])continue; seen[k]=1;
+          if(!occ[k]){found=nbs[i];break;} q.push(nbs[i]);}
+        if(found)break; }
+      if(!found)return msg($('mintmsg'),'No open plot found near there.','bad');
+      var c=plotCenter(found[0],found[1]); $('h-lat').value=c.lat.toFixed(2); $('h-lon').value=c.lon.toFixed(2);
+      msg($('mintmsg'),'Found an open plot bordering the '+seed[0]+' network — ready to mint.','good');
+    }).catch(function(e){msg($('mintmsg'),'World fetch failed: '+e.message,'bad');});
+  });
+
+  // ---- mint a hub ----
+  $('h-mint').addEventListener('click',function(){
+    if(!base())return msg($('mintmsg'),'Set the backend URL first.','bad');
+    if(!$('adminkey').value)return msg($('mintmsg'),'Admin key required to mint a hub.','bad');
+    var body={name:$('h-name').value.trim(),lat:parseFloat($('h-lat').value),lon:parseFloat($('h-lon').value),
+      patreonUrl:$('h-patreon').value.trim(),handle:$('h-handle').value.trim(),tier:parseInt($('h-tier').value,10),ts:Date.now()};
+    if(!body.name)return msg($('mintmsg'),'Name required.','bad');
+    if(isNaN(body.lat)||isNaN(body.lon))return msg($('mintmsg'),'Set lat/lon (or use "Find an open plot").','bad');
+    msg($('mintmsg'),'Minting…','muted');
+    fetch(base()+'/v1/admin/hub',{method:'POST',headers:adminHdrs(),body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});}).then(function(res){
+      if(res.s!==200)return msg($('mintmsg'),'Failed: '+(res.j.error||res.s),'bad');
+      msg($('mintmsg'),'Hub minted: '+res.j.hub.name+' ('+res.j.hub.hubId+'). Owner token below — hand it to the influencer.','good');
+      $('h-name').value='';$('h-patreon').value='';$('h-handle').value='';$('h-lat').value='';$('h-lon').value='';
+      loadHubs();
+    }).catch(function(e){msg($('mintmsg'),'Error: '+e.message,'bad');});
+  });
+
+  // ---- list hubs (admin) ----
+  $('refresh').addEventListener('click',loadHubs);
+  function loadHubs(){
+    if(!base()||!$('adminkey').value){$('hublist').innerHTML='<div class="muted">Set backend + admin key, then Refresh.</div>';return;}
+    $('hublist').innerHTML='<div class="muted">Loading…</div>';
+    fetch(base()+'/v1/admin/hubs',{headers:{'Authorization':'Bearer '+$('adminkey').value}}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});}).then(function(res){
+      if(res.s!==200){$('hublist').innerHTML='<div class="bad">'+esc(res.j.error||('HTTP '+res.s))+'</div>';return;}
+      var hubs=res.j.hubs||[];
+      if(!hubs.length){$('hublist').innerHTML='<div class="muted">No hubs yet. Mint one above.</div>';return;}
+      var joinBase=location.origin+location.pathname.replace(/hub-console\.html$/,'world/')+'?backend='+encodeURIComponent(base());
+      var h='<table><thead><tr><th>Hub</th><th>Members</th><th>Cities</th><th>Owner token</th><th>Codes</th></tr></thead><tbody>';
+      hubs.forEach(function(hb){
+        h+='<tr><td><b>'+esc(hb.name)+'</b><br><span class="muted">'+esc(hb.hubId)+'</span>'+
+           (hb.patreonUrl?'<br><a href="'+esc(hb.patreonUrl)+'" target="_blank" rel="noopener">Patreon ↗</a>':'')+'</td>'+
+           '<td>'+hb.members+'</td><td>'+hb.cities+'</td>'+
+           '<td><code class="copy" title="click to copy" data-copy="'+esc(hb.ownerToken)+'">'+esc(hb.ownerToken)+'</code></td>'+
+           '<td><button class="ghost sm" data-mkopen="'+esc(hb.hubId)+'">+ open</button> '+
+               '<button class="ghost sm" data-mkpatron="'+esc(hb.hubId)+'">+ patron</button>'+
+               '<div class="codes" id="ac-'+esc(hb.hubId)+'"></div></td></tr>';
+      });
+      h+='</tbody></table><div class="hint" style="margin-top:10px">Join link base for players: <code class="copy" data-copy="'+esc(joinBase)+'">'+esc(joinBase)+'</code> — append <code>&amp;join=CODE</code> to auto-open the redeem card.</div>';
+      $('hublist').innerHTML=h;
+    }).catch(function(e){$('hublist').innerHTML='<div class="bad">Error: '+esc(e.message)+'</div>';});
+  }
+
+  // delegated: copy + generate-code from the admin table
+  $('hublist').addEventListener('click',function(e){
+    var cp=e.target.closest('[data-copy]'); if(cp){copy(cp.getAttribute('data-copy'),cp);return;}
+    var mo=e.target.closest('[data-mkopen]'), mp=e.target.closest('[data-mkpatron]');
+    if(mo)return adminMintCode(mo.getAttribute('data-mkopen'),'open');
+    if(mp)return adminMintCode(mp.getAttribute('data-mkpatron'),'patron');
+  });
+  function adminMintCode(hubId,kind){
+    fetch(base()+'/v1/hub/code',{method:'POST',headers:adminHdrs(),body:JSON.stringify({hubId:hubId,kind:kind,ts:Date.now()})})
+      .then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});}).then(function(res){
+      var box=$('ac-'+hubId); if(!box)return;
+      if(res.s!==200){box.insertAdjacentHTML('beforeend','<span class="bad">'+esc(res.j.error||res.s)+'</span>');return;}
+      box.insertAdjacentHTML('beforeend', codeChip(res.j.code));
+    }).catch(function(e){});
+  }
+
+  // ---- owner mode ----
+  $('o-hubid').value=LS.get('mdg-console-hubid'); $('o-token').value=LS.get('mdg-console-ownertoken');
+  $('o-load').addEventListener('click',function(){
+    var hubId=$('o-hubid').value.trim(), tok=$('o-token').value.trim();
+    if(!base())return msg($('ownermsg'),'Set the backend URL first.','bad');
+    if(!hubId)return msg($('ownermsg'),'Enter your hub ID.','bad');
+    LS.set('mdg-console-hubid',hubId); LS.set('mdg-console-ownertoken',tok);
+    msg($('ownermsg'),'Loading…','muted');
+    fetch(base()+'/v1/hub/'+encodeURIComponent(hubId)).then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});}).then(function(res){
+      if(res.s!==200){$('o-codecard').style.display='none';return msg($('ownermsg'),res.j.error||('HTTP '+res.s),'bad');}
+      var hb=res.j.hub;
+      msg($('ownermsg'),'','');
+      $('ownerinfo').innerHTML='<table><tbody>'+
+        '<tr><th>Hub</th><td><b>'+esc(hb.name)+'</b> <span class="muted">('+esc(hb.hubId)+')</span></td></tr>'+
+        '<tr><th>Members</th><td>'+hb.members+'</td></tr><tr><th>Cities</th><td>'+hb.cities+'</td></tr>'+
+        (hb.patreonUrl?'<tr><th>Patreon</th><td><a href="'+esc(hb.patreonUrl)+'" target="_blank" rel="noopener">'+esc(hb.patreonUrl)+'</a></td></tr>':'')+
+        '</tbody></table>';
+      $('o-codecard').style.display=tok?'':'none';
+      if(!tok)msg($('ownermsg'),'Add your owner token to mint codes.','muted');
+    }).catch(function(e){msg($('ownermsg'),'Error: '+e.message,'bad');});
+  });
+  $('o-gen').addEventListener('click',function(){
+    var body={hubId:$('o-hubid').value.trim(),ownerToken:$('o-token').value.trim(),kind:$('o-kind').value,
+      max:parseInt($('o-max').value,10)||100,code:$('o-code').value.trim(),note:$('o-note').value.trim(),ts:Date.now()};
+    if(!body.hubId||!body.ownerToken)return msg($('genmsg'),'Hub ID + owner token required.','bad');
+    msg($('genmsg'),'Generating…','muted');
+    fetch(base()+'/v1/hub/code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});}).then(function(res){
+      if(res.s!==200)return msg($('genmsg'),'Failed: '+(res.j.error||res.s),'bad');
+      msg($('genmsg'),'Code created.','good'); $('o-code').value='';
+      $('o-codes').insertAdjacentHTML('afterbegin', codeChip(res.j.code, true));
+    }).catch(function(e){msg($('genmsg'),'Error: '+e.message,'bad');});
+  });
+
+  function codeChip(c, withLink){
+    var joinBase=location.origin+location.pathname.replace(/hub-console\.html$/,'world/')+'?backend='+encodeURIComponent(base())+'&join='+encodeURIComponent(c.code);
+    return '<span class="chip '+(c.kind==='patron'?'patron':'open')+'" title="'+c.kind+(c.max?' · max '+c.max:'')+'">'+
+      '<code class="copy" data-copy="'+esc(c.code)+'" title="copy code">'+esc(c.code)+'</code>'+
+      (withLink?' <a class="copy" href="#" data-copy="'+esc(joinBase)+'" title="copy join link">link</a>':'')+
+      '</span>';
+  }
+  // global copy delegation for owner codes + any [data-copy]
+  document.addEventListener('click',function(e){var c=e.target.closest('#o-codes [data-copy], #ownerinfo [data-copy]');if(c){e.preventDefault();copy(c.getAttribute('data-copy'),c);}});
+  function copy(text,el){ try{navigator.clipboard.writeText(text);}catch(e){}
+    if(el){var old=el.textContent; el.textContent='copied ✓'; setTimeout(function(){el.textContent=old;},900);} }
+
+  if(base()&&$('adminkey').value) loadHubs();
+})();
+</script>
+</body>
+</html>

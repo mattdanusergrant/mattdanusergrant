@@ -41,8 +41,14 @@
   .wtoast b{color:var(--muted);font-weight:500}
   @media(max-width:640px){.intro{max-width:60vw}.legend{display:none}}
   #fade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:6}
-  #ncard,#fcard,#rcard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
-  #ncard.on,#fcard.on,#rcard.on{display:flex}
+  #ncard,#fcard,#rcard,#jcard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
+  #ncard.on,#fcard.on,#rcard.on,#jcard.on{display:flex}
+  .nc-inner input{width:100%;box-sizing:border-box;font-family:'Inter',sans-serif;font-size:16px;letter-spacing:.12em;text-transform:uppercase;text-align:center;padding:11px 12px;border:1.5px solid var(--line-2);border-radius:10px;margin:0 0 12px;color:var(--ink);background:var(--bg)}
+  .nc-inner input:focus{outline:none;border-color:#5285B6}
+  #jc-patreon{margin:0 0 14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+  #jc-patreon a{color:#C86B2B;font-weight:600}
+  .hubbtn{font-family:'Fraunces',serif;font-size:13px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:7px 15px;cursor:pointer;white-space:nowrap}
+  .hubbtn.member{background:rgba(95,190,110,.16);color:#2E7D46;border:1.5px solid rgba(95,190,110,.5)}
   .plots{display:grid;grid-template-columns:repeat(4,46px);gap:7px;margin:4px 0 16px;justify-content:center}
   /* .plots prefix beats the .nc-inner button pill styling on specificity */
   .plots .plot{width:46px;height:46px;border-radius:9px;border:1.5px solid var(--line-2);background:rgba(167,192,137,.4);cursor:pointer;font-size:15px;line-height:1;color:#fff;font-family:inherit;padding:0}
@@ -68,6 +74,7 @@
   <header class="bar">
     <a class="home" href="../" title="Back to the playable build">← the playable build</a>
     <span class="spacer"></span>
+    <button id="hubbtn" class="hubbtn" type="button" hidden></button>
   </header>
 
   <div class="intro">
@@ -81,6 +88,7 @@
   <div id="ncard"><div class="nc-inner"><h3 id="nc-name"></h3><p id="nc-msg"></p><div class="nc-actions"><button id="nc-visit" type="button">Visit →</button><button id="nc-trade" type="button" class="ghost">🤝 Trade</button><button id="nc-close" type="button" class="ghost">Close</button></div></div></div>
   <div id="fcard"><div class="nc-inner"><h3 id="fc-name">Found your city here</h3><p id="fc-msg"></p><div class="nc-actions"><button id="fc-build" type="button">Build here →</button><button id="fc-cancel" type="button" class="ghost">Keep looking</button></div></div></div>
   <div id="rcard"><div class="nc-inner"><h3 id="rc-name"></h3><p id="rc-msg"></p><div class="plots" id="rc-plots"></div><div class="nc-actions"><button id="rc-close" type="button" class="ghost">Close</button></div></div></div>
+  <div id="jcard"><div class="nc-inner"><h3 id="jc-name">Join a hub</h3><p id="jc-msg">Enter an invite code from a hub player to found your city in their community — you’ll build right next to them and their members.</p><input id="jc-code" placeholder="invite code" autocomplete="off" spellcheck="false" maxlength="24" /><div id="jc-patreon"></div><div class="nc-actions"><button id="jc-go" type="button">Join →</button><button id="jc-close" type="button" class="ghost">Close</button></div></div></div>
   <div class="rtip" id="rtip" hidden></div>
 
   <div class="wtoast" id="wtoast"></div>
@@ -88,6 +96,7 @@
     <span class="hd">On this world</span>
     <div class="row"><span class="dot" id="lg-you"></span> Your city</div>
     <div class="row"><span class="dot" id="lg-them"></span> AI-run cities</div>
+    <div class="row" id="lg-hubrow" hidden><span class="dot" id="lg-hub"></span> <span id="lg-hublabel">Your hub</span></div>
     <div class="row"><span class="dot" id="lg-frontier"></span> Region with open plots</div>
   </div>
   <div class="hint">drag to spin · hover a land square · click it to open the Region and claim a plot</div>
@@ -197,14 +206,23 @@
   function netFetchWorld(){if(!MDG_BACKEND)return;
     try{fetch(MDG_BACKEND+'/v1/world').then(function(r){return r.ok?r.json():null;}).then(function(d){
       if(!d||!d.cities)return;var changed=false,mine=null,i;
-      for(i=1;i<CITIES.length;i++){var hp=plotOf(CITIES[i].lat,CITIES[i].lon);if(hp)_remoteKeys[hp.key]=1;}   // hubs + known remotes
-      for(i=0;i<d.cities.length;i++){var c=d.cities[i];if(c.hub)continue;       // hub seed already in CITIES
+      if(typeof d.inviteOnly==='boolean')WORLD_INVITEONLY=d.inviteOnly;
+      for(i=1;i<CITIES.length;i++){var hp=plotOf(CITIES[i].lat,CITIES[i].lon);if(hp)_remoteKeys[hp.key]=1;   // hubs + known remotes
+        if(!CITIES[i].hubId&&CITIES[i].tier&&!CITIES[i].remote&&!CITIES[i].human)CITIES[i].hubId=seedHubId(CITIES[i].name);}   // tag the AI seed hubs
+      // (your own city is tagged with your hub only once you actually claim a plot — see `mine` below)
+      for(i=0;i<d.cities.length;i++){var c=d.cities[i];
         var cp=plotOf(c.lat,c.lon);if(!cp)continue;
+        if(c.hub&&!c.human)continue;                                            // AI seed hub — already in CITIES
+        if(c.hub&&c.human){                                                     // a human HUB PLAYER — a real influencer's hub
+          if(_remoteKeys[cp.key]){for(var j=1;j<CITIES.length;j++){if(CITIES[j].hubId===c.hubId){CITIES[j].tier=c.tier;}}continue;}
+          _remoteKeys[cp.key]=1;CITIES.push({name:c.name,lat:c.lat,lon:c.lon,tier:c.tier||3,hub:true,human:true,hubId:c.hubId,patreonUrl:c.patreonUrl||''});changed=true;continue;}
         if(c.owner&&c.owner===MDG_TOKEN){mine=c;continue;}                       // my own claim → my city
         if(_remoteKeys[cp.key])continue;
-        _remoteKeys[cp.key]=1;CITIES.push({name:c.name,lat:c.lat,lon:c.lon,tier:c.tier||1,remote:true});changed=true;}
+        _remoteKeys[cp.key]=1;CITIES.push({name:c.name,lat:c.lat,lon:c.lon,tier:c.tier||1,remote:true,hubId:c.hubId||null});changed=true;}
       if(mine){var myp=plotOf(mine.lat,mine.lon),cur=plotOf(CITIES[0].lat,CITIES[0].lon);   // adopt my server claim (cross-device)
+        if(mine.hubId)CITIES[0].hubId=mine.hubId;
         if(!cur||cur.key!==myp.key){CITIES[0].lat=mine.lat;CITIES[0].lon=mine.lon;if(mine.name)CITIES[0].name=mine.name;saveHome();changed=true;}}
+      refreshHubUI();
       if(changed){NET=null;tilesDirty();}
     }).catch(function(){});}catch(e){}}
   function netClaim(loc,region,cb){if(!MDG_BACKEND||!MDG_TOKEN){cb({netfail:true});return;}
@@ -212,6 +230,31 @@
       .then(function(r){return r.json().then(function(d){return {status:r.status,d:d};});})
       .then(function(x){if(x.status===200&&x.d&&x.d.ok)cb({ok:true,city:x.d.city});else cb({reject:(x.d&&x.d.error)||'claim rejected'});})
       .catch(function(){cb({netfail:true});});}catch(e){cb({netfail:true});}}
+
+  // ---- HUB PLAYERS: invite-only communities that grow out of an influencer's hub ----
+  var WORLD_INVITEONLY=!!MDG_BACKEND;                                         // offline play is always open; a backend may gate the shared world (confirmed via /v1/world)
+  var MDG_HUB=(function(){try{return JSON.parse(localStorage.getItem('mdg-hub')||'null');}catch(e){return null;}})();  // {hubId,name,patreonUrl}
+  function setHub(h){MDG_HUB=h;try{if(h)localStorage.setItem('mdg-hub',JSON.stringify(h));else localStorage.removeItem('mdg-hub');}catch(e){}}
+  function myHubId(){return MDG_HUB&&MDG_HUB.hubId||null;}
+  function seedHubId(name){return 'seed-'+String(name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
+  // a stable, distinct colour per hub territory (human hubs pop; seeds stay muted blue; yours is green)
+  function hubColor(hubId){if(!hubId)return '#5285B6';if(hubId===myHubId())return '#4C8047';if(hubId.indexOf('seed-')===0)return '#5285B6';
+    var h=2166136261;for(var i=0;i<hubId.length;i++){h^=hubId.charCodeAt(i);h=(h*16777619)>>>0;}
+    var hue=h%360, sat=58, lig=52; return 'hsl('+hue+','+sat+'%,'+lig+'%)';}
+  function hubTint(hubId,you){if(you||hubId===myHubId())return 'rgba(46,105,44,.30)';
+    if(!hubId||hubId.indexOf('seed-')===0)return 'rgba(63,124,180,.26)';
+    var c=hubColor(hubId);return c.replace('hsl(','hsla(').replace(')',',.32)');}
+  function netRedeem(code,cb){if(!MDG_BACKEND||!MDG_TOKEN){cb({netfail:true});return;}
+    try{fetch(MDG_BACKEND+'/v1/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:MDG_TOKEN,code:code,ts:Date.now()})})
+      .then(function(r){return r.json().then(function(d){return {status:r.status,d:d};});})
+      .then(function(x){if(x.status===200&&x.d&&x.d.ok){setHub({hubId:x.d.hubId,name:x.d.hubName,patreonUrl:x.d.patreonUrl||'',lat:x.d.lat,lon:x.d.lon});cb({ok:true,hub:MDG_HUB});}
+        else cb({reject:(x.d&&x.d.error)||'invalid code'});})
+      .catch(function(){cb({netfail:true});});}catch(e){cb({netfail:true});}}
+  function netMe(){if(!MDG_BACKEND||!MDG_TOKEN)return;                        // restore membership across devices/sessions
+    try{fetch(MDG_BACKEND+'/v1/me?token='+encodeURIComponent(MDG_TOKEN)).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d)return;WORLD_INVITEONLY=d.inviteOnly!==false;
+      if(d.member){setHub({hubId:d.hubId,name:d.hubName,patreonUrl:d.patreonUrl||''});}
+      refreshHubUI();}).catch(function(){});}catch(e){}}
 
   // ---- regions & plots: the world is a grid of SOLID land / SOLID ocean squares ----
   // Each land square is a REGION holding a PLOTS×PLOTS grid of city plots. Hover a land square for
@@ -241,17 +284,23 @@
     var occ={}, conn={}, cityTiles={}, i, t;
     for(i=0;i<CITIES.length;i++){t=tileOf(CITIES[i].lat,CITIES[i].lon);if(t)cityTiles[t.key]=1;}
     for(i=1;i<CITIES.length;i++){var p=plotOf(CITIES[i].lat,CITIES[i].lon);if(!p)continue;
-      occ[p.key]={city:CITIES[i]};conn[p.key]=CITIES[i].name;}     // hubs: connected by definition (the wider world's network)
+      var hid=CITIES[i].hubId||(CITIES[i].tier&&!CITIES[i].remote&&!CITIES[i].human?seedHubId(CITIES[i].name):null);
+      occ[p.key]={city:CITIES[i],hubId:hid};conn[p.key]=CITIES[i].name;}   // hubs + members: occupied, tagged by territory
     var yp=plotOf(CITIES[0].lat,CITIES[0].lon);
-    if(yp&&!occ[yp.key]){occ[yp.key]={city:CITIES[0],you:true};
+    if(yp&&!occ[yp.key]){occ[yp.key]={city:CITIES[0],you:true,hubId:CITIES[0].hubId||null};
       var yn=plotNbs(yp.pi,yp.pj);                                 // your plot joins the network iff it borders it (the chain rule)
       for(i=0;i<yn.length;i++){var yk=yn[i][0]+','+yn[i][1];if(conn[yk]){conn[yp.key]=conn[yk];break;}}}
-    var avail={};                                      // open plots: unoccupied, on land, bordering a connected city
-    for(var k in conn){var kp=k.split(','),pi=+kp[0],pj=+kp[1],nb=plotNbs(pi,pj);
+    // seeds = the plots whose open neighbours you may claim. A hub MEMBER grows out of THEIR hub's
+    // territory only; unaffiliated players in open mode grow off the connected network; an
+    // un-joined player in invite-only mode has no seeds (must redeem a code first).
+    var avail={}, seeds=[], mh=myHubId(), sk;
+    if(mh){for(sk in occ)if(occ[sk].hubId===mh)seeds.push(sk);}
+    else if(!WORLD_INVITEONLY){for(sk in conn)seeds.push(sk);}
+    for(var s=0;s<seeds.length;s++){var kp=seeds[s].split(','),pi=+kp[0],pj=+kp[1],nb=plotNbs(pi,pj);
       for(var n=0;n<nb.length;n++){var nk=nb[n][0]+','+nb[n][1];if(occ[nk]||avail[nk])continue;
         var rti=Math.floor(nb[n][0]/PLOTS),rtj=Math.floor(nb[n][1]/PLOTS);
         if(!(cityTiles[rti+','+rtj]||noiseLand(rti,rtj)))continue;
-        avail[nk]={hub:conn[k]};}}
+        avail[nk]={hub:(occ[seeds[s]].city?occ[seeds[s]].city.name:conn[seeds[s]]),hubId:occ[seeds[s]].hubId};}}
     var regionAvail={}, regionCities={};               // per-region rollups for the map + tooltip
     for(var a in avail){var ap=a.split(','),ak=Math.floor(+ap[0]/PLOTS)+','+Math.floor(+ap[1]/PLOTS);regionAvail[ak]=(regionAvail[ak]||0)+1;}
     for(var o in occ){var op=o.split(','),ok=Math.floor(+op[0]/PLOTS)+','+Math.floor(+op[1]/PLOTS);(regionCities[ok]=regionCities[ok]||[]).push(occ[o]);}
@@ -301,9 +350,11 @@
     ctx.beginPath();for(k=0;k<landQ.length;k++)addQuad(landQ[k]);ctx.fillStyle=P.land;ctx.fill();
     ctx.beginPath();for(k=0;k<waterQ.length;k++)addQuad(waterQ[k]);for(k=0;k<landQ.length;k++)addQuad(landQ[k]);
     ctx.strokeStyle=P.grat;ctx.lineWidth=0.7;ctx.stroke();
-    for(k in NET.regionCities){var rc=k.split(','),t2=tileVerts(+rc[0],+rc[1]);if(!t2)continue;   // regions holding cities: tinted
-      var you=NET.regionCities[k].some(function(o){return o.you;});
-      ctx.beginPath();addQuad(t2);ctx.fillStyle=you?'rgba(46,105,44,.30)':'rgba(63,124,180,.30)';ctx.fill();}
+    for(k in NET.regionCities){var rc=k.split(','),t2=tileVerts(+rc[0],+rc[1]);if(!t2)continue;   // regions holding cities: tinted by hub territory
+      var cellCs=NET.regionCities[k],you=false,anyHid=null,humanHid=null;
+      for(var ci=0;ci<cellCs.length;ci++){var oo=cellCs[ci];if(oo.you)you=true;
+        if(oo.hubId){if(oo.city&&oo.city.human)humanHid=oo.hubId;if(!anyHid)anyHid=oo.hubId;}}
+      ctx.beginPath();addQuad(t2);ctx.fillStyle=hubTint(you?myHubId():(humanHid||anyHid),you);ctx.fill();}
     ctx.setLineDash([5,4]);
     for(k in NET.regionAvail){var ra=k.split(','),t3=tileVerts(+ra[0],+ra[1]);if(!t3)continue;    // regions with open plots: dashed
       ctx.beginPath();addQuad(t3);ctx.fillStyle='rgba(95,154,90,.12)';ctx.fill();
@@ -335,8 +386,10 @@
     var inf=regionInfo(ti,tj);
     document.getElementById('rc-name').textContent=inf.name;
     document.getElementById('rc-msg').innerHTML=inf.spec+'<br>'
-      +(inf.open?'<b>'+inf.open+' plot'+(inf.open>1?'s':'')+'</b> open to claim — new cities must border the megacity network.'
-                :'No open plots here — this region is beyond the frontier for now.');
+      +(WORLD_INVITEONLY&&!myHubId()
+          ?'This world is <b>invite-only</b> — <b>Join a hub</b> (top-right) with a creator’s code to found your city in their community.'
+          :inf.open?'<b>'+inf.open+' plot'+(inf.open>1?'s':'')+'</b> open to claim'+(myHubId()?' — grow out of your hub’s territory.':' — new cities must border the megacity network.')
+                :(myHubId()?'No open plots bordering your hub here — expand from a plot next to your community.':'No open plots here — this region is beyond the frontier for now.'));
     var grid=document.getElementById('rc-plots');grid.innerHTML='';
     for(var py=PLOTS-1;py>=0;py--)for(var px=0;px<PLOTS;px++){   // north row first
       var pi=ti*PLOTS+px,pj=tj*PLOTS+py,k=pi+','+pj,o=NET.occ[k],a=NET.avail[k];
@@ -427,11 +480,11 @@
                     .filter(function(o){return o.p.z>0.02;})
                     .sort(function(a,b){return a.p.z-b.p.z;});          // far first
     list.forEach(function(o){
-      var c=o.c,p=o.p,col=c.you?P.you:P.them[(o.i-1)%P.them.length];
-      var rad=(c.you?7:(3.4+grownTier(c)*0.7))*(0.7+0.5*p.z);           // AI markers scale with their grown tier
+      var c=o.c,p=o.p,col=c.you?P.you:(c.hubId?hubColor(c.hubId):P.them[(o.i-1)%P.them.length]);
+      var rad=(c.you?7:((c.human?5.2:3.4)+grownTier(c)*0.7))*(0.7+0.5*p.z);   // markers scale with tier; human hubs read larger
       // stem + shadow
       ctx.globalAlpha=Math.min(1,p.z*1.6);
-      if(c.you){var pr=rad+4+2.5*Math.sin(t/380);ctx.beginPath();ctx.arc(p.sx,p.sy,pr,0,6.2832);ctx.strokeStyle=col;ctx.globalAlpha=0.5*Math.min(1,p.z*1.6);ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=Math.min(1,p.z*1.6);}
+      if(c.you||c.human){var pr=rad+4+2.5*Math.sin(t/380);ctx.beginPath();ctx.arc(p.sx,p.sy,pr,0,6.2832);ctx.strokeStyle=col;ctx.globalAlpha=0.5*Math.min(1,p.z*1.6);ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=Math.min(1,p.z*1.6);}   // hub players get a pulse ring like you
       ctx.beginPath();ctx.arc(p.sx,p.sy,rad,0,6.2832);ctx.fillStyle=col;ctx.fill();
       ctx.lineWidth=1.5;ctx.strokeStyle=P.bg;ctx.stroke();
       // label
@@ -551,6 +604,43 @@
   document.getElementById('fc-cancel').addEventListener('click',function(){fcard.classList.remove('on');});
   fcard.addEventListener('click',function(e){if(e.target.id==='fcard')this.classList.remove('on');});
 
+  // ---- hub membership UI: the "Join a hub" button, legend row, and the redeem card ----
+  function refreshHubUI(){
+    var btn=document.getElementById('hubbtn'),hubrow=document.getElementById('lg-hubrow');
+    if(btn){btn.hidden=!MDG_BACKEND;
+      if(MDG_HUB){btn.textContent='★ '+MDG_HUB.name;btn.classList.add('member');btn.title='You’re a member of '+MDG_HUB.name+' — click to view / switch';}
+      else{btn.textContent='Join a hub';btn.classList.remove('member');btn.title='Enter an invite code to join a creator’s community';}}
+    if(hubrow){if(MDG_HUB){hubrow.hidden=false;document.getElementById('lg-hublabel').textContent=MDG_HUB.name;document.getElementById('lg-hub').style.background=hubColor(MDG_HUB.hubId);}else hubrow.hidden=true;}
+  }
+  var jcard=document.getElementById('jcard');
+  function openJoin(prefill){
+    var code=document.getElementById('jc-code');code.value=(prefill||'').toUpperCase();
+    document.getElementById('jc-msg').innerHTML=MDG_HUB
+      ? 'You’re in <b>'+esc(MDG_HUB.name)+'</b>. Enter another code to switch hubs — you can belong to one at a time.'
+      : 'Enter an invite code from a hub player to found your city in their community — you’ll build right beside them and their members.';
+    document.getElementById('jc-patreon').innerHTML=MDG_HUB&&MDG_HUB.patreonUrl
+      ? 'Patrons’ perk from <a href="'+esc(MDG_HUB.patreonUrl)+'" target="_blank" rel="noopener">'+esc(MDG_HUB.name)+' on Patreon ↗</a>'
+      : '<span style="color:var(--muted)">No code? Hubs are invite-only — get one from a creator’s channel or Patreon.</span>';
+    jcard.classList.add('on');setTimeout(function(){code.focus();},60);
+  }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function doJoin(){
+    var code=document.getElementById('jc-code').value.trim();
+    if(!code)return document.getElementById('jc-msg').textContent='Enter your invite code.';
+    document.getElementById('jc-msg').textContent='Joining…';
+    netRedeem(code,function(res){
+      if(res.ok){jcard.classList.remove('on');refreshHubUI();NET=null;tilesDirty();netFetchWorld();
+        showWToast('★ Joined <b>'+esc(res.hub.name)+'</b> — claim a plot bordering their territory');}
+      else if(res.reject)document.getElementById('jc-msg').textContent='⛔ '+res.reject;
+      else document.getElementById('jc-msg').textContent='Network error — try again.';
+    });
+  }
+  document.getElementById('hubbtn').addEventListener('click',function(){openJoin();});
+  document.getElementById('jc-go').addEventListener('click',doJoin);
+  document.getElementById('jc-code').addEventListener('keydown',function(e){if(e.key==='Enter')doJoin();});
+  document.getElementById('jc-close').addEventListener('click',function(){jcard.classList.remove('on');});
+  jcard.addEventListener('click',function(e){if(e.target.id==='jcard')this.classList.remove('on');});
+
   // ---- loop ----
   var last=performance.now();
   function frame(now){
@@ -575,8 +665,23 @@
 
   readTheme(); paintLegend();
   window.addEventListener('resize',resize); resize();
+  refreshHubUI();                                                             // reflect any cached membership immediately
+  netMe();                                                                    // restore/confirm hub membership from the server
   netFetchWorld();                                                            // pull the shared world once at boot…
   if(MDG_BACKEND)setInterval(netFetchWorld,60000);                           // …and refresh so new neighbours appear without a reload
+  (function(){try{var j=new URLSearchParams(location.search).get('join');     // deep link: mdg …/world/?join=CODE opens the redeem card
+    if(j&&MDG_BACKEND)setTimeout(function(){openJoin(j);},400);}catch(e){}})();
+  // strictly-gated E2E driver (only when ?e2e=1) — lets the harness exercise the real
+  // join→claim path deterministically without simulating 3D globe clicks. Never active in normal play.
+  if(new URLSearchParams(location.search).get('e2e')==='1'){window.__wdbg={
+    hub:function(){return MDG_HUB;},inviteOnly:function(){return WORLD_INVITEONLY;},
+    cities:function(){return CITIES.map(function(c){return {name:c.name,lat:c.lat,lon:c.lon,hubId:c.hubId||null,you:!!c.you,human:!!c.human,remote:!!c.remote,tier:c.tier};});},
+    availKeys:function(){NET=null;buildNetwork();return Object.keys(NET.avail);},
+    join:function(code,cb){netRedeem(code,cb);},
+    claimFirstOpen:function(cb){NET=null;buildNetwork();var k=Object.keys(NET.avail)[0];if(!k){cb&&cb(null);return null;}
+      var kp=k.split(','),cc=plotCenter(+kp[0],+kp[1]);
+      netClaim({lat:cc.lat,lon:cc.lon},'E2E City',function(r){if(r.ok){CITIES[0].lat=r.city.lat;CITIES[0].lon=r.city.lon;if(r.city.hubId)CITIES[0].hubId=r.city.hubId;saveHome();NET=null;tilesDirty();}cb&&cb(r);});return k;}
+  };}
   requestAnimationFrame(frame);
 })();
 </script>
