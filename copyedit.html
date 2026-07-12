@@ -50,8 +50,8 @@
   .pg-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:19px;letter-spacing:-0.01em;margin:0}
   .pg-head .path{font-size:12.5px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
   .pg-head .wc{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-left:auto;white-space:nowrap}
-  .row{display:grid;grid-template-columns:170px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);align-items:start}
-  @media(max-width:640px){.row{grid-template-columns:1fr}}
+  .row{display:grid;grid-template-columns:160px 1fr 58px;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);align-items:start}
+  @media(max-width:640px){.row{grid-template-columns:1fr auto}}
   .meta{font-size:12px;color:var(--muted);line-height:1.45;padding-top:4px}
   .meta .tag{display:inline-block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;border:1px solid var(--line-2);border-radius:6px;padding:1px 6px;margin-bottom:4px}
   .meta .ctx{display:block}
@@ -64,9 +64,11 @@
   .rv{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0;display:none}
   .row.dirty .rv{display:inline}
   .rv:hover{color:#b4543a}
-  .donebox{display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
-  .donebox input{margin:0;cursor:pointer;accent-color:#3c8c5a;width:14px;height:14px}
-  .row.done .donebox{color:#3c8c5a;font-weight:600}
+  .done-cell{display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:11px;cursor:pointer;user-select:none}
+  .done-cell input{margin:0;cursor:pointer;accent-color:#3c8c5a;width:18px;height:18px}
+  .done-cell .dl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .row.done .done-cell .dl{color:#3c8c5a;font-weight:600}
+  @media(max-width:640px){.done-cell{flex-direction:row;gap:6px;padding-top:2px;justify-content:flex-start}}
   .row.done .ed{opacity:.5}
   .row.done:hover .ed,.row.done .ed:focus{opacity:1}
   .bar{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--paper);border-top:1.5px solid var(--line);box-shadow:0 -8px 30px rgba(15,16,28,.08)}
@@ -297,11 +299,14 @@
         var row=document.createElement('div'); row.className='row'+(r.verified?'':' manual');
         row.innerHTML='<div class="meta"><span class="tag">'+esc(r.tag)+'</span>'+
           (r.ctx?'<span class="ctx">'+esc(r.ctx)+'</span>':'')+
-          '<label class="donebox"><input type="checkbox" class="done-cb" /> done</label>'+
-          '<button class="rv" type="button">↩ revert</button></div>';
+          '<button class="rv" type="button" tabindex="-1">↩ revert</button></div>';
         var ed=document.createElement('div'); ed.className='ed'; ed.contentEditable='true'; ed.spellcheck=true;
         if(r.type==='title')ed.textContent=r.original; else ed.innerHTML=r.original;
         row.appendChild(ed);
+        // done control — its own right-hand column, so it tabs after the text and lines up down the page
+        var doneCell=document.createElement('label'); doneCell.className='done-cell';
+        doneCell.innerHTML='<input type="checkbox" class="done-cb" aria-label="Mark reviewed / done" /><span class="dl">done</span>';
+        row.appendChild(doneCell);
         r.el=row; r.edEl=ed;
         r.base=r.type==='title'?ed.textContent:ed.innerHTML; // post-normalization baseline
         // restore draft
