@@ -363,6 +363,15 @@
       return t;});
   }catch(e){return [];}})();
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
+  // ---- online layer (optional, offline-first): cloud city saves. Empty MDG_BACKEND = fully local. ----
+  var MDG_BACKEND=(function(){try{var q=new URLSearchParams(location.search).get('backend');if(q)return q.replace(/\/+$/,'');var ls=localStorage.getItem('mdg-backend');if(ls)return ls.replace(/\/+$/,'');}catch(e){}return '';})();
+  var MDG_TOKEN=(function(){try{var t=localStorage.getItem('mdg-token');if(!t||!/^[A-Za-z0-9_-]{12,64}$/.test(t)){t=(Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9]/g,'');while(t.length<16)t+='0';t=t.slice(0,32);localStorage.setItem('mdg-token',t);}return t;}catch(e){return '';}})();
+  var netSlug=function(){return REGION?REGION.slug:'home';}, _netSaveAt=0;
+  function netSaveCity(blob){if(!MDG_BACKEND||!MDG_TOKEN||OBSERVE)return;var now=Date.now();if(now-_netSaveAt<10000)return;_netSaveAt=now;   // first save pushes immediately, then throttle
+    try{fetch(MDG_BACKEND+'/v1/city',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:MDG_TOKEN,slug:netSlug(),blob:blob,ts:now})}).catch(function(){});}catch(e){}}
+  function netBootPull(){if(!MDG_BACKEND||!MDG_TOKEN||localStorage.getItem(SAVE_KEY))return;   // local save present → cloud is a mirror, never override
+    try{fetch(MDG_BACKEND+'/v1/city?token='+encodeURIComponent(MDG_TOKEN)+'&slug='+encodeURIComponent(netSlug())).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d||!d.blob)return;try{JSON.parse(d.blob);ioImporting=true;clearTimeout(saveTimer);localStorage.setItem(SAVE_KEY,d.blob);location.reload();}catch(e){}}).catch(function(){});}catch(e){}}
   var ZONES={res:1,com:1,ind:1,fac:1,tower:1};
   var FOOT={res:2,com:2,ind:2,fac:2,tower:2};        // each zone building is ONE 2×2 building (anchor cell + 3 'sub' members)
   function footOf(t){return FOOT[t]||1;}
@@ -1805,7 +1814,8 @@
       if(g&&g.t!=='highway'&&g.t!=='sub'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,g.foot||1]);}   // save anchors only; 'sub' members are reconstructed on load
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}}));}catch(e){}}
+    var payload=JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
+    localStorage.setItem(SAVE_KEY,payload);netSaveCity(payload);}catch(e){}}   // mirror to the cloud (throttled, offline-safe)
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
@@ -1903,7 +1913,7 @@
   window.addEventListener('resize',resize);
   resize();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // build the fixed world, lay the gateway, aim the camera at the interchange
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
-  else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }   // density ceiling + tech follow the loaded tier
+  else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); netBootPull(); }   // density ceiling + tech follow the loaded tier; pull a cloud save if this device has none
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();renderEvent();renderPolicy();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var gg0=grid[idx(c0,r0)];if(gg0.t==='road'||gg0.t==='highway')roadList.push([c0,r0]);if(gg0.rail||gg0.t==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
