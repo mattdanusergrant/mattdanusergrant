@@ -106,6 +106,17 @@
   .cat.open .catmenu{display:flex}
   .menuhd{font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 2px 2px}
   .catmenu .tool{width:100%;box-sizing:border-box}
+  .polmenu{min-width:224px;gap:8px}
+  .polmenu .pol-sec{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .polmenu .taxseg{display:flex;gap:4px}
+  .polmenu .taxseg button{flex:1;font:600 11px system-ui,sans-serif;padding:5px 4px;border-radius:7px;border:1.5px solid var(--line-2);background:var(--bg);color:var(--ink-2);cursor:pointer}
+  .polmenu .taxseg button.on{background:#3E8E6E;border-color:#3E8E6E;color:#FBF6E6}
+  .polmenu .tax-note{font-size:10px;color:var(--muted);line-height:1.35}
+  .polmenu .ord{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-2);font-weight:500;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;cursor:pointer;line-height:1.3}
+  .polmenu .ord.on{border-color:#3E8E6E;background:rgba(95,190,110,.10)}
+  .polmenu .ord.locked{opacity:.45;cursor:default}
+  .polmenu .ord .tick{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--line-2);flex:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#FBF6E6}
+  .polmenu .ord.on .tick{background:#3E8E6E;border-color:#3E8E6E}
   .curtool{font-family:'Fraunces',serif;font-size:13px;color:var(--bar-ink);font-weight:600;white-space:nowrap}
   @media(max-width:560px){.clabel{display:none}.cat{min-width:0;padding:6px 9px}.curtool{display:none}}
   .tool{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500;color:var(--ink-2);background:var(--paper);border:1.5px solid var(--line-2);border-radius:9px;padding:7px 10px;transition:border-color .15s,transform .1s,background .15s;user-select:none}
@@ -271,6 +282,8 @@
         <div class="tool" data-brush="port"><span class="sw" data-sw="port"></span>Port<span class="key">P</span></div>
         <div class="tool" data-brush="tower"><span class="sw" data-sw="tower"></span>Tower<span class="key">T</span></div>
       </div></div>
+    <div class="cat" data-cat="policy" id="polcat" title="Budget &amp; policy — set the tax rate, enact ordinances"><span class="cico">⚖️</span><span class="clabel">Policy</span>
+      <div class="catmenu polmenu" id="polmenu"></div></div>
     <span class="spacer"></span>
     <span class="curtool" id="curtool" title="Current tool">Road</span>
     <button class="reset" id="reset" type="button">Reset</button>
@@ -384,12 +397,15 @@
   var insolvent=false, deficitWarned=false, insolventEl, _ecoT=0;
   function economy(){
     if(!OBSERVE&&(++_ecoT%20===0))scheduleSave();       // treasury moves every tick — persist it even when the player is only watching
-    var income=0,upkeep=0,banks=0,ports=0,facN=0;
+    var income=0,upkeep=0,banks=0,ports=0,facN=0,taxInc=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;var t=g.t;
-      if(TAX[t])income+=g.lvl*TAX[t];
+      if(TAX[t])taxInc+=g.lvl*TAX[t];
       if(UPKEEP[t])upkeep+=UPKEEP[t];
       if(t==='bank')banks++;else if(t==='port')ports++;else if(t==='fac')facN++;}
     bankCount=banks;
+    taxInc*=TAXP[POL.tax].inc*(POL.sm?0.97:1);income+=taxInc;   // tax lever + solar-mandate compliance drag
+    if(POL.cp)income+=popTarget*0.012;                           // congestion-pricing tolls
+    if(POL.ft)upkeep+=popTarget*0.010;                           // fare-free transit subsidy
     income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium*exportMult*EVMOD.exportM; // Ports + Green Logistics tech lift export revenue; a trade partner short on Goods pays a premium
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
@@ -790,7 +806,7 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();activeEv=null;evCooldown=160;evalEventMods();renderEvent();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();activeEv=null;evCooldown=160;evalEventMods();renderEvent();POL={tax:1,cp:false,sm:false,ft:false};renderPolicy();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -827,7 +843,7 @@
       for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'&&!net[ni]){net[ni]=1;que.push(ni);}}}}
     flow(pnet,pq);flow(wnet,wq);
     var use=0,wuse=0;for(var di=0;di<n;di++){var gd=grid[di];if(!gd)continue;if(POWERUSE[gd.t])use+=POWERUSE[gd.t]*(gd.lvl||1);if(WATERUSE[gd.t])wuse+=WATERUSE[gd.t]*(gd.lvl||1);}
-    use=Math.round(use*powerUseMult);wuse=Math.round(wuse*waterUseMult);   // Smart Grid / Water Reclamation techs cut demand
+    use=Math.round(use*powerUseMult*(POL.sm?0.9:1));wuse=Math.round(wuse*waterUseMult);   // Solar Mandate trims demand   // Smart Grid / Water Reclamation techs cut demand
     powerGen=Math.round(gen);powerUse=use;powerOK=(gen>=use);          // city-wide power budget
     waterGen=Math.round(wgen);waterUse=wuse;waterOK=(wgen>=wuse);       // city-wide water budget
     function borders(net,c,r){return (inB(c-1,r)&&net[idx(c-1,r)])||(inB(c+1,r)&&net[idx(c+1,r)])||(inB(c,r-1)&&net[idx(c,r-1)])||(inB(c,r+1)&&net[idx(c,r+1)]);}
@@ -853,9 +869,9 @@
     for(var tc=0;tc<n;tc++){var gt=grid[tc];if(!gt)continue;
       if(gt.t==='road'&&connected[tc])roadCells++;else if(gt.t==='transit')transitStops++;
       if(TRIPW[gt.t])trips+=TRIPW[gt.t]*(gt.lvl||1);}
-    trafficDemand=trips; trafficCap=roadCells*0.6+transitStops*TRANSIT_CAP*transitMult;
+    trafficDemand=trips; trafficCap=roadCells*0.6+transitStops*TRANSIT_CAP*transitMult*(POL.ft?1.35:1);
     congestion=trips>0?Math.max(0,Math.min(1,(trips-trafficCap)/trips)):0;
-    congestion=Math.max(0,Math.min(1,congestion+EVMOD.congest));   // an active event can spike or relieve the jam   // 0 = free-flowing, 1 = total gridlock
+    congestion=Math.max(0,Math.min(1,congestion+EVMOD.congest-(POL.cp?0.12:0)));   // an active event can spike or relieve the jam   // 0 = free-flowing, 1 = total gridlock
   }
   function nearConnected(c,r){
     return (inB(c-1,r)&&connected[idx(c-1,r)])||(inB(c+1,r)&&connected[idx(c+1,r)])||
@@ -937,7 +953,7 @@
       var rate=demand[cell.t]>0?1:0.28;
       if(cell.t==='ind'&&matWanted)rate=1;               // Works speed up when Materials are short
       if(complement(c,r,cell.t))rate*=1.6;
-      rate*=(1-congestion*0.6)*EVMOD.growth;               // gridlock throttles growth; events can surge or stall it
+      rate*=(1-congestion*0.6)*EVMOD.growth*TAXP[POL.tax].gr;               // gridlock throttles growth; events can surge or stall it
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
@@ -981,7 +997,7 @@
     for(k in TECH)if(TECH[k].t===t)out.push('🔬 '+TECH[k].n+' ('+TECH[k].d+')');
     return out;}
   function checkMilestone(){var reached=maxMS;for(var i=0;i<MS.length;i++)if(popTarget>=MS[i].n&&treasury>=MS[i].cash)reached=i;
-    if(reached>maxMS){var prev=maxMS;maxMS=reached;MAXLVL=densCap();syncTech();updateToolLocks();scheduleSave();
+    if(reached>maxMS){var prev=maxMS;maxMS=reached;MAXLVL=densCap();syncTech();updateToolLocks();renderPolicy();scheduleSave();
       showToast(MS[reached].l,MS[reached].n);
       for(var tt=prev+1;tt<=reached;tt++){var u=tierUnlocks(tt),dc=DENS[Math.min(DENS.length-1,tt+1)];   // announce what each new tier grants
         var parts=u.slice();if(dc>DENS[Math.min(DENS.length-1,tt)])parts.push('taller buildings (L'+dc+')');
@@ -1108,6 +1124,33 @@
     activeEv={key:key,left:EVDEF[key].dur,chosen:null};
     evalEventMods();renderEvent();scheduleSave();
   }
+
+  // ---- budget & policy: the tax lever + tier-unlocked ordinances (the city's standing rules) ----
+  var POL={tax:1,cp:false,sm:false,ft:false};
+  var TAXP=[{l:'Low',inc:0.75,gr:1.15,n:'−25% tax income · growth +15%'},
+            {l:'Standard',inc:1,gr:1,n:'the balanced default'},
+            {l:'High',inc:1.3,gr:0.8,n:'+30% tax income · growth −20%'}];
+  var ORDS=[
+    {k:'sm',t:3,icon:'☀️',name:'Solar Mandate',d:'efficiency codes: power use −10%, tax income −3%'},
+    {k:'cp',t:4,icon:'🚗',name:'Congestion Pricing',d:'congestion −12%, tolls add income by population'},
+    {k:'ft',t:5,icon:'🚉',name:'Fare-Free Transit',d:'transit capacity +35%, subsidy costs by population'}];
+  var polMenuEl=null;
+  function renderPolicy(){if(!polMenuEl)polMenuEl=document.getElementById('polmenu');if(!polMenuEl)return;
+    var h='<span class="menuhd">Budget &amp; Policy</span><span class="pol-sec">Tax rate</span><div class="taxseg">';
+    for(var i=0;i<3;i++)h+='<button type="button" data-tax="'+i+'" class="'+(POL.tax===i?'on':'')+'">'+TAXP[i].l+'</button>';
+    h+='</div><div class="tax-note">'+TAXP[POL.tax].n+'</div><span class="pol-sec">Ordinances</span>';
+    for(var j=0;j<ORDS.length;j++){var o=ORDS[j],lk=maxMS<o.t;
+      h+='<div class="ord'+(POL[o.k]?' on':'')+(lk?' locked':'')+'" data-ord="'+o.k+'"'+(lk?' data-lk="1"':'')+'>'
+        +'<span class="tick">'+(POL[o.k]?'✓':'')+'</span><span>'+o.icon+' <b>'+o.name+'</b><br>'
+        +(lk?'unlocks at '+MS[o.t].l:o.d)+'</span></div>';}
+    polMenuEl.innerHTML=h;}
+  document.getElementById('polcat').addEventListener('click',function(e){
+    var tb=e.target.closest('[data-tax]');
+    if(tb){e.stopPropagation();POL.tax=+tb.getAttribute('data-tax');renderPolicy();updateCashUI();scheduleSave();return;}
+    var od=e.target.closest('[data-ord]');
+    if(od){e.stopPropagation();if(od.getAttribute('data-lk'))return;var k=od.getAttribute('data-ord');
+      POL[k]=!POL[k];renderPolicy();svcDirty=true;scheduleSave();return;}
+    renderPolicy();});                                     // opening the chip (or any other click inside) refreshes the panel
 
   // ---- guided first-run: a short objective path that teaches the loop as you play ----
   var TUTOR_KEY='mdg-tutor-done';
@@ -1572,7 +1615,7 @@
       if(g&&g.t!=='highway'&&g.t!=='sub'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,g.foot||1]);}   // save anchors only; 'sub' members are reconstructed on load
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,ev:ev,evc:evCooldown}));}catch(e){}}
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
@@ -1580,6 +1623,7 @@
       if(typeof d.cd==='number')contractsDone=d.cd;
       if(d.ev&&EVDEF[d.ev.k])activeEv={key:d.ev.k,left:Math.max(1,d.ev.l|0),chosen:d.ev.c||null};
       if(typeof d.evc==='number')evCooldown=d.evc;
+      if(d.pol){POL.tax=Math.max(0,Math.min(2,d.pol.t|0));POL.cp=!!d.pol.cp;POL.sm=!!d.pol.sm;POL.ft=!!d.pol.ft;}
       evalEventMods();}
     list.forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
       if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
@@ -1669,7 +1713,7 @@
   resize();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // build the fixed world, lay the gateway, aim the camera at the interchange
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
   else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }   // density ceiling + tech follow the loaded tier
-  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();renderEvent();
+  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();renderEvent();renderPolicy();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var gg0=grid[idx(c0,r0)];if(gg0.t==='road'||gg0.t==='highway')roadList.push([c0,r0]);if(gg0.rail||gg0.t==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
   if(!AI&&tutorActive)showTutor();
