@@ -17,7 +17,7 @@
     --shadow:0 1px 0 rgba(60,45,20,.03),0 12px 30px rgba(80,55,20,.10);
     --shadow-hover:0 18px 44px rgba(80,55,20,.16);
     /* coloured chrome — a light, sunny DAWN yellow frames the light play field; dark warm text on it */
-    --bar:#2E2620; --bar-ink:#F4EADA; --bar-muted:#B7A78F; --bar-line:rgba(244,234,218,.16);
+    --bar:#223442; --bar-ink:#EDF2F7; --bar-muted:#96A8B7; --bar-line:rgba(255,255,255,.14);   /* Slate default (theme selector overrides via JS) */
   }
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease}
@@ -1368,11 +1368,11 @@
     terracotta:{n:'Terracotta',bar:'#D5765A',ink:'#FDF1E6',muted:'#F7D3C1',line:'rgba(253,241,230,.24)'},
     orange:{n:'Orange',bar:'#F3993C',ink:'#3A2410',muted:'#7E4E1E',line:'rgba(58,36,16,.20)'},
     gold:{n:'Gold',bar:'#F7DA63',ink:'#3A2E08',muted:'#7C6620',line:'rgba(58,44,8,.20)'},
-    bright:{n:'Bright',bar:'#F5C518',ink:'#3A2E08',muted:'#7A6216',line:'rgba(58,44,8,.22)'},
+    forest:{n:'Forest',bar:'#2C4636',ink:'#EEF4EA',muted:'#9CB49F',line:'rgba(238,244,234,.15)'},
     slate:{n:'Slate',bar:'#223442',ink:'#EDF2F7',muted:'#96A8B7',line:'rgba(255,255,255,.14)'}
   };
   var THEME_KEY='mdg-theme';
-  var curTheme=(function(){try{var t=localStorage.getItem(THEME_KEY);return THEMES[t]?t:'espresso';}catch(e){return 'espresso';}})();
+  var curTheme=(function(){try{var t=localStorage.getItem(THEME_KEY);return THEMES[t]?t:'slate';}catch(e){return 'slate';}})();   // Slate is the default for now
   function applyTheme(k){if(!THEMES[k])return;curTheme=k;var t=THEMES[k],rs=document.documentElement.style;
     rs.setProperty('--bar',t.bar);rs.setProperty('--bar-ink',t.ink);rs.setProperty('--bar-muted',t.muted);rs.setProperty('--bar-line',t.line);
     try{localStorage.setItem(THEME_KEY,k);}catch(e){}
