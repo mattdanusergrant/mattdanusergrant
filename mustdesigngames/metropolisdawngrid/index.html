@@ -375,7 +375,20 @@
   var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
   var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
   var congestion=0, trafficDemand=0, trafficCap=0;
-  var auraMap=null, obsBuilt=false;                    // landmark growth aura + Observatory city-wide lift      // public-transport pressure: trips generated vs road + transit capacity
+  var auraMap=null, obsBuilt=false;                    // landmark growth aura + Observatory city-wide lift
+  // ---- day-night: a slow visual cycle over the whole region (DAWN gets the hero moment) ----
+  var TOD_PERIOD=300;                                    // ticks per full day (~3¼ min)
+  var TODLOCK=(function(){try{var v=new URLSearchParams(location.search).get('tod');
+    return {dawn:0.03,day:0.3,dusk:0.62,night:0.82}[v]!==undefined?{dawn:0.03,day:0.3,dusk:0.62,night:0.82}[v]:null;}catch(e){return null;}})();
+  function todPhase(){return TODLOCK!==null?TODLOCK:((_tickN%TOD_PERIOD)/TOD_PERIOD);}
+  function todTint(){var ph=todPhase();                  // returns [r,g,b,alpha] for the sky wash, or null in full day
+    if(ph<0.10)return [244,166,66,0.13*(1-ph/0.10)];                       // dawn: warm gold burning off
+    if(ph<0.55)return null;                                                // day
+    if(ph<0.68)return [214,108,66,0.13*((ph-0.55)/0.13)];                  // dusk: warm deepening
+    if(ph<0.95)return [28,38,74,0.16];                                     // night: cool blue, still readable
+    return [120,90,70,0.14];                                               // pre-dawn: the sky warming again
+  }
+  function isNight(){var ph=todPhase();return ph>=0.66&&ph<0.97;}      // public-transport pressure: trips generated vs road + transit capacity
   var TRIPW={res:1,tower:2,com:1.5,ind:1.2,fac:1.2};     // trips generated per building level (a growing city needs to move people)
 
   // ---- economy: everything costs money; a working city earns it; debt charges interest ----
@@ -989,7 +1002,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
+    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();dirty=true;updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -1769,6 +1782,12 @@
       ctx.strokeStyle='rgba(25,35,50,.85)';ctx.lineWidth=2;ctx.strokeRect(ic*CELL+1.5,ir*CELL+1.5,CELL-3,CELL-3);
       ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.strokeRect(ic*CELL+3,ir*CELL+3,CELL-6,CELL-6);}
     drawGateSign();                                                 // overhead "→ toward [Hub]" sign at the interchange
+    var tint=todTint();
+    if(tint){ctx.fillStyle='rgba('+tint[0]+','+tint[1]+','+tint[2]+','+tint[3]+')';
+      ctx.fillRect(vx0*CELL,vy0*CELL,(vx1-vx0)*CELL,(vy1-vy0)*CELL);}       // the sky wash over the visible world
+    if(isNight()){ctx.fillStyle='rgba(243,194,74,.85)';                      // streetlights wake up after dark
+      for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){var lg=grid[idx(c,r)];
+        if(lg&&(lg.t==='road'||lg.t==='highway')&&((c*7+r*13)%4===0))ctx.fillRect(c*CELL+CELL/2-1.5,r*CELL+CELL/2-1.5,3,3);}}
     ctx.restore();
     mmRender();                                                     // overlay the minimap + viewport box each redraw
   }
