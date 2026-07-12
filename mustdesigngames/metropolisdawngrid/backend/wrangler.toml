@@ -1,0 +1,11 @@
+name = "mdg-world"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Bind a KV namespace before deploying:
+#   wrangler kv namespace create WORLD
+# then paste the returned id below (and a preview_id for `wrangler dev`).
+[[kv_namespaces]]
+binding = "WORLD"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_ID"

@@ -1,0 +1,12 @@
+{
+  "name": "mdg-world-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Metropolis Dawn Grid — shared-world backend (Cloudflare Worker + KV)",
+  "scripts": {
+    "test": "node test.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  }
+}
