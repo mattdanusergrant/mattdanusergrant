@@ -28,6 +28,12 @@
   .chip{font-family:'Fraunces',serif;font-size:13px;font-weight:500;border-radius:999px;padding:7px 14px;border:1.5px solid var(--line-2);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
   .chip:hover{border-color:var(--ink);color:var(--ink)}
   .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .prog{margin:18px 0 2px}
+  .prog-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+  .prog-top .lab{font-family:'Fraunces',serif;font-size:15px;font-weight:500;color:var(--ink)}
+  .prog-top .pct{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted)}
+  .prog-track{height:10px;background:var(--line);border-radius:999px;overflow:hidden}
+  .prog-fill{height:100%;width:0;background:#3c8c5a;border-radius:999px;transition:width .3s ease}
   .stats{margin:22px 0 4px;display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:start}
   @media(max-width:720px){.stats{grid-template-columns:1fr}}
   .hero-tile{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:18px 26px;box-shadow:var(--shadow);min-width:200px}
@@ -58,6 +64,11 @@
   .rv{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0;display:none}
   .row.dirty .rv{display:inline}
   .rv:hover{color:#b4543a}
+  .donebox{display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+  .donebox input{margin:0;cursor:pointer;accent-color:#3c8c5a;width:14px;height:14px}
+  .row.done .donebox{color:#3c8c5a;font-weight:600}
+  .row.done .ed{opacity:.5}
+  .row.done:hover .ed,.row.done .ed:focus{opacity:1}
   .bar{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--paper);border-top:1.5px solid var(--line);box-shadow:0 -8px 30px rgba(15,16,28,.08)}
   .bar-in{max-width:960px;margin:0 auto;padding:12px 28px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   #count{font-family:'Fraunces',serif;font-size:15px;font-weight:500}
@@ -77,7 +88,13 @@
   <p class="lede">Every line of copy on the site, editable in one place. Edit any box —
   changes save as a draft <b>in this browser</b> automatically. When you're done, click
   <b>Export edits</b> and send the downloaded file back to Matt; nothing here changes the
-  live site directly. Keep inline styling like <em>italics</em> unless it's wrong.</p>
+  live site directly. Keep inline styling like <em>italics</em> unless it's wrong.
+  Tick <b>done</b> on each entry as you review it — the bar below tracks your progress.</p>
+
+  <div class="prog" id="prog" hidden>
+    <div class="prog-top"><span class="lab" id="prog-label">0 of 0 entries done</span><span class="pct" id="prog-pct">0%</span></div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+  </div>
 
   <div class="stats" id="stats" hidden>
     <div class="hero-tile"><span class="hero-num" id="total-words">—</span><span class="hero-sub">words across the site</span></div>
@@ -87,6 +104,7 @@
   <div class="toolbar">
     <input id="q" type="search" placeholder="Filter copy… (e.g. 'designer', 'Play', 'Neon')" />
     <button class="chip" id="only-edited">Edited only</button>
+    <button class="chip" id="hide-done">Hide done</button>
   </div>
 
   <div id="desk"><p class="loading">Loading site copy…</p></div>
@@ -94,6 +112,7 @@
 
 <div class="bar"><div class="bar-in">
   <span id="count">0 edits</span>
+  <span id="progress-mini" style="font-size:13px;color:var(--muted)"></span>
   <span style="flex:1"></span>
   <span id="status"></span>
   <button class="btn ghost" id="clear">Discard all drafts</button>
@@ -155,8 +174,10 @@
     {g:'Apex game copies', path:'/games/mosslings/index.html', label:'Mosslings (apex copy)'}
   ];
   var SEL='h1,h2,h3,h4,p,li,figcaption,blockquote,dt,dd,.eyebrow,a.btn,.more-text';
-  var LS='copydesk:';
+  var LS='copydesk:';   // draft edits (per row)
+  var LSD='copydone:';  // review "done" flags (per row, independent of edits)
   var rows=[]; // {page,label,idx,tag,ctx,original,verified,occ,el,base}
+  var sections=[], groupHeaders={}; // for filter-driven section/header hiding
 
   function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -245,8 +266,21 @@
   var statsT=null;
   function queueStats(){clearTimeout(statsT);statsT=setTimeout(updateStats,250);}
 
+  function updateProgress(){
+    var total=rows.length,done=0;
+    rows.forEach(function(r){if(r.el&&r.el.classList.contains('done'))done++;});
+    var pct=total?Math.round(done/total*100):0;
+    document.getElementById('prog-fill').style.width=pct+'%';
+    document.getElementById('prog-label').textContent=done.toLocaleString()+' of '+total.toLocaleString()+' entries done';
+    document.getElementById('prog-pct').textContent=pct+'%';
+    document.getElementById('prog').hidden=false;
+    var mini=document.getElementById('progress-mini');
+    if(mini)mini.textContent=total?(' · '+pct+'% reviewed'):'';
+  }
+
   function render(){
     var desk=document.getElementById('desk'); desk.innerHTML='';
+    sections=[]; groupHeaders={};
     var byPage={};
     rows.forEach(function(r){(byPage[r.page]=byPage[r.page]||[]).push(r);});
     var lastGroup=null;
@@ -254,14 +288,16 @@
       var list=byPage[p.path]; if(!list||!list.length)return;
       if(p.g!==lastGroup){lastGroup=p.g;
         var gh=document.createElement('h2'); gh.className='grp-h'; gh.textContent=p.g;
-        desk.appendChild(gh);}
+        desk.appendChild(gh); groupHeaders[p.g]=gh;}
       var sec=document.createElement('section'); sec.className='pg';
       sec.innerHTML='<div class="pg-head"><h2>'+esc(p.label)+'</h2><span class="path">'+esc(p.path)+'</span><span class="wc"></span></div>';
       pageWc[p.path]=sec.querySelector('.wc');
+      var secRec={el:sec,group:p.g,rowEls:[]}; sections.push(secRec);
       list.forEach(function(r){
         var row=document.createElement('div'); row.className='row'+(r.verified?'':' manual');
         row.innerHTML='<div class="meta"><span class="tag">'+esc(r.tag)+'</span>'+
           (r.ctx?'<span class="ctx">'+esc(r.ctx)+'</span>':'')+
+          '<label class="donebox"><input type="checkbox" class="done-cb" /> done</label>'+
           '<button class="rv" type="button">↩ revert</button></div>';
         var ed=document.createElement('div'); ed.className='ed'; ed.contentEditable='true'; ed.spellcheck=true;
         if(r.type==='title')ed.textContent=r.original; else ed.innerHTML=r.original;
@@ -285,11 +321,21 @@
           if(r.type==='title')ed.textContent=r.base; else ed.innerHTML=r.base; sync();
         });
         sync();
+        // review "done" flag — persisted separately from drafts
+        var cb=row.querySelector('.done-cb');
+        if(localStorage.getItem(LSD+r.page+'#'+r.idx)==='1'){cb.checked=true;row.classList.add('done');}
+        cb.addEventListener('change',function(){
+          row.classList.toggle('done',cb.checked);
+          if(cb.checked)localStorage.setItem(LSD+r.page+'#'+r.idx,'1');
+          else localStorage.removeItem(LSD+r.page+'#'+r.idx);
+          updateProgress(); applyFilters();
+        });
+        secRec.rowEls.push(row);
         sec.appendChild(row);
       });
       desk.appendChild(sec);
     });
-    refreshCount(); updateStats();
+    refreshCount(); updateStats(); updateProgress();
   }
 
   function dirtyRows(){return rows.filter(function(r){return r.el && r.el.classList.contains('dirty');});}
@@ -328,17 +374,29 @@
     Object.keys(localStorage).forEach(function(k){if(k.indexOf(LS)===0)localStorage.removeItem(k);});
     location.reload();
   });
-  document.getElementById('q').addEventListener('input',function(){
-    var q=this.value.toLowerCase();
+  function applyFilters(){
+    var q=document.getElementById('q').value.toLowerCase();
+    var onlyEdited=document.getElementById('only-edited').classList.contains('on');
+    var hideDone=document.getElementById('hide-done').classList.contains('on');
     rows.forEach(function(r){ if(!r.el)return;
-      r.el.style.display=(!q||(r.original+' '+r.ctx+' '+r.edEl.textContent).toLowerCase().indexOf(q)>=0)?'':'none';});
-  });
-  document.getElementById('only-edited').addEventListener('click',function(){
-    this.classList.toggle('on');
-    var on=this.classList.contains('on');
-    rows.forEach(function(r){ if(!r.el)return;
-      r.el.style.display=(on && !r.el.classList.contains('dirty'))?'none':'';});
-  });
+      var show=true;
+      if(q && (r.original+' '+r.ctx+' '+r.edEl.textContent).toLowerCase().indexOf(q)<0)show=false;
+      if(onlyEdited && !r.el.classList.contains('dirty'))show=false;
+      if(hideDone && r.el.classList.contains('done'))show=false;
+      r.el.style.display=show?'':'none';
+    });
+    // hide page sections and group headers that have no visible rows left
+    var vis={};
+    sections.forEach(function(s){
+      var any=s.rowEls.some(function(re){return re.style.display!=='none';});
+      s.el.style.display=any?'':'none';
+      if(any)vis[s.group]=true;
+    });
+    Object.keys(groupHeaders).forEach(function(g){groupHeaders[g].style.display=vis[g]?'':'none';});
+  }
+  document.getElementById('q').addEventListener('input',applyFilters);
+  document.getElementById('only-edited').addEventListener('click',function(){this.classList.toggle('on');applyFilters();});
+  document.getElementById('hide-done').addEventListener('click',function(){this.classList.toggle('on');applyFilters();});
 
   Promise.all(PAGES.map(function(p){
     return fetch(p.path).then(function(r){return r.text();}).then(function(raw){return extract(p,raw);})
