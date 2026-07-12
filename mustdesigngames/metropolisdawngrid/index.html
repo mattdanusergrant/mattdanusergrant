@@ -1054,7 +1054,11 @@
     xport:  {icon:'📦',mk:function(){var t=niceNum(8+(maxMS+1)*7);return {text:'Ship '+t+' Goods/mo to '+hubShort(),target:t};},val:function(){return exportRate;}},
     transit:{icon:'🚉',mk:function(){return {text:'Cut congestion below 20%',target:20,inv:true};},val:function(){return congestion*100;},avail:function(){return congestion>0.28;}},
     parks:  {icon:'🌳',mk:function(){var t=censusCount('park')+3;return {text:'Open '+t+' Parks',target:t};},val:function(){return censusCount('park');}},
-    facs:   {icon:'🏭',mk:function(){var t=censusCount('fac')+2;return {text:'Operate '+t+' Factories',target:t};},val:function(){return censusCount('fac');},avail:function(){return maxMS>=2;}}
+    facs:   {icon:'🏭',mk:function(){var t=censusCount('fac')+2;return {text:'Operate '+t+' Factories',target:t};},val:function(){return censusCount('fac');},avail:function(){return maxMS>=2;}},
+    bsolar: {icon:'☀️',mk:function(){var t=censusCount('solar')+3;return {text:'Raise '+t+' Solar Arrays',target:t};},val:function(){return censusCount('solar');},avail:function(){return unlocked('solar');}},
+    btrans: {icon:'🚉',mk:function(){var t=censusCount('transit')+2;return {text:'Open '+t+' Transit stops',target:t};},val:function(){return censusCount('transit');},avail:function(){return unlocked('transit');}},
+    btower: {icon:'🏙️',mk:function(){var t=censusCount('tower')+2;return {text:'Top out '+t+' Towers',target:t};},val:function(){return censusCount('tower');},avail:function(){return unlocked('tower');}},
+    bbank:  {icon:'🏛️',mk:function(){var t=censusCount('bank')+1;return {text:'Charter '+(t>1?t+' Banks':'a Bank'),target:t};},val:function(){return censusCount('bank');},avail:function(){return unlocked('bank');}}
   };
   function newContract(avoid){var keys=[],k;for(k in CDEF){if(avoid.indexOf(k)>=0)continue;var d=CDEF[k];if(d.avail&&!d.avail())continue;keys.push(k);}
     if(!keys.length)return null;k=keys[Math.floor(Math.random()*keys.length)];var m=CDEF[k].mk();
