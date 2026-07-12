@@ -1,2 +1,3 @@
 Bump this file (or use Actions → Run workflow) to deploy Moon Druid Guardians.
 deploy 3 — 2026-07-11 — restore the "Choose your moor" picker pack (Operator wants it live)
+deploy 4 — 2026-07-12 — single default level "Vigil Hollow" (no picker); tree-wall funnels

@@ -15,8 +15,8 @@ on:
   workflow_dispatch:
     inputs:
       maps:
-        description: 'Level JSON filenames from modulardigitalgoods/tools/map-editor/examples/ (comma-separated): several = the "Choose your moor" picker, one = a single custom level, "moor" = the stock game with no picker.'
-        default: 'lastlight-clearing.json,elderwood-grove.json,moonpetal-meadow.json'
+        description: 'Level JSON filenames from modulardigitalgoods/tools/map-editor/examples/ (comma-separated): one = a single level (default, no picker), several = the "Choose your moor" picker, "moor" = the stock procedural game.'
+        default: 'vigil-hollow.json'
       project:
         description: 'Cloudflare Pages project name'
         default: 'moondruidguardians'
@@ -56,10 +56,10 @@ jobs:
         env:
           PACKS: ${{ github.workspace }}/_assets/packs
           EXDIR: ${{ github.workspace }}/_assets/tools/map-editor/examples
-          # Default (and push trigger) deploys the "Choose your moor" picker pack. Pass
-          # maps=moor via "Run workflow" for the stock game with no picker, or a single
-          # filename for one custom level.
-          MAPS_IN: ${{ inputs.maps || 'lastlight-clearing.json,elderwood-grove.json,moonpetal-meadow.json' }}
+          # Default (and push trigger) deploys the single Vigil Hollow level — no picker.
+          # Pass several comma-separated filenames via "Run workflow" for the "Choose your
+          # moor" picker pack, or maps=moor for the stock procedural game.
+          MAPS_IN: ${{ inputs.maps || 'vigil-hollow.json' }}
         run: |
           set -e
           node tools/bake.mjs --packs "$PACKS" --game index.html --out dist/index.html
