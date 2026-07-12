@@ -269,6 +269,7 @@
         <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
         <div class="tool" data-act="import" title="Paste a share code to load a city"><span class="ico">📥</span>Import city</div>
         <div class="tool" data-act="stats" title="City history — population, treasury, congestion over time"><span class="ico">📊</span>Stats</div>
+        <div class="tool" data-act="ach" title="Achievements — earned across every city you build"><span class="ico">🏅</span>Awards</div>
       </div></div>
     <div class="cat" data-cat="transport"><span class="cico">🛣️</span><span class="clabel">Transport</span>
       <div class="catmenu"><span class="menuhd">Transport</span>
@@ -988,7 +989,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
+    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -1150,7 +1151,7 @@
     if(activeEv){var d=EVDEF[activeEv.key];
       if(--activeEv.left<=0){toastEl.innerHTML=d.icon+' <b>'+d.title+'</b> is over — the city breathes easy.';toastEl.classList.add('on');
         clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);
-        activeEv=null;evCooldown=160;evalEventMods();renderEvent();scheduleSave();}
+        activeEv=null;evCooldown=160;evalEventMods();renderEvent();scheduleSave();achUnlock('storm');}
       else if(activeEv.chosen)renderEvent();             // tick the countdown bar
       return;}
     if(evCooldown>0){evCooldown--;return;}
@@ -1161,6 +1162,35 @@
     activeEv={key:key,left:EVDEF[key].dur,chosen:null};
     evalEventMods();renderEvent();scheduleSave();
   }
+
+  // ---- achievements: player-level trophies in their OWN store — they survive city resets and span regions ----
+  var ACH=[
+    {k:'ground', n:'Ground Broken',      d:'Lay 10 roads',                        t:function(){return censusCount('road')>=10;}},
+    {k:'hamlet', n:'First Charter',      d:'Reach Hamlet',                        t:function(){return maxMS>=0;}},
+    {k:'town',   n:'Town Charter',       d:'Reach Town',                          t:function(){return maxMS>=3;}},
+    {k:'city',   n:'City Charter',       d:'Reach City',                          t:function(){return maxMS>=5;}},
+    {k:'mega',   n:'Megacity',           d:'Reach the top tier',                  t:function(){return maxMS>=8;}},
+    {k:'export', n:'Open for Business',  d:'Ship your first Goods to the world',  t:function(){return exportRate>0.5;}},
+    {k:'rich',   n:'Six Figures',        d:'Bank ₵100,000',                       t:function(){return treasury>=100000;}},
+    {k:'pop10k', n:'Ten Thousand Strong',d:'House 10,000 citizens',               t:function(){return popTarget>=10000;}},
+    {k:'pop50k', n:'Sea of Souls',       d:'House 50,000 citizens',               t:function(){return popTarget>=50000;}},
+    {k:'deal5',  n:'Dealmaker',          d:'Complete 5 contracts',                t:function(){return contractsDone>=5;}},
+    {k:'deal15', n:'Serial Dealmaker',   d:'Complete 15 contracts',               t:function(){return contractsDone>=15;}},
+    {k:'lmark',  n:'Monumental',         d:'Place a landmark',                    t:function(){return censusCount('mon1')+censusCount('mon2')+censusCount('mon3')>0;}},
+    {k:'law',    n:'Lawmaker',           d:'Enact all three ordinances at once',  t:function(){return POL.cp&&POL.sm&&POL.ft;}},
+    {k:'storm',  n:'Storm Weathered',    d:'See a city event through to the end', t:null},
+    {k:'flow',   n:'Free Flowing',       d:'3,000+ citizens with clear streets',  t:function(){return popTarget>=3000&&congestion<=0.05;}}
+  ];
+  var ACH_KEY='mdg-ach-v1', achSet={};
+  try{achSet=JSON.parse(localStorage.getItem(ACH_KEY)||'{}')||{};}catch(e){achSet={};}
+  function achUnlock(k){
+    if(achSet[k]||OBSERVE)return;achSet[k]=1;
+    try{localStorage.setItem(ACH_KEY,JSON.stringify(achSet));}catch(e){}
+    for(var i=0;i<ACH.length;i++)if(ACH[i].k===k){
+      toastEl.innerHTML='🏅 Achievement — <b>'+ACH[i].n+'</b>';toastEl.classList.add('on');
+      clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3200);break;}}
+  function achTick(){if(OBSERVE)return;
+    for(var i=0;i<ACH.length;i++){var a=ACH[i];if(!achSet[a.k]&&a.t&&a.t())achUnlock(a.k);}}
 
   // ---- city history: a rolling ~10-minute window of the headline numbers, for the Stats graphs ----
   var HIST_MAX=240, hist={pop:[],cash:[],net:[],cong:[]};
@@ -1208,6 +1238,14 @@
       document.getElementById('io-dl').addEventListener('click',function(){
         var bl=new Blob([code],{type:'text/plain'}),u=URL.createObjectURL(bl),aEl=document.createElement('a');
         aEl.href=u;aEl.download=(REGION?REGION.slug:'city')+'.mdg.txt';document.body.appendChild(aEl);aEl.click();aEl.remove();setTimeout(function(){URL.revokeObjectURL(u);},4000);});
+    } else if(kind==='ach'){
+      var got=0,ai;for(ai=0;ai<ACH.length;ai++)if(achSet[ACH[ai].k])got++;
+      var ah='<h3>🏅 Awards · '+got+'/'+ACH.length+'</h3><p>Earned across every city you build — a Reset never takes these away.</p><div style="display:flex;flex-direction:column;gap:5px;max-height:330px;overflow-y:auto">';
+      for(ai=0;ai<ACH.length;ai++){var av=ACH[ai],on=!!achSet[av.k];
+        ah+='<div style="display:flex;align-items:center;gap:9px;border:1.5px solid '+(on?'#D9AE52':'var(--line)')+';border-radius:8px;padding:6px 9px;'+(on?'background:rgba(217,174,82,.10)':'opacity:.55')+'">'
+          +'<span style="font-size:15px">'+(on?'🏅':'🔒')+'</span><span style="font:600 11.5px system-ui;color:var(--ink)">'+av.n+'<br><span style="font-weight:500;font-size:10.5px;color:var(--muted)">'+av.d+'</span></span></div>';}
+      ah+='</div><div class="iorow"><button type="button" id="io-x">Close</button></div>';
+      ioBox.innerHTML=ah;
     } else if(kind==='stats'){
       var rows=[['Population',hist.pop,'#3E8E6E',function(v){return v.toLocaleString();}],
                 ['Treasury ₵',hist.cash,'#B8892E',function(v){return v.toLocaleString();}],
