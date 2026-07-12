@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moon Druid Guardians — Map Maker (Collaborator Edition)</title>
+<style>
+  :root { --bg:#12161b; --panel:#1a2027; --line:#2b3540; --ink:#e6edf3; --mut:#8b98a5; --accent:#6fb3ff; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; overflow:hidden; }
+  #bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:8px 12px;
+    background:var(--panel); border-bottom:1px solid var(--line); }
+  #bar .grp { display:flex; align-items:center; gap:6px; }
+  #bar .sep { width:1px; height:22px; background:var(--line); }
+  button, select, input { font:inherit; color:var(--ink); background:#222b34; border:1px solid var(--line);
+    border-radius:6px; padding:5px 9px; cursor:pointer; }
+  button:hover, select:hover { border-color:#3d4a58; }
+  button.on { background:var(--accent); color:#0b1016; border-color:var(--accent); font-weight:700; }
+  button.hero { background:#2ea043; border-color:#2ea043; color:#eafff0; font-weight:700; }
+  button.hero:hover { background:#38b64f; border-color:#38b64f; }
+  input[type=number] { width:56px; cursor:text; }
+  label { color:var(--mut); }
+  .badge { font-size:11px; color:#0b1016; background:var(--accent); border-radius:5px; padding:2px 7px; font-weight:700; }
+  main { display:flex; height:calc(100% - 47px); }
+  #side { width:380px; flex:none; display:flex; flex-direction:column; background:var(--panel);
+    border-right:1px solid var(--line); }
+  #side .head { display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--line); }
+  #palwrap { flex:1; overflow:auto; background:#0d1116;
+    background-image:linear-gradient(45deg,#161b21 25%,transparent 25%),linear-gradient(-45deg,#161b21 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#161b21 75%),linear-gradient(-45deg,transparent 75%,#161b21 75%);
+    background-size:16px 16px; background-position:0 0,0 8px,8px -8px,-8px 0; }
+  #pal { display:block; image-rendering:pixelated; cursor:crosshair; }
+  #sel { padding:8px 10px; border-top:1px solid var(--line); color:var(--mut); display:flex; align-items:center; gap:10px; }
+  #selCv { image-rendering:pixelated; border:1px solid var(--line); background:#0d1116; }
+  #mk, #stamps, #autos { border-top:1px solid var(--line); }
+  .mkhead { padding:7px 10px 3px; color:var(--mut); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  .mkrow { display:flex; flex-wrap:wrap; gap:5px; padding:2px 10px 8px; }
+  .mkrow button { padding:4px 7px; font-size:12px; }
+  .mkrow canvas { border:1px solid var(--line); border-radius:5px; cursor:pointer; background:#0d1116; image-rendering:pixelated; }
+  .mkrow canvas.on { border-color:var(--accent); }
+  #mapwrap { flex:1; overflow:auto; background:#0d1116;
+    background-image:linear-gradient(45deg,#161b21 25%,transparent 25%),linear-gradient(-45deg,#161b21 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#161b21 75%),linear-gradient(-45deg,transparent 75%,#161b21 75%);
+    background-size:16px 16px; background-position:0 0,0 8px,8px -8px,-8px 0; padding:16px; }
+  #map { image-rendering:pixelated; cursor:crosshair; box-shadow:0 0 0 1px var(--line); }
+  .muted { color:var(--mut); }
+  kbd { background:#222b34; border:1px solid var(--line); border-radius:4px; padding:0 4px; }
+  /* intro overlay */
+  #intro { position:fixed; inset:0; background:rgba(6,9,13,0.82); display:flex; align-items:center; justify-content:center; z-index:50; }
+  #introCard { max-width:560px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px 24px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+  #introCard h1 { margin:0 0 4px; font-size:18px; color:var(--accent); }
+  #introCard .sub { color:var(--mut); font-size:12px; margin-bottom:14px; }
+  #introCard ol { margin:0 0 16px; padding-left:20px; }
+  #introCard li { margin:6px 0; }
+  #introCard .note { background:#131a21; border:1px solid var(--line); border-radius:8px; padding:10px 12px; color:var(--mut); font-size:12px; margin-bottom:16px; }
+  #introCard button { background:var(--accent); color:#0b1016; font-weight:700; border:none; padding:9px 18px; font-size:14px; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <div class="grp">
+    <strong style="color:var(--accent)">🌙 Map Maker</strong>
+    <span class="badge" title="Tiles show as flat stand-in colours; the real moonlit Wetland art is applied when the map is baked into the game.">stand-in art</span>
+  </div>
+  <div class="sep"></div>
+  <div class="grp" id="tools">
+    <button data-tool="paint" class="on" title="Paint (B)">✏️ Paint</button>
+    <button data-tool="erase" title="Erase (X)">🧽 Erase</button>
+    <button data-tool="rect" title="Rectangle (R)">▭ Rect</button>
+    <button data-tool="fill" title="Fill (G)">🪣 Fill</button>
+    <button data-tool="pick" title="Pick from map (I)">💉 Pick</button>
+    <button data-tool="block" title="Mark impassable — channels foes, blocks building (K)">⛔ Block</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <label>Brush</label>
+    <button id="brush" title="Brush size">1×1</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <label>Layer</label>
+    <select id="layerSel"></select>
+    <button id="layerVis" title="Toggle layer visibility">👁</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <label>Map</label>
+    <input id="mw" type="number" min="1" max="200" value="40"> ×
+    <input id="mh" type="number" min="1" max="200" value="25">
+    <button id="resize">Resize</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <label>Zoom</label>
+    <button id="zout">−</button><span id="zlbl" class="muted">1×</span><button id="zin">+</button>
+    <button id="gridBtn" class="on" title="Toggle grid">▦</button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button id="exPng">⤓ PNG</button>
+    <button id="save" class="hero" title="Save the map file to send back">⤓ Save map (JSON)</button>
+    <button id="load">⤒ Load</button>
+    <button id="clear" title="Clear active layer">🗑 Clear</button>
+    <button id="help" title="How this works">?</button>
+  </div>
+  <input id="file" type="file" accept="application/json" hidden>
+</div>
+<main>
+  <aside id="side">
+    <div class="head">
+      <label>Sheet</label>
+      <select id="sheetSel" style="flex:1"></select>
+      <button id="palz" title="Palette zoom">2×</button>
+    </div>
+    <div id="palwrap"><canvas id="pal"></canvas></div>
+    <div id="sel">
+      <canvas id="selCv" width="48" height="48"></canvas>
+      <div><div id="selTxt">no tile selected</div><div class="muted" style="font-size:11px">click a tile in the sheet above</div></div>
+    </div>
+    <div id="autos">
+      <div class="mkhead">Autotiles — paint, edges snap</div>
+      <div id="autorow" class="mkrow"></div>
+    </div>
+    <div id="stamps">
+      <div class="mkhead">Stamps</div>
+      <div id="stamprow" class="mkrow"></div>
+    </div>
+    <div id="mk">
+      <div class="mkhead">Level markers</div>
+      <div class="mkrow">
+        <button data-mk="home">🌳 Home</button>
+        <button data-mk="well">💧 Lightwell</button>
+        <button data-mk="copse">🌲 Copse</button>
+        <button data-mk="knoll">🌰 Knoll</button>
+        <button data-mk="" class="on">✏️ Tiles</button>
+      </div>
+      <div class="muted" style="font-size:11px;padding:2px 10px 8px">Place the Elderbough (Home), harvest Nodes, and the Knoll — the level baker turns these into real Moon Druid Guardians geometry. Home/Knoll are single; click a node again to remove it.</div>
+    </div>
+  </aside>
+  <section id="mapwrap"><canvas id="map"></canvas></section>
+</main>
+
+<div id="intro">
+  <div id="introCard">
+    <h1>🌙 Map Maker — Collaborator Edition</h1>
+    <div class="sub">Design a level for <strong>Moon Druid Guardians</strong>.</div>
+    <div class="note">The tiles here render as flat <strong>stand-in colours</strong> (green = ground, blue = water, dark green = trees). That's on purpose — the real moonlit Wetland art is licensed, so it's painted in later when your map is baked into the game. Your layout, blocking and markers are what carry over exactly.</div>
+    <ol>
+      <li><strong>Shape the ground.</strong> Paint terrain, drop 💧 Pond / 🌿 Isle autotiles, stamp 🌳 trees.</li>
+      <li><strong>Block the impassable.</strong> Use <kbd>⛔ Block</kbd> to mark water, cliffs and tree-lines foes can't cross — they'll route around and funnel through gaps.</li>
+      <li><strong>Place the markers.</strong> 🌳 Home (the Elderbough), 💧 Lightwell &amp; 🌲 Copse (harvest nodes), 🌰 Knoll. These become the real gameplay geometry.</li>
+      <li><strong>Send it back.</strong> Hit <kbd>⤓ Save map (JSON)</kbd> and send the file over — it bakes straight into the game.</li>
+    </ol>
+    <button id="introOk">Got it — start mapping</button>
+  </div>
+</div>
+
+<script>
+// Collaborator edition of the Wetland map editor. It carries NO licensed art: each tile
+// sheet is synthesized in-browser as a flat, category-coloured stand-in on the SAME
+// coordinate grid as the real Szadi Wetland pack (dimensions below are the pack's, which
+// are just numbers — not the art). Because the exported JSON is pure {s,tx,ty} coordinates
+// plus markers and the blocked grid, a map made here bakes into the real moonlit art
+// unchanged by the game-repo level baker. See ../../../../ (game repo) tools/level-bake.mjs.
+//
+// SHEETS mirrors tools/map-editor/build-editor.mjs in the private modulardigitalgoods repo,
+// minus the embedded PNGs. kind drives the stand-in tint.
+const SHEETS = [
+  { name:'Main tileset', kind:'main',  w:2016, h:1536 },
+  { name:'Props 1',      kind:'props', w:1376, h:896  },
+  { name:'Props 2',      kind:'props', w:1280, h:992  },
+  { name:'Tree 1 · A',   kind:'tree',  w:800,  h:448  },
+  { name:'Tree 1 · B',   kind:'tree',  w:800,  h:448  },
+  { name:'Tree 2 · A',   kind:'tree',  w:800,  h:448  },
+  { name:'Tree 2 · B',   kind:'tree',  w:800,  h:448  },
+  { name:'Water · A',    kind:'water', w:320,  h:32   },
+  { name:'Water · B',    kind:'water', w:320,  h:32   },
+];
+const TS = 32;
+const $ = s => document.querySelector(s);
+
+const S = {
+  tool:'paint', sheet:0, tile:null, palZoom:2, mapZoom:1, grid:true,
+  layers:[{name:'Ground',vis:true},{name:'Decor',vis:true}], layer:0,
+  w:40, h:25, cells:[],
+  marker:null, markers:[],   // level markers → gameplay geometry
+  brush:1, stamp:null, at:null,  // brush size (1/2/3), active stamp, active autotile id
+  blocked:[], blockVal:1,    // impassable grid (0/1) → foe walkability + build blocking
+  rectStart:null, rectEnd:null,
+};
+// Level marker types → the game concept the level-baker turns each into.
+const MARK = { home:'🌳', well:'💧', copse:'🌲', knoll:'🌰' };
+// Multi-tile stamps: big trees on sheet 2 (Dec_props2). [name, sheet, srcCol, srcRow, wTiles, hTiles]
+const STAMPS = [ ['Tree', 2, 0, 0, 5, 7], ['Cherry', 2, 5, 0, 5, 7], ['Tree 2', 2, 10, 0, 5, 7], ['Cherry 2', 2, 15, 0, 5, 7] ];
+// Autotiles: paint a terrain, edges/corners auto-pick from a 9-slice on the Main tileset.
+// nine = {c(fill), n,e,s,w (edges), nw,ne,sw,se (corners)} as [sheet,tx,ty]. Coords from the
+// pack's assembled shore blocks (Water pond @53–57×20–24, Grass isle @48–52×20–24).
+const AUTOTILES = {
+  pond: { name:'💧 Pond', layer:0, nine:{ c:[0,55,22], n:[0,55,20], s:[0,55,24], w:[0,53,22], e:[0,57,22], nw:[0,53,20], ne:[0,57,20], sw:[0,53,24], se:[0,57,24] } },
+  isle: { name:'🌿 Isle', layer:0, nine:{ c:[0,50,22], n:[0,50,20], s:[0,50,24], w:[0,48,22], e:[0,52,22], nw:[0,48,20], ne:[0,52,20], sw:[0,48,24], se:[0,52,24] } },
+};
+const imgs = [];
+const idx = (c,r)=>r*S.w+c;
+const key = t => t ? t.s+':'+t.tx+':'+t.ty : '.';
+
+// ---- stand-in tile synthesis (replaces the embedded PNG pack) ----
+// Same grid, license-free flat colours. Special regions read semantically so the pond/isle
+// autotiles and the tree stamps look right without the real art.
+function tileKind(si, tx, ty){
+  if(si===0){ // Main tileset — surface the pond/isle shore blocks
+    if(tx>=53&&tx<=57&&ty>=20&&ty<=24) return 'water';
+    if(tx>=48&&tx<=52&&ty>=20&&ty<=24) return 'isle';
+  }
+  if(si===2 && ty<=6 && tx<=19) return (tx%10<5) ? 'tree' : 'cherry'; // big-tree stamps
+  return SHEETS[si].kind;
+}
+const BASE = { main:[112,26,32], props:[36,20,40], tree:[128,30,23], water:[205,48,42], isle:[92,32,47], cherry:[332,34,60] };
+function tileFill(si,tx,ty){
+  const k=tileKind(si,tx,ty), b=BASE[k]||[0,0,40];
+  const hh=((tx*73856093)^(ty*19349663))>>>0;
+  const jl=((hh>>3)%10)-5, jh=((hh>>7)%8)-4;
+  return { k, css:`hsl(${b[0]+jh},${b[1]}%,${b[2]+jl}%)`, edge:`hsl(${b[0]},${b[1]}%,${Math.max(6,b[2]-14)}%)` };
+}
+function synthSheet(si){
+  const s=SHEETS[si], cv=document.createElement('canvas'); cv.width=s.w; cv.height=s.h;
+  const g=cv.getContext('2d'); g.imageSmoothingEnabled=false;
+  const cols=s.w/TS|0, rows=s.h/TS|0;
+  for(let ty=0;ty<rows;ty++) for(let tx=0;tx<cols;tx++){
+    const x=tx*TS, y=ty*TS, f=tileFill(si,tx,ty);
+    g.fillStyle=f.css; g.fillRect(x,y,TS,TS);
+    g.strokeStyle=f.edge; g.lineWidth=1; g.strokeRect(x+0.5,y+0.5,TS-1,TS-1);
+    if(f.k==='water'){ g.strokeStyle='rgba(255,255,255,0.22)'; g.lineWidth=1;
+      g.beginPath(); g.moveTo(x+4,y+12); g.lineTo(x+TS-4,y+12); g.moveTo(x+4,y+20); g.lineTo(x+TS-4,y+20); g.stroke(); }
+    else if(f.k==='tree'||f.k==='cherry'){ g.fillStyle='rgba(0,0,0,0.16)';
+      g.beginPath(); g.arc(x+TS/2,y+TS/2,TS*0.34,0,7); g.fill(); }
+  }
+  return cv;
+}
+
+function newMap(w,h,keep){
+  const old=S.cells, ob=S.blocked, ow=S.w, oh=S.h;
+  S.w=w; S.h=h;
+  S.cells=S.layers.map((_,li)=>{
+    const arr=new Array(w*h).fill(null);
+    if(keep&&old[li]) for(let r=0;r<Math.min(h,oh);r++) for(let c=0;c<Math.min(w,ow);c++) arr[r*w+c]=old[li][r*ow+c];
+    return arr;
+  });
+  const nb=new Array(w*h).fill(0);
+  if(keep&&ob&&ob.length) for(let r=0;r<Math.min(h,oh);r++) for(let c=0;c<Math.min(w,ow);c++) nb[r*w+c]=ob[r*ow+c]||0;
+  S.blocked=nb;
+}
+
+// ---- palette ----
+function buildSheetSel(){
+  $('#sheetSel').innerHTML = SHEETS.map((s,i)=>`<option value="${i}">${s.name} (${s.w/TS}×${s.h/TS})</option>`).join('');
+  $('#layerSel').innerHTML = S.layers.map((l,i)=>`<option value="${i}">${l.name}</option>`).join('');
+}
+function drawPalette(){
+  const s=SHEETS[S.sheet], z=S.palZoom, cv=$('#pal'), g=cv.getContext('2d');
+  cv.width=s.w*z; cv.height=s.h*z; g.imageSmoothingEnabled=false;
+  g.drawImage(imgs[S.sheet],0,0,cv.width,cv.height);
+  if(S.grid){ g.strokeStyle='rgba(255,255,255,0.08)'; g.lineWidth=1;
+    for(let x=0;x<=s.w;x+=TS){ g.beginPath(); g.moveTo(x*z+.5,0); g.lineTo(x*z+.5,cv.height); g.stroke(); }
+    for(let y=0;y<=s.h;y+=TS){ g.beginPath(); g.moveTo(0,y*z+.5); g.lineTo(cv.width,y*z+.5); g.stroke(); } }
+  if(S.tile && S.tile.s===S.sheet){ g.strokeStyle='#6fb3ff'; g.lineWidth=2;
+    g.strokeRect(S.tile.tx*TS*z+1, S.tile.ty*TS*z+1, TS*z-2, TS*z-2); }
+}
+function selectTile(sheet,tx,ty){
+  S.tile={s:sheet,tx,ty};
+  const g=$('#selCv').getContext('2d'); g.imageSmoothingEnabled=false;
+  g.clearRect(0,0,48,48); g.drawImage(imgs[sheet],tx*TS,ty*TS,TS,TS,8,8,32,32);
+  $('#selTxt').textContent = `${SHEETS[sheet].name} · tile ${tx},${ty}`;
+  drawPalette();
+}
+function refreshAutoBtns(){ document.querySelectorAll('#autorow button').forEach(b=>b.classList.toggle('on', (b.dataset.at||null)===S.at)); }
+function setStamp(i){ S.stamp = i>=0 ? STAMPS[i] : null;
+  if(S.stamp){ S.at=null; refreshAutoBtns(); setTool('paint'); }
+  document.querySelectorAll('#stamprow canvas').forEach((cv,k)=>cv.classList.toggle('on', !!S.stamp && k===i)); }
+function setAuto(id){ S.at = id||null;
+  if(S.at){ S.stamp=null; document.querySelectorAll('#stamprow canvas').forEach(cv=>cv.classList.remove('on')); setTool('paint'); }
+  refreshAutoBtns(); }
+function buildAutos(){ const row=$('#autorow'); if(!row) return;
+  row.innerHTML = Object.entries(AUTOTILES).map(([id,A])=>`<button data-at="${id}">${A.name}</button>`).join('') + '<button data-at="" class="on">✏️ Tiles</button>';
+  row.querySelectorAll('button').forEach(b=>b.onclick=()=>setAuto(b.dataset.at||null)); }
+function buildStamps(){ const row=$('#stamprow'); if(!row) return; row.innerHTML='';
+  STAMPS.forEach((st,i)=>{ const [name,s,sc,sr,w,h]=st; const cv=document.createElement('canvas');
+    cv.width=44; cv.height=54; cv.title=name; const g=cv.getContext('2d'); g.imageSmoothingEnabled=false;
+    const sw=w*TS, sh=h*TS, k=Math.min(44/sw,54/sh); g.drawImage(imgs[s], sc*TS,sr*TS,sw,sh, (44-sw*k)/2,(54-sh*k)/2, sw*k,sh*k);
+    cv.onclick=()=>setStamp(i); row.appendChild(cv); }); }
+
+// ---- map ----
+function drawMap(){
+  const z=S.mapZoom, cv=$('#map'), g=cv.getContext('2d');
+  cv.width=S.w*TS*z; cv.height=S.h*TS*z; g.imageSmoothingEnabled=false;
+  g.fillStyle='#0d1116'; g.fillRect(0,0,cv.width,cv.height);
+  for(let li=0;li<S.layers.length;li++){ if(!S.layers[li].vis) continue;
+    const cells=S.cells[li];
+    for(let r=0;r<S.h;r++) for(let c=0;c<S.w;c++){ const t=cells[r*S.w+c]; if(!t) continue;
+      g.drawImage(imgs[t.s], t.tx*TS,t.ty*TS,TS,TS, c*TS*z,r*TS*z, TS*z,TS*z); } }
+  if(S.grid){ g.strokeStyle='rgba(255,255,255,0.10)'; g.lineWidth=1;
+    for(let c=0;c<=S.w;c++){ g.beginPath(); g.moveTo(c*TS*z+.5,0); g.lineTo(c*TS*z+.5,cv.height); g.stroke(); }
+    for(let r=0;r<=S.h;r++){ g.beginPath(); g.moveTo(0,r*TS*z+.5); g.lineTo(cv.width,r*TS*z+.5); g.stroke(); } }
+  // impassable overlay
+  if(S.blocked.some(Boolean)){ g.fillStyle='rgba(210,60,60,0.34)'; g.strokeStyle='rgba(255,120,120,0.5)'; g.lineWidth=1;
+    for(let r=0;r<S.h;r++) for(let c=0;c<S.w;c++){ if(!S.blocked[r*S.w+c]) continue;
+      const x=c*TS*z, y=r*TS*z; g.fillRect(x,y,TS*z,TS*z);
+      g.beginPath(); g.moveTo(x,y); g.lineTo(x+TS*z,y+TS*z); g.moveTo(x+TS*z,y); g.lineTo(x,y+TS*z); g.stroke(); } }
+  // level markers on top
+  if(S.markers.length){ g.textAlign='center'; g.textBaseline='middle'; g.font=Math.floor(TS*z*0.8)+'px serif';
+    for(const m of S.markers){ const x=(m.c+0.5)*TS*z, y=(m.r+0.5)*TS*z;
+      g.fillStyle='rgba(0,0,0,0.5)'; g.beginPath(); g.arc(x,y,TS*z*0.44,0,7); g.fill();
+      g.strokeStyle='#ffd76a'; g.lineWidth=2; g.stroke();
+      g.fillStyle='#fff'; g.fillText(MARK[m.type]||'?', x, y+1); } }
+  // rectangle drag preview
+  if(S.rectStart&&S.rectEnd){ const a=S.rectStart,b=S.rectEnd, x0=Math.min(a.c,b.c)*TS*z, y0=Math.min(a.r,b.r)*TS*z,
+    w=(Math.abs(a.c-b.c)+1)*TS*z, h=(Math.abs(a.r-b.r)+1)*TS*z;
+    g.fillStyle='rgba(111,179,255,0.22)'; g.fillRect(x0,y0,w,h); g.strokeStyle='#6fb3ff'; g.lineWidth=2; g.strokeRect(x0+1,y0+1,w-2,h-2); }
+}
+function placeMarker(c,r){
+  const t=S.marker;
+  if(t==='home'||t==='knoll') S.markers=S.markers.filter(m=>m.type!==t).concat({type:t,c,r});
+  else { const i=S.markers.findIndex(m=>m.type===t&&m.c===c&&m.r===r);
+    if(i>=0) S.markers.splice(i,1); else S.markers.push({type:t,c,r}); }
+  drawMap(); autosave();
+}
+function cellAt(e){ const z=S.mapZoom, rect=$('#map').getBoundingClientRect();
+  const c=Math.floor((e.clientX-rect.left)/(TS*z)), r=Math.floor((e.clientY-rect.top)/(TS*z));
+  return (c>=0&&r>=0&&c<S.w&&r<S.h)?{c,r}:null; }
+function paintCell(c,r){
+  const cells=S.cells[S.layer];
+  if(S.tool==='pick'){ const t=cells[idx(c,r)]; if(t){ S.sheet=t.s; $('#sheetSel').value=t.s; drawPalette(); selectTile(t.s,t.tx,t.ty); setStamp(-1); setTool('paint'); } return; }
+  if(S.tool==='block'){ S.blocked[idx(c,r)]=S.blockVal; drawMap(); autosave(); return; }
+  if(S.tool==='fill'){ flood(c,r); drawMap(); autosave(); return; }
+  if(S.tool==='rect') return; // committed on mouseup
+  if(S.at && S.tool==='paint'){ paintAuto(c,r); return; }
+  if(S.stamp && S.tool==='paint'){ stampAt(c,r); drawMap(); autosave(); return; }
+  const b=S.brush, o=(b-1)>>1;
+  for(let j=0;j<b;j++) for(let i2=0;i2<b;i2++){ const cc=c-o+i2, rr=r-o+j;
+    if(cc<0||rr<0||cc>=S.w||rr>=S.h) continue; const ii=rr*S.w+cc;
+    if(S.tool==='erase') cells[ii]=null; else { if(!S.tile) continue; cells[ii]={...S.tile}; } }
+  for(let j=-1;j<=b;j++) for(let i2=-1;i2<=b;i2++) atCompute(S.layer,c-o+i2,r-o+j); // refresh nearby autotile edges
+  drawMap(); autosave();
+}
+function stampAt(c,r){ const [,s,sc,sr,w,h]=S.stamp; const cells=S.cells[S.layer];
+  for(let j=0;j<h;j++) for(let i=0;i<w;i++){ const cc=c+i, rr=r+j; if(cc<0||rr<0||cc>=S.w||rr>=S.h) continue;
+    cells[rr*S.w+cc]={s,tx:sc+i,ty:sr+j}; } }
+function rectFill(){ if(!S.rectStart||!S.rectEnd) return; const a=S.rectStart,b=S.rectEnd, cells=S.cells[S.layer];
+  const c0=Math.min(a.c,b.c),c1=Math.max(a.c,b.c),r0=Math.min(a.r,b.r),r1=Math.max(a.r,b.r);
+  for(let r=r0;r<=r1;r++) for(let c=c0;c<=c1;c++){ if(S.tile) cells[r*S.w+c]={...S.tile}; }
+  S.rectStart=S.rectEnd=null; drawMap(); autosave(); }
+function flood(c,r){
+  if(!S.tile) return; const cells=S.cells[S.layer], target=key(cells[idx(c,r)]), rep=key(S.tile);
+  if(target===rep) return; const st=[[c,r]];
+  while(st.length){ const [x,y]=st.pop(); if(x<0||y<0||x>=S.w||y>=S.h) continue;
+    const i=idx(x,y); if(key(cells[i])!==target) continue; cells[i]={...S.tile};
+    st.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]); }
+}
+// ---- autotiles ----
+const atSame=(li,c,r,T)=>{ if(c<0||r<0||c>=S.w||r>=S.h) return true; const cl=S.cells[li][r*S.w+c]; return !!(cl&&cl.at===T); };
+function atCompute(li,c,r){ const cl=S.cells[li][r*S.w+c]; if(!cl||!cl.at) return; const A=AUTOTILES[cl.at]; if(!A) return;
+  let m=0; if(!atSame(li,c,r-1,cl.at))m|=1; if(!atSame(li,c+1,r,cl.at))m|=2; if(!atSame(li,c,r+1,cl.at))m|=4; if(!atSame(li,c-1,r,cl.at))m|=8;
+  const n=A.nine, p={0:n.c,1:n.n,2:n.e,4:n.s,8:n.w,9:n.nw,3:n.ne,6:n.se,12:n.sw,5:n.n,10:n.e,11:n.n,7:n.e,14:n.s,13:n.w,15:n.c}[m]||n.c;
+  cl.s=p[0]; cl.tx=p[1]; cl.ty=p[2]; }
+function retile(li,c,r){ for(let j=-1;j<=1;j++) for(let i=-1;i<=1;i++) atCompute(li,c+i,r+j); }
+function paintAuto(c,r){ const A=AUTOTILES[S.at], li=A.layer, b=S.brush, o=(b-1)>>1;
+  for(let j=0;j<b;j++) for(let i=0;i<b;i++){ const cc=c-o+i,rr=r-o+j; if(cc<0||rr<0||cc>=S.w||rr>=S.h) continue;
+    S.cells[li][rr*S.w+cc]={s:A.nine.c[0],tx:A.nine.c[1],ty:A.nine.c[2],at:S.at}; }
+  for(let j=-2;j<=b+1;j++) for(let i=-2;i<=b+1;i++) atCompute(li,c-o+i,r-o+j);
+  drawMap(); autosave(); }
+
+// ---- tools / ui ----
+function setTool(t){ S.tool=t; document.querySelectorAll('#tools button').forEach(b=>b.classList.toggle('on',b.dataset.tool===t)); }
+function setZoom(z){ S.mapZoom=Math.max(0.5,Math.min(4,z)); $('#zlbl').textContent=S.mapZoom+'×'; drawMap(); }
+
+let painting=false;
+function wire(){
+  document.querySelectorAll('#tools button').forEach(b=>b.onclick=()=>{ setStamp(-1); setAuto(null); setTool(b.dataset.tool); });
+  $('#pal').addEventListener('mousedown',e=>{ const z=S.palZoom;
+    selectTile(S.sheet, Math.floor(e.offsetX/(TS*z)), Math.floor(e.offsetY/(TS*z))); setStamp(-1); setAuto(null); setTool('paint'); });
+  $('#sheetSel').onchange=e=>{ S.sheet=+e.target.value; drawPalette(); };
+  $('#palz').onclick=()=>{ S.palZoom=S.palZoom>=3?1:S.palZoom+1; $('#palz').textContent=S.palZoom+'×'; drawPalette(); };
+  $('#layerSel').onchange=e=>{ S.layer=+e.target.value; $('#layerVis').classList.toggle('on',S.layers[S.layer].vis); };
+  $('#layerVis').onclick=()=>{ S.layers[S.layer].vis=!S.layers[S.layer].vis; $('#layerVis').classList.toggle('on',S.layers[S.layer].vis); drawMap(); };
+  $('#map').addEventListener('mousedown',e=>{ const p=cellAt(e); if(!p) return;
+    if(S.marker){ placeMarker(p.c,p.r); return; }
+    if(S.tool==='rect'){ S.rectStart={...p}; S.rectEnd={...p}; painting=true; drawMap(); return; }
+    if(S.tool==='block'){ S.blockVal = S.blocked[idx(p.c,p.r)]?0:1; }
+    painting=true; paintCell(p.c,p.r); });
+  document.querySelectorAll('#mk button').forEach(b=>b.onclick=()=>{ S.marker=b.dataset.mk||null;
+    document.querySelectorAll('#mk button').forEach(x=>x.classList.toggle('on',x===b)); });
+  $('#brush').onclick=()=>{ S.brush=S.brush>=3?1:S.brush+1; $('#brush').textContent=S.brush+'×'+S.brush; };
+  window.addEventListener('mousemove',e=>{ if(!painting) return; const p=cellAt(e); if(!p) return;
+    if(S.tool==='rect'){ S.rectEnd=p; drawMap(); return; }
+    if(S.tool==='fill'||S.tool==='pick') return; paintCell(p.c,p.r); });
+  window.addEventListener('mouseup',()=>{ if(painting&&S.tool==='rect') rectFill(); painting=false; });
+  $('#zin').onclick=()=>setZoom(S.mapZoom+(S.mapZoom<1?0.5:1));
+  $('#zout').onclick=()=>setZoom(S.mapZoom-(S.mapZoom<=1?0.5:1));
+  $('#gridBtn').onclick=()=>{ S.grid=!S.grid; $('#gridBtn').classList.toggle('on',S.grid); drawMap(); drawPalette(); };
+  $('#resize').onclick=()=>{ newMap(Math.max(1,+$('#mw').value|0), Math.max(1,+$('#mh').value|0), true); drawMap(); autosave(); };
+  $('#clear').onclick=()=>{ if(confirm('Clear the "'+S.layers[S.layer].name+'" layer?')){ S.cells[S.layer]=new Array(S.w*S.h).fill(null); drawMap(); autosave(); } };
+  $('#exPng').onclick=exportPNG; $('#save').onclick=saveJSON;
+  $('#load').onclick=()=>$('#file').click();
+  $('#help').onclick=()=>{ $('#intro').style.display='flex'; };
+  $('#introOk').onclick=()=>{ $('#intro').style.display='none'; try{ localStorage.setItem('mdg-mapmaker-intro','1'); }catch(e){} };
+  $('#file').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader();
+    rd.onload=()=>{ try{ loadData(JSON.parse(rd.result)); }catch(err){ alert('Bad map file'); } }; rd.readAsText(f); e.target.value=''; };
+  document.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT') return;
+    const k={b:'paint',x:'erase',r:'rect',g:'fill',i:'pick',k:'block'}[e.key.toLowerCase()]; if(k){ setStamp(-1); setAuto(null); setTool(k); } });
+}
+
+// ---- export / persistence ----
+function download(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+function exportPNG(){
+  const cv=document.createElement('canvas'); cv.width=S.w*TS; cv.height=S.h*TS;
+  const g=cv.getContext('2d'); g.imageSmoothingEnabled=false;
+  for(let li=0;li<S.layers.length;li++){ if(!S.layers[li].vis) continue; const cells=S.cells[li];
+    for(let r=0;r<S.h;r++) for(let c=0;c<S.w;c++){ const t=cells[r*S.w+c]; if(!t) continue;
+      g.drawImage(imgs[t.s], t.tx*TS,t.ty*TS,TS,TS, c*TS,r*TS,TS,TS); } }
+  cv.toBlob(b=>download(b,'moondruid-map-preview.png'),'image/png');
+}
+function mapData(){ return { v:1, w:S.w, h:S.h, sheets:SHEETS.map(s=>s.name),
+  layers:S.layers.map((l,li)=>({name:l.name, vis:l.vis, cells:S.cells[li]})), markers:S.markers,
+  blocked:S.blocked.some(Boolean)?S.blocked:undefined }; }
+function saveJSON(){ download(new Blob([JSON.stringify(mapData())],{type:'application/json'}),'moondruid-map.json'); }
+function loadData(d){
+  if(!d||!d.layers) return; S.w=d.w; S.h=d.h; $('#mw').value=d.w; $('#mh').value=d.h;
+  S.layers=d.layers.map(l=>({name:l.name,vis:l.vis!==false})); S.cells=d.layers.map(l=>l.cells);
+  S.markers=d.markers||[];
+  S.blocked=(d.blocked&&d.blocked.length===d.w*d.h)?d.blocked.slice():new Array(d.w*d.h).fill(0);
+  S.layer=Math.min(S.layer,S.layers.length-1); buildSheetSel(); $('#layerSel').value=S.layer;
+  $('#layerVis').classList.toggle('on',S.layers[S.layer].vis); drawMap();
+}
+function autosave(){ try{ localStorage.setItem('wetland-map', JSON.stringify(mapData())); }catch(e){} }
+
+// ---- boot ----
+function init(){
+  buildSheetSel(); buildStamps(); buildAutos();
+  let restored=false;
+  try{ const raw=localStorage.getItem('wetland-map'); if(raw){ loadData(JSON.parse(raw)); restored=true; } }catch(e){}
+  if(!restored) newMap(S.w,S.h,false);
+  $('#layerVis').classList.add('on');
+  selectTile(0,0,0); drawPalette(); drawMap(); wire();
+  try{ if(localStorage.getItem('mdg-mapmaker-intro')) $('#intro').style.display='none'; }catch(e){}
+  window.ED = { S, imgs, drawMap, paintCell, exportPNG, selectTile, loadData, mapData, setTool, setStamp, stampAt, setAuto, paintAuto, AUTOTILES }; // test/automation hook
+}
+// Synthesize the stand-in sheets (no network, no embedded art) and start.
+for(let i=0;i<SHEETS.length;i++) imgs.push(synthSheet(i));
+init();
+</script>
+</body>
+</html>
