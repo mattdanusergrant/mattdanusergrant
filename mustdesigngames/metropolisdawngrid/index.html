@@ -404,7 +404,7 @@
   var COST={road:4,rail:10,transit:110,res:15,com:25,ind:35,fac:60,park:20,power:120,solar:80,water:100,bank:180,port:140,tower:200,mon1:0,mon2:0,mon3:0,bulldoze:0};
   var UPKEEP={power:8,solar:1,water:6,road:0.2,rail:0.3,transit:4,bank:4,port:5,tower:3};  // ₵/month (solar is clean & cheap to run; a fossil station costs more)
   var TAX={res:6,com:5,ind:3,fac:3,tower:14};           // ₵/month per building level (Towers are dense = high tax)
-  var CASH_START=1500, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;
+  var CASH_START=6000, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;   // generous starting buffer so the first city is stress-free (the service sink still bites as you grow)
   // public services scale with population — the sink that ends infinite wealth. First ~400 residents free
   // (early game breathes); past that every resident costs, so a big city must fund itself with exports &
   // commerce (tax-per-head falls as density rises), not just sprawl. Net income stays tight, never runaway.
@@ -486,6 +486,21 @@
     var msg=unlocked('transit')?'🚦 Gridlock — the streets can’t move everyone. Build <b>Transit</b> stops to carry the crowds and keep the city growing.'
                                :'🚦 The streets are jamming as the city grows. <b>Transit</b> unlocks soon — charter the next tier to keep it moving.';
     toastEl.innerHTML=msg;toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},7000);
+  }
+  // the make-or-break onboarding hint: if you've zoned buildings but NONE can grow, say exactly why
+  var growthWarned=false, _growthStuck=0;
+  function growthCoach(){
+    if(OBSERVE)return;
+    var zoned=0,blocked=0,reason='';
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g||!ZONES[g.t])continue;zoned++;var bk=blocker(i%cols,(i/cols)|0);if(bk){blocked++;if(!reason)reason=bk;}}
+    if(zoned<1||blocked<zoned){_growthStuck=0;growthWarned=false;return;}   // at least one building can grow → all good
+    if(growthWarned||++_growthStuck<4)return;                              // sustained stuck (~4 ticks) before nudging
+    growthWarned=true;
+    var msg=reason==='disc'?'🔌 Your buildings need to <b>touch a Road</b> that reaches the freeway before they’ll grow. Lay a Road right up against them.'
+      :reason==='pow'?'⚡ No <b>Power</b> reaching your buildings. Place a Power station and connect it by Road.'
+      :reason==='wat'?'💧 No <b>Water</b> reaching your buildings. Place a Water tower and connect it by Road.'
+      :'Your buildings can’t grow yet — they each need a <b>Road</b> connection, <b>Power</b> and <b>Water</b>.';
+    toastEl.innerHTML=msg;toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},7200);
   }
   var cashEl,cashRateEl;
   function updateCashUI(){
@@ -852,7 +867,8 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();hist={pop:[],cash:[],net:[],cong:[]};activeEv=null;evCooldown=160;evalEventMods();renderEvent();POL={tax:1,cp:false,sm:false,ft:false};renderPolicy();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    try{localStorage.removeItem(TUTOR_KEY);}catch(e){}tutorDone=false;tutorActive=true;tutorStep=-1;   // a Reset is a true fresh start — replay the intro quest
+    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();hist={pop:[],cash:[],net:[],cong:[]};activeEv=null;evCooldown=160;evalEventMods();renderEvent();POL={tax:1,cp:false,sm:false,ft:false};renderPolicy();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();seedRampIfEmpty();showTutor();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -1011,7 +1027,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();dirty=true;updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
+    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();dirty=true;updateDemandUI();updateResourceUI();trafficCoach();growthCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -1913,7 +1929,7 @@
   window.addEventListener('resize',resize);
   resize();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // build the fixed world, lay the gateway, aim the camera at the interchange
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
-  else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); netBootPull(); }   // density ceiling + tech follow the loaded tier; pull a cloud save if this device has none
+  else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); seedRampIfEmpty(); netBootPull(); }   // give even a first-run player a starter on-ramp to build from; pull a cloud save if this device has none
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();renderEvent();renderPolicy();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var gg0=grid[idx(c0,r0)];if(gg0.t==='road'||gg0.t==='highway')roadList.push([c0,r0]);if(gg0.rail||gg0.t==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
