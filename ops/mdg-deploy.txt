@@ -1,2 +1,2 @@
 Bump this file (or use Actions → Run workflow) to deploy Moon Druid Guardians.
-deploy 2 — 2026-07-11 — restore the stock moor (was: demo picker)
+deploy 3 — 2026-07-11 — restore the "Choose your moor" picker pack (Operator wants it live)
