@@ -77,6 +77,17 @@
   .obj-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#E7A93E,#5FBE6E);border-radius:3px;transition:width .45s ease}
   .obj-rew{align-self:flex-end;font-size:9.5px;font-weight:700;color:#3E8E6E;letter-spacing:.03em}
   @media(max-width:640px){.objectives{display:none}}
+  .eventcard{position:absolute;left:14px;bottom:64px;z-index:6;width:252px;background:var(--paper);border:1.5px solid #E0A93E;border-radius:10px;box-shadow:var(--shadow);padding:10px 12px 11px}
+  .eventcard .ev-h{font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .eventcard .ev-d{font-size:11px;color:var(--ink-2);line-height:1.4;margin-bottom:8px}
+  .eventcard .ev-btns{display:flex;flex-direction:column;gap:5px}
+  .eventcard button{font:600 11px system-ui,sans-serif;padding:6px 9px;border-radius:7px;border:1.5px solid var(--line-2);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left;transition:border-color .15s}
+  .eventcard button:hover{border-color:#E0A93E}
+  .eventcard button b{color:#3E8E6E}
+  .eventcard .ev-bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:2px}
+  .eventcard .ev-bar i{display:block;height:100%;background:#E0A93E;border-radius:3px;transition:width .5s linear}
+  .eventcard .ev-note{font-size:10px;color:var(--muted);margin-top:5px;font-weight:600}
+  @media(max-width:640px){.eventcard{display:none}}
   canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
   .toast{position:absolute;top:16px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:14px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;white-space:normal;max-width:min(560px,88vw);text-align:center;line-height:1.35;z-index:5}
   .toast.on{opacity:1;transform:translate(-50%,0)}
@@ -216,6 +227,7 @@
       <ol class="tutor-l" id="tutor-l"></ol>
     </div>
     <div class="objectives" id="objectives" hidden><div class="obj-h">📋 Contracts <b id="obj-done"></b></div><ul class="obj-l" id="obj-l"></ul></div>
+    <div class="eventcard" id="eventcard" hidden></div>
     <div class="obs" id="obs" hidden><b>👁 Observing an AI-run city</b> · read-only — <a href="world/">← back to the world</a></div>
     <div class="obs warn" id="insolvent" hidden><b>⚠ Insolvent</b> · income can’t cover upkeep — export Goods or <b>Clear</b> costly buildings to climb out</div>
     <div class="inspect" id="inspect" hidden></div>
@@ -378,7 +390,7 @@
       if(UPKEEP[t])upkeep+=UPKEEP[t];
       if(t==='bank')banks++;else if(t==='port')ports++;else if(t==='fac')facN++;}
     bankCount=banks;
-    income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium*exportMult; // Ports + Green Logistics tech lift export revenue; a trade partner short on Goods pays a premium
+    income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium*exportMult*EVMOD.exportM; // Ports + Green Logistics tech lift export revenue; a trade partner short on Goods pays a premium
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
     serviceCost=Math.round(Math.max(0,popTarget-SERVICE_FREE)*SERVICE_RATE);    // public services grow with population — the money sink
@@ -778,7 +790,7 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();activeEv=null;evCooldown=160;evalEventMods();renderEvent();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -807,8 +819,8 @@
       for(var k=0;k<4;k++){var a=nn[k][0],bb=nn[k][1];if(!inB(a,bb))continue;var ni=idx(a,bb);if(grid[ni].t==='road'){hit=true;if(!net[ni]){net[ni]=1;que.push(ni);}}}
       return hit;}   // utilities distribute over local ROADS (not the freeway); did the source touch one?
     for(var si=0;si<n;si++){var gs=grid[si];if(!gs)continue;var stt=gs.t;
-      if(stt==='power'){gen+=POWER_OUT/9;seedNet(si,pnet,pq);}         // a 3×3 station = 9 cells → POWER_OUT total
-      if(stt==='solar'){gen+=SOLAR_OUT*solarMult;seedNet(si,pnet,pq);} // clean 1×1 array — Rooftop Solar tech boosts it
+      if(stt==='power'){gen+=(POWER_OUT/9)*EVMOD.power;seedNet(si,pnet,pq);}         // a 3×3 station = 9 cells → POWER_OUT total
+      if(stt==='solar'){gen+=SOLAR_OUT*solarMult*EVMOD.solar;seedNet(si,pnet,pq);} // clean 1×1 array — Rooftop Solar tech boosts it
       if(stt==='water'){wgen+=WATER_OUT;seedNet(si,wnet,wq);}
       if(gs.terr==='water'){if(seedNet(si,wnet,wq))wgen+=WATER_PER_TILE;}}   // a coast/lake tile adds capacity only where it meets a road
     function flow(net,que){var h=0;while(h<que.length){var id=que[h++],c=id%cols,r=(id/cols)|0,nn=[[c-1,r],[c+1,r],[c,r-1],[c,r+1]];
@@ -842,7 +854,8 @@
       if(gt.t==='road'&&connected[tc])roadCells++;else if(gt.t==='transit')transitStops++;
       if(TRIPW[gt.t])trips+=TRIPW[gt.t]*(gt.lvl||1);}
     trafficDemand=trips; trafficCap=roadCells*0.6+transitStops*TRANSIT_CAP*transitMult;
-    congestion=trips>0?Math.max(0,Math.min(1,(trips-trafficCap)/trips)):0;   // 0 = free-flowing, 1 = total gridlock
+    congestion=trips>0?Math.max(0,Math.min(1,(trips-trafficCap)/trips)):0;
+    congestion=Math.max(0,Math.min(1,congestion+EVMOD.congest));   // an active event can spike or relieve the jam   // 0 = free-flowing, 1 = total gridlock
   }
   function nearConnected(c,r){
     return (inB(c-1,r)&&connected[idx(c-1,r)])||(inB(c+1,r)&&connected[idx(c+1,r)])||
@@ -924,11 +937,11 @@
       var rate=demand[cell.t]>0?1:0.28;
       if(cell.t==='ind'&&matWanted)rate=1;               // Works speed up when Materials are short
       if(complement(c,r,cell.t))rate*=1.6;
-      rate*=(1-congestion*0.6);                           // gridlock throttles growth — a jammed city can't expand
+      rate*=(1-congestion*0.6)*EVMOD.growth;               // gridlock throttles growth; events can surge or stall it
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    _tickN++;updatePop();economy();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();manageCars();manageTrains();tutorTick();
+    _tickN++;updatePop();economy();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -1025,6 +1038,75 @@
     for(var j=0;j<contracts.length;j++){var c2=contracts[j],v2=CDEF[c2.key].val(),
       pf=c2.inv?(v2<=c2.target?1:Math.max(0,Math.min(1,(100-v2)/(100-c2.target)))):Math.max(0,Math.min(1,v2/c2.target));
       if(bars[j])bars[j].style.width=(pf*100).toFixed(1)+'%';}
+  }
+
+  // ---- city events: state-triggered situations with a decision — spend to shape the outcome, or ride it out ----
+  // While active they modify the sim via EVMOD (power/solar output, growth rate, export price, congestion).
+  var EVMOD={power:1,solar:1,growth:1,exportM:1,congest:0};
+  var activeEv=null, evCooldown=160;                     // grace period before the first event can fire
+  var EVDEF={
+    heat:{icon:'☀️',title:'Heatwave',dur:90,cond:function(){return popTarget>800;},
+      desc:function(){return 'A brutal heatwave grips the region — power stations strain at −30% output, while solar arrays soak up the sun (+25%).';},
+      base:{power:0.7,solar:1.25},
+      a:{label:'Retrofit station cooling',costF:function(){return niceNum(260+(maxMS+1)*240);},mod:{power:0.95,solar:1.25},note:'stations hold at −5%'},
+      b:{label:'Ride it out',note:'−30% power until it breaks'}},
+    grid:{icon:'🚧',title:'Gridlock crisis',dur:80,cond:function(){return congestion>0.45;},
+      desc:function(){return 'An accident cascade has the streets at a standstill — congestion is spiking citywide.';},
+      base:{congest:0.25},
+      a:{label:'Emergency bus fleet',costF:function(){return niceNum(200+(maxMS+1)*200);},mod:{congest:-0.2},note:'clears the jam and then some'},
+      b:{label:'Let it clear on its own',note:'congestion stays spiked'}},
+    boom:{icon:'🎈',title:'Population boom',dur:100,cond:function(){return popTarget>300&&demand.res>0;},
+      desc:function(){return 'Word is out about your city — newcomers are arriving in waves. Growth is surging.';},
+      base:{growth:1.4},
+      a:{label:'Fund a welcome campaign',costF:function(){return niceNum(180+(maxMS+1)*180);},mod:{growth:1.8},note:'growth ×1.8 while it lasts'},
+      b:{label:'Grow at your own pace',note:'growth ×1.4 while it lasts'}},
+    wind:{icon:'📦',title:'Export windfall',dur:90,cond:function(){return exportRate>2;},
+      desc:function(){return hubShort()+' is paying a premium for Goods this season — export income is way up.';},
+      base:{exportM:1.6},
+      a:{label:'Hire extra haulers',costF:function(){return niceNum(220+(maxMS+1)*200);},mod:{exportM:2.2},note:'exports ×2.2 while it lasts'},
+      b:{label:'Sell at the usual pace',note:'exports ×1.6 while it lasts'}},
+    fire:{icon:'🔥',title:'Transformer fire',dur:70,cond:function(){return censusCount('power')>=9&&popTarget>500;},
+      desc:function(){return 'A substation fire has crews scrambling — station output is down 40% until repairs finish.';},
+      base:{power:0.6},
+      a:{label:'Pay overtime repair crews',costF:function(){return niceNum(240+(maxMS+1)*220);},shorten:26,note:'repairs finish 3× faster'},
+      b:{label:'Standard repairs',note:'−40% power until fixed'}}
+  };
+  function evalEventMods(){EVMOD={power:1,solar:1,growth:1,exportM:1,congest:0};
+    if(!activeEv)return;var d=EVDEF[activeEv.key];if(!d)return;
+    var m=(activeEv.chosen==='a'&&d.a.mod)?d.a.mod:d.base,k;
+    for(k in m)EVMOD[k]=m[k];}
+  var evCard=null;
+  function renderEvent(){if(!evCard)evCard=document.getElementById('eventcard');if(!evCard)return;
+    if(!activeEv||OBSERVE){evCard.hidden=true;return;}
+    var d=EVDEF[activeEv.key];evCard.hidden=false;
+    var h='<div class="ev-h">'+d.icon+' '+d.title+'</div><div class="ev-d">'+d.desc()+'</div>';
+    if(!activeEv.chosen){var cost=d.a.costF();
+      h+='<div class="ev-btns"><button type="button" id="ev-a">'+d.a.label+' — <b>₵'+cost.toLocaleString()+'</b><br><span style="font-weight:500;color:var(--muted)">'+d.a.note+'</span></button>'
+        +'<button type="button" id="ev-b">'+d.b.label+' — <b>free</b><br><span style="font-weight:500;color:var(--muted)">'+d.b.note+'</span></button></div>';
+    } else {
+      h+='<div class="ev-note">'+(activeEv.chosen==='a'?d.a.note:d.b.note)+'</div><div class="ev-bar"><i style="width:'+Math.round(activeEv.left/d.dur*100)+'%"></i></div>';
+    }
+    evCard.innerHTML=h;
+    var ba=document.getElementById('ev-a'),bb=document.getElementById('ev-b');
+    if(ba)ba.addEventListener('click',function(){var c=d.a.costF();if(!canAfford(c)){denyToast();return;}spend(c);
+      activeEv.chosen='a';if(d.a.shorten)activeEv.left=Math.min(activeEv.left,d.a.shorten);evalEventMods();renderEvent();scheduleSave();});
+    if(bb)bb.addEventListener('click',function(){activeEv.chosen='b';evalEventMods();renderEvent();scheduleSave();});
+  }
+  function evTick(){
+    if(OBSERVE||tutorActive||maxMS<0)return;
+    if(activeEv){var d=EVDEF[activeEv.key];
+      if(--activeEv.left<=0){toastEl.innerHTML=d.icon+' <b>'+d.title+'</b> is over — the city breathes easy.';toastEl.classList.add('on');
+        clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},2800);
+        activeEv=null;evCooldown=160;evalEventMods();renderEvent();scheduleSave();}
+      else if(activeEv.chosen)renderEvent();             // tick the countdown bar
+      return;}
+    if(evCooldown>0){evCooldown--;return;}
+    if(Math.random()>=0.006)return;                      // ~1 roll per couple of minutes once eligible
+    var keys=[],k;for(k in EVDEF)if(EVDEF[k].cond())keys.push(k);
+    if(!keys.length)return;
+    var key=keys[Math.floor(Math.random()*keys.length)];
+    activeEv={key:key,left:EVDEF[key].dur,chosen:null};
+    evalEventMods();renderEvent();scheduleSave();
   }
 
   // ---- guided first-run: a short objective path that teaches the loop as you play ----
@@ -1489,12 +1571,16 @@
   function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];
       if(g&&g.t!=='highway'&&g.t!=='sub'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,g.foot||1]);}   // save anchors only; 'sub' members are reconstructed on load
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone}));}catch(e){}}
+    var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,ev:ev,evc:evCooldown}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
       if(Array.isArray(d.ct))contracts=d.ct.filter(function(a){return CDEF[a[0]];}).map(function(a){return {key:a[0],target:a[1],reward:a[2],inv:!!a[3],text:a[4]};});
-      if(typeof d.cd==='number')contractsDone=d.cd;}
+      if(typeof d.cd==='number')contractsDone=d.cd;
+      if(d.ev&&EVDEF[d.ev.k])activeEv={key:d.ev.k,left:Math.max(1,d.ev.l|0),chosen:d.ev.c||null};
+      if(typeof d.evc==='number')evCooldown=d.evc;
+      evalEventMods();}
     list.forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
       if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
       var f=a[5]||1;
@@ -1583,7 +1669,7 @@
   resize();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // build the fixed world, lay the gateway, aim the camera at the interchange
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
   else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); if(!tutorActive)seedRampIfEmpty(); }   // density ceiling + tech follow the loaded tier
-  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();
+  computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();renderEvent();
   roadList=[];railList=[];for(var r0=0;r0<rows;r0++)for(var c0=0;c0<cols;c0++){var gg0=grid[idx(c0,r0)];if(gg0.t==='road'||gg0.t==='highway')roadList.push([c0,r0]);if(gg0.rail||gg0.t==='highway')railList.push([c0,r0]);}
   manageCars();manageTrains();
   if(!AI&&tutorActive)showTutor();
