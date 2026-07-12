@@ -13,6 +13,7 @@ function makeKV() {
     _m: m,
     get: async (k, type) => { const v = m.get(k); if (v === undefined) return null; return type === 'json' ? JSON.parse(v) : v; },
     put: async (k, v) => { m.set(k, v); },
+    delete: async (k) => { m.delete(k); },
     list: async ({ prefix = '', limit = 1000 } = {}) => ({
       keys: [...m.keys()].filter((k) => k.startsWith(prefix)).slice(0, limit).map((name) => ({ name })),
       list_complete: true, cursor: null
@@ -209,6 +210,83 @@ const TOKEN = 'testdevicetoken001';
     const code2 = (await admPost(e, '/v1/hub/code', { hubId: mint2.body.hub.hubId, code: 'BIFFA1' })).body.code.code;
     const twoHubs = await call(e, 'POST', '/v1/redeem', { token: MEMBER, code: code2 });
     eq(twoHubs.status, 409, 'a player already in a hub cannot join a second'); eq(twoHubs.body.code, 'other_hub', 'reason is other_hub');
+  }
+
+  // ---- HUB APPLICATIONS: earn / gate / approve → hub, plus "upgrade my city" ----
+  {
+    const e = env();   // invite-only, HUB_MIN_MS default 7 (Metropolis)
+    const LOW = 'lowmayordevice001';   // a small-town mayor
+    const under = await call(e, 'POST', '/v1/apply', { token: LOW, hubName: 'Tinyville', bestMs: 3, bestPop: 900 });
+    eq(under.status, 422, 'a low-tier city cannot apply for a hub'); eq(under.body.code, 'ineligible', 'reason is ineligible'); eq(under.body.minMs, 7, 'gate names the required milestone');
+
+    // a Metropolis mayor with a claimed city applies
+    const BIG = 'bigmayordevice0001';
+    // give them a claim first (open mode not needed — seed an admin hub they can border? simpler: claim in open mode via a temp env is messy).
+    // Instead: place their claim by minting via redeem into an existing hub, then applying to upgrade.
+    const seed = SEED_HUBS[4]; const sp = plotOf(seed.lat, seed.lon);
+    const hnb = plotNbs(sp.pi, sp.pj).find((n) => (n[0] + ',' + n[1]) !== sp.key); const hc = plotCenter(hnb[0], hnb[1]);
+    const host = await admPost(e, '/v1/admin/hub', { name: 'Host Hub', lat: hc.lat, lon: hc.lon });
+    const hostId = host.body.hub.hubId;
+    const hostCode = (await admPost(e, '/v1/hub/code', { hubId: hostId, code: 'HOST01' })).body.code.code;
+    await call(e, 'POST', '/v1/redeem', { token: BIG, code: hostCode });
+    // BIG claims a city bordering Host Hub
+    const bignb = plotNbs(plotOf(hc.lat, hc.lon).pi, plotOf(hc.lat, hc.lon).pj).find((n) => (n[0] + ',' + n[1]) !== sp.key);
+    const bigc = plotCenter(bignb[0], bignb[1]);
+    const bigClaim = await call(e, 'POST', '/v1/claim', { token: BIG, name: 'Grandopolis', lat: bigc.lat, lon: bigc.lon });
+    eq(bigClaim.status, 200, 'the aspiring mayor first founds a city under an existing hub');
+
+    const apply = await call(e, 'POST', '/v1/apply', { token: BIG, name: 'Grand Mayor', hubName: 'Grandopolis Hub', bestMs: 7, bestPop: 20000, patreonUrl: 'https://patreon.com/grand', note: 'huge city' });
+    eq(apply.status, 200, 'a Metropolis mayor CAN apply'); eq(apply.body.application.status, 'pending', 'the application is pending');
+
+    const mine = await call(e, 'GET', '/v1/apply?token=' + BIG);
+    eq(mine.body.application.hubName, 'Grandopolis Hub', 'the applicant can read their pending application back');
+
+    const adminList = await admGet(e, '/v1/admin/apps');
+    if (adminList.body.applications.some((a) => a.token === BIG && a.status === 'pending')) ok('the application shows in the admin queue'); else fail('application missing from admin queue');
+    const listNoAuth = await call(e, 'GET', '/v1/admin/apps'); eq(listNoAuth.status, 403, 'the admin queue needs admin auth');
+
+    // approve → "upgrade the city into a hub": their claim plot becomes the hub, owned by them
+    const bigPlotKey = plotOf(bigc.lat, bigc.lon).key;
+    const decide = await admPost(e, '/v1/admin/apps/decide', { token: BIG, approve: true, useCurrentCity: true });
+    eq(decide.status, 200, 'admin approves the application'); eq(decide.body.converted, true, 'their city was UPGRADED into the hub');
+    const newHubId = decide.body.hub.hubId;
+    eq(decide.body.hub.ownerToken, BIG, 'the applicant now OWNS the new hub');
+    eq(decide.body.hub.tier, 4, 'a Metropolis mayor’s hub starts at tier 4');
+
+    // /v1/me now reports them as a hub OWNER
+    const bigMe = await call(e, 'GET', '/v1/me?token=' + BIG);
+    eq(bigMe.body.owner, true, 'the new hub player is recognised as an owner'); eq(bigMe.body.hubId, newHubId, '/v1/me names their hub');
+
+    // the old claim at that plot is gone (converted), the hub occupies it
+    const worldNow = await call(e, 'GET', '/v1/world');
+    const asClaim = worldNow.body.cities.filter((c) => c.owner === BIG && !c.hub).length;
+    const asHub = worldNow.body.cities.filter((c) => c.hubId === newHubId && c.human).length;
+    if (asClaim === 0 && asHub === 1) ok('the plot is now a HUB, not a plain claim'); else fail('conversion left a stray claim (claim=' + asClaim + ', hub=' + asHub + ')');
+
+    // the new owner can now mint invite codes for THEIR community
+    const ownerCode = await call(e, 'POST', '/v1/hub/code', { hubId: newHubId, ownerToken: BIG, kind: 'open' });
+    eq(ownerCode.status, 200, 'the freshly-minted hub player can generate invite codes');
+
+    // applying again is refused — already a hub
+    const again = await call(e, 'POST', '/v1/apply', { token: BIG, hubName: 'Another', bestMs: 8 });
+    eq(again.status, 409, 'an existing hub owner cannot apply again'); eq(again.body.code, 'already_hub', 'reason is already_hub');
+
+    // a PAID charter bypasses the progress gate (still pending review)
+    const CHARTER = 'charterbuyerdev01';
+    const charter = await call(e, 'POST', '/v1/apply', { token: CHARTER, hubName: 'Bought Hub', bestMs: 2, intent: 'charter' });
+    eq(charter.status, 200, 'a paid charter application bypasses the progress gate'); eq(charter.body.application.intent, 'charter', 'the charter intent is recorded');
+
+    // reject path
+    const REJ = 'rejectmedevice001';
+    await call(e, 'POST', '/v1/apply', { token: REJ, hubName: 'Nope Hub', bestMs: 7 });
+    const rej = await admPost(e, '/v1/admin/apps/decide', { token: REJ, approve: false, reason: 'too close to another hub' });
+    eq(rej.body.application.status, 'rejected', 'admin can reject an application'); eq(rej.body.application.reason, 'too close to another hub', 'the rejection reason is stored');
+
+    // approve WITHOUT a current city → auto-places a hub on an open frontier plot
+    const NOCITY = 'nocitymayordev001';
+    await call(e, 'POST', '/v1/apply', { token: NOCITY, hubName: 'Fresh Hub', bestMs: 8, bestPop: 40000 });
+    const autop = await admPost(e, '/v1/admin/apps/decide', { token: NOCITY, approve: true });
+    eq(autop.status, 200, 'approving a mayor with no claim auto-places their hub'); eq(autop.body.converted, false, 'auto-placed (not a conversion)'); eq(autop.body.hub.tier, 5, 'a Megacity mayor’s hub starts at tier 5');
   }
 
   // ---- admin cannot mint a hub on an occupied plot ----

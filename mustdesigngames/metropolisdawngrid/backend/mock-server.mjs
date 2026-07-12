@@ -12,6 +12,7 @@ const m = new Map();
 const KV = {
   get: async (k, type) => { const v = m.get(k); if (v === undefined) return null; return type === 'json' ? JSON.parse(v) : v; },
   put: async (k, v) => { m.set(k, v); },
+  delete: async (k) => { m.delete(k); },
   list: async ({ prefix = '', limit = 1000, cursor = null } = {}) => ({
     keys: [...m.keys()].filter((k) => k.startsWith(prefix)).slice(0, limit).map((name) => ({ name })),
     list_complete: true, cursor: null

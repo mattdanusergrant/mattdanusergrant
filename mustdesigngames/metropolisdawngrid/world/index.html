@@ -41,14 +41,28 @@
   .wtoast b{color:var(--muted);font-weight:500}
   @media(max-width:640px){.intro{max-width:60vw}.legend{display:none}}
   #fade{position:fixed;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:6}
-  #ncard,#fcard,#rcard,#jcard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
-  #ncard.on,#fcard.on,#rcard.on,#jcard.on{display:flex}
+  #ncard,#fcard,#rcard,#jcard,#acard{position:fixed;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);padding:20px}
+  #ncard.on,#fcard.on,#rcard.on,#jcard.on,#acard.on{display:flex}
   .nc-inner input{width:100%;box-sizing:border-box;font-family:'Inter',sans-serif;font-size:16px;letter-spacing:.12em;text-transform:uppercase;text-align:center;padding:11px 12px;border:1.5px solid var(--line-2);border-radius:10px;margin:0 0 12px;color:var(--ink);background:var(--bg)}
   .nc-inner input:focus{outline:none;border-color:#5285B6}
   #jc-patreon{margin:0 0 14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
   #jc-patreon a{color:#C86B2B;font-weight:600}
   .hubbtn{font-family:'Fraunces',serif;font-size:13px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:7px 15px;cursor:pointer;white-space:nowrap}
   .hubbtn.member{background:rgba(95,190,110,.16);color:#2E7D46;border:1.5px solid rgba(95,190,110,.5)}
+  .hubbtn.ghostbtn{background:transparent;color:var(--ink-2);border:1.5px solid var(--line-2)}
+  .hubbtn.ghostbtn:hover{color:var(--ink);border-color:var(--ink-2)}
+  .nc-inner.nc-wide{max-width:392px}
+  .ac-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:16px 0 4px}
+  .tier{border:1.5px solid var(--line-2);border-radius:12px;padding:11px 13px;margin:9px 0 0}
+  .tier h4{margin:0;font-family:'Fraunces',serif;font-size:15px;color:var(--ink);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .tier h4 .price{font-weight:700;color:#2E7D46;font-family:'Inter',sans-serif;font-size:15px;white-space:nowrap}
+  .tier .perks{font-size:12px;color:var(--ink-2);margin:6px 0 0;line-height:1.5}
+  .tier.flag{border-color:#5F9A5A;background:rgba(95,154,90,.07)}
+  .tier.founding{border-color:#C08B3E;background:rgba(191,143,62,.07)}
+  .tier.founding h4 .price{color:#B07A2B}
+  .tier button{margin-top:9px;font-family:'Fraunces',serif;font-size:12.5px;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:6px 14px;cursor:pointer}
+  .tier.flag button{background:#3C7A47}.tier.founding button{background:#B07A2B}
+  .tier button:disabled{opacity:.5;cursor:default}
   .plots{display:grid;grid-template-columns:repeat(4,46px);gap:7px;margin:4px 0 16px;justify-content:center}
   /* .plots prefix beats the .nc-inner button pill styling on specificity */
   .plots .plot{width:46px;height:46px;border-radius:9px;border:1.5px solid var(--line-2);background:rgba(167,192,137,.4);cursor:pointer;font-size:15px;line-height:1;color:#fff;font-family:inherit;padding:0}
@@ -74,6 +88,7 @@
   <header class="bar">
     <a class="home" href="../" title="Back to the playable build">← the playable build</a>
     <span class="spacer"></span>
+    <button id="applybtn" class="hubbtn ghostbtn" type="button" hidden>Become a hub</button>
     <button id="hubbtn" class="hubbtn" type="button" hidden></button>
   </header>
 
@@ -89,6 +104,7 @@
   <div id="fcard"><div class="nc-inner"><h3 id="fc-name">Found your city here</h3><p id="fc-msg"></p><div class="nc-actions"><button id="fc-build" type="button">Build here →</button><button id="fc-cancel" type="button" class="ghost">Keep looking</button></div></div></div>
   <div id="rcard"><div class="nc-inner"><h3 id="rc-name"></h3><p id="rc-msg"></p><div class="plots" id="rc-plots"></div><div class="nc-actions"><button id="rc-close" type="button" class="ghost">Close</button></div></div></div>
   <div id="jcard"><div class="nc-inner"><h3 id="jc-name">Join a hub</h3><p id="jc-msg">Enter an invite code from a hub player to found your city in their community — you’ll build right next to them and their members.</p><input id="jc-code" placeholder="invite code" autocomplete="off" spellcheck="false" maxlength="24" /><div id="jc-patreon"></div><div class="nc-actions"><button id="jc-go" type="button">Join →</button><button id="jc-close" type="button" class="ghost">Close</button></div></div></div>
+  <div id="acard"><div class="nc-inner nc-wide"><h3 id="ac-title">Become a hub player</h3><p id="ac-msg"></p><div id="ac-form"><input id="ac-hubname" placeholder="your hub name (e.g. your channel)" autocomplete="off" maxlength="28" /><input id="ac-patreon" placeholder="Patreon URL (optional)" autocomplete="off" maxlength="120" style="text-transform:none;letter-spacing:0;text-align:left;font-size:14px" /><input id="ac-note" placeholder="a note to the operator (optional)" autocomplete="off" maxlength="140" style="text-transform:none;letter-spacing:0;text-align:left;font-size:14px" /><div class="nc-actions"><button id="ac-apply" type="button">Apply →</button><button id="ac-close" type="button" class="ghost">Close</button></div></div><div id="ac-tiers"></div></div></div>
   <div class="rtip" id="rtip" hidden></div>
 
   <div class="wtoast" id="wtoast"></div>
@@ -207,6 +223,7 @@
     try{fetch(MDG_BACKEND+'/v1/world').then(function(r){return r.ok?r.json():null;}).then(function(d){
       if(!d||!d.cities)return;var changed=false,mine=null,i;
       if(typeof d.inviteOnly==='boolean')WORLD_INVITEONLY=d.inviteOnly;
+      if(typeof d.hubMinMs==='number')MDG_HUBMINMS=d.hubMinMs;
       for(i=1;i<CITIES.length;i++){var hp=plotOf(CITIES[i].lat,CITIES[i].lon);if(hp)_remoteKeys[hp.key]=1;   // hubs + known remotes
         if(!CITIES[i].hubId&&CITIES[i].tier&&!CITIES[i].remote&&!CITIES[i].human)CITIES[i].hubId=seedHubId(CITIES[i].name);}   // tag the AI seed hubs
       // (your own city is tagged with your hub only once you actually claim a plot — see `mine` below)
@@ -233,6 +250,17 @@
 
   // ---- HUB PLAYERS: invite-only communities that grow out of an influencer's hub ----
   var WORLD_INVITEONLY=!!MDG_BACKEND;                                         // offline play is always open; a backend may gate the shared world (confirmed via /v1/world)
+  var MDG_HUBMINMS=7;                                                         // milestone needed to APPLY for a hub (7=Metropolis; learned from server)
+  var MDG_OWNER=false;                                                        // am I already a hub owner? (from /v1/me)
+  var _appStatus=null;                                                        // my hub application, if any
+  var MSLABEL=['Hamlet','Village','Township','Town','Borough','City','District','Metropolis','Megacity'];
+  var MSPOP=[120,320,700,1500,3000,6000,11000,19000,32000];
+  function msLabel(ms){return ms>=0&&ms<MSLABEL.length?MSLABEL[ms]:(ms<0?'no city yet':'tier '+ms);}
+  // the player's best city, read from the builder's own saves (same origin) — no server needed
+  function bestProgress(){var best=-1;try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);
+    if(!/^mdg-(district-grid|region-)/.test(k))continue;var raw=localStorage.getItem(k);if(!raw)continue;
+    var s;try{s=JSON.parse(raw);}catch(e){continue;}if(s&&typeof s.ms==='number'&&s.ms>best)best=s.ms;}}catch(e){}
+    return {ms:best,pop:best>=0?MSPOP[Math.min(best,MSPOP.length-1)]:0};}
   var MDG_HUB=(function(){try{return JSON.parse(localStorage.getItem('mdg-hub')||'null');}catch(e){return null;}})();  // {hubId,name,patreonUrl}
   function setHub(h){MDG_HUB=h;try{if(h)localStorage.setItem('mdg-hub',JSON.stringify(h));else localStorage.removeItem('mdg-hub');}catch(e){}}
   function myHubId(){return MDG_HUB&&MDG_HUB.hubId||null;}
@@ -252,9 +280,19 @@
       .catch(function(){cb({netfail:true});});}catch(e){cb({netfail:true});}}
   function netMe(){if(!MDG_BACKEND||!MDG_TOKEN)return;                        // restore membership across devices/sessions
     try{fetch(MDG_BACKEND+'/v1/me?token='+encodeURIComponent(MDG_TOKEN)).then(function(r){return r.ok?r.json():null;}).then(function(d){
-      if(!d)return;WORLD_INVITEONLY=d.inviteOnly!==false;
+      if(!d)return;WORLD_INVITEONLY=d.inviteOnly!==false;if(typeof d.hubMinMs==='number')MDG_HUBMINMS=d.hubMinMs;MDG_OWNER=!!d.owner;
       if(d.member){setHub({hubId:d.hubId,name:d.hubName,patreonUrl:d.patreonUrl||''});}
       refreshHubUI();}).catch(function(){});}catch(e){}}
+  function netApplyStatus(){if(!MDG_BACKEND||!MDG_TOKEN)return;               // do I have a pending/decided hub application?
+    try{fetch(MDG_BACKEND+'/v1/apply?token='+encodeURIComponent(MDG_TOKEN)).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d)return;if(typeof d.minMs==='number')MDG_HUBMINMS=d.minMs;_appStatus=d.application||null;refreshHubUI();}).catch(function(){});}catch(e){}}
+  function netApply(payload,cb){if(!MDG_BACKEND||!MDG_TOKEN){cb({netfail:true});return;}
+    var body={token:MDG_TOKEN,ts:Date.now()};for(var k in payload)body[k]=payload[k];
+    try{fetch(MDG_BACKEND+'/v1/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(d){return {status:r.status,d:d};});})
+      .then(function(x){if(x.status===200&&x.d&&x.d.ok){_appStatus=x.d.application;cb({ok:true,application:_appStatus});}
+        else cb({reject:(x.d&&x.d.error)||'application failed',code:x.d&&x.d.code,minMs:x.d&&x.d.minMs});})
+      .catch(function(){cb({netfail:true});});}catch(e){cb({netfail:true});}}
 
   // ---- regions & plots: the world is a grid of SOLID land / SOLID ocean squares ----
   // Each land square is a REGION holding a PLOTS×PLOTS grid of city plots. Hover a land square for
@@ -606,11 +644,13 @@
 
   // ---- hub membership UI: the "Join a hub" button, legend row, and the redeem card ----
   function refreshHubUI(){
-    var btn=document.getElementById('hubbtn'),hubrow=document.getElementById('lg-hubrow');
+    var btn=document.getElementById('hubbtn'),hubrow=document.getElementById('lg-hubrow'),apbtn=document.getElementById('applybtn');
     if(btn){btn.hidden=!MDG_BACKEND;
-      if(MDG_HUB){btn.textContent='★ '+MDG_HUB.name;btn.classList.add('member');btn.title='You’re a member of '+MDG_HUB.name+' — click to view / switch';}
+      if(MDG_HUB){btn.textContent=(MDG_OWNER?'⚑ ':'★ ')+MDG_HUB.name;btn.classList.add('member');btn.title=(MDG_OWNER?'You own ':'You’re a member of ')+MDG_HUB.name;}
       else{btn.textContent='Join a hub';btn.classList.remove('member');btn.title='Enter an invite code to join a creator’s community';}}
     if(hubrow){if(MDG_HUB){hubrow.hidden=false;document.getElementById('lg-hublabel').textContent=MDG_HUB.name;document.getElementById('lg-hub').style.background=hubColor(MDG_HUB.hubId);}else hubrow.hidden=true;}
+    if(apbtn){apbtn.hidden=!MDG_BACKEND||MDG_OWNER;                            // hidden once you actually own a hub
+      apbtn.textContent=_appStatus&&_appStatus.status==='pending'?'⏳ Application pending':_appStatus&&_appStatus.status==='approved'?'★ Hub approved — reload':'Become a hub';}
   }
   var jcard=document.getElementById('jcard');
   function openJoin(prefill){
@@ -641,6 +681,62 @@
   document.getElementById('jc-close').addEventListener('click',function(){jcard.classList.remove('on');});
   jcard.addEventListener('click',function(e){if(e.target.id==='jcard')this.classList.remove('on');});
 
+  // ---- "Become a hub": eligibility (from the player's own city progress) + apply / charter tiers ----
+  var acard=document.getElementById('acard');
+  function tierHTML(){
+    return '<div class="ac-eyebrow">Or charter one now</div>'
+      +'<div class="tier flag"><h4>Hub Charter <span class="price">$99.99</span></h4>'
+        +'<div class="perks">Skip the climb. A permanent named hub + territory, your own invite codes, a custom hub colour &amp; crest, a Founder badge, and a feature slot in the hub directory.</div>'
+        +'<button type="button" data-charter="charter">Reserve a Charter</button></div>'
+      +'<div class="tier founding"><h4>Founding Charter <span class="price">$249.99</span></h4>'
+        +'<div class="perks">Everything in Charter, plus a <b>lifetime subscription</b>, your city preserved forever as a visitable landmark, a co-designed monument, and your name in the world credits.</div>'
+        +'<button type="button" data-charter="founding">Reserve Founding</button></div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:10px">Charters are reserved now and confirmed when checkout opens — you keep your place in the queue.</div>';
+  }
+  function openApply(){
+    var bp=bestProgress(),eligible=bp.ms>=MDG_HUBMINMS,form=document.getElementById('ac-form'),tiers=document.getElementById('ac-tiers');
+    if(_appStatus&&_appStatus.status==='pending'){
+      document.getElementById('ac-title').textContent='Application pending';
+      document.getElementById('ac-msg').innerHTML='Your application for <b>'+esc(_appStatus.hubName)+'</b> is in review — we’ll turn your city into a hub once it’s approved.';
+      form.style.display='none';tiers.innerHTML='';
+    } else if(_appStatus&&_appStatus.status==='approved'){
+      document.getElementById('ac-title').textContent='You’re a hub player! 🎉';
+      document.getElementById('ac-msg').innerHTML='Reload to manage <b>'+esc(_appStatus.hubName)+'</b> and mint invite codes for your community.';
+      form.style.display='none';tiers.innerHTML='';
+    } else {
+      document.getElementById('ac-title').textContent='Become a hub player';
+      form.style.display='';
+      document.getElementById('ac-msg').innerHTML=eligible
+        ? 'Your best city is a <b>'+esc(msLabel(bp.ms))+'</b> — you qualify to rally your own community. Apply free and your city becomes a hub others build out from.'
+        : 'Reach <b>'+esc(msLabel(MDG_HUBMINMS))+'</b> to apply free — your best city is a <b>'+esc(msLabel(bp.ms))+'</b>. Or charter a hub now:';
+      var ab=document.getElementById('ac-apply');ab.disabled=!eligible;ab.textContent=eligible?'Apply free →':'Locked — reach '+msLabel(MDG_HUBMINMS);
+      tiers.innerHTML=tierHTML();
+    }
+    acard.classList.add('on');
+  }
+  function submitApply(intent){
+    var bp=bestProgress();
+    var payload={hubName:document.getElementById('ac-hubname').value.trim()||'New Hub',
+      patreonUrl:document.getElementById('ac-patreon').value.trim(),note:document.getElementById('ac-note').value.trim(),
+      bestMs:bp.ms,bestPop:bp.pop,intent:intent||'earn'};
+    document.getElementById('ac-msg').textContent='Submitting…';
+    netApply(payload,function(res){
+      if(res.ok){refreshHubUI();document.getElementById('ac-form').style.display='none';document.getElementById('ac-tiers').innerHTML='';
+        var paid=intent&&intent!=='earn';
+        document.getElementById('ac-title').textContent=paid?'Charter reserved ✓':'Application sent ✓';
+        document.getElementById('ac-msg').innerHTML=paid
+          ? 'Thanks! Your <b>'+(intent==='founding'?'Founding ':'')+'Charter</b> is reserved — we’ll be in touch when checkout opens.'
+          : 'Your application is in — we’ll turn your city into a hub once it’s approved.';
+      } else if(res.reject){document.getElementById('ac-msg').textContent='⛔ '+res.reject;}
+      else document.getElementById('ac-msg').textContent='Network error — try again.';
+    });
+  }
+  document.getElementById('applybtn').addEventListener('click',function(){openApply();});
+  document.getElementById('ac-apply').addEventListener('click',function(){submitApply('earn');});
+  document.getElementById('ac-close').addEventListener('click',function(){acard.classList.remove('on');});
+  document.getElementById('ac-tiers').addEventListener('click',function(e){var c=e.target.closest('[data-charter]');if(c)submitApply(c.getAttribute('data-charter'));});
+  acard.addEventListener('click',function(e){if(e.target.id==='acard')this.classList.remove('on');});
+
   // ---- loop ----
   var last=performance.now();
   function frame(now){
@@ -667,6 +763,7 @@
   window.addEventListener('resize',resize); resize();
   refreshHubUI();                                                             // reflect any cached membership immediately
   netMe();                                                                    // restore/confirm hub membership from the server
+  netApplyStatus();                                                           // …and any pending hub application
   netFetchWorld();                                                            // pull the shared world once at boot…
   if(MDG_BACKEND)setInterval(netFetchWorld,60000);                           // …and refresh so new neighbours appear without a reload
   (function(){try{var j=new URLSearchParams(location.search).get('join');     // deep link: mdg …/world/?join=CODE opens the redeem card
@@ -675,6 +772,8 @@
   // join→claim path deterministically without simulating 3D globe clicks. Never active in normal play.
   if(new URLSearchParams(location.search).get('e2e')==='1'){window.__wdbg={
     hub:function(){return MDG_HUB;},inviteOnly:function(){return WORLD_INVITEONLY;},
+    owner:function(){return MDG_OWNER;},minMs:function(){return MDG_HUBMINMS;},best:function(){return bestProgress();},
+    apply:function(payload,cb){netApply(payload,cb);},appStatus:function(){return _appStatus;},me:function(){netMe();netApplyStatus();},
     cities:function(){return CITIES.map(function(c){return {name:c.name,lat:c.lat,lon:c.lon,hubId:c.hubId||null,you:!!c.you,human:!!c.human,remote:!!c.remote,tier:c.tier};});},
     availKeys:function(){NET=null;buildNetwork();return Object.keys(NET.avail);},
     join:function(code,cb){netRedeem(code,cb);},

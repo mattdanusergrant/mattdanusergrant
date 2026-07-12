@@ -120,6 +120,11 @@ function isAdmin(request, env) {
   return !!m && m[1] === env.ADMIN_KEY;
 }
 function inviteOnly(env) { return String((env && env.WORLD_INVITE_ONLY) || 'true') !== 'false'; }
+// Eligibility to APPLY for a hub: reach at least this milestone (MS index in the builder —
+// 7 = Metropolis, 8 = Megacity), or have paid at least this much lifetime (0 = disabled).
+function hubMinMs(env) { var v = parseInt(env && env.HUB_MIN_MS, 10); return isFinite(v) ? v : 7; }
+function hubMinPaid(env) { var v = parseFloat(env && env.HUB_MIN_PAID); return isFinite(v) ? v : 0; }
+function okMs(v) { v = Math.floor(Number(v)); return isFinite(v) && v >= -1 && v <= 12; }
 
 // ---- KV loaders ----
 async function loadPrefix(env, prefix, guardCap) {
@@ -137,7 +142,25 @@ async function loadPrefix(env, prefix, guardCap) {
 function loadClaims(env) { return loadPrefix(env, 'claim:', 20); }   // hard cap ~20k claims for v1
 function loadHubs(env) { return loadPrefix(env, 'hub:', 5); }
 function loadMembers(env) { return loadPrefix(env, 'member:', 20); }
+function loadApps(env) { return loadPrefix(env, 'app:', 10); }
 function getHub(env, hubId) { return env.WORLD.get('hub:' + hubId, 'json'); }
+
+// Nearest open plot to any AI seed hub (BFS) — where an auto-placed new hub lands.
+function autoOpenPlot(occ) {
+  for (var i = 0; i < SEED_HUBS.length; i++) {
+    var sp = plotOf(SEED_HUBS[i].lat, SEED_HUBS[i].lon); if (!sp) continue;
+    var seen = {}, q = [[sp.pi, sp.pj]], head = 0, guard = 0; seen[sp.key] = 1;
+    while (head < q.length && guard++ < 6000) {
+      var cur = q[head++], nb = plotNbs(cur[0], cur[1]);
+      for (var n = 0; n < nb.length; n++) {
+        var k = nb[n][0] + ',' + nb[n][1]; if (seen[k]) continue; seen[k] = 1;
+        if (!occ[k]) { var c = plotCenter(nb[n][0], nb[n][1]); return { lat: c.lat, lon: c.lon, key: k }; }
+        q.push(nb[n]);
+      }
+    }
+  }
+  return null;
+}
 
 var seedHubId = function (name) { return 'seed-' + slugify(name); };
 
@@ -234,7 +257,7 @@ async function handle(request, env) {
     var cities = SEED_HUBS.map(function (h) { return { name: h.name, lat: h.lat, lon: h.lon, tier: h.tier, hub: true, hubId: seedHubId(h.name) }; })
       .concat(wHubs.map(function (h) { return { name: h.name, lat: h.lat, lon: h.lon, tier: h.tier || 3, hub: true, human: true, hubId: h.hubId, patreonUrl: h.patreonUrl || '', handle: h.handle || '' }; }))
       .concat(wClaims.map(function (c) { return { name: c.name, lat: c.lat, lon: c.lon, tier: c.tier || 1, owner: c.token, hubId: c.hubId || null }; }));
-    return json({ ok: true, cities: cities, count: cities.length, inviteOnly: inviteOnly(env) });
+    return json({ ok: true, cities: cities, count: cities.length, inviteOnly: inviteOnly(env), hubMinMs: hubMinMs(env) });
   }
 
   // ---- public hub directory (a "communities" browser) ----
@@ -267,16 +290,96 @@ async function handle(request, env) {
     return json({ ok: true, hubId: rhub.hubId, hubName: rhub.name, patreonUrl: rhub.patreonUrl || '', handle: rhub.handle || '', kind: crec.kind, lat: rhub.lat, lon: rhub.lon });
   }
 
+  // ---- apply to become a hub player (gated by progress and/or lifetime spend) ----
+  if (path === '/v1/apply') {
+    if (method === 'GET') {
+      var at = url.searchParams.get('token');
+      if (!okToken(at)) return json({ error: 'bad token' }, 400);
+      var gotApp = await env.WORLD.get('app:' + at, 'json');
+      return json({ ok: true, application: gotApp || null, minMs: hubMinMs(env), minPaid: hubMinPaid(env) });
+    }
+    if (method === 'POST') {
+      var pb = await request.json().catch(function () { return null; });
+      if (!pb || !okToken(pb.token)) return json({ error: 'bad token' }, 400);
+      var pHubs = await loadHubs(env), i;
+      for (i = 0; i < pHubs.length; i++) if (pHubs[i].ownerToken === pb.token) return json({ error: 'you already own a hub', code: 'already_hub', hubId: pHubs[i].hubId }, 409);
+      var bestMs = okMs(pb.bestMs) ? Math.floor(pb.bestMs) : -1;
+      var paid = Math.max(0, Number(pb.paidTotal) || 0);
+      var intent = (pb.intent === 'charter' || pb.intent === 'founding') ? pb.intent : 'earn';
+      var minMs = hubMinMs(env), minPaid = hubMinPaid(env);
+      if (intent === 'earn') {                                  // the free/earned path is gated; paid charters skip the grind (still reviewed)
+        var okProg = bestMs >= minMs, okPaid = minPaid > 0 && paid >= minPaid;
+        if (!okProg && !okPaid) return json({ error: 'not eligible yet — grow a bigger city or keep supporting', code: 'ineligible', minMs: minMs, minPaid: minPaid, bestMs: bestMs }, 422);
+      }
+      var arec = {
+        token: pb.token, name: cleanName(pb.name || 'A Mayor'), hubName: cleanName(pb.hubName || pb.name || 'New Hub'),
+        bestMs: bestMs, bestPop: Math.max(0, Math.floor(Number(pb.bestPop) || 0)), paidTotal: paid,
+        patreonUrl: cleanUrl(pb.patreonUrl), note: cleanText(pb.note, 140), intent: intent,
+        status: 'pending', ts: Number(pb.ts) || 0
+      };
+      await env.WORLD.put('app:' + pb.token, JSON.stringify(arec));
+      return json({ ok: true, application: arec });
+    }
+    return json({ error: 'method not allowed' }, 405);
+  }
+
+  // ---- ADMIN: list hub applications ----
+  if (path === '/v1/admin/apps' && method === 'GET') {
+    if (!isAdmin(request, env)) return json({ error: 'admin only' }, 403);
+    var apps = await loadApps(env);
+    apps.sort(function (a, b) { return ((a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1)) || (b.ts - a.ts); });
+    return json({ ok: true, applications: apps, minMs: hubMinMs(env), minPaid: hubMinPaid(env) });
+  }
+
+  // ---- ADMIN: approve/reject an application (approve mints a hub owned by the applicant) ----
+  if (path === '/v1/admin/apps/decide' && method === 'POST') {
+    if (!isAdmin(request, env)) return json({ error: 'admin only' }, 403);
+    var db = await request.json().catch(function () { return null; });
+    if (!db || !okToken(db.token)) return json({ error: 'bad token' }, 400);
+    var app = await env.WORLD.get('app:' + db.token, 'json');
+    if (!app) return json({ error: 'no such application' }, 404);
+    if (!db.approve) {
+      app.status = 'rejected'; app.reason = cleanText(db.reason, 140);
+      await env.WORLD.put('app:' + db.token, JSON.stringify(app));
+      return json({ ok: true, application: app });
+    }
+    var dClaims = await loadClaims(env), dHubs = await loadHubs(env);
+    var dOcc = occupancy(dClaims, dHubs);
+    var lat, lon, converted = false, oldKey = null, di;
+    if (db.useCurrentCity !== false) {                          // "hub city upgrade" — turn their existing city INTO the hub
+      for (di = 0; di < dClaims.length; di++) if (dClaims[di].token === db.token) {
+        var cp = plotOf(dClaims[di].lat, dClaims[di].lon); lat = dClaims[di].lat; lon = dClaims[di].lon; oldKey = cp && cp.key; converted = true; break;
+      }
+    }
+    if (!converted) {
+      if (typeof db.lat === 'number' && typeof db.lon === 'number') { lat = db.lat; lon = db.lon; }
+      else { var found = autoOpenPlot(dOcc); if (!found) return json({ error: 'no open plot found — pass lat/lon' }, 409); lat = found.lat; lon = found.lon; }
+    }
+    var tgt = plotOf(lat, lon); if (!tgt) return json({ error: 'bad location' }, 400);
+    if (!converted && dOcc[tgt.key]) return json({ error: 'that plot is occupied' }, 409);
+    var base = slugify(app.hubName), hubId = base, tries = 0;
+    while (dHubs.some(function (h) { return h.hubId === hubId; }) || (await getHub(env, hubId))) { hubId = base + '-' + randStr(3, 'abcdefghijklmnopqrstuvwxyz0123456789'); if (++tries > 6) break; }
+    var center = plotCenter(tgt.pi, tgt.pj);
+    var tier = Math.max(3, Math.min(5, 3 + Math.max(0, (app.bestMs || 0) - 6)));   // Metropolis(7)→4, Megacity(8)→5
+    var hrec = { hubId: hubId, name: app.hubName, ownerToken: db.token, lat: center.lat, lon: center.lon, tier: tier, patreonUrl: app.patreonUrl || '', handle: '', url: '', created: Number(db.ts) || 0 };
+    if (converted && oldKey) await env.WORLD.delete('claim:' + oldKey);   // their claim becomes the hub seed
+    await env.WORLD.put('hub:' + hubId, JSON.stringify(hrec));
+    await env.WORLD.delete('member:' + db.token);                          // ownership now governs their claims (drop any prior membership)
+    app.status = 'approved'; app.hubId = hubId;
+    await env.WORLD.put('app:' + db.token, JSON.stringify(app));
+    return json({ ok: true, application: app, hub: hrec, converted: converted });
+  }
+
   // ---- who am I: my hub membership (client bootstrap) ----
   if (path === '/v1/me' && method === 'GET') {
     var meTok = url.searchParams.get('token');
     if (!okToken(meTok)) return json({ error: 'bad token' }, 400);
     var meHubs = await loadHubs(env);
     var meHubId = await claimerHub(env, meTok, meHubs);
-    if (!meHubId) return json({ ok: true, member: false, inviteOnly: inviteOnly(env) });
+    if (!meHubId) return json({ ok: true, member: false, inviteOnly: inviteOnly(env), hubMinMs: hubMinMs(env) });
     var meHub = await getHub(env, meHubId) || meHubs.filter(function (h) { return h.hubId === meHubId; })[0];
     var owner = !!(meHub && meHub.ownerToken === meTok);
-    return json({ ok: true, member: true, owner: owner, hubId: meHubId, hubName: meHub ? meHub.name : meHubId, patreonUrl: meHub ? (meHub.patreonUrl || '') : '', inviteOnly: inviteOnly(env) });
+    return json({ ok: true, member: true, owner: owner, hubId: meHubId, hubName: meHub ? meHub.name : meHubId, patreonUrl: meHub ? (meHub.patreonUrl || '') : '', inviteOnly: inviteOnly(env), hubMinMs: hubMinMs(env) });
   }
 
   // ---- generate an invite code (admin OR the hub's owner token) ----

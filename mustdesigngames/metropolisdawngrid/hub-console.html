@@ -96,6 +96,12 @@
       <h2>Hubs <button class="ghost sm" id="refresh" style="float:right">Refresh</button></h2>
       <div id="hublist"><div class="muted">Connect + refresh to list hubs.</div></div>
     </div>
+
+    <div class="card">
+      <h2>Applications <button class="ghost sm" id="refresh-apps" style="float:right">Refresh</button></h2>
+      <div class="hint">Players who’ve applied to become hub players (gated by city progress or lifetime spend). Approving a mayor with a city <b>upgrades that city into their hub</b>; approving without one auto-places a hub on the frontier.</div>
+      <div id="applist"><div class="muted">Connect + refresh to list applications.</div></div>
+    </div>
   </div>
 
   <!-- ================= OWNER ================= -->
@@ -235,6 +241,49 @@
     }).catch(function(e){});
   }
 
+  // ---- applications (admin) ----
+  var MSLABEL=['Hamlet','Village','Township','Town','Borough','City','District','Metropolis','Megacity'];
+  function msLabel(ms){return ms>=0&&ms<MSLABEL.length?MSLABEL[ms]:(ms<0?'—':'tier '+ms);}
+  $('refresh-apps').addEventListener('click',loadApps);
+  function loadApps(){
+    if(!base()||!$('adminkey').value){$('applist').innerHTML='<div class="muted">Set backend + admin key, then Refresh.</div>';return;}
+    $('applist').innerHTML='<div class="muted">Loading…</div>';
+    fetch(base()+'/v1/admin/apps',{headers:{'Authorization':'Bearer '+$('adminkey').value}}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});}).then(function(res){
+      if(res.s!==200){$('applist').innerHTML='<div class="bad">'+esc(res.j.error||('HTTP '+res.s))+'</div>';return;}
+      var apps=res.j.applications||[];
+      if(!apps.length){$('applist').innerHTML='<div class="muted">No applications yet.</div>';return;}
+      var h='<table><thead><tr><th>Mayor · Hub</th><th>Best city</th><th>Paid</th><th>Type</th><th>Status</th><th></th></tr></thead><tbody>';
+      apps.forEach(function(a){
+        var st=a.status||'pending', pending=st==='pending';
+        h+='<tr><td><b>'+esc(a.hubName)+'</b><br><span class="muted">'+esc(a.name)+'</span>'+(a.note?'<br><span class="muted" style="font-size:12px">“'+esc(a.note)+'”</span>':'')+(a.patreonUrl?'<br><a href="'+esc(a.patreonUrl)+'" target="_blank" rel="noopener">Patreon ↗</a>':'')+'</td>'+
+          '<td>'+esc(msLabel(a.bestMs))+(a.bestPop?'<br><span class="muted">'+Number(a.bestPop).toLocaleString()+' pop</span>':'')+'</td>'+
+          '<td>'+(a.paidTotal?('$'+Number(a.paidTotal).toFixed(0)):'—')+'</td>'+
+          '<td><span class="chip '+(a.intent==='earn'?'open':'patron')+'">'+esc(a.intent||'earn')+'</span></td>'+
+          '<td>'+(st==='approved'?'<span class="good">approved</span>'+(a.hubId?'<br><span class="muted">'+esc(a.hubId)+'</span>':''):st==='rejected'?'<span class="bad">rejected</span>':'<span style="color:var(--gold)">pending</span>')+'</td>'+
+          '<td>'+(pending?'<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px"><input type="checkbox" class="app-cur" data-t="'+esc(a.token)+'" checked style="width:auto;display:inline"> upgrade their city</label>'+
+                 '<button class="sm" data-approve="'+esc(a.token)+'">Approve</button> <button class="ghost sm" data-reject="'+esc(a.token)+'">Reject</button>':'')+
+          '<div class="msg" id="ap-'+esc(a.token)+'"></div></td></tr>';
+      });
+      h+='</tbody></table>';
+      $('applist').innerHTML=h;
+    }).catch(function(e){$('applist').innerHTML='<div class="bad">Error: '+esc(e.message)+'</div>';});
+  }
+  $('applist').addEventListener('click',function(e){
+    var ap=e.target.closest('[data-approve]'), rj=e.target.closest('[data-reject]');
+    if(ap)return decideApp(ap.getAttribute('data-approve'),true);
+    if(rj){var reason=prompt('Reject reason (optional):')||'';return decideApp(rj.getAttribute('data-reject'),false,reason);}
+  });
+  function decideApp(token,approve,reason){
+    var box=$('ap-'+token); if(box){box.className='msg muted';box.textContent=approve?'Approving…':'Rejecting…';}
+    var cur=document.querySelector('.app-cur[data-t="'+CSS.escape(token)+'"]');
+    var body={token:token,approve:approve,useCurrentCity:cur?cur.checked:true,reason:reason||'',ts:Date.now()};
+    fetch(base()+'/v1/admin/apps/decide',{method:'POST',headers:adminHdrs(),body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});}).then(function(res){
+      if(res.s!==200){if(box){box.className='msg bad';box.textContent=res.j.error||('HTTP '+res.s);}return;}
+      if(box){box.className='msg good';box.textContent=approve?('Hub created: '+res.j.hub.hubId+(res.j.converted?' (city upgraded)':' (auto-placed)')):'Rejected.';}
+      loadApps();loadHubs();
+    }).catch(function(e){if(box){box.className='msg bad';box.textContent=e.message;}});
+  }
+
   // ---- owner mode ----
   $('o-hubid').value=LS.get('mdg-console-hubid'); $('o-token').value=LS.get('mdg-console-ownertoken');
   $('o-load').addEventListener('click',function(){
@@ -281,7 +330,7 @@
   function copy(text,el){ try{navigator.clipboard.writeText(text);}catch(e){}
     if(el){var old=el.textContent; el.textContent='copied ✓'; setTimeout(function(){el.textContent=old;},900);} }
 
-  if(base()&&$('adminkey').value) loadHubs();
+  if(base()&&$('adminkey').value){loadHubs();loadApps();}
 })();
 </script>
 </body>
