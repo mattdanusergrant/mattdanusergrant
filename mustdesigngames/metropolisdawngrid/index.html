@@ -268,6 +268,7 @@
         <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
         <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
         <div class="tool" data-act="import" title="Paste a share code to load a city"><span class="ico">📥</span>Import city</div>
+        <div class="tool" data-act="stats" title="City history — population, treasury, congestion over time"><span class="ico">📊</span>Stats</div>
       </div></div>
     <div class="cat" data-cat="transport"><span class="cico">🛣️</span><span class="clabel">Transport</span>
       <div class="catmenu"><span class="menuhd">Transport</span>
@@ -828,7 +829,7 @@
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
-    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();activeEv=null;evCooldown=160;evalEventMods();renderEvent();POL={tax:1,cp:false,sm:false,ft:false};renderPolicy();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
+    ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();hist={pop:[],cash:[],net:[],cong:[]};activeEv=null;evCooldown=160;evalEventMods();renderEvent();POL={tax:1,cp:false,sm:false,ft:false};renderPolicy();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();dirty=true;scheduleSave();
   });
 
   // ---- services: highway connectivity + power/water coverage ----
@@ -987,7 +988,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    _tickN++;updatePop();economy();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
+    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();updateDemandUI();updateResourceUI();trafficCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -1161,6 +1162,26 @@
     evalEventMods();renderEvent();scheduleSave();
   }
 
+  // ---- city history: a rolling ~10-minute window of the headline numbers, for the Stats graphs ----
+  var HIST_MAX=240, hist={pop:[],cash:[],net:[],cong:[]};
+  function histSample(){
+    hist.pop.push(Math.round(popTarget));hist.cash.push(Math.round(treasury));
+    hist.net.push(Math.round(netRate));hist.cong.push(Math.round(congestion*100));
+    for(var k in hist)if(hist[k].length>HIST_MAX)hist[k].shift();}
+  function sparkline(cv,data,color,fmt){
+    var g=cv.getContext('2d'),W=cv.width,H=cv.height;g.clearRect(0,0,W,H);
+    if(data.length<2){g.fillStyle='#8A7A5E';g.font='10px system-ui';g.fillText('gathering data…',6,H/2+3);return;}
+    var mn=Math.min.apply(null,data),mx=Math.max.apply(null,data);if(mx===mn){mx+=1;mn-=1;}
+    var xs=function(i){return i/(data.length-1)*(W-2)+1;},ys=function(v){return H-3-((v-mn)/(mx-mn))*(H-14);};
+    if(mn<0&&mx>0){g.strokeStyle='rgba(138,122,94,.35)';g.setLineDash([3,3]);g.beginPath();g.moveTo(0,ys(0));g.lineTo(W,ys(0));g.stroke();g.setLineDash([]);}
+    g.beginPath();g.moveTo(xs(0),ys(data[0]));
+    for(var i=1;i<data.length;i++)g.lineTo(xs(i),ys(data[i]));
+    g.strokeStyle=color;g.lineWidth=1.6;g.stroke();
+    g.lineTo(xs(data.length-1),H);g.lineTo(xs(0),H);g.closePath();
+    g.globalAlpha=0.13;g.fillStyle=color;g.fill();g.globalAlpha=1;
+    g.fillStyle='#8A7A5E';g.font='9px system-ui';
+    g.fillText(fmt(mx),4,10);g.fillText(fmt(mn),4,H-4);}
+
   // ---- save export / import: the city as a portable share code (pre-backend persistence escape hatch) ----
   var ioModal=null,ioBox=null,ioImporting=false;   // ioImporting guards the pagehide save-flush from clobbering a just-imported city
   function ioEnc(str){return 'MDG1.'+btoa(unescape(encodeURIComponent(str)));}
@@ -1187,6 +1208,19 @@
       document.getElementById('io-dl').addEventListener('click',function(){
         var bl=new Blob([code],{type:'text/plain'}),u=URL.createObjectURL(bl),aEl=document.createElement('a');
         aEl.href=u;aEl.download=(REGION?REGION.slug:'city')+'.mdg.txt';document.body.appendChild(aEl);aEl.click();aEl.remove();setTimeout(function(){URL.revokeObjectURL(u);},4000);});
+    } else if(kind==='stats'){
+      var rows=[['Population',hist.pop,'#3E8E6E',function(v){return v.toLocaleString();}],
+                ['Treasury ₵',hist.cash,'#B8892E',function(v){return v.toLocaleString();}],
+                ['Net ₵/mo',hist.net,'#5589BB',function(v){return (v>=0?'+':'')+v.toLocaleString();}],
+                ['Congestion %',hist.cong,'#C0563F',function(v){return v+'%';}]];
+      var sh='<h3>📊 City history</h3><p>The last ~10 minutes of play, sampled as the city runs.</p>';
+      for(var ri=0;ri<rows.length;ri++){var cur=rows[ri][1].length?rows[ri][1][rows[ri][1].length-1]:0;
+        sh+='<div style="font:600 10.5px system-ui;color:var(--ink-2);margin:7px 0 3px">'+rows[ri][0]+' · <b style="color:'+rows[ri][2]+'">'+rows[ri][3](cur)+'</b></div>'
+          +'<canvas class="spark" width="430" height="52" style="width:100%;height:52px;background:var(--bg);border:1.5px solid var(--line);border-radius:7px"></canvas>';}
+      sh+='<div class="iorow"><button type="button" id="io-x">Close</button></div>';
+      ioBox.innerHTML=sh;
+      var cvs=ioBox.querySelectorAll('canvas.spark');
+      for(var ci2=0;ci2<rows.length;ci2++)sparkline(cvs[ci2],rows[ci2][1],rows[ci2][2],rows[ci2][3]);
     } else {
       ioBox.innerHTML='<h3>📥 Import city</h3><p>Paste a share code below. <b>This replaces the city currently on this patch</b> — export it first if you want to keep it.</p>'
         +'<textarea id="io-t" placeholder="MDG1.…"></textarea><div class="ioerr" id="io-e"></div>'
@@ -1714,7 +1748,7 @@
       if(g&&g.t!=='highway'&&g.t!=='sub'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,g.foot||1]);}   // save anchors only; 'sub' members are reconstructed on load
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
-    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}}));}catch(e){}}
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:8,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}}));}catch(e){}}
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     var list=Array.isArray(d)?d:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
@@ -1723,6 +1757,7 @@
       if(d.ev&&EVDEF[d.ev.k])activeEv={key:d.ev.k,left:Math.max(1,d.ev.l|0),chosen:d.ev.c||null};
       if(typeof d.evc==='number')evCooldown=d.evc;
       if(d.pol){POL.tax=Math.max(0,Math.min(2,d.pol.t|0));POL.cp=!!d.pol.cp;POL.sm=!!d.pol.sm;POL.ft=!!d.pol.ft;}
+      if(Array.isArray(d.h)&&d.h.length===4){var hk=['pop','cash','net','cong'];for(var hi2=0;hi2<4;hi2++)if(Array.isArray(d.h[hi2]))hist[hk[hi2]]=d.h[hi2].slice(-HIST_MAX).map(Number);}
       evalEventMods();}
     list.forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
       if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
