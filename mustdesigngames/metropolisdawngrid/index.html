@@ -92,7 +92,7 @@
   .toast{position:absolute;top:16px;left:50%;transform:translate(-50%,-8px);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:9px 16px;box-shadow:var(--shadow);font-size:14px;color:var(--ink);font-family:'Fraunces',serif;letter-spacing:-.01em;opacity:0;pointer-events:none;transition:opacity .4s ease,transform .4s ease;white-space:normal;max-width:min(560px,88vw);text-align:center;line-height:1.35;z-index:5}
   .toast.on{opacity:1;transform:translate(-50%,0)}
   .toast b{color:var(--muted);font-weight:500;font-size:12px;margin-left:8px}
-  .tools{display:flex;align-items:center;gap:8px;padding:8px clamp(12px,3vw,22px);border-top:1.5px solid var(--line);background:var(--bg);flex-shrink:0}
+  .tools{position:relative;z-index:30;display:flex;align-items:center;gap:8px;padding:8px clamp(12px,3vw,22px);border-top:1.5px solid var(--line);background:var(--bg);flex-shrink:0}   /* own stacking context: open menus must beat the stage overlays (zoom ctl etc.) */
   /* one row of category icons; each opens a popup menu above it */
   .cat{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:5px 12px;border-radius:11px;border:1.5px solid var(--bar-line);background:rgba(255,255,255,.16);color:var(--bar-ink);min-width:60px;user-select:none;transition:background .12s,border-color .12s,transform .1s}
   .cat:hover{background:rgba(255,255,255,.34)}
@@ -106,6 +106,16 @@
   .cat.open .catmenu{display:flex}
   .menuhd{font-size:8.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 2px 2px}
   .catmenu .tool{width:100%;box-sizing:border-box}
+  .iomodal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(42,34,22,.35)}
+  .iomodal[hidden]{display:none}
+  .iobox{width:min(480px,92vw);background:var(--paper);border:1.5px solid var(--line-2);border-radius:14px;box-shadow:var(--shadow-hover);padding:16px 18px}
+  .iobox h3{font-family:'Fraunces',serif;font-size:16px;color:var(--ink);margin-bottom:6px}
+  .iobox p{font-size:11.5px;color:var(--muted);line-height:1.45;margin-bottom:9px}
+  .iobox textarea{width:100%;box-sizing:border-box;height:110px;resize:none;font:11px ui-monospace,monospace;color:var(--ink-2);background:var(--bg);border:1.5px solid var(--line-2);border-radius:8px;padding:8px}
+  .iobox .iorow{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
+  .iobox button{font:600 12px system-ui,sans-serif;padding:7px 14px;border-radius:8px;border:1.5px solid var(--line-2);background:var(--bg);color:var(--ink);cursor:pointer}
+  .iobox button.pri{background:#3E8E6E;border-color:#3E8E6E;color:#FBF6E6}
+  .iobox .ioerr{color:#C0563F;font-size:11px;font-weight:600;margin-top:6px;min-height:14px}
   .polmenu{min-width:224px;gap:8px}
   .polmenu .pol-sec{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
   .polmenu .taxseg{display:flex;gap:4px}
@@ -250,11 +260,14 @@
   </div>
   <div id="worldfade"></div>
 
+  <div class="iomodal" id="iomodal" hidden><div class="iobox" id="iobox"></div></div>
   <footer class="tools" id="tools">
     <div class="cat" data-cat="tools"><span class="cico">🔍</span><span class="clabel">Tools</span>
       <div class="catmenu"><span class="menuhd">Tools</span>
         <div class="tool" data-brush="inspect"><span class="ico">🔍</span>Inspect<span class="key">`</span></div>
         <div class="tool" data-brush="bulldoze"><span class="sw" data-sw="bulldoze"></span>Clear<span class="key">0</span></div>
+        <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
+        <div class="tool" data-act="import" title="Paste a share code to load a city"><span class="ico">📥</span>Import city</div>
       </div></div>
     <div class="cat" data-cat="transport"><span class="cico">🛣️</span><span class="clabel">Transport</span>
       <div class="catmenu"><span class="menuhd">Transport</span>
@@ -762,6 +775,8 @@
     if(lk){if(key)key.style.display='none';if(!lock){lock=document.createElement('span');lock.className='lock';el.appendChild(lock);}lock.textContent=LMARK[b]?('🔒 '+LMARK[b]+' contracts'):('🔒 '+MS[TIER_UNLOCK[b]].l);}
     else{if(key)key.style.display='';if(lock)lock.remove();}});}
   tools.addEventListener('click',function(e){
+    var act=e.target.closest('[data-act]');
+    if(act){closeMenus();ioOpen(act.getAttribute('data-act'));return;}   // export/import actions, not brushes
     var t=e.target.closest('.tool');
     if(t){selectBrush(t.getAttribute('data-brush'));return;}       // selectBrush closes the menu
     var cat=e.target.closest('.cat');
@@ -1140,6 +1155,45 @@
     var key=keys[Math.floor(Math.random()*keys.length)];
     activeEv={key:key,left:EVDEF[key].dur,chosen:null};
     evalEventMods();renderEvent();scheduleSave();
+  }
+
+  // ---- save export / import: the city as a portable share code (pre-backend persistence escape hatch) ----
+  var ioModal=null,ioBox=null,ioImporting=false;   // ioImporting guards the pagehide save-flush from clobbering a just-imported city
+  function ioEnc(str){return 'MDG1.'+btoa(unescape(encodeURIComponent(str)));}
+  function ioDec(code){code=String(code||'').trim();
+    if(code.indexOf('MDG1.')!==0)throw new Error('not an MDG share code');
+    var json=decodeURIComponent(escape(atob(code.slice(5))));
+    if(json.length>500000)throw new Error('code too large');
+    var d=JSON.parse(json);
+    if(!d||typeof d!=='object'||!Array.isArray(d.cells))throw new Error('malformed city data');
+    return json;}
+  function ioOpen(kind){
+    if(!ioModal){ioModal=document.getElementById('iomodal');ioBox=document.getElementById('iobox');
+      ioModal.addEventListener('click',function(e){if(e.target===ioModal)ioModal.hidden=true;});}
+    if(kind==='export'){
+      save();                                            // flush the debounced save so the code is current
+      var raw=localStorage.getItem(SAVE_KEY)||'{"v":8,"cells":[]}', code=ioEnc(raw);
+      ioBox.innerHTML='<h3>📤 Export city</h3><p>Your whole city as one share code — keep it as a backup or send it to another browser. Import it there with <b>Tools → Import city</b>.</p>'
+        +'<textarea id="io-t" readonly></textarea><div class="ioerr" id="io-e"></div>'
+        +'<div class="iorow"><button type="button" id="io-dl">Download file</button><button type="button" class="pri" id="io-cp">Copy code</button><button type="button" id="io-x">Close</button></div>';
+      document.getElementById('io-t').value=code;
+      document.getElementById('io-cp').addEventListener('click',function(){var t=document.getElementById('io-t');t.select();
+        try{navigator.clipboard&&navigator.clipboard.writeText(code);}catch(e){}try{document.execCommand('copy');}catch(e){}
+        document.getElementById('io-e').style.color='#3E8E6E';document.getElementById('io-e').textContent='Copied ✓';});
+      document.getElementById('io-dl').addEventListener('click',function(){
+        var bl=new Blob([code],{type:'text/plain'}),u=URL.createObjectURL(bl),aEl=document.createElement('a');
+        aEl.href=u;aEl.download=(REGION?REGION.slug:'city')+'.mdg.txt';document.body.appendChild(aEl);aEl.click();aEl.remove();setTimeout(function(){URL.revokeObjectURL(u);},4000);});
+    } else {
+      ioBox.innerHTML='<h3>📥 Import city</h3><p>Paste a share code below. <b>This replaces the city currently on this patch</b> — export it first if you want to keep it.</p>'
+        +'<textarea id="io-t" placeholder="MDG1.…"></textarea><div class="ioerr" id="io-e"></div>'
+        +'<div class="iorow"><button type="button" class="pri" id="io-go">Import &amp; load</button><button type="button" id="io-x">Cancel</button></div>';
+      document.getElementById('io-go').addEventListener('click',function(){
+        try{var json=ioDec(document.getElementById('io-t').value);
+          ioImporting=true;clearTimeout(saveTimer);localStorage.setItem(SAVE_KEY,json);location.reload();}
+        catch(err){document.getElementById('io-e').textContent='Could not import: '+err.message;}});
+    }
+    document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
+    ioModal.hidden=false;
   }
 
   // ---- budget & policy: the tax lever + tier-unlocked ordinances (the city's standing rules) ----
@@ -1652,7 +1706,7 @@
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
   window.addEventListener('pagehide',function(){save();});   // flush on leave — a debounced save may still be pending
-  function save(){if(OBSERVE)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];
+  function save(){if(OBSERVE||ioImporting)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];
       if(g&&g.t!=='highway'&&g.t!=='sub'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,g.foot||1]);}   // save anchors only; 'sub' members are reconstructed on load
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
