@@ -423,9 +423,9 @@
     if(!list){var old=localStorage.getItem('mdg-trade-partner');if(old){var o=JSON.parse(old);list=o?[o]:[];}}  // migrate single-partner key
     if(!Array.isArray(list))list=[];
     return list.filter(function(t){return t&&!isNaN(t.lat)&&!isNaN(t.lon);}).map(function(t){
-      t.cls=classAt(t.lat,t.lon);                     // partner's terrain decides what they trade
-      t.supplies=(t.cls==='coast')?'goods':'mat';     // coast is dense in Goods; everyone else exports raw Materials
-      t.wantsGoods=(t.cls!=='coast');                 // land cities are short on Goods → pay a premium for yours
+      t.cls=classAt(t.lat,t.lon);                     // partner's region decides what raw resource they export (their NEAR resource)
+      t.supplies=t.cls;                               // a resource id (lumber/grain/ore/stone/oil/fish) — flowed into the matching pool in the trade phase
+      t.wantsGoods=true;                              // land cities are short on finished Goods → pay a premium for yours
       return t;});
   }catch(e){return [];}})();
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
@@ -595,7 +595,30 @@
   // Six tradeable raw resources; each region gets ONE near, ONE medium-far, ONE very-far, the REST absent
   // (must be imported). Deterministic pure function of the region's noise offset → globe & surface agree.
   var RESIDS=['lumber','grain','ore','stone','oil','fish'];
-  var _profCache={};
+  var RESICON={lumber:'🪵',grain:'🌾',ore:'⛏',stone:'🧱',oil:'🛢',fish:'🐟'};
+  var RESNAME={lumber:'Lumber',grain:'Grain',ore:'Ore',stone:'Stone',oil:'Oil',fish:'Fish'};
+  var TERR2RES={forest:'lumber',plains:'grain',hills:'stone',desert:'oil'};   // buildable resource terrains (gated by region profile); ore/fish are adjacency-mined from always-present mountain/water
+  var RES2TERR={lumber:'forest',grain:'plains',stone:'hills',oil:'desert',ore:'mountain',fish:'water'};
+  var _profCache={},_anchorCache={};
+  // each PRESENT resource gets a guaranteed patch at a deterministic point in its band ring, so a
+  // region "rich in grain" always has reachable farmland even where the noise field produced none.
+  function _anchorLand(ac,ar){                                  // BFS to nearest buildable land (pure terrClass; grid not yet built at gen time)
+    var q=[[ac,ar]],seen={},h=0; seen[ac+','+ar]=1;
+    while(h<q.length&&h<260){var cur=q[h++],t=terrClass(cur[0]+WOX,cur[1]+WOY);
+      if(cur[1]>0&&t!=='water'&&t!=='mountain')return cur;
+      var nn=nbs(cur[0],cur[1]);
+      for(var k=0;k<6;k++){var nc=nn[k][0],nr=nn[k][1],kk=nc+','+nr;
+        if(!seen[kk]&&inB(nc,nr)){seen[kk]=1;q.push([nc,nr]);}}}
+    return [ac,ar];}
+  function resAnchors(){
+    var key=WOX+','+WOY+','+BANDC+','+BANDR; if(_anchorCache[key])return _anchorCache[key];
+    var prof=regionProfile(WOX,WOY),out={},bands=['near','med','far'];
+    for(var bi=0;bi<3;bi++){var res=prof[bands[bi]],dist=bi===0?5:bi===1?11:19,ri=RESIDS.indexOf(res);
+      var a=hash2((WOX*13+ri*71+5)|0,(WOY*7+ri*97+3)|0)*6.2832;
+      var ac=Math.max(1,Math.min(cols-2,Math.round(BANDC+dist*Math.cos(a)))),ar=Math.max(1,Math.min(rows-2,Math.round(BANDR+dist*Math.sin(a))));
+      if(res!=='ore'&&res!=='fish'){var la=_anchorLand(ac,ar);ac=la[0];ar=la[1];}   // buildable patches need land; ore/fish stamp mountain/water
+      out[res]=[ac,ar];}
+    _anchorCache[key]=out;return out;}
   function regionProfile(ox,oy){
     var key=ox+','+oy; if(_profCache[key])return _profCache[key];
     var scored=RESIDS.map(function(id,i){return {id:id,s:hash2((ox*31+i*101)|0,(oy*17+i*263)|0)};});  // raw hash → well-spread per-resource ordering
@@ -609,13 +632,30 @@
     prof.has[order[0]]=prof.has[order[1]]=prof.has[order[2]]=true;
     _profCache[key]=prof; return prof;
   }
-  function terrClass(wc,wr){                                   // world-space classifier — the single source of truth
+  function terrClass(wc,wr){                                   // world-space CANDIDATE classifier (pure, no region/band awareness)
     if(tfbm(wc,wr,24)<0.30)return 'water';                     // large basins fill → coherent lakes/seas (water wins ties)
-    if(tfbm(wc+310,wr+190,22)>0.76)return 'mountain';          // separate ridge field → gathered ranges; mine ore from ADJACENT tiles
-    if(vnoise(wc+80,wr+40,6)>0.6)return 'forest';              // forest — good for Works (timber)
-    return 'plains';                                           // grasslands (the default)
+    if(tfbm(wc+310,wr+190,22)>0.76)return 'mountain';          // separate ridge field → gathered ranges; ore mined from ADJACENT tiles
+    if(vnoise(wc+80,wr+40,6)>0.62)return 'forest';             // 🪵 lumber
+    if(vnoise(wc+150,wr+220,7)>0.66)return 'hills';            // 🧱 stone
+    if(vnoise(wc+500,wr+330,8)>0.68)return 'desert';           // 🛢 oil
+    if(vnoise(wc+260,wr+120,6)>0.60)return 'plains';           // 🌾 farmland (grain)
+    return 'grass';                                            // neutral buildable base (the city proper)
   }
-  function terrainAt(c,r){if(r<=0)return 'plains';return terrClass(c+WOX,r+WOY);}   // highway row stays buildable/clear
+  // region+distance-aware: a buildable resource terrain survives ONLY if this region has that resource
+  // AND the cell falls in the resource's assigned distance ring; otherwise it's neutral grass.
+  function terrainAt(c,r){
+    if(r<=0)return 'grass';                                    // highway row stays neutral/buildable
+    var cand=terrClass(c+WOX,r+WOY),prof=regionProfile(WOX,WOY),anch=resAnchors(),bands=['near','med','far'];
+    for(var bi=0;bi<3;bi++){var res=prof[bands[bi]],a=anch[res];   // guaranteed anchor patch for each present resource
+      if(a&&hexDist(c,r,a[0],a[1])<=2.4+vnoise((c+WOX)*3+11,(r+WOY)*3+7,2)*2){
+        var terr=RES2TERR[res];
+        if(terr==='mountain'||terr==='water')return terr;      // ore/fish: guarantee mineable mountain/water in-band
+        if(cand!=='water'&&cand!=='mountain')return terr;}}     // buildable resource: on land only (yield to lakes/peaks)
+    if(cand==='water'||cand==='mountain')return cand;          // global lakes / barriers / water supply
+    var res2=TERR2RES[cand];                                   // organic in-band scatter beyond the anchor patch
+    if(res2&&prof.has[res2]&&bandOf(c,r)===prof.band[res2])return cand;
+    return 'grass';
+  }
   function noBuild(t){return t==='water'||t==='mountain';}     // water & mountains can't be built on
   function nearMountain(c,r){                                  // a Works next to a peak mines its ore (+80%)
     var nn=nbs(c,r);
@@ -625,24 +665,12 @@
   }
   // terrain make-up over a representative window, scored against the cross-world baseline →
   // a one-line "why here" label naming this patch's comparative advantage (the reason to trade)
-  function regionSpec(){
-    var ct={plains:0,forest:0,mountain:0,water:0};
-    for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrainAt(c,r)]++;
-    var land=ct.plains+ct.forest||1;                           // buildable land (mountains aren't buildable)
-    var oS=(ct.mountain/(ct.mountain+land))/0.16, fS=(ct.forest/land)/0.30, wS=(ct.water/(ct.water+land))/0.17;
-    var mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'open grassland · balanced start';
-    if(mx===oS)return 'mountainous · Works +80% by the peaks';
-    if(mx===fS)return 'forested · Works +40% timber';
-    return 'coastal shelf · free water, tight land';
+  function regionSpec(){                                       // header chip: names the local strength + what to trade for
+    var pr=regionProfile(WOX,WOY);
+    return RESICON[pr.near]+' '+RESNAME[pr.near]+'-rich · short on '+pr.absent.map(function(id){return RESICON[id];}).join(' ')+' — trade for them';
   }
-  // terrain class at an arbitrary world location (for a trade partner) — mirrors the globe's terrainClass
-  function classAt(lat,lon){
-    var ox=Math.round(lon*137)+9973, oy=Math.round(lat*151)+7919, ct={plains:0,forest:0,mountain:0,water:0};
-    for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrClass(c+ox,r+oy)]++;   // same classifier the surface uses
-    var land=ct.plains+ct.forest||1, oS=(ct.mountain/(ct.mountain+land))/0.16, fS=(ct.forest/land)/0.30, wS=(ct.water/(ct.water+land))/0.17, mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'plains'; if(mx===oS)return 'mountain'; if(mx===fS)return 'forest'; return 'coast';
-  }
+  // the resource a location is richest in (its NEAR resource) — drives trade partners; mirrors the globe
+  function classAt(lat,lon){var ox=Math.round(lon*137)+9973, oy=Math.round(lat*151)+7919;return regionProfile(ox,oy).near;}
 
   // ---- palettes ----
   var PAL={
@@ -663,7 +691,8 @@
       transitBody:'#3E8E7E',transitRoof:'#2E6A5D',transitGlass:'#CDEAE2',transitSign:'#F3C24A',transitPost:'#5F574B',
 
       lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
-      terrGrass:'rgba(130,196,100,.24)',terrWater:'rgba(74,150,200,.28)',terrMountain:'rgba(126,128,136,.34)',terrForest:'rgba(36,98,46,.5)',terrPeak:'rgba(88,90,98,.55)',
+      terrGrass:'rgba(130,196,100,.20)',terrWater:'rgba(74,150,200,.28)',terrMountain:'rgba(126,128,136,.34)',terrForest:'rgba(36,98,46,.5)',terrPeak:'rgba(88,90,98,.55)',
+      terrPlains:'rgba(214,178,72,.34)',terrHills:'rgba(150,128,92,.34)',terrDesert:'rgba(228,200,128,.40)',terrWheat:'rgba(150,120,40,.55)',terrRock:'rgba(110,100,86,.6)',terrDune:'rgba(196,168,110,.6)',
       railBed:'#C9C2B0',tie:'#9A8E78',rail:'#7C7566',trainEngine:'#3E3D48',
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
     }
@@ -941,7 +970,7 @@
   var mmOff=document.createElement('canvas');mmOff.width=mmOff.height=WORLD;var mmoc=mmOff.getContext('2d');
   var mapDirty=true;
   function hex2rgb(h){h=h.replace('#','');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];var n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
-  var MMTERR={water:'#a9cbe4',mountain:'#b7b7bd',forest:'#5f8f5a',plains:'#bcd6ad'};
+  var MMTERR={water:'#a9cbe4',mountain:'#b7b7bd',forest:'#5f8f5a',grass:'#bcd6ad',plains:'#d9c479',hills:'#b6a17e',desert:'#e0cd94'};
   var MMRAIL='#6f6552';                                              // rail reads darker/warmer than road on the overview
   function paintMinimap(){
     var img=mmoc.createImageData(WORLD,WORLD),d=img.data;
@@ -1701,14 +1730,15 @@
   function drawGridPaper(vx0,vy0,vx1,vy1){
     ctx.fillStyle=C.bg;ctx.fillRect(vx0*CELL-CELL,vy0*VSTEP-CELLH,(vx1-vx0+2)*CELL,(vy1-vy0)*VSTEP+2*CELLH);
     // the honeycomb: 4 batched fills (one per terrain) + one stroke pass for the whole grid
-    var batches={grass:[],water:[],mountain:[],forest:[]},tr,tc,g;
+    var batches={grass:[],water:[],mountain:[],forest:[],plains:[],hills:[],desert:[]},tr,tc,g;
     for(tr=vy0;tr<vy1;tr++)for(tc=vx0;tc<vx1;tc++){g=grid[idx(tc,tr)];if(!g)continue;
-      var tt=g.terr;(tt==='water'?batches.water:tt==='mountain'?batches.mountain:tt==='forest'?batches.forest:batches.grass).push([tc,tr]);}
+      (batches[g.terr]||batches.grass).push([tc,tr]);}
     function fillBatch(list,color){if(!list.length)return;ctx.beginPath();
       for(var i=0;i<list.length;i++)hexPath(hx(list[i][0],list[i][1]),hy(list[i][1]));
       ctx.fillStyle=color;ctx.fill();}
     fillBatch(batches.grass,pal.terrGrass);fillBatch(batches.water,pal.terrWater);
     fillBatch(batches.mountain,pal.terrMountain);fillBatch(batches.forest,pal.terrForest);
+    fillBatch(batches.plains,pal.terrPlains);fillBatch(batches.hills,pal.terrHills);fillBatch(batches.desert,pal.terrDesert);
     ctx.beginPath();                                              // one stroke pass = the hex grid paper
     for(tr=vy0;tr<vy1;tr++)for(tc=vx0;tc<vx1;tc++)hexPath(hx(tc,tr),hy(tr));
     ctx.strokeStyle=C.line;ctx.lineWidth=1;ctx.stroke();
@@ -1716,6 +1746,16 @@
       var mx=hcx(mc,mr),myy=hcy(mr);
       ctx.fillStyle=pal.terrPeak;ctx.beginPath();ctx.moveTo(mx,myy-9);ctx.lineTo(mx+8,myy+8);ctx.lineTo(mx-8,myy+8);ctx.closePath();ctx.fill();
       ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.moveTo(mx,myy-9);ctx.lineTo(mx+3,myy-3);ctx.lineTo(mx-3,myy-3);ctx.closePath();ctx.fill();}
+    // light resource-terrain sprites (unmistakable at a glance, like the peaks)
+    var pi,pc,prw,px,py;
+    ctx.lineWidth=1.6;ctx.lineCap='round';
+    for(pi=0;pi<batches.plains.length;pi++){pc=batches.plains[pi];px=hcx(pc[0],pc[1]);py=hcy(pc[1]);   // farmland: furrow rows
+      ctx.strokeStyle=pal.terrWheat;ctx.beginPath();
+      ctx.moveTo(px-7,py-3);ctx.lineTo(px+7,py-3);ctx.moveTo(px-7,py+1);ctx.lineTo(px+7,py+1);ctx.moveTo(px-7,py+5);ctx.lineTo(px+7,py+5);ctx.stroke();}
+    for(pi=0;pi<batches.hills.length;pi++){pc=batches.hills[pi];px=hcx(pc[0],pc[1]);py=hcy(pc[1]);   // hills: two rounded bumps
+      ctx.fillStyle=pal.terrRock;ctx.beginPath();ctx.arc(px-4,py+3,4,Math.PI,0);ctx.arc(px+4,py+3,3.2,Math.PI,0);ctx.fill();}
+    for(pi=0;pi<batches.desert.length;pi++){pc=batches.desert[pi];px=hcx(pc[0],pc[1]);py=hcy(pc[1]);   // desert: a dune ripple
+      ctx.strokeStyle=pal.terrDune;ctx.beginPath();ctx.moveTo(px-7,py+3);ctx.quadraticCurveTo(px-2,py-3,px+2,py+2);ctx.quadraticCurveTo(px+5,py+5,px+8,py);ctx.stroke();}
   }
   function highwayExtras(c,r){                                                 // per-hex bits drawn on top of the layered carriageway: ramps + the interchange plaza
     var cx0=hcx(c,r),cy0=hcy(r),rampMids=connOf(c,r,isRoadCell);
@@ -2010,7 +2050,7 @@
     if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.rail)return false;
     if(g.t!=='empty')return false; return canAfford(COST[brush]||0);}   // one clear hex is all any building needs
   var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',solar:'Solar array',water:'Water tower',bank:'Bank',port:'Port',transit:'Transit stop',mon1:'Monument',mon2:'Solar Beacon',mon3:'Star Observatory'};
-  var TERRLABEL={plains:'Grassland',forest:'Forest',mountain:'Mountain',water:'Water'};
+  var TERRLABEL={grass:'Grassland',plains:'Farmland',forest:'Forest',mountain:'Mountain',hills:'Hills',desert:'Desert',water:'Water'};
   var ZONEK={res:1,com:1,ind:1,fac:1,tower:1};
   function yn(v){return v?'<span class="ok">yes</span>':'<span class="no">no</span>';}
   function tileInfo(c,r){if(!inB(c,r))return '';
@@ -2326,7 +2366,7 @@
     info:function(c,r){return tileInfo(c,r);},
     setGoal:function(k,t){setMyGoal(k,t);},goal:function(){return myGoal;},clearGoal:function(){clearMyGoal();},
     profile:function(){return regionProfile(WOX,WOY);},band:function(c,r){return bandOf(c,r);},terr:function(c,r){return inB(c,r)?grid[idx(c,r)].terr:null;},
-    hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};}
+    hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};},anchors:function(){return resAnchors();},hdist:function(c,r){return hexDist(c,r,BANDC,BANDR);}
   };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
