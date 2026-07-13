@@ -191,6 +191,16 @@
   .cat .cnote{font-size:14px;}
   .cats-note{margin-top:12px;}
 
+  /* Detail sections (laundry / dishes) */
+  .det{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:2px 16px; box-shadow:var(--shadow);}
+  .det .dg{padding:12px 0;}
+  .det .dg + .dg{border-top:1px dashed var(--line);}
+  .det .dgl{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:800; color:var(--muted); margin-bottom:7px;}
+  .det ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
+  .det li{position:relative; padding-left:16px; font-size:14px;}
+  .det li::before{content:""; position:absolute; left:2px; top:8px; width:5px; height:5px; border-radius:50%; background:var(--muted);}
+  .det li b{font-weight:800;}
+
   /* Chat sample */
   .chat{background:var(--pm-soft); border:1px solid color-mix(in srgb,var(--pm) 25%, var(--line)); border-radius:14px; padding:13px 14px; margin-top:12px;}
   .chat .cap{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--pm-ink); margin-bottom:7px;}
@@ -263,6 +273,16 @@
   </section>
 
   <section>
+    <h2 data-t="s_laundry">Laundry Details</h2>
+    <div class="det" id="laundry"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_dishes">Dishes Details</h2>
+    <div class="det" id="dishes"></div>
+  </section>
+
+  <section>
     <h2 data-t="s_loop">The Shopping Loop</h2>
     <div class="loop" id="loop"></div>
     <div class="chat">
@@ -294,6 +314,8 @@ const T = {
   s_quiet:{en:"Quiet Times", es:"Horas de Silencio"},
   s_assist:{en:"Assist Areas", es:"Áreas de Apoyo"},
   s_cats:{en:"Cats", es:"Gatos"},
+  s_laundry:{en:"Laundry Details", es:"Detalles de Lavandería"},
+  s_dishes:{en:"Dishes Details", es:"Detalles de Platos"},
   cats_note:{en:"Feeding the grey cat outside leaves dishes out there. <b>Both nannies:</b> bring any empty dishes inside to the sink to soak or wash.", es:"Alimentar al gato gris afuera deja platos sucios ahí. <b>Las dos niñeras:</b> traer los platos vacíos adentro al fregadero para remojar o lavar."},
   assist_note:{en:"Each nanny owns her areas — but helps set up the other's for success.", es:"Cada niñera es dueña de sus áreas — pero ayuda a preparar las de la otra."},
   s_labels:{en:"Labels", es:"Etiquetas"},
@@ -344,6 +366,44 @@ const ROLES = [
   ]},
 ];
 
+const LAUNDRY = [
+  {label:{en:"Sort first", es:"Separar primero"}, items:[
+    {en:"Whites · colors · darks · delicates · towels · sheets · kids' clothes", es:"Blancos · colores · oscuros · delicados · toallas · sábanas · ropa de niños"},
+    {en:"Check pockets, close zippers, turn delicates inside out", es:"Revisar bolsillos, cerrar cierres, voltear los delicados al revés"},
+  ]},
+  {label:{en:"Wash", es:"Lavar"}, items:[
+    {en:"Cold for colors & darks; warm/hot for whites, towels, and sheets", es:"Fría para colores y oscuros; tibia/caliente para blancos, toallas y sábanas"},
+    {en:"Delicates on the gentle cycle", es:"Delicados en ciclo suave"},
+    {en:"One cap/pod of detergent; fabric softener as usual; bleach only for whites", es:"Una tapa/cápsula de detergente; suavizante normal; cloro solo para blancos"},
+  ]},
+  {label:{en:"Dry", es:"Secar"}, items:[
+    {en:"Towels & sheets: normal heat. Clothes: low. Hang-dry delicates.", es:"Toallas y sábanas: calor normal. Ropa: bajo. Colgar los delicados."},
+    {en:"Add a dryer sheet; clean the lint trap each load", es:"Poner una hoja para secadora; limpiar el filtro de pelusa cada carga"},
+  ]},
+  {label:{en:"Fold & put away", es:"Doblar y guardar"}, items:[
+    {en:"Fold promptly; everything goes to its labeled spot", es:"Doblar pronto; todo va a su lugar etiquetado"},
+    {en:"Kids' clothes to their closet/dresser labels", es:"Ropa de niños a las etiquetas de su clóset/cómoda"},
+  ]},
+];
+
+const DISHES = [
+  {label:{en:"Load the dishwasher", es:"Cargar el lavavajillas"}, items:[
+    {en:"Scrape food first; cups & glasses on top, plates & pots on the bottom, utensils in the basket", es:"Raspar la comida; vasos arriba, platos y ollas abajo, cubiertos en la canasta"},
+    {en:"Run it when full; add one pod", es:"Ponerlo cuando esté lleno; una cápsula"},
+  ]},
+  {label:{en:"Hand-wash", es:"Lavar a mano"}, items:[
+    {en:"Knives, pots & pans, and anything delicate — wash, rinse, air-dry on the rack", es:"Cuchillos, ollas y sartenes, y lo delicado — lavar, enjuagar, secar en el escurridor"},
+    {en:"Soak stuck-on food instead of scrubbing hard", es:"Remojar la comida pegada en vez de tallar fuerte"},
+  ]},
+  {label:{en:"Cat dishes", es:"Platos de los gatos"}, items:[
+    {en:"Bring the empties in from outside; soak in the sink, then wash", es:"Traer los vacíos de afuera; remojar en el fregadero, luego lavar"},
+    {en:"Keep them separate from the family's dishes", es:"Mantenerlos separados de los platos de la familia"},
+  ]},
+  {label:{en:"Finish up", es:"Terminar"}, items:[
+    {en:"Empty the dishwasher into labeled spots; wipe the counters and sink", es:"Vaciar el lavavajillas en los lugares etiquetados; limpiar barras y fregadero"},
+  ]},
+];
+
 const CATS = [
   {sw:"#2b2b2b", name:{en:"Black cat", es:"Gato negro"}, where:{en:"Indoor / outdoor", es:"Adentro y afuera"}, note:{en:"May have fresh wet food whenever he wishes. His leftovers can then be put outside for the grey cat.", es:"Puede comer comida húmeda fresca cuando quiera. Sus sobras luego se pueden poner afuera para el gato gris."}},
   {sw:"#9ca3af", name:{en:"Grey cat", es:"Gato gris"}, where:{en:"Outdoor only", es:"Solo afuera"}, note:{en:"Eats outside — including the black cat's leftovers.", es:"Come afuera — incluidas las sobras del gato negro."}},
@@ -391,6 +451,16 @@ function render(){
       <div class="top"><span class="name">${role.name[lang]}</span><span class="hrs">${role.hrs[lang]}</span></div>
       <ul>${role.items.map(i=>`<li>${i[lang]}</li>`).join("")}</ul>
     </div>`).join("");
+
+  const renderDetails = (id, data) => {
+    document.getElementById(id).innerHTML = data.map(g=>`
+      <div class="dg">
+        <div class="dgl">${g.label[lang]}</div>
+        <ul>${g.items.map(i=>`<li>${i[lang]}</li>`).join("")}</ul>
+      </div>`).join("");
+  };
+  renderDetails("laundry", LAUNDRY);
+  renderDetails("dishes", DISHES);
 
   document.getElementById("cats").innerHTML = CATS.map(c=>`
     <div class="cat">
