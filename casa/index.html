@@ -170,6 +170,15 @@
   .assist .txt{font-size:14.5px;}
   .assist-note{margin-top:12px;}
 
+  /* Quiet times */
+  .quiet{background:var(--line-soft); border:1px solid var(--line); border-left:6px solid var(--muted);
+    border-radius:14px; padding:2px 16px; box-shadow:var(--shadow);}
+  .quiet .q{padding:13px 0;}
+  .quiet .q + .q{border-top:1px dashed var(--line);}
+  .quiet .win{font-size:15.5px; font-weight:800; letter-spacing:-.01em;}
+  .quiet .why{font-size:13px; color:var(--muted); margin:1px 0 5px; font-weight:600;}
+  .quiet .do{font-size:14px;}
+
   /* Chat sample */
   .chat{background:var(--pm-soft); border:1px solid color-mix(in srgb,var(--pm) 25%, var(--line)); border-radius:14px; padding:13px 14px; margin-top:12px;}
   .chat .cap{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--pm-ink); margin-bottom:7px;}
@@ -204,6 +213,11 @@
     <div class="stat am"><div class="k" data-t="g1k"></div><div class="v">8:00–2:30</div></div>
     <div class="stat pm"><div class="k" data-t="g2k"></div><div class="v">2:30–6:30</div></div>
   </div>
+
+  <section>
+    <h2 data-t="s_quiet">Quiet Times</h2>
+    <div class="quiet" id="quiet"></div>
+  </section>
 
   <section>
     <h2 data-t="s_day">The Day</h2>
@@ -259,6 +273,7 @@ const T = {
   s_roles:{en:"Roles", es:"Roles"},
   s_own:{en:"Who Organizes What", es:"Quién Organiza Qué"},
   s_loop:{en:"The Shopping Loop", es:"El Circuito de Compras"},
+  s_quiet:{en:"Quiet Times", es:"Horas de Silencio"},
   s_assist:{en:"Assist Areas", es:"Áreas de Apoyo"},
   assist_note:{en:"Each nanny owns her areas — but helps set up the other's for success.", es:"Cada niñera es dueña de sus áreas — pero ayuda a preparar las de la otra."},
   s_labels:{en:"Labels", es:"Etiquetas"},
@@ -309,6 +324,11 @@ const ROLES = [
   ]},
 ];
 
+const QUIET = [
+  {t:"8:00 – 9:00", why:{en:"Children may still be sleeping", es:"Los niños pueden seguir dormidos"}, dono:{en:"Enter as quietly as possible; only quiet tasks until the children are awake.", es:"Entrar lo más callado posible; solo tareas silenciosas hasta que los niños despierten."}},
+  {t:"12:00 – 3:00", why:{en:"Toddler nap hours", es:"Horas de siesta del bebé"}, dono:{en:"Enter as quietly as possible; only quiet tasks until the children are awake.", es:"Entrar lo más callado posible; solo tareas silenciosas hasta que los niños despierten."}},
+];
+
 const ASSIST = [
   {cls:"am", who:N1, area:{en:"helps with laundry", es:"ayuda con la lavandería"}, en:"Brings laundry from downstairs up, and gets it into the hampers — staged for Nanny 2", es:"Sube la ropa sucia de abajo y la pone en los cestos — lista para la Niñera 2"},
   {cls:"pm", who:N2, area:{en:"helps with the kitchen", es:"ayuda con la cocina"}, en:"Cleans the kitchen after snack, and again after dinner as her final task", es:"Limpia la cocina después de la merienda, y otra vez después de la cena como su última tarea"},
@@ -345,6 +365,13 @@ function render(){
     <div class="role ${role.cls}">
       <div class="top"><span class="name">${role.name[lang]}</span><span class="hrs">${role.hrs[lang]}</span></div>
       <ul>${role.items.map(i=>`<li>${i[lang]}</li>`).join("")}</ul>
+    </div>`).join("");
+
+  document.getElementById("quiet").innerHTML = QUIET.map(q=>`
+    <div class="q">
+      <div class="win">${q.t}</div>
+      <div class="why">${q.why[lang]}</div>
+      <div class="do">${q.dono[lang]}</div>
     </div>`).join("");
 
   document.getElementById("assist").innerHTML = ASSIST.map(a=>`
