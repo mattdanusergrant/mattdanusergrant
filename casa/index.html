@@ -160,6 +160,16 @@
   .loop .st{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--muted);}
   .loop .sd{font-size:14.5px; margin-top:1px;}
 
+  /* Assist areas */
+  .assist{display:flex; flex-direction:column; gap:10px;}
+  .assist .a{background:var(--card); border:1px solid var(--line); border-left:6px solid var(--mk);
+    border-radius:14px; padding:12px 14px; box-shadow:var(--shadow);}
+  .assist .a.am{--mk:var(--am);} .assist .a.pm{--mk:var(--pm);}
+  .assist .who{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:800; margin-bottom:3px;}
+  .assist .a.am .who{color:var(--am-ink);} .assist .a.pm .who{color:var(--pm-ink);}
+  .assist .txt{font-size:14.5px;}
+  .assist-note{margin-top:12px;}
+
   /* Chat sample */
   .chat{background:var(--pm-soft); border:1px solid color-mix(in srgb,var(--pm) 25%, var(--line)); border-radius:14px; padding:13px 14px; margin-top:12px;}
   .chat .cap{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--pm-ink); margin-bottom:7px;}
@@ -216,6 +226,12 @@
   </section>
 
   <section>
+    <h2 data-t="s_assist">Assist Areas</h2>
+    <div class="assist" id="assist"></div>
+    <div class="own-note assist-note" data-t="assist_note"></div>
+  </section>
+
+  <section>
     <h2 data-t="s_loop">The Shopping Loop</h2>
     <div class="loop" id="loop"></div>
     <div class="chat">
@@ -244,6 +260,8 @@ const T = {
   s_roles:{en:"Roles", es:"Roles"},
   s_own:{en:"Who Organizes What", es:"Quién Organiza Qué"},
   s_loop:{en:"The Shopping Loop", es:"El Circuito de Compras"},
+  s_assist:{en:"Assist Areas", es:"Áreas de Apoyo"},
+  assist_note:{en:"Each nanny owns her areas — but helps set up the other's for success.", es:"Cada niñera es dueña de sus áreas — pero ayuda a preparar las de la otra."},
   s_labels:{en:"Labels", es:"Etiquetas"},
   own_am_l:{en:"Kitchen", es:"Cocina"},
   own_am_h:{en:"Nanny 1 decides", es:"Niñera 1 decide"},
@@ -292,6 +310,11 @@ const ROLES = [
   ]},
 ];
 
+const ASSIST = [
+  {cls:"am", who:N1, area:{en:"helps with laundry", es:"ayuda con la lavandería"}, en:"Brings laundry from downstairs up, and gets it into the hampers — staged for Nanny 2", es:"Sube la ropa sucia de abajo y la pone en los cestos — lista para la Niñera 2"},
+  {cls:"pm", who:N2, area:{en:"helps with the kitchen", es:"ayuda con la cocina"}, en:"Cleans the kitchen after snack, and again after dinner as her final task", es:"Limpia la cocina después de la merienda, y otra vez después de la cena como su última tarea"},
+];
+
 const LOOP = [
   {c:"a", st:{en:"Evening · Nanny 2", es:"Tarde · Niñera 2"}, d:{en:"Texts the group chat what the house is short on", es:"Manda al chat lo que falta en la casa"}},
   {c:"b", st:{en:"Next morning · Nanny 1", es:"A la mañana · Niñera 1"}, d:{en:"Shops it on her way in, before she arrives", es:"Lo compra de camino, antes de llegar"}},
@@ -323,6 +346,12 @@ function render(){
     <div class="role ${role.cls}">
       <div class="top"><span class="name">${role.name[lang]}</span><span class="hrs">${role.hrs[lang]}</span></div>
       <ul>${role.items.map(i=>`<li>${i[lang]}</li>`).join("")}</ul>
+    </div>`).join("");
+
+  document.getElementById("assist").innerHTML = ASSIST.map(a=>`
+    <div class="a ${a.cls}">
+      <div class="who">${a.who[lang]} · ${a.area[lang]}</div>
+      <div class="txt">${a[lang]}</div>
     </div>`).join("");
 
   document.getElementById("loop").innerHTML = LOOP.map((s,i)=>`
