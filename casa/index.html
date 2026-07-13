@@ -252,6 +252,15 @@
   </section>
 
   <section>
+    <h2 data-t="s_loop">The Shopping Loop</h2>
+    <div class="loop" id="loop"></div>
+    <div class="chat">
+      <div class="cap" data-t="chat_cap"></div>
+      <pre data-t="chat_body"></pre>
+    </div>
+  </section>
+
+  <section>
     <h2 data-t="s_own">Who Organizes What</h2>
     <div class="own">
       <div class="o am"><div class="lbl" data-t="own_am_l"></div><div class="h" data-t="own_am_h"></div><div class="d" data-t="own_am_d"></div></div>
@@ -280,15 +289,6 @@
   <section>
     <h2 data-t="s_dishes">Dishes Details</h2>
     <div class="det" id="dishes"></div>
-  </section>
-
-  <section>
-    <h2 data-t="s_loop">The Shopping Loop</h2>
-    <div class="loop" id="loop"></div>
-    <div class="chat">
-      <div class="cap" data-t="chat_cap"></div>
-      <pre data-t="chat_body"></pre>
-    </div>
   </section>
 
   <section>
@@ -368,40 +368,33 @@ const ROLES = [
 ];
 
 const LAUNDRY = [
-  {label:{en:"Sort first", es:"Separar primero"}, items:[
-    {en:"Whites · colors · darks · delicates · towels · sheets · kids' clothes", es:"Blancos · colores · oscuros · delicados · toallas · sábanas · ropa de niños"},
-    {en:"Check pockets, close zippers, turn delicates inside out", es:"Revisar bolsillos, cerrar cierres, voltear los delicados al revés"},
+  {label:{en:"Always — every load", es:"Siempre — cada carga"}, items:[
+    {en:"<b>ALL dresses MUST hang dry</b> — never put a dress in the dryer", es:"<b>TODOS los vestidos DEBEN secarse colgados</b> — nunca poner un vestido en la secadora"},
+    {en:"Priority order: Kids → Mom → Dad", es:"Orden de prioridad: Niños → Mamá → Papá"},
   ]},
-  {label:{en:"Wash", es:"Lavar"}, items:[
-    {en:"Cold for colors & darks; warm/hot for whites, towels, and sheets", es:"Fría para colores y oscuros; tibia/caliente para blancos, toallas y sábanas"},
-    {en:"Delicates on the gentle cycle", es:"Delicados en ciclo suave"},
-    {en:"One cap/pod of detergent; fabric softener as usual; bleach only for whites", es:"Una tapa/cápsula de detergente; suavizante normal; cloro solo para blancos"},
+  {label:{en:"1 · Kids", es:"1 · Niños"}, items:[
+    {en:"<b>Washer:</b> warm · normal cycle", es:"<b>Lavadora:</b> tibia · ciclo normal"},
+    {en:"<b>Dryer:</b> low heat", es:"<b>Secadora:</b> calor bajo"},
   ]},
-  {label:{en:"Dry", es:"Secar"}, items:[
-    {en:"Towels & sheets: normal heat. Clothes: low. Hang-dry delicates.", es:"Toallas y sábanas: calor normal. Ropa: bajo. Colgar los delicados."},
-    {en:"Add a dryer sheet; clean the lint trap each load", es:"Poner una hoja para secadora; limpiar el filtro de pelusa cada carga"},
+  {label:{en:"2 · Mom", es:"2 · Mamá"}, items:[
+    {en:"<b>Washer:</b> cold · colors / gentle", es:"<b>Lavadora:</b> fría · colores / suave"},
+    {en:"<b>Dryer:</b> low heat · hang delicates (and all dresses)", es:"<b>Secadora:</b> calor bajo · colgar los delicados (y todos los vestidos)"},
   ]},
-  {label:{en:"Fold & put away", es:"Doblar y guardar"}, items:[
-    {en:"Fold promptly; everything goes to its labeled spot", es:"Doblar pronto; todo va a su lugar etiquetado"},
-    {en:"Kids' clothes to their closet/dresser labels", es:"Ropa de niños a las etiquetas de su clóset/cómoda"},
+  {label:{en:"3 · Dad", es:"3 · Papá"}, items:[
+    {en:"<b>Washer:</b> warm · normal cycle", es:"<b>Lavadora:</b> tibia · ciclo normal"},
+    {en:"<b>Dryer:</b> normal heat", es:"<b>Secadora:</b> calor normal"},
   ]},
 ];
 
 const DISHES = [
-  {label:{en:"Load the dishwasher", es:"Cargar el lavavajillas"}, items:[
-    {en:"Scrape food first; cups & glasses on top, plates & pots on the bottom, utensils in the basket", es:"Raspar la comida; vasos arriba, platos y ollas abajo, cubiertos en la canasta"},
-    {en:"Run it when full; add one pod", es:"Ponerlo cuando esté lleno; una cápsula"},
+  {label:{en:"Dishwasher", es:"Lavavajillas"}, items:[
+    {en:"We use the dishwasher for nearly everything — hand-wash only large items that don't fit", es:"Usamos el lavavajillas para casi todo — lavar a mano solo los artículos grandes que no caben"},
   ]},
-  {label:{en:"Hand-wash", es:"Lavar a mano"}, items:[
-    {en:"Knives, pots & pans, and anything delicate — wash, rinse, air-dry on the rack", es:"Cuchillos, ollas y sartenes, y lo delicado — lavar, enjuagar, secar en el escurridor"},
-    {en:"Soak stuck-on food instead of scrubbing hard", es:"Remojar la comida pegada en vez de tallar fuerte"},
+  {label:{en:"Clean / Dirty magnet", es:"Imán Limpio / Sucio"}, items:[
+    {en:"Check the Clean/Dirty magnet before loading or unloading — flip it when you start a wash or empty it", es:"Revisar el imán Limpio/Sucio antes de cargar o vaciar — cambiarlo al iniciar un lavado o al vaciarlo"},
   ]},
   {label:{en:"Cat dishes", es:"Platos de los gatos"}, items:[
-    {en:"Bring the empties in from outside; soak in the sink, then wash", es:"Traer los vacíos de afuera; remojar en el fregadero, luego lavar"},
-    {en:"Keep them separate from the family's dishes", es:"Mantenerlos separados de los platos de la familia"},
-  ]},
-  {label:{en:"Finish up", es:"Terminar"}, items:[
-    {en:"Empty the dishwasher into labeled spots; wipe the counters and sink", es:"Vaciar el lavavajillas en los lugares etiquetados; limpiar barras y fregadero"},
+    {en:"Bring the empties in from outside; soak in the sink, then wash; keep them separate from the family's dishes", es:"Traer los vacíos de afuera; remojar en el fregadero, luego lavar; mantenerlos separados de los platos de la familia"},
   ]},
 ];
 
