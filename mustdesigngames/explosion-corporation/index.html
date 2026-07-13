@@ -317,104 +317,152 @@ function finish(win){
   if(!DBG) showEnd();
 }
 
-// ---------- render ----------
+// ---------- N64-style 3D renderer ----------
+// The sim's (x,y) plane is the GROUND (world XZ); world Y is height up. We render the
+// scene to a tiny framebuffer, then upscale it with bilinear smoothing — that soft blur
+// (plus heavy fog, flat-shaded boxes, and snapped vertices) is the N64 look.
+const LW=340, LH=218;          // small framebuffer → bilinear upscale gives the N64 blur
+const lbuf=document.createElement("canvas"); lbuf.width=LW; lbuf.height=LH;
+const lctx=lbuf.getContext("2d");
+const CAM={ eye:[500,940,-500], target:[500,0,405], focal:300, up:[0,1,0] };
+function vsub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function vcross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function vnorm(a){const m=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/m,a[1]/m,a[2]/m];}
+const CF=vnorm(vsub(CAM.target,CAM.eye));
+const CR=vnorm(vcross(CAM.up,CF));
+const CU=vcross(CR,CF);
+function project(wx,wy,wz){
+  const dx=wx-CAM.eye[0], dy=wy-CAM.eye[1], dz=wz-CAM.eye[2];
+  const cz=dx*CF[0]+dy*CF[1]+dz*CF[2];
+  if(cz<1) return {vis:false,z:cz};
+  const cx=dx*CR[0]+dy*CR[1]+dz*CR[2];
+  const cy=dx*CU[0]+dy*CU[1]+dz*CU[2];
+  const s=CAM.focal/cz;
+  return { x:Math.round(LW/2+cx*s), y:Math.round(LH/2+cy*s), z:cz, vis:true };  // Math.round = vertex snap (N64 wobble)
+}
+function hexRGB(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+let FOGc=[20,24,30], FOG0=980, FOG1=1560;
+function fog(rgb,z){ const f=Math.max(0,Math.min(1,(z-FOG0)/(FOG1-FOG0)));
+  return [rgb[0]+(FOGc[0]-rgb[0])*f, rgb[1]+(FOGc[1]-rgb[1])*f, rgb[2]+(FOGc[2]-rgb[2])*f]; }
+function css(c){ return "rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")"; }
+const LIGHT=[-0.5,-0.85];  // headlight-ish direction in the XZ ground plane
+
+function fillQuad(ps,color,edge){
+  if(!(ps[0].vis&&ps[1].vis&&ps[2].vis&&ps[3].vis)) return;
+  lctx.fillStyle=color; lctx.beginPath(); lctx.moveTo(ps[0].x,ps[0].y);
+  for(let i=1;i<4;i++) lctx.lineTo(ps[i].x,ps[i].y); lctx.closePath(); lctx.fill();
+  if(edge){ lctx.strokeStyle=edge; lctx.lineWidth=1; lctx.stroke(); }
+}
+function rectCorners(cx,cz,halfW,halfL,ang){ // 4 ground [x,z] pts; ang rotates the length axis
+  const c=Math.cos(ang), s=Math.sin(ang);
+  return [[halfL,halfW],[halfL,-halfW],[-halfL,-halfW],[-halfL,halfW]]
+    .map(p=>[cx + p[0]*c - p[1]*s, cz + p[0]*s + p[1]*c]);
+}
+// an extruded box standing on the ground: 4 side faces (flat-shaded, sorted) + a top.
+function boxDraw(corners,h,baseRGB,topRGB){
+  const b=corners.map(c=>project(c[0],0,c[1]));
+  const t=corners.map(c=>project(c[0],h,c[1]));
+  const sides=[];
+  for(let i=0;i<4;i++){ const j=(i+1)%4;
+    const ex=corners[j][0]-corners[i][0], ez=corners[j][1]-corners[i][1];
+    let nx=ez, nz=-ex; const nl=Math.hypot(nx,nz)||1; nx/=nl; nz/=nl;   // outward normal (XZ)
+    const lit=Math.max(0, nx*LIGHT[0]+nz*LIGHT[1]);
+    const sh=0.42+0.5*lit;
+    const dep=(b[i].z+b[j].z+t[i].z+t[j].z)/4;
+    sides.push({ps:[b[i],b[j],t[j],t[i]], col:baseRGB.map(v=>v*sh), z:dep});
+  }
+  sides.sort((a,c)=>c.z-a.z);
+  for(const s of sides) fillQuad(s.ps, css(fog(s.col,s.z)), "rgba(0,0,0,.22)");
+  const tz=(t[0].z+t[1].z+t[2].z+t[3].z)/4;
+  fillQuad(t, css(fog(topRGB,tz)), "rgba(0,0,0,.22)");
+}
+
 function render(){
-  ctx.save();
-  ctx.scale(scale,scale);
-  const sh=g?g.shake:0, sx=(Math.random()-.5)*10*sh, sy=(Math.random()-.5)*10*sh;
-  ctx.translate(sx,sy);
-  // ground
-  ctx.fillStyle = g? g.lv.tint : "#161d24";
-  ctx.fillRect(-20,-20,W+40,H+40);
-  if(!g){ ctx.restore(); return; }
-
-  // grid
-  ctx.strokeStyle="rgba(255,255,255,.035)"; ctx.lineWidth=1;
-  for(let x=0;x<=W;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-  for(let y=0;y<=H;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-  // danger lane
-  const path=g.lv.path, half=CARRIER.h/2+LANE_PAD;
-  ctx.strokeStyle="rgba(255,90,77,.16)"; ctx.lineWidth=half*2; ctx.lineCap="round"; ctx.lineJoin="round";
-  ctx.beginPath(); ctx.moveTo(path[0][0],path[0][1]); for(let i=1;i<path.length;i++) ctx.lineTo(path[i][0],path[i][1]); ctx.stroke();
-  ctx.setLineDash([12,14]); ctx.strokeStyle="rgba(255,90,77,.5)"; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(path[0][0],path[0][1]); for(let i=1;i<path.length;i++) ctx.lineTo(path[i][0],path[i][1]); ctx.stroke();
-  ctx.setLineDash([]);
-  // goal
-  const goal=pointAt(path,g.pathLen);
-  ctx.fillStyle="#3ad07a"; ctx.font="bold 13px system-ui"; ctx.textAlign="center";
-  ctx.fillRect(goal.x-4,goal.y-half,8,half*2); ctx.fillText("GOAL",goal.x,goal.y-half-8);
-
-  // buildings
-  for(const b of g.buildings){
-    if(b.dead){ ctx.fillStyle="rgba(120,130,140,.28)";
-      ctx.fillRect(b.x+4,b.y+4,b.w-8,b.h-8);
-      ctx.fillStyle="rgba(150,160,170,.4)";
-      for(let i=0;i<4;i++) ctx.fillRect(b.x+6+((i*13)%(b.w-14)), b.y+8+((i*17)%(b.h-16)), 7,7);
-      continue;
+  if(g){ const ti=hexRGB(g.lv.tint); FOGc=[ti[0]*0.7+12,ti[1]*0.7+14,ti[2]*0.7+20]; }
+  lctx.setTransform(1,0,0,1,0,0);
+  lctx.fillStyle=css(FOGc); lctx.fillRect(0,0,LW,LH);   // fog / sky
+  const labels=[];
+  if(g){
+    const car=g.carrier;
+    // ground plane
+    const g0=project(0,0,0), g1=project(W,0,0), g2=project(W,0,H), g3=project(0,0,H);
+    const gt=hexRGB(g.lv.tint);
+    fillQuad([g3,g2,g1,g0], css([gt[0]*1.3+10,gt[1]*1.3+10,gt[2]*1.3+12]), null);
+    // ground grid (fogged)
+    lctx.lineWidth=1;
+    for(let x=0;x<=W;x+=100){ const a=project(x,0,0), b=project(x,0,H);
+      if(a.vis&&b.vis){ lctx.strokeStyle=css(fog([72,82,94],(a.z+b.z)/2)); lctx.beginPath(); lctx.moveTo(a.x,a.y); lctx.lineTo(b.x,b.y); lctx.stroke(); } }
+    for(let z=0;z<=H;z+=100){ const a=project(0,0,z), b=project(W,0,z);
+      if(a.vis&&b.vis){ lctx.strokeStyle=css(fog([72,82,94],(a.z+b.z)/2)); lctx.beginPath(); lctx.moveTo(a.x,a.y); lctx.lineTo(b.x,b.y); lctx.stroke(); } }
+    // danger lane painted on the ground
+    const path=g.lv.path, half=CARRIER.h/2+LANE_PAD;
+    for(let i=0;i<path.length-1;i++){
+      const ax=path[i][0],az=path[i][1],bx=path[i+1][0],bz=path[i+1][1];
+      let px=bz-az, pz=-(bx-ax); const pl=Math.hypot(px,pz)||1; px=px/pl*half; pz=pz/pl*half;
+      fillQuad([project(ax+px,1,az+pz),project(bx+px,1,bz+pz),project(bx-px,1,bz-pz),project(ax-px,1,az-pz)],
+        "rgba(255,70,58,0.30)", null);
     }
-    const frac=b.hp/b.hp0;
-    const base = b.blocks ? [255,120,90] : [150,168,182];
-    const c = base.map(v=>Math.round(v*(0.5+0.5*frac)));
-    ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
-    if(b.hit>0){ ctx.fillStyle="#fff"; b.hit-=1/60; }
-    ctx.fillRect(b.x,b.y,b.w,b.h);
-    // windows
-    ctx.fillStyle="rgba(0,0,0,.22)";
-    for(let yy=b.y+8; yy<b.y+b.h-6; yy+=14) for(let xx=b.x+7; xx<b.x+b.w-6; xx+=14) ctx.fillRect(xx,yy,7,8);
-    // blocker outline
-    if(b.blocks){ ctx.strokeStyle="#ff5a4d"; ctx.lineWidth=2.5; ctx.strokeRect(b.x-1,b.y-1,b.w+2,b.h+2); }
-    // hp bar
-    ctx.fillStyle="rgba(0,0,0,.5)"; ctx.fillRect(b.x,b.y-6,b.w,4);
-    ctx.fillStyle= b.blocks? "#ff8a5a":"#9fdcff"; ctx.fillRect(b.x,b.y-6,b.w*frac,4);
+    // dashed centre line
+    lctx.strokeStyle="rgba(255,130,96,0.75)"; lctx.lineWidth=1; lctx.setLineDash([4,5]);
+    lctx.beginPath();
+    for(let i=0;i<path.length;i++){ const p=project(path[i][0],2,path[i][1]); if(p.vis){ i?lctx.lineTo(p.x,p.y):lctx.moveTo(p.x,p.y);} }
+    lctx.stroke(); lctx.setLineDash([]);
+    // goal post
+    const goal=pointAt(path,g.pathLen);
+    boxDraw(rectCorners(goal.x,goal.y,half,4,0), 40, [36,180,104],[86,232,150]);
+
+    // depth-sorted 3D objects: buildings + carrier + rigs
+    const draws=[];
+    for(const b of g.buildings){
+      const cx=b.x+b.w/2, cz=b.y+b.h/2, cen=project(cx,b.dead?4:20,cz);
+      if(b.dead){ draws.push({z:cen.z, fn:()=>boxDraw(rectCorners(cx,cz,b.h/2-3,b.w/2-3,0),8,[66,74,82],[90,98,108])}); continue; }
+      const frac=b.hp/b.hp0, bh=34+b.w*0.62;
+      let base=(b.blocks?[228,108,82]:[150,168,182]).map(v=>v*(0.55+0.45*frac));
+      let top =(b.blocks?[255,150,110]:[182,200,214]).map(v=>v*(0.55+0.45*frac));
+      if(b.hit>0){ base=[255,255,255]; top=[255,255,255]; b.hit-=1/60; }
+      const corners=rectCorners(cx,cz,b.h/2,b.w/2,0);
+      draws.push({z:cen.z, fn:()=>boxDraw(corners,bh,base,top)});
+    }
+    if(car.alive){
+      const cor=rectCorners(car.x,car.y,CARRIER.h/2,CARRIER.w/2,car.ang), cen=project(car.x,20,car.y);
+      draws.push({z:cen.z, fn:()=>{
+        boxDraw(cor,32,[150,158,166],[255,180,84]);   // amber roof = the hazard hauler
+        const cx2=car.x+Math.cos(car.ang)*(CARRIER.w/2-7), cy2=car.y+Math.sin(car.ang)*(CARRIER.w/2-7);
+        boxDraw(rectCorners(cx2,cy2,CARRIER.h/2,7,car.ang),36,[40,50,60],[58,70,82]);   // cab
+      }});
+    }
+    for(const rig of g.rigs){
+      const cor=rectCorners(rig.x,rig.y,R,R,rig.ang), cen=project(rig.x,12,rig.y);
+      const rc=hexRGB(rig.color), br=rig.ram>0?1.3:1;
+      draws.push({z:cen.z, fn:()=>{
+        boxDraw(cor,22,rc.map(v=>v*0.8*br),rc.map(v=>Math.min(255,v*br)));
+        const bx=rig.x+Math.cos(rig.ang)*(R+3), by=rig.y+Math.sin(rig.ang)*(R+3);
+        boxDraw(rectCorners(bx,by,R,3,rig.ang),20,[208,218,226],[240,248,255]);  // blade
+      }});
+      const lp=project(rig.x,42,rig.y);
+      if(lp.vis) labels.push({x:lp.x/LW, y:lp.y/LH, text:rig.human?("P"+(rig.id+1)):"AI", col:rig.color});
+    }
+    draws.sort((a,b)=>b.z-a.z);
+    for(const d of draws) d.fn();
+    // debris
+    for(const p of g.particles){ const pp=project(p.x,6,p.y); if(!pp.vis) continue;
+      lctx.globalAlpha=Math.max(0,Math.min(1,p.life*1.6)); lctx.fillStyle=p.col; lctx.fillRect(pp.x-1,pp.y-1,2,2); }
+    lctx.globalAlpha=1;
   }
-
-  // carrier
-  const car=g.carrier;
-  if(car.alive){
-    ctx.save(); ctx.translate(car.x,car.y); ctx.rotate(car.ang);
-    // danger pulse
-    const pulse=0.5+0.5*Math.sin(g.t*7);
-    ctx.fillStyle=`rgba(255,90,77,${.10+.10*pulse})`;
-    ctx.fillRect(-CARRIER.w/2-8,-CARRIER.h/2-8,CARRIER.w+16,CARRIER.h+16);
-    // body
-    ctx.fillStyle="#c9ced2"; ctx.fillRect(-CARRIER.w/2,-CARRIER.h/2,CARRIER.w,CARRIER.h);
-    // hazard stripes
-    ctx.fillStyle="#ffb454";
-    for(let i=-CARRIER.w/2; i<CARRIER.w/2-6; i+=18) ctx.fillRect(i, -CARRIER.h/2, 9, CARRIER.h);
-    ctx.fillStyle="#20140a"; ctx.font="bold 11px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle";
-    ctx.fillText("☢", CARRIER.w/2-14, 0);
-    // cab
-    ctx.fillStyle="#2a343c"; ctx.fillRect(CARRIER.w/2-14,-CARRIER.h/2,14,CARRIER.h);
-    ctx.restore();
-    ctx.textBaseline="alphabetic";
-  }
-
-  // rigs
-  for(const rig of g.rigs){
-    ctx.save(); ctx.translate(rig.x,rig.y); ctx.rotate(rig.ang);
-    if(rig.ram>0){ ctx.fillStyle=`rgba(255,255,255,${.25*rig.ram})`; ctx.beginPath(); ctx.arc(0,0,R+8,0,7); ctx.fill(); }
-    // body
-    ctx.fillStyle=rig.color; ctx.strokeStyle="rgba(0,0,0,.35)"; ctx.lineWidth=2;
-    roundRect(-R,-R+3,R*2,R*2-6,6); ctx.fill(); ctx.stroke();
-    // blade
-    ctx.fillStyle="#e9eef2"; ctx.fillRect(R-3,-R+2,7,R*2-4);
-    // eye/dir
-    ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(R-14,-4,8,8);
-    ctx.restore();
-    // label
-    ctx.fillStyle=rig.color; ctx.font="bold 10px system-ui"; ctx.textAlign="center";
-    ctx.fillText(rig.human? ("P"+(rig.id+1)) : "AI", rig.x, rig.y-R-5);
-  }
-
-  // particles
-  for(const p of g.particles){ ctx.globalAlpha=Math.max(0,p.life*1.6); ctx.fillStyle=p.col;
-    ctx.fillRect(p.x-2,p.y-2,4,4); }
-  ctx.globalAlpha=1;
-
-  // HUD
+  // blit low-res -> display with bilinear blur (the N64 softness); shake jitters the blit
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="low";
+  ctx.fillStyle="#0c1116"; ctx.fillRect(0,0,cvs.width,cvs.height);
+  const sh=g?g.shake:0, jx=(Math.random()-.5)*7*sh*scale, jy=(Math.random()-.5)*7*sh*scale;
+  ctx.drawImage(lbuf, jx, jy, cvs.width, cvs.height);
+  if(!g) return;
+  // HUD + rig labels at crisp display resolution
+  ctx.setTransform(scale,0,0,scale,0,0);
+  ctx.textAlign="center";
+  for(const l of labels){ ctx.font="bold 11px system-ui";
+    ctx.fillStyle="rgba(0,0,0,.6)"; ctx.fillText(l.text,l.x*W+1,l.y*H+1);
+    ctx.fillStyle=l.col; ctx.fillText(l.text,l.x*W,l.y*H); }
   drawHUD();
-  ctx.restore();
 }
 function roundRect(x,y,w,h,r){ ctx.beginPath();
   ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
