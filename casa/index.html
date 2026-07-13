@@ -85,7 +85,7 @@
   .toggle button:focus-visible{outline:2px solid var(--am); outline-offset:2px;}
 
   /* Glance */
-  .glance{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0 26px;}
+  .glance{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:20px 0 26px;}
   .stat{
     background:var(--card); border:1px solid var(--line); border-radius:var(--r);
     padding:14px 12px; box-shadow:var(--shadow);
@@ -203,7 +203,6 @@
   <div class="glance">
     <div class="stat am"><div class="k" data-t="g1k"></div><div class="v">8:00–2:30</div></div>
     <div class="stat pm"><div class="k" data-t="g2k"></div><div class="v">2:30–6:30</div></div>
-    <div class="stat"><div class="k" data-t="g3k"></div><div class="v">10:00 · 3:00</div></div>
   </div>
 
   <section>
@@ -281,7 +280,7 @@ const N2 = {en:"Nanny 2", es:"Niñera 2"};
 const HANDOFF = {en:"Handoff", es:"Cambio"};
 const TIMELINE = [
   {t:"8:00", who:N1, cls:"am", en:"Shops on the way in (paid from 8:00) using last night's list", es:"Va de compras de camino (pagada desde las 8:00) con la lista de anoche"},
-  {t:"8:30", who:N1, cls:"am", en:"Arrives with groceries & starts making breakfast for the children", es:"Llega con las compras y empieza a hacer el desayuno de los niños"},
+  {t:"8:30", who:{en:"Nanny 1 · Morning Ritual", es:"Niñera 1 · Ritual de la Mañana"}, cls:"am", en:"Put away the groceries (if any), open all the blinds, then start making breakfast for the children", es:"Guardar las compras (si hay), abrir todas las persianas, y empezar a hacer el desayuno de los niños"},
   {t:"10:00", who:N1, cls:"am", en:"Snack #1 for the kids", es:"Merienda #1 para los niños"},
   {t:"11:30", who:N1, cls:"am", en:"Makes lunch for the children", es:"Hace el almuerzo de los niños"},
   {t:"12:00", who:N1, cls:"am", en:"Gets the 2-yr-old ready for a nap; takes the 6-yr-old to color or play outside", es:"Prepara al de 2 años para la siesta; lleva al de 6 a colorear o a jugar afuera"},
