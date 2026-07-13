@@ -193,6 +193,9 @@
   }
   .foot .contact a:hover{border-color:var(--ink-2)}
   .foot .contact span + span::before{content:' · ';color:var(--line-2);margin:0 .4em}
+  .foot .credit{flex-basis:100%;font-size:13px;color:var(--muted)}
+  .foot .credit a{color:var(--ink-2);border-bottom:1px solid transparent;transition:border-color .15s}
+  .foot .credit a:hover{border-color:var(--ink-2)}
   .replay-btn{background:none;border:none;cursor:pointer;padding:0;color:var(--muted);font-size:inherit;font-family:inherit;transition:color .15s}
   .replay-btn:hover{color:var(--ink)}
 
@@ -433,6 +436,7 @@
       <span><a href="https://github.com/mattdanusergrant" target="_blank" rel="noopener">GitHub</a></span>
     </div>
     <div>Newark, CA · <button class="replay-btn" type="button" onclick="sessionStorage.removeItem('mdg-intro');location.reload()">Replay intro</button></div>
+    <div class="credit">a <a href="https://manydoorsguild.com" target="_blank" rel="noopener">Many Doors Guild</a> website</div>
   </footer>
 
 </div>
