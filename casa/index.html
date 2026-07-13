@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Plan — Carla &amp; Deyanira</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FBF6EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1E1915" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Daily household plan for Carla and Deyanira — schedule, roles, and the shopping loop.">
+<style>
+  :root{
+    --ground:#FBF6EE; --card:#FFFFFF; --ink:#29221D; --muted:#8A7F76;
+    --line:#EBE1D3; --line-soft:#F3ECDF;
+    --am:#C97518; --am-soft:#FAEAD3; --am-ink:#8A4E10;
+    --pm:#5F4F91; --pm-soft:#ECE7F6; --pm-ink:#453A6C;
+    --good:#3E7C55;
+    --shadow:0 1px 2px rgba(41,34,29,.05), 0 8px 24px rgba(41,34,29,.07);
+    --r:16px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#1E1915; --card:#2A2420; --ink:#F3ECE2; --muted:#A99C8F;
+      --line:#3A322B; --line-soft:#332C26;
+      --am:#E7A24E; --am-soft:#3A2C18; --am-ink:#F0C083;
+      --pm:#A493D6; --pm-soft:#2B2540; --pm-ink:#C9BCEC;
+      --good:#7FB08F;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#FBF6EE; --card:#FFFFFF; --ink:#29221D; --muted:#8A7F76;
+    --line:#EBE1D3; --line-soft:#F3ECDF;
+    --am:#C97518; --am-soft:#FAEAD3; --am-ink:#8A4E10;
+    --pm:#5F4F91; --pm-soft:#ECE7F6; --pm-ink:#453A6C;
+    --good:#3E7C55;
+    --shadow:0 1px 2px rgba(41,34,29,.05), 0 8px 24px rgba(41,34,29,.07);
+  }
+  :root[data-theme="dark"]{
+    --ground:#1E1915; --card:#2A2420; --ink:#F3ECE2; --muted:#A99C8F;
+    --line:#3A322B; --line-soft:#332C26;
+    --am:#E7A24E; --am-soft:#3A2C18; --am-ink:#F0C083;
+    --pm:#A493D6; --pm-soft:#2B2540; --pm-ink:#C9BCEC;
+    --good:#7FB08F;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:20px 16px 56px;}
+
+  /* Header */
+  header{padding:8px 2px 4px;}
+  .eyebrow{
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--muted); font-weight:700; margin:0 0 8px;
+  }
+  h1{
+    font-size:30px; line-height:1.08; letter-spacing:-.02em; font-weight:800;
+    margin:0 0 8px; text-wrap:balance;
+  }
+  .season{
+    display:inline-flex; align-items:center; gap:7px; font-size:13.5px; color:var(--muted);
+    background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:5px 12px; margin-top:2px;
+  }
+  .season .dot{width:8px;height:8px;border-radius:50%;background:var(--am);}
+
+  /* Toggle */
+  .toggle{
+    display:inline-flex; background:var(--card); border:1px solid var(--line);
+    border-radius:999px; padding:4px; margin:18px 0 4px; box-shadow:var(--shadow);
+  }
+  .toggle button{
+    appearance:none; border:0; background:transparent; cursor:pointer;
+    font:inherit; font-weight:700; font-size:14px; color:var(--muted);
+    padding:8px 20px; border-radius:999px; transition:color .15s;
+  }
+  .toggle button[aria-pressed="true"]{background:var(--ink); color:var(--ground);}
+  .toggle button:focus-visible{outline:2px solid var(--am); outline-offset:2px;}
+
+  /* Glance */
+  .glance{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0 26px;}
+  .stat{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+    padding:14px 12px; box-shadow:var(--shadow);
+  }
+  .stat .k{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700;}
+  .stat .v{font-size:19px; font-weight:800; margin-top:5px; letter-spacing:-.01em;}
+  .stat.am .v{color:var(--am-ink);} .stat.pm .v{color:var(--pm-ink);}
+
+  /* Section */
+  section{margin:0 0 30px;}
+  h2{
+    font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
+    font-weight:700; margin:0 0 14px; padding-left:2px;
+  }
+
+  /* Timeline */
+  .tl{position:relative; padding-left:0;}
+  .row{display:grid; grid-template-columns:60px 1fr; gap:14px; padding:0 0 6px;}
+  .time{
+    font-size:14px; font-weight:800; text-align:right; padding-top:14px; color:var(--ink);
+    letter-spacing:-.01em; white-space:nowrap;
+  }
+  .track{position:relative; padding:0 0 18px 22px;}
+  .track::before{
+    content:""; position:absolute; left:5px; top:16px; bottom:-2px; width:2px;
+    background:var(--line);
+  }
+  .row:last-child .track::before{display:none;}
+  .node{position:absolute; left:0; top:14px; width:12px; height:12px; border-radius:50%;
+    border:2.5px solid var(--card); box-shadow:0 0 0 1.5px currentColor;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; box-shadow:var(--shadow);
+  }
+  .card .who{font-size:11px; letter-spacing:.07em; text-transform:uppercase; font-weight:700; margin:0 0 3px;}
+  .card .txt{font-size:14.5px;}
+  .am-c{color:var(--am);} .pm-c{color:var(--pm);}
+  .row.am .who{color:var(--am-ink);} .row.pm .who{color:var(--pm-ink);}
+  .row.handoff .card{background:var(--line-soft); border-style:dashed; text-align:center;}
+  .row.handoff .who{color:var(--muted);}
+
+  /* Role cards */
+  .roles{display:flex; flex-direction:column; gap:14px;}
+  .role{border-radius:var(--r); padding:16px 16px 14px; box-shadow:var(--shadow); border:1px solid var(--line);}
+  .role.am{background:linear-gradient(180deg,var(--am-soft),var(--card) 60%); border-color:color-mix(in srgb,var(--am) 30%, var(--line));}
+  .role.pm{background:linear-gradient(180deg,var(--pm-soft),var(--card) 60%); border-color:color-mix(in srgb,var(--pm) 30%, var(--line));}
+  .role .top{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:10px;}
+  .role .name{font-size:20px; font-weight:800; letter-spacing:-.01em;}
+  .role.am .name{color:var(--am-ink);} .role.pm .name{color:var(--pm-ink);}
+  .role .hrs{font-size:13px; font-weight:700; color:var(--muted);}
+  .role ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+  .role li{position:relative; padding-left:20px; font-size:14.5px;}
+  .role li::before{content:""; position:absolute; left:2px; top:8px; width:7px; height:7px; border-radius:2px;}
+  .role.am li::before{background:var(--am);} .role.pm li::before{background:var(--pm);}
+  .role li b{font-weight:800;}
+
+  /* Ownership */
+  .own{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .own .o{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px; box-shadow:var(--shadow);}
+  .own .o .lbl{font-size:11px; letter-spacing:.07em; text-transform:uppercase; font-weight:800; margin-bottom:6px;}
+  .own .o.am .lbl{color:var(--am-ink);} .own .o.pm .lbl{color:var(--pm-ink);}
+  .own .o .h{font-size:16px; font-weight:800; margin-bottom:5px;}
+  .own .o .d{font-size:13px; color:var(--muted);}
+  .own-note{grid-column:1/-1; font-size:13px; color:var(--muted); text-align:center; padding:2px 8px 0;}
+
+  /* Loop */
+  .loop{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px; box-shadow:var(--shadow);}
+  .loop .step{display:grid; grid-template-columns:26px 1fr; gap:12px; align-items:start; padding:9px 0;}
+  .loop .step + .step{border-top:1px dashed var(--line);}
+  .loop .n{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:800; color:#fff;}
+  .loop .step.a .n{background:var(--pm);} .loop .step.b .n{background:var(--am);} .loop .step.c .n{background:var(--good);}
+  .loop .st{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--muted);}
+  .loop .sd{font-size:14.5px; margin-top:1px;}
+
+  /* Chat sample */
+  .chat{background:var(--pm-soft); border:1px solid color-mix(in srgb,var(--pm) 25%, var(--line)); border-radius:14px; padding:13px 14px; margin-top:12px;}
+  .chat .cap{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--pm-ink); margin-bottom:7px;}
+  .chat pre{margin:0; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px; line-height:1.55; white-space:pre-wrap; color:var(--ink);}
+
+  .note{font-size:14px; color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; box-shadow:var(--shadow);}
+  .note b{color:var(--ink); font-weight:700;}
+
+  footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted); text-align:center;}
+
+  @media (max-width:380px){
+    .glance{grid-template-columns:1fr 1fr;}
+    .stat.wide{grid-column:1/-1;}
+    h1{font-size:26px;}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow" data-t="eyebrow">Household Guide</p>
+    <h1 data-t="title">Daily Plan — Carla &amp; Deyanira</h1>
+    <span class="season"><span class="dot"></span><span data-t="season">Summer schedule · both kids home all day</span></span>
+    <div class="toggle" role="group" aria-label="Language">
+      <button type="button" id="btn-en" aria-pressed="true" onclick="setLang('en')">English</button>
+      <button type="button" id="btn-es" aria-pressed="false" onclick="setLang('es')">Español</button>
+    </div>
+  </header>
+
+  <div class="glance">
+    <div class="stat am"><div class="k" data-t="g1k"></div><div class="v">8:00–2:30</div></div>
+    <div class="stat pm"><div class="k" data-t="g2k"></div><div class="v">2:30–6:30</div></div>
+    <div class="stat"><div class="k" data-t="g3k"></div><div class="v">10:30 · 3:30</div></div>
+  </div>
+
+  <section>
+    <h2 data-t="s_day">The Day</h2>
+    <div class="tl" id="timeline"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_roles">Roles</h2>
+    <div class="roles" id="roles"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_own">Who Organizes What</h2>
+    <div class="own">
+      <div class="o am"><div class="lbl" data-t="own_am_l"></div><div class="h" data-t="own_am_h"></div><div class="d" data-t="own_am_d"></div></div>
+      <div class="o pm"><div class="lbl" data-t="own_pm_l"></div><div class="h" data-t="own_pm_h"></div><div class="d" data-t="own_pm_d"></div></div>
+      <div class="own-note" data-t="own_note"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="s_loop">The Shopping Loop</h2>
+    <div class="loop" id="loop"></div>
+    <div class="chat">
+      <div class="cap" data-t="chat_cap"></div>
+      <pre data-t="chat_body"></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="s_labels">Labels</h2>
+    <div class="note" data-t="labels_note"></div>
+  </section>
+
+  <footer data-t="footer"></footer>
+</div>
+
+<script>
+const T = {
+  eyebrow:{en:"Household Guide", es:"Guía de la Casa"},
+  title:{en:"Daily Plan — Carla &amp; Deyanira", es:"Plan Diario — Carla y Deyanira"},
+  season:{en:"Summer schedule · both kids home all day", es:"Horario de verano · los dos niños en casa todo el día"},
+  g1k:{en:"Carla · Morning", es:"Carla · Mañana"},
+  g2k:{en:"Deyanira · Evening", es:"Deyanira · Tarde"},
+  g3k:{en:"Snack times", es:"Meriendas"},
+  s_day:{en:"The Day", es:"El Día"},
+  s_roles:{en:"Roles", es:"Roles"},
+  s_own:{en:"Who Organizes What", es:"Quién Organiza Qué"},
+  s_loop:{en:"The Shopping Loop", es:"El Circuito de Compras"},
+  s_labels:{en:"Labels", es:"Etiquetas"},
+  own_am_l:{en:"Kitchen", es:"Cocina"},
+  own_am_h:{en:"Carla decides", es:"Carla decide"},
+  own_am_d:{en:"Where things go & the labels. Deyanira cleans it anytime she has time.", es:"Dónde va cada cosa y las etiquetas. Deyanira la limpia cuando tiene tiempo."},
+  own_pm_l:{en:"Upstairs closets", es:"Clósets de arriba"},
+  own_pm_h:{en:"Deyanira decides", es:"Deyanira decide"},
+  own_pm_d:{en:"Kids' + both adults' closets — how they're organized.", es:"Clósets de los niños y de los dos adultos — cómo se organizan."},
+  own_note:{en:"Everyone keeps every area clean and returns things to their labeled spot.", es:"Todos mantienen todo limpio y regresan las cosas a su lugar etiquetado."},
+  chat_cap:{en:"Example — evening group-chat text", es:"Ejemplo — mensaje del chat en la tarde"},
+  chat_body:{en:"Short on — July 13\n• Milk — almost out ⭐\n• Eggs — 3 left\n• Diapers size 4 — last bag ⭐\n• Detergent — 1 wash left", es:"Faltantes — 13 julio\n• Leche — casi vacía ⭐\n• Huevos — quedan 3\n• Pañales talla 4 — última bolsa ⭐\n• Detergente — 1 lavada más"},
+  labels_note:{en:"Every spot in the kitchen and the closets has an <b>English + Spanish label</b>, so both nannies always know where things belong — even across the 2:30 handoff. A print-and-cut label sheet lives with the plan.", es:"Cada lugar de la cocina y los clósets tiene una <b>etiqueta en inglés y español</b>, para que las dos niñeras siempre sepan dónde va cada cosa — incluso en el cambio de las 2:30. Hay una hoja de etiquetas para imprimir y recortar."},
+  footer:{en:"Made for the family · Summer schedule", es:"Hecho para la familia · Horario de verano"},
+};
+
+const TIMELINE = [
+  {t:"8:00", who:"Carla", cls:"am", en:"Shops on the way in (paid from 8:00) using last night's list", es:"Va de compras de camino (pagada desde las 8:00) con la lista de anoche"},
+  {t:"8:30", who:"Carla", cls:"am", en:"Arrives with groceries → kids → dishes & put groceries away", es:"Llega con las compras → niños → platos y guardar las compras"},
+  {t:"10:30", who:"Carla", cls:"am", en:"Snack #1 for the kids", es:"Merienda #1 para los niños"},
+  {t:"11:30", who:"Carla", cls:"am", en:"2-yr-old naps → one-on-one with the 6-yr-old; tidy kitchen around it", es:"El de 2 años duerme → tiempo con el de 6; acomodar la cocina alrededor"},
+  {t:"2:30", who:"Handoff", cls:"handoff", en:"Carla leaves, Deyanira arrives — pass the day's notes", es:"Carla se va, Deyanira llega — pasar las notas del día"},
+  {t:"3:30", who:"Deyanira", cls:"pm", en:"Snack #2 for the kids", es:"Merienda #2 para los niños"},
+  {t:"→ 5:45", who:"Deyanira", cls:"pm", en:"Kids → laundry (main focus) → upstairs closets → clean kitchen as time allows", es:"Niños → lavandería (enfoque principal) → clósets de arriba → limpiar la cocina cuando hay tiempo"},
+  {t:"5:45", who:"Deyanira", cls:"pm", en:"Kitchen cleanup + check what's low → text the group chat", es:"Limpieza de la cocina + revisar qué falta → mandar al chat de grupo"},
+];
+
+const ROLES = [
+  {name:"Carla", cls:"am", hrs:{en:"Morning · 8:00–2:30 · EN + ES", es:"Mañana · 8:00–2:30 · EN + ES"}, items:[
+    {en:"<b>Owns kitchen organization</b> — where things go & the labels", es:"<b>Dueña de la organización de la cocina</b> — dónde va cada cosa y las etiquetas"},
+    {en:"Shops on the way in, from the shortage list", es:"Compra de camino, con la lista de faltantes"},
+    {en:"Dishes, counters, put the groceries away", es:"Platos, barras, guardar las compras"},
+    {en:"Snack #1 at 10:30", es:"Merienda #1 a las 10:30"},
+  ]},
+  {name:"Deyanira", cls:"pm", hrs:{en:"Evening · 2:30–6:30 · ES", es:"Tarde · 2:30–6:30 · ES"}, items:[
+    {en:"<b>Owns upstairs-closet organization</b> (kids' + both adults')", es:"<b>Dueña de la organización de los clósets de arriba</b> (niños + los dos adultos)"},
+    {en:"Laundry is the main focus", es:"La lavandería es el enfoque principal"},
+    {en:"Cleans the kitchen as time allows (doesn't reorganize)", es:"Limpia la cocina cuando hay tiempo (no reorganiza)"},
+    {en:"Snack #2 at 3:30 · end-of-day shortage text", es:"Merienda #2 a las 3:30 · lista de faltantes al final del día"},
+  ]},
+];
+
+const LOOP = [
+  {c:"a", st:{en:"Evening · Deyanira", es:"Tarde · Deyanira"}, d:{en:"Texts the group chat what the house is short on", es:"Manda al chat lo que falta en la casa"}},
+  {c:"b", st:{en:"Next morning · Carla", es:"A la mañana · Carla"}, d:{en:"Shops it on her way in, before she arrives", es:"Lo compra de camino, antes de llegar"}},
+  {c:"c", st:{en:"Then", es:"Después"}, d:{en:"Puts everything away in its labeled spot", es:"Guarda todo en su lugar etiquetado"}},
+];
+
+let lang = "en";
+
+function render(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(el=>{
+    const v = T[el.getAttribute("data-t")];
+    if(v) el.innerHTML = v[lang];
+  });
+
+  document.getElementById("timeline").innerHTML = TIMELINE.map(r=>`
+    <div class="row ${r.cls}">
+      <div class="time">${r.t}</div>
+      <div class="track">
+        ${r.cls!=="handoff"?`<span class="node ${r.cls==="am"?"am-c":"pm-c"}"></span>`:""}
+        <div class="card">
+          <div class="who">${r.who==="Handoff"?(lang==="en"?"Handoff":"Cambio"):r.who}</div>
+          <div class="txt">${r[lang]}</div>
+        </div>
+      </div>
+    </div>`).join("");
+
+  document.getElementById("roles").innerHTML = ROLES.map(role=>`
+    <div class="role ${role.cls}">
+      <div class="top"><span class="name">${role.name}</span><span class="hrs">${role.hrs[lang]}</span></div>
+      <ul>${role.items.map(i=>`<li>${i[lang]}</li>`).join("")}</ul>
+    </div>`).join("");
+
+  document.getElementById("loop").innerHTML = LOOP.map((s,i)=>`
+    <div class="step ${s.c}">
+      <div class="n">${i+1}</div>
+      <div><div class="st">${s.st[lang]}</div><div class="sd">${s.d[lang]}</div></div>
+    </div>`).join("");
+}
+
+function setLang(l){
+  lang = l;
+  document.getElementById("btn-en").setAttribute("aria-pressed", l==="en");
+  document.getElementById("btn-es").setAttribute("aria-pressed", l==="es");
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
