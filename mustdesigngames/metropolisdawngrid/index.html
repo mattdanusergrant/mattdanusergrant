@@ -1544,21 +1544,12 @@
       ctx.fillStyle=pal.terrPeak;ctx.beginPath();ctx.moveTo(mx,myy-9);ctx.lineTo(mx+8,myy+8);ctx.lineTo(mx-8,myy+8);ctx.closePath();ctx.fill();
       ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.moveTo(mx,myy-9);ctx.lineTo(mx+3,myy-3);ctx.lineTo(mx-3,myy-3);ctx.closePath();ctx.fill();}
   }
-  function drawHighway(x,y,c,r){
-    var mids=connOf(c,r,isHwy),cx0=hcx(c,r),cy0=hcy(r);
-    var deck=deckTint(c,r);
-    // short ramp spurs from the interchange centre out to any adjoining city road (drawn UNDER the carriageway)
-    var rampMids=connOf(c,r,isRoadCell);
+  function highwayExtras(c,r){                                                 // per-hex bits drawn on top of the layered carriageway: ramps + the interchange plaza
+    var cx0=hcx(c,r),cy0=hcy(r),rampMids=connOf(c,r,isRoadCell);
     if(rampMids.length){ctx.strokeStyle=pal.hw;ctx.lineWidth=6;ctx.lineCap='round';ctx.beginPath();
       for(var ri=0;ri<rampMids.length;ri++){ctx.moveTo(cx0,cy0);ctx.lineTo(rampMids[ri][0],rampMids[ri][1]);}ctx.stroke();}
-    if(deck)strokeRibbon(c,r,mids,deck,21);                                    // viaduct/tunnel casing where it crosses water or rock
-    strokeRibbon(c,r,mids,pal.hw,17);                                          // the carriageway — one continuous winding ribbon
-    strokeRibbon(c,r,mids,pal.hwLane,13);                                      // pale edge lanes
-    strokeRibbon(c,r,mids,pal.hw,10);
-    if(mids.length<=2)strokeRibbon(c,r,mids,pal.hwMed,1.6,[5,7]);              // gold centre dashes on through-runs (interchange stays clean)
-    else{ctx.fillStyle=pal.hwMed;ctx.beginPath();ctx.arc(cx0,cy0,2,0,6.2832);ctx.fill();}
     if(c===HWGC&&r===HWGR){                                                    // the interchange: a warm DAWN gateway plaza
-      ctx.beginPath();hexPath(x,y,2);
+      ctx.beginPath();hexPath(hx(c,r),hy(r),2);
       ctx.fillStyle='rgba(243,194,74,.22)';ctx.fill();
       ctx.strokeStyle=pal.hwGlow;ctx.lineWidth=1.5;ctx.stroke();
     }
@@ -1619,35 +1610,63 @@
     if(mids.length>=3){ctx.fillStyle=color;ctx.beginPath();ctx.arc(cx0,cy0,width/2,0,6.2832);ctx.fill();}   // solid junction node fills the plaza
   }
   function deckTint(c,r){var t=grid[idx(c,r)].terr;return t==='water'?'#8a7f6a':t==='mountain'?'#6f6c72':null;}
-  function drawRoad(x,y,c,r){
-    var mids=connOf(c,r,drivable),deck=deckTint(c,r);
-    if(deck)strokeRibbon(c,r,mids,deck,15);                            // bridge/tunnel deck under the street
-    strokeRibbon(c,r,mids,pal.curb,10);                                // sidewalk shoulder
-    strokeRibbon(c,r,mids,pal.road,7);                                 // road surface
-    if(mids.length<=2)strokeRibbon(c,r,mids,pal.lane,1,[3,5]);         // centre dashes on through-runs only (a junction stays clean)
-    else{ctx.fillStyle=pal.lane;ctx.beginPath();ctx.arc(hcx(c,r),hcy(r),1.4,0,6.2832);ctx.fill();}   // a small dot marks the junction centre
+
+  // CONTINUOUS NETWORK PAINTING. The old code drew each hex fully (casing+surface+dashes) before
+  // the next, so a hex's lighter CASING overpainted its neighbour's surface at the shared edge —
+  // a visible seam per hex. Instead we paint the whole network in LAYERS: every casing first,
+  // then every surface on top. Adjacent hexes' ribbons meet at the shared edge midpoint, so a
+  // single-colour surface layer reads as one unbroken road; the casing survives only as the outer
+  // shoulder that runs continuously along the whole path.
+  function ribbonLayer(cells,pred,color,width,dash){       // stroke ONE layer across every hex in `cells`, in a single path
+    if(!cells.length)return;
+    ctx.beginPath();
+    for(var i=0;i<cells.length;i++)ribbonPath(hcx(cells[i][0],cells[i][1]),hcy(cells[i][1]),connOf(cells[i][0],cells[i][1],pred));
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';
+    if(dash)ctx.setLineDash(dash);ctx.stroke();if(dash)ctx.setLineDash([]);
   }
-  function drawRail(x,y,c,r){
-    var mids=connOf(c,r,isRail),deck=(grid[idx(c,r)].t!=='road')?deckTint(c,r):null;
-    if(deck)strokeRibbon(c,r,mids,deck,13);                            // rail-only bridge/tunnel deck
-    strokeRibbon(c,r,mids,pal.railBed,7);                              // ballast bed
-    strokeRibbon(c,r,mids,pal.tie,4,[2,3]);                            // sleepers: a dashed dark band reads as ties
-    // twin running rails offset either side of the ribbon
-    var cx0=hcx(c,r),cy0=hcy(r);
+  function junctionDots(cells,pred,color,rad){             // a small node at every 3+-way hex so branches merge cleanly
+    ctx.fillStyle=color;
+    for(var i=0;i<cells.length;i++){var c=cells[i][0],r=cells[i][1];
+      if(connOf(c,r,pred).length>=3){ctx.beginPath();ctx.arc(hcx(c,r),hcy(r),rad,0,6.2832);ctx.fill();}}
+  }
+  function terrCells(cells,t){return cells.filter(function(p){return grid[idx(p[0],p[1])].terr===t;});}
+  function throughCells(cells,pred){return cells.filter(function(p){return connOf(p[0],p[1],pred).length<=2;});}
+  function railTwin(c,r){                                   // twin running rails + crossing marks — thin, same-colour, safe to draw per hex
+    var mids=connOf(c,r,isRail),cx0=hcx(c,r),cy0=hcy(r);
     ctx.strokeStyle=pal.rail;ctx.lineWidth=1.2;ctx.lineCap='round';
-    function railCurve(p0,p1){var dx=p1[0]-p0[0],dy=p1[1]-p0[1],L=Math.hypot(dx,dy)||1,ox=-dy/L*1.6,oy=dx/L*1.6;   // smooth twin curve through the centre
+    function railCurve(p0,p1){var dx=p1[0]-p0[0],dy=p1[1]-p0[1],L=Math.hypot(dx,dy)||1,ox=-dy/L*1.6,oy=dx/L*1.6;
       ctx.beginPath();ctx.moveTo(p0[0]+ox,p0[1]+oy);ctx.quadraticCurveTo(cx0+ox,cy0+oy,p1[0]+ox,p1[1]+oy);
       ctx.moveTo(p0[0]-ox,p0[1]-oy);ctx.quadraticCurveTo(cx0-ox,cy0-oy,p1[0]-ox,p1[1]-oy);ctx.stroke();}
-    function railArm(p){var dx=p[0]-cx0,dy=p[1]-cy0,L=Math.hypot(dx,dy)||1,ox=-dy/L*1.6,oy=dx/L*1.6;              // straight twin from centre out to one edge
+    function railArm(p){var dx=p[0]-cx0,dy=p[1]-cy0,L=Math.hypot(dx,dy)||1,ox=-dy/L*1.6,oy=dx/L*1.6;
       ctx.beginPath();ctx.moveTo(cx0+ox,cy0+oy);ctx.lineTo(p[0]+ox,p[1]+oy);
       ctx.moveTo(cx0-ox,cy0-oy);ctx.lineTo(p[0]-ox,p[1]-oy);ctx.stroke();}
     if(mids.length===2)railCurve(mids[0],mids[1]);
     else if(mids.length===1)railArm(mids[0]);
-    else if(mids.length>=3)for(var i2=0;i2<mids.length;i2++)railArm(mids[i2]);
-    if(grid[idx(c,r)].t==='road'){                                     // level crossing: red centre bolt + white posts
+    else if(mids.length>=3)for(var i=0;i<mids.length;i++)railArm(mids[i]);
+    if(grid[idx(c,r)].t==='road'){                          // level crossing: red centre bolt + white posts
       ctx.fillStyle='#E9E4D6';ctx.fillRect(cx0-7,cy0-2,2,4);ctx.fillRect(cx0+5,cy0-2,2,4);
-      ctx.fillStyle='#D8452F';ctx.fillRect(cx0-1,cy0-1,2,2);
-    }
+      ctx.fillStyle='#D8452F';ctx.fillRect(cx0-1,cy0-1,2,2);}
+  }
+  function paintNetworks(vx0,vy0,vx1,vy1){
+    var hwy=[],road=[],rail=[],r,c,g;
+    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){g=grid[idx(c,r)];if(!g)continue;
+      if(g.t==='highway')hwy.push([c,r]);else if(g.t==='road')road.push([c,r]);
+      if(g.rail)rail.push([c,r]);}
+    // ---- FREEWAY (bottom) ----
+    ribbonLayer(terrCells(hwy,'water'),isHwy,'#8a7f6a',21);ribbonLayer(terrCells(hwy,'mountain'),isHwy,'#6f6c72',21);   // viaduct/tunnel casings
+    ribbonLayer(hwy,isHwy,pal.hw,17);ribbonLayer(hwy,isHwy,pal.hwLane,13);ribbonLayer(hwy,isHwy,pal.hw,10);             // carriageway + pale edge lanes
+    ribbonLayer(throughCells(hwy,isHwy),isHwy,pal.hwMed,1.6,[5,7]);junctionDots(hwy,isHwy,pal.hwMed,2);                 // flowing gold centre-line
+    for(var hi=0;hi<hwy.length;hi++)highwayExtras(hwy[hi][0],hwy[hi][1]);                                              // ramps + interchange
+    // ---- ROADS ----
+    ribbonLayer(terrCells(road,'water'),drivable,'#8a7f6a',15);ribbonLayer(terrCells(road,'mountain'),drivable,'#6f6c72',15);   // bridge/tunnel decks
+    ribbonLayer(road,drivable,pal.curb,10);                                                                            // continuous shoulder (all cells)…
+    ribbonLayer(road,drivable,pal.road,7);                                                                             // …then the surface on top → one unbroken ribbon
+    ribbonLayer(throughCells(road,drivable),drivable,pal.lane,1,[3,5]);junctionDots(road,drivable,pal.lane,1.4);       // centre dashes / junction dots
+    // ---- RAIL (on top) ----
+    var railDeck=rail.filter(function(p){return grid[idx(p[0],p[1])].t!=='road';});
+    ribbonLayer(terrCells(railDeck,'water'),isRail,'#8a7f6a',13);ribbonLayer(terrCells(railDeck,'mountain'),isRail,'#6f6c72',13);
+    ribbonLayer(rail,isRail,pal.railBed,7);ribbonLayer(rail,isRail,pal.tie,4,[2,3]);                                   // ballast bed + sleepers
+    for(var ti=0;ti<rail.length;ti++)railTwin(rail[ti][0],rail[ti][1]);                                                // twin running rails + crossings
   }
   function py(v){return Math.round(v);}
   function drawPark(x,y,cell){
@@ -1850,10 +1869,9 @@
       for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++)if(arr[idx(c,r)])hexPath(hx(c,r),hy(r),1);
       ctx.fillStyle=brush==='power'?'rgba(224,169,62,.15)':'rgba(76,154,209,.15)';ctx.fill();
     }
-    // roads + highway first, then rail on top (so a level crossing shows the track over the road)
-    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(!cell)continue;x=hx(c,r);y=hy(r);
-      if(cell.t==='highway')drawHighway(x,y,c,r);else if(cell.t==='road')drawRoad(x,y,c,r);}
-    for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){cell=grid[idx(c,r)];if(cell&&cell.rail)drawRail(hx(c,r),hy(r),c,r);}
+    // freeway + roads + rail, painted as continuous LAYERED networks (casings before surfaces),
+    // so each type reads as one unbroken path instead of overlapping per-hex sections
+    paintNetworks(vx0,vy0,vx1,vy1);
     // structures — every building is one hex: hex lot base + the sprite scaled into the inscribed square
     for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){
       cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway')continue;
