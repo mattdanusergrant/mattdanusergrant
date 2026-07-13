@@ -2264,12 +2264,13 @@
       if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,1]);}   // one hex per building
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
-    var payload=JSON.stringify({v:9,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
+    var payload=JSON.stringify({v:10,ms:maxMS,stock:STOCK,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
     localStorage.setItem(SAVE_KEY,payload);netSaveCity(payload);}catch(e){}}   // mirror to the cloud (throttled, offline-safe)
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
-    if(!Array.isArray(d)&&d.v!==9){try{localStorage.removeItem(SAVE_KEY);}catch(e2){}return;}   // HEX WORLD: square-era saves (v<9) start fresh
+    if(!Array.isArray(d)&&d.v!==10){try{localStorage.removeItem(SAVE_KEY);}catch(e2){}return;}   // multi-resource economy: pre-v10 saves start fresh
     var list=Array.isArray(d)?[]:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
-    if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
+    if(!Array.isArray(d)){if(d.stock&&typeof d.stock==='object')RESIDS.forEach(function(k){if(typeof d.stock[k]==='number')STOCK[k]=d.stock[k];});
+      if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
       if(Array.isArray(d.ct))contracts=d.ct.filter(function(a){return CDEF[a[0]];}).map(function(a){return {key:a[0],target:a[1],reward:a[2],inv:!!a[3],text:a[4]};});
       if(typeof d.cd==='number')contractsDone=d.cd;
       if(d.ev&&EVDEF[d.ev.k])activeEv={key:d.ev.k,left:Math.max(1,d.ev.l|0),chosen:d.ev.c||null};
@@ -2421,7 +2422,8 @@
     stock:function(){return STOCK;},sup:function(){return SUP;},extract:function(c,r){return inB(c,r)?extractorOutput(c,r,grid[idx(c,r)]):null;},econres:function(){return econ.res;},
     growthsup:function(t){return growthSup(t);},blocked:function(c,r){return blocker(c,r);},tick:function(){tick();},
     tradeTest:function(res){TRADES.length=0;TRADES.push({lat:0,lon:0,tier:3,supplies:res,wantsGoods:true,name:'TestPartner'});railToWorld=true;connectedRailCount=12;},
-    computeRes:function(){computeResources();}   // resource step only (skips computeServices' rail recompute) — test harness
+    computeRes:function(){computeResources();},   // resource step only (skips computeServices' rail recompute) — test harness
+    save:function(){save();},saveKey:function(){return SAVE_KEY;}
   };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
