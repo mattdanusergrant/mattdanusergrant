@@ -233,11 +233,10 @@
       <div class="meter"><span class="bar"><i id="dem-com"></i></span><b>C</b></div>
       <div class="meter"><span class="bar"><i id="dem-ind"></i></span><b>I</b></div>
     </div>
-    <div class="res" id="res" style="cursor:pointer" title="Supply chain — Works make Materials, Factories turn Materials into Goods, Shops sell Goods. Tap for the full production vs consumption breakdown.">
-      <div class="rstat"><span class="rn" id="mat">0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Materials</span></div>
+    <div class="res" id="res" style="cursor:pointer" title="Raw resources — Works extract them from the land (each terrain a different one); your city needs a basket. Short on one? Trade for it. Tap for the full breakdown.">
+      <div class="rstat" id="rstat-res"><span class="rn" id="reslow">✓</span><span class="rl"><span class="dot" style="background:#8AA84A"></span>Resources</span></div>
       <div class="rstat"><span class="rn" id="goods">0</span><span class="rl"><span class="dot" style="background:#7C6CB0"></span>Goods</span></div>
       <div class="rstat"><span class="rn" id="exp">0</span><span class="rl"><span class="dot" style="background:#5C8A55"></span>Exports</span></div>
-      <div class="rstat" id="terrstat" title="Extra Materials per tick your Works earn from ore (+80%) and forest (+40%) terrain — put Works where the land favours them"><span class="rn" id="terrb">+0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Terrain</span></div>
       <div class="rstat" id="pwrstat" title="City power — stations generate it, buildings draw it, roads carry it. A deficit browns out unpowered buildings until you add capacity."><span class="rn" id="pwr">0</span><span class="rl"><span class="dot" style="background:#E0A93E"></span>Power</span></div>
       <div class="rstat" id="watstat" title="City water — towers (and coasts/lakes) supply it, buildings draw it, roads carry it. A deficit leaves buildings dry until you add capacity."><span class="rn" id="wat">0</span><span class="rl"><span class="dot" style="background:#4C88B8"></span>Water</span></div>
       <div class="rstat" id="trafstat" title="Traffic — a growing city generates trips. Roads carry some; Transit stops carry far more. When demand outruns capacity the streets jam and growth slows — build Transit to keep it moving."><span class="rn" id="traf">0%</span><span class="rl"><span class="dot" style="background:#C0563F"></span>Transit</span></div>
@@ -597,6 +596,9 @@
   var RESIDS=['lumber','grain','ore','stone','oil','fish'];
   var RESICON={lumber:'🪵',grain:'🌾',ore:'⛏',stone:'🧱',oil:'🛢',fish:'🐟'};
   var RESNAME={lumber:'Lumber',grain:'Grain',ore:'Ore',stone:'Stone',oil:'Oil',fish:'Fish'};
+  var RESMETA={lumber:{c:'#4E7A38',src:'forest',use:'Construction uses'},grain:{c:'#C9A23A',src:'farmland',use:'Population eats'},
+               ore:{c:'#8A8378',src:'mountains',use:'Factories draw'},stone:{c:'#A98F6E',src:'hills',use:'Factories draw'},
+               oil:{c:'#5A5560',src:'the desert',use:'Towers draw'},fish:{c:'#3E8EA8',src:'the coast',use:'Food (subs. grain)'}};
   var TERR2RES={forest:'lumber',plains:'grain',hills:'stone',desert:'oil'};   // buildable resource terrains (gated by region profile); ore/fish are adjacency-mined from always-present mountain/water
   var RES2TERR={lumber:'forest',grain:'plains',stone:'hills',oil:'desert',ore:'mountain',fish:'water'};
   var _profCache={},_anchorCache={};
@@ -657,10 +659,16 @@
     return 'grass';
   }
   function noBuild(t){return t==='water'||t==='mountain';}     // water & mountains can't be built on
-  function nearMountain(c,r){                                  // a Works next to a peak mines its ore (+80%)
+  function nearMountain(c,r){                                  // a Works next to a peak mines its ore
     var nn=nbs(c,r);
     for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];
       if(inB(a,b)&&grid[idx(a,b)].terr==='mountain')return true;}
+    return false;
+  }
+  function nearWater(c,r){                                     // a Works next to water works the fishery
+    var nn=nbs(c,r);
+    for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];
+      if(inB(a,b)&&grid[idx(a,b)].terr==='water')return true;}
     return false;
   }
   // terrain make-up over a representative window, scored against the cross-world baseline →
@@ -1094,44 +1102,73 @@
     if(t==='fac'&&!(matStock>0.01||matHealthy))return 'mat';        // factories need Materials
     return '';
   }
-  // supply chain: Works → Materials → Factories → Goods → Shops (city-wide pools, no routing)
-  var matWanted=false, terrBonus=0;
-  var tradePremium=1, tradeMatIn=0, tradeGoodsIn=0;     // set each tick from the trade partners' inflow
-  // per-tick flow snapshot for the Economy readout panel (production vs consumption, per resource)
-  var econ={mat:{make:0,terr:0,imp:0,use:0,cap:0,stock:0,works:0},
-            goods:{make:0,imp:0,sell:0,need:0,exp:0,stock:0,facs:0,shops:0}};
+  // ---- multi-resource economy: each terrain yields a distinct raw resource; the city needs a BASKET ----
+  // Works are generic EXTRACTORS — output is set by the terrain they sit on / are adjacent to. Buildings
+  // consume a basket (grain→pop, lumber→construction, ore+stone→goods, oil→towers, fish→food alt); a
+  // resource the map lacks must be imported. SUP[id] (0.35..1) is how well each need is met → soft slowdown.
+  var STOCK={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};   // city-wide raw-resource pools
+  var SUP={lumber:1,grain:1,ore:1,stone:1,oil:1,fish:1};     // supply ratio per resource (floored 0.35) — throttles growth
+  var RES_YIELD=2.4;                                          // raw units per extractor level per tick
+  var matWanted=false, terrBonus=0, matStock=0;              // matStock kept as ore+stone (legacy blocker compat)
+  var tradePremium=1, tradeGoodsIn=0, tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};
+  var econ={res:{},goods:{make:0,imp:0,sell:0,need:0,exp:0,stock:0,facs:0,shops:0}};
+  RESIDS.forEach(function(id){econ.res[id]={make:0,imp:0,use:0,need:0,stock:0,sup:1};});
+  function extractorOutput(c,r,g){                            // the resource a Works pulls, decided by its terrain
+    var t=g.terr, prof=regionProfile(WOX,WOY);
+    if(t==='forest')return 'lumber'; if(t==='plains')return 'grain';
+    if(t==='hills')return 'stone';   if(t==='desert')return 'oil';
+    if(nearMountain(c,r))return (prof.has.ore&&bandOf(c,r)===prof.band.ore)?'ore':null;   // ore only where the region has it, in its band
+    if(nearWater(c,r))return (prof.has.fish&&bandOf(c,r)===prof.band.fish)?'fish':null;   // fishery likewise
+    return null;                                              // a Works on bare grass extracts nothing — site it on resource terrain
+  }
+  function supOf(avail,need){return need<=1e-6?1:Math.max(0.35,Math.min(1,avail/need));}
   function computeResources(){
-    var works=0,facs=0,shops=0,matYield=0;terrBonus=0;
-    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-      if(g.t==='ind'){var wc=i%cols,wr=(i/cols)|0;works+=g.lvl;var mult=nearMountain(wc,wr)?1.8:g.terr==='forest'?1.4:1;matYield+=g.lvl*2*mult;terrBonus+=g.lvl*2*(mult-1);} // Works by a mountain mine ore (+80%); on forest = timber (+40%)
-      else if(g.t==='fac')facs+=g.lvl;else if(g.t==='com')shops+=g.lvl;}
-    matStock+=matYield;                                  // Works extract Materials (ore/forest yield more)
-    // trade partners: each ships surplus in over the shared rail link (Materials, or Goods from coast cities)
-    tradeMatIn=0;tradeGoodsIn=0;tradePremium=1;
+    var facs=0,shops=0,works=0,resLv=0,towerLv=0,zoneLv=0,ti,tp;
+    var make={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g||!g.lvl)continue;var t=g.t;
+      if(t==='ind'){works+=g.lvl;var id=extractorOutput(i%cols,(i/cols)|0,g);if(id)make[id]+=g.lvl*RES_YIELD;}
+      else if(t==='fac')facs+=g.lvl; else if(t==='com')shops+=g.lvl;
+      else if(t==='res')resLv+=g.lvl; else if(t==='tower')towerLv+=g.lvl;
+      if(ZONES[t])zoneLv+=g.lvl;}
+    // trade imports per resource (filled by the trade phase from rail partners)
+    tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};tradeGoodsIn=0;tradePremium=1;
     if(TRADES.length&&railToWorld){
       var landCount=0, perRail=Math.min(connectedRailCount*0.8,25);
-      for(var ti=0;ti<TRADES.length;ti++){var tp=TRADES[ti], flow=perRail*(1+(tp.tier||2)*0.15);
-        if(tp.supplies==='goods')tradeGoodsIn+=flow; else {tradeMatIn+=flow;landCount++;}}
-      tradeMatIn=Math.min(tradeMatIn,34); tradeGoodsIn=Math.min(tradeGoodsIn,22);   // the rail line has finite throughput
-      if(landCount>0)tradePremium=Math.min(1.7,1.5+landCount*0.05);   // land partners short on Goods pay a premium for your exports
+      for(ti=0;ti<TRADES.length;ti++){tp=TRADES[ti];var flow=perRail*(1+(tp.tier||2)*0.15);
+        if(tp.supplies==='goods')tradeGoodsIn+=flow; else if(tradeImp[tp.supplies]!==undefined){tradeImp[tp.supplies]+=flow;landCount++;}}
+      var cap=28;RESIDS.forEach(function(id){tradeImp[id]=Math.min(tradeImp[id],cap);});tradeGoodsIn=Math.min(tradeGoodsIn,22);
+      if(landCount>0)tradePremium=Math.min(1.7,1.5+landCount*0.05);   // partners short on Goods pay a premium for your exports
     }
-    matStock+=tradeMatIn;                                // ore/timber partners ship raw Materials
-    var facCap=facs*3, drawn=Math.min(matStock,facCap);
-    matStock-=drawn; goodsStock+=drawn*(2/3);            // Factories convert 3 Materials → 2 Goods
-    goodsStock+=tradeGoodsIn;                            // coast partners ship finished Goods straight in
-    var need=shops*1.5, sold=Math.min(goodsStock,need);
-    goodsStock-=sold;
-    // rail exports: a rail line reaching the highway ships surplus Goods out to the world (seed of inter-city trade)
+    RESIDS.forEach(function(id){STOCK[id]+=make[id]+tradeImp[id];});     // production + imports into the pools
+    // ---- needs (per tick) ----
+    var need={grain:resLv*0.4+towerLv*0.7, lumber:zoneLv*0.2, ore:facs*1.5, stone:facs*1.5, oil:towerLv*0.4, fish:0};
+    var foodAvail=STOCK.grain+STOCK.fish;                                // fish substitutes for grain as food
+    SUP.grain=supOf(foodAvail,need.grain);
+    SUP.lumber=supOf(STOCK.lumber,need.lumber);
+    SUP.ore=supOf(STOCK.ore,need.ore); SUP.stone=supOf(STOCK.stone,need.stone);
+    SUP.oil=supOf(STOCK.oil,need.oil); SUP.fish=1;
+    // ---- consumption ----
+    var foodUse=Math.min(foodAvail,need.grain);
+    if(foodAvail>0){var fg=foodUse*STOCK.grain/foodAvail;STOCK.grain-=fg;STOCK.fish-=(foodUse-fg);}
+    STOCK.lumber-=Math.min(STOCK.lumber,need.lumber);
+    STOCK.oil-=Math.min(STOCK.oil,need.oil);
+    var made=Math.min(STOCK.ore,STOCK.stone,facs*1.5);                   // Factories need BOTH ore AND stone → Goods
+    STOCK.ore-=made;STOCK.stone-=made;goodsStock+=made*(2/1.5)+tradeGoodsIn;
+    var needG=shops*1.5, sold=Math.min(goodsStock,needG);goodsStock-=sold;
     exportRate=0;
-    if(railToWorld&&goodsStock>0.01){var cap=Math.min(connectedRailCount*1.2,60);exportRate=Math.min(goodsStock,cap);goodsStock-=exportRate;}
-    matStock=Math.max(0,Math.min(matStock,CAPRES)); goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));
-    matHealthy=(facCap-drawn)<=0.01;                     // factories got all the Materials they wanted
-    goodsHealthy=(need-sold)<=0.01;                      // shops got all the Goods they wanted
-    matWanted=(facCap-drawn>0.01);                       // Works in demand when factories are starved
-    demand.fac=(shops>0&&(!goodsHealthy||goodsStock<need+1))?3:(matStock>2?1:(facs<shops?1:-1));  // feed shops, or process piled-up Materials (bootstraps the chain)
-    // snapshot this tick's flows so the Economy panel can show production vs consumption per resource
-    econ.mat.works=works;econ.mat.make=matYield;econ.mat.terr=terrBonus;econ.mat.imp=tradeMatIn;econ.mat.use=drawn;econ.mat.cap=facCap;econ.mat.stock=matStock;
-    econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=drawn*(2/3);econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=need;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;
+    if(railToWorld&&goodsStock>0.01){var xcap=Math.min(connectedRailCount*1.2,60);exportRate=Math.min(goodsStock,xcap);goodsStock-=exportRate;}
+    RESIDS.forEach(function(id){STOCK[id]=Math.max(0,Math.min(STOCK[id],CAPRES));});
+    goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));
+    // ---- flags + legacy compat ----
+    matStock=STOCK.ore+STOCK.stone;
+    matHealthy=(SUP.ore>=0.999&&SUP.stone>=0.999); goodsHealthy=(needG-sold)<=0.01;
+    matWanted=(SUP.lumber<1||SUP.grain<1||SUP.ore<1||SUP.stone<1);       // Works speed up when any raw is short
+    SUP.goods=supOf(goodsStock+sold,needG);
+    demand.fac=(shops>0&&!goodsHealthy)?3:((STOCK.ore>2&&STOCK.stone>2)?1:(facs<shops?1:-1));
+    // ---- flow snapshot for the Economy panel ----
+    RESIDS.forEach(function(id){var e=econ.res[id];e.make=make[id];e.imp=tradeImp[id];e.need=need[id];e.stock=STOCK[id];e.sup=SUP[id];});
+    econ.res.grain.food=foodAvail;                                       // grain panel notes fish-as-food
+    econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=made*(2/1.5);econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=needG;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;econ.goods.sup=SUP.goods;
   }
 
   function complement(c,r,t){
@@ -1179,7 +1216,7 @@
     if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='tower')p+=g.lvl*g.lvl*135;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;else if(LMARK[g.t])p+=60;}
     p+=Math.round(exportRate*35);                         // trade income from rail exports sustains extra population
     popTarget=p;}
-  var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp'),terrEl=document.getElementById('terrb'),terrStat=document.getElementById('terrstat');
+  var reslowEl=document.getElementById('reslow'),reswStat=document.getElementById('rstat-res'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp');
   var pwrEl=document.getElementById('pwr'),pwrStat=document.getElementById('pwrstat'),watEl=document.getElementById('wat'),watStat=document.getElementById('watstat');
   var trafEl=document.getElementById('traf'),trafStat=document.getElementById('trafstat');
   function meterUI(el,stat,gen,use,label,src){var net=gen-use;
@@ -1187,9 +1224,13 @@
     el.style.color=gen===0?'':(net>=0?'#5FBE6E':'#F0876A');
     stat.title='City '+label+' — generating '+gen.toLocaleString()+', using '+use.toLocaleString()+(net<0?' · DEFICIT: buildings going without, add '+src:' · surplus')+'. Roads carry '+label+'.';
     stat.style.opacity=(gen>0||use>0)?1:0.38;}
-  function updateResourceUI(){matEl.textContent=Math.round(matStock);goodsEl.textContent=Math.round(goodsStock);expEl.textContent=Math.round(exportRate);
-    matEl.style.color=matHealthy?'':'#F0876A';goodsEl.style.color=goodsHealthy?'':'#F0876A';expEl.style.color=exportRate>0.5?'#5FBE6E':'';
-    terrEl.textContent='+'+Math.round(terrBonus);terrStat.style.opacity=terrBonus>0.5?1:0.38;
+  function updateResourceUI(){goodsEl.textContent=Math.round(goodsStock);expEl.textContent=Math.round(exportRate);
+    goodsEl.style.color=goodsHealthy?'':'#F0876A';expEl.style.color=exportRate>0.5?'#5FBE6E':'';
+    // Resources tile: surface the worst-supplied resource (buildings needing it grow slowly until you trade for it)
+    var worst=null,ws=1.01;RESIDS.forEach(function(id){if(econ.res[id].need>0.05&&SUP[id]<ws){ws=SUP[id];worst=id;}});
+    if(!worst){reslowEl.textContent='✓';reslowEl.style.color='#5FBE6E';reswStat.title='All resource needs met.';reswStat.style.opacity=0.72;}
+    else{reslowEl.textContent=RESICON[worst]+' '+Math.round(ws*100)+'%';reslowEl.style.color=ws<0.6?'#E4553C':ws<0.95?'#E0A93E':'#5FBE6E';
+      reswStat.title='Lowest resource: '+RESNAME[worst]+' at '+Math.round(ws*100)+'% of demand'+(ws<0.999?' — buildings needing it grow slowly; extract more or trade for it.':'.');reswStat.style.opacity=1;}
     meterUI(pwrEl,pwrStat,powerGen,powerUse,'power','a station');
     meterUI(watEl,watStat,waterGen,waterUse,'water','a tower');
     if(trafEl){var cp=Math.round(congestion*100);trafEl.textContent=cp+'%';
@@ -1530,38 +1571,41 @@
             +'<span>Net / tick</span><b style="color:'+nc+'">'+(net>=0.05?'+':net<=-0.05?'−':'')+ef(net)+' · '+ns+'</b></div>'
           +(hint?'<div style="font:500 10px system-ui;color:var(--muted);margin-top:4px;line-height:1.4">'+hint+'</div>':'')+'</div>';};
 
-      // Materials: Works produce (terrain-boosted) + rail imports → Factories consume
-      var mNet=e.mat.make+e.mat.imp-e.mat.use,mRows='';
-      mRows+=flowRow('Works produce'+(e.mat.terr>0.05?' (terrain +'+ef(e.mat.terr)+')':''),e.mat.make,true);
-      if(e.mat.imp>0.05)mRows+=flowRow('Imported by rail',e.mat.imp,true);
-      mRows+=flowRow('Factories consume',e.mat.use,false);
-      var mHint=e.mat.works===0?'No Works yet — Works mine Materials (put them by mountains for ore +80%, on forest +40%).'
-        :(e.mat.use<e.mat.cap-0.05?'Factories want '+ef(e.mat.cap)+'/tick but only get '+ef(e.mat.use)+' — add Works or import more.'
-        :(mNet>2?'Materials piling up — add a Factory to turn them into Goods.':''));
-
-      // Goods: Factories produce + imports → Shops sell + rail exports
-      var gNet=e.goods.make+e.goods.imp-e.goods.sell-e.goods.exp,gRows='';
-      gRows+=flowRow('Factories produce',e.goods.make,true);
-      if(e.goods.imp>0.05)gRows+=flowRow('Imported by rail',e.goods.imp,true);
-      gRows+=flowRow('Shops sell',e.goods.sell,false);
-      if(e.goods.exp>0.05)gRows+=flowRow('Exported to '+hubShort(),e.goods.exp,false);
-      var gHint=e.goods.facs===0?'No Factories yet — they turn 3 Materials into 2 Goods, which Shops sell.'
-        :(e.goods.sell<e.goods.need-0.05?'Shops want '+ef(e.goods.need)+'/tick but only get '+ef(e.goods.sell)+' — add Factories or Works upstream.'
-        :(e.goods.exp>0.05?'Surplus Goods rail out to '+hubShort()+' for export income.'
-        :(gNet>2?'Goods surplus — lay rail to the highway to export them for income.':'')));
-
-      // Power & Water: city-wide budgets (already computed each tick)
+      var prof=regionProfile(WOX,WOY);
+      // one block per raw resource in play: extractors produce + rail imports → consumers draw
+      var resBlocks='';
+      RESIDS.forEach(function(id){var r=e.res[id],m=RESMETA[id];
+        if(r.make<0.05&&r.need<0.05&&r.stock<0.5&&r.imp<0.05)return;    // skip resources not in play
+        var rows=flowRow('Extractors produce',r.make,true);
+        if(r.imp>0.05)rows+=flowRow('Imported by rail',r.imp,true);
+        if(r.need>0.05)rows+=flowRow(m.use,r.need,false);
+        var net=r.make+r.imp-r.need;
+        var absent=!prof.has[id]&&(id==='ore'||id==='fish'?!prof.has[id]:prof.absent.indexOf(id)>=0);
+        var hint=r.sup<0.999
+          ?(r.make<0.05?('No '+RESNAME[id]+' extracted — '+(prof.has[id]?'site a Works on '+m.src:'not on this map, <b>import it by rail</b>')+'.')
+            :'Short on '+RESNAME[id]+' — add a Works on '+m.src+', or trade for it.')
+          :(net>3?RESNAME[id]+' surplus — a partner short on it will trade for yours.':'');
+        var supLbl=r.sup<0.999?' · ⚠ '+Math.round(r.sup*100)+'%':'';
+        resBlocks+=block(RESICON[id]+' '+RESNAME[id],m.c,rows,net,'stock '+Math.round(r.stock)+supLbl,hint);
+      });
+      // Goods: Factories turn Ore+Stone into Goods → Shops sell + rail exports
+      var g=e.goods,gNet=g.make+g.imp-g.sell-g.exp,gRows=flowRow('Factories produce',g.make,true);
+      if(g.imp>0.05)gRows+=flowRow('Imported by rail',g.imp,true);
+      gRows+=flowRow('Shops sell',g.sell,false);
+      if(g.exp>0.05)gRows+=flowRow('Exported to '+hubShort(),g.exp,false);
+      var gHint=g.facs===0?'No Factories yet — they turn Ore + Stone into Goods, which Shops sell.'
+        :(g.sell<g.need-0.05?'Shops want '+ef(g.need)+'/tick but only get '+ef(g.sell)+' — feed Factories more Ore & Stone.'
+        :(g.exp>0.05?'Surplus Goods rail out to '+hubShort()+' for export income.':(gNet>2?'Goods surplus — lay rail to the highway to export them.':'')));
       var pNet=powerGen-powerUse,wNet=waterGen-waterUse;
       var pRows=flowRow('Stations generate',powerGen,true)+flowRow('Buildings draw',powerUse,false);
       var wRows=flowRow('Towers &amp; coast supply',waterGen,true)+flowRow('Buildings draw',waterUse,false);
-
-      var body='<div style="max-height:min(58vh,430px);overflow-y:auto;margin:0 -2px;padding:0 2px">'
-        +block('Materials','#BF8F45',mRows,mNet,'stock '+Math.round(e.mat.stock),mHint)
-        +block('Goods','#7C6CB0',gRows,gNet,'stock '+Math.round(e.goods.stock),gHint)
-        +block('Power','#E0A93E',pRows,pNet,pNet>=0?'covered':'short',pNet<0?'A deficit browns out unpowered buildings — add a station or Solar.':'')
-        +block('Water','#4C88B8',wRows,wNet,wNet>=0?'covered':'short',wNet<0?'A deficit leaves buildings dry — add a Water Tower (or build by a coast/lake).':'')
+      var body='<div style="max-height:min(60vh,440px);overflow-y:auto;margin:0 -2px;padding:0 2px">'
+        +(resBlocks||'<div style="font:500 11px system-ui;color:var(--muted);padding:6px 0">No extractors yet — build a Works (🔍 Tools) on a resource terrain to start pulling raw materials.</div>')
+        +block('📦 Goods','#7C6CB0',gRows,gNet,'stock '+Math.round(g.stock),gHint)
+        +block('⚡ Power','#E0A93E',pRows,pNet,pNet>=0?'covered':'short',pNet<0?'A deficit browns out unpowered buildings — add a station or Solar.':'')
+        +block('💧 Water','#4C88B8',wRows,wNet,wNet>=0?'covered':'short',wNet<0?'A deficit leaves buildings dry — add a Water Tower (or build by a coast/lake).':'')
         +'</div>';
-      ioBox.innerHTML='<h3>📈 Economy</h3><p>Production vs. consumption each tick, per resource. A surplus feeds growth (and exports); a deficit starves the chain downstream.</p>'
+      ioBox.innerHTML='<h3>📈 Economy</h3><p>Each terrain yields a different raw resource; your city needs a basket. A surplus feeds growth; a shortfall slows the buildings that need it until you extract more — or <b>trade for what your land lacks</b>.</p>'
         +body+'<div class="iorow"><button type="button" id="io-x">Close</button></div>';
     } else {
       ioBox.innerHTML='<h3>📥 Import city</h3><p>Paste a share code below. <b>This replaces the city currently on this patch</b> — export it first if you want to keep it.</p>'
@@ -2069,20 +2113,22 @@
     else if(ZONEK[t]){
       h+='<div><span class="ik">Level</span> <b>'+g.lvl+' / '+MAXLVL+'</b></div>';
       h+='<div><span class="ik">Road</span> '+yn(nearConnected(c,r))+' <span class="ik">Power</span> '+yn(powered&&powered[i])+' <span class="ik">Water</span> '+yn(watered&&watered[i])+'</div>';
-      var bl=blocker(c,r),why={disc:'needs a road link',pow:'needs power',wat:'needs water',goods:'waiting on Goods',mat:'waiting on Materials'}[bl];
+      var bl=blocker(c,r),why={disc:'needs a road link',pow:'needs power',wat:'needs water',goods:'waiting on Goods',mat:'waiting on Ore & Stone'}[bl];
       h+=why?'<div class="no">⏸ '+why+'</div>':(g.lvl<MAXLVL?'<div class="ok">▲ growing</div>':'<div class="ok">✓ maxed</div>');
       if(g.lvl>0){                                         // concrete per-building economic contribution (mirrors the sim)
         var eo='';
-        if(t==='ind'){var mm=nearMountain(c,r)?1.8:g.terr==='forest'?1.4:1,boost=nearMountain(c,r)?' <span class="ik">(mountain +80% ore)</span>':g.terr==='forest'?' <span class="ik">(forest +40% timber)</span>':'';eo='Mines <b>+'+(+(g.lvl*2*mm).toFixed(1))+'</b> Materials/tick'+boost;}
-        else if(t==='fac')eo='Converts <b>'+(g.lvl*3)+'</b> Materials → <b>'+(g.lvl*2)+'</b> Goods/tick';
+        if(t==='ind'){var oid=extractorOutput(c,r,g);
+          eo=oid?'Extracts <b>+'+(+(g.lvl*RES_YIELD).toFixed(1))+'</b> '+RESICON[oid]+' '+RESNAME[oid]+'/tick':'<span class="no">No resource here</span> <span class="ik">— site on forest/farmland/hills/desert or beside a mountain/coast</span>';}
+        else if(t==='fac')eo='Turns <b>'+(g.lvl*1.5)+'</b> ⛏Ore + <b>'+(g.lvl*1.5)+'</b> 🧱Stone → <b>'+(g.lvl*2)+'</b> Goods/tick';
         else if(t==='com')eo='Sells <b>'+(+(g.lvl*1.5).toFixed(1))+'</b> Goods/tick';
         else if(t==='res')eo='Houses <b>'+(g.lvl*g.lvl*45).toLocaleString()+'</b> people';
         else if(t==='tower')eo='Houses <b>'+(g.lvl*g.lvl*135).toLocaleString()+'</b> people';
         if(eo)h+='<div class="ik">'+eo+'</div>';
         var pu=(POWERUSE[t]||0)*g.lvl,wu=(WATERUSE[t]||0)*g.lvl;
         if(pu||wu)h+='<div><span class="ik">Draws</span> <b>'+pu+'</b> <span class="ik">power ·</span> <b>'+wu+'</b> <span class="ik">water</span></div>';
-      } else if(t==='ind'){                                 // level 0: name the terrain the Works will exploit once grown
-        h+='<div class="ik">'+(nearMountain(c,r)?'By a mountain — +80% ore once grown':g.terr==='forest'?'On forest — +40% timber once grown':'No terrain boost')+'</div>';
+      } else if(t==='ind'){                                 // level 0: name the resource this Works will pull once grown
+        var oid0=extractorOutput(c,r,g);
+        h+='<div class="ik">'+(oid0?'On '+RESNAME[oid0]+' terrain — extracts '+RESICON[oid0]+' '+RESNAME[oid0]+' once grown':'No resource here — move to resource terrain (forest/farmland/hills/desert) or beside a mountain/coast')+'</div>';
       }
     } else {
       var desc={park:'Lifts nearby land',power:'Generates power for the grid',solar:'Clean power — cheap to run, boosted by Rooftop Solar tech',water:'Supplies water to the grid',bank:'Raises your credit ceiling + earns interest',port:'Boosts export revenue',transit:'Moves people — relieves traffic so a dense city keeps growing'}[t];
@@ -2366,7 +2412,8 @@
     info:function(c,r){return tileInfo(c,r);},
     setGoal:function(k,t){setMyGoal(k,t);},goal:function(){return myGoal;},clearGoal:function(){clearMyGoal();},
     profile:function(){return regionProfile(WOX,WOY);},band:function(c,r){return bandOf(c,r);},terr:function(c,r){return inB(c,r)?grid[idx(c,r)].terr:null;},
-    hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};},anchors:function(){return resAnchors();},hdist:function(c,r){return hexDist(c,r,BANDC,BANDR);}
+    hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};},anchors:function(){return resAnchors();},hdist:function(c,r){return hexDist(c,r,BANDC,BANDR);},
+    stock:function(){return STOCK;},sup:function(){return SUP;},extract:function(c,r){return inB(c,r)?extractorOutput(c,r,grid[idx(c,r)]):null;},econres:function(){return econ.res;}
   };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
