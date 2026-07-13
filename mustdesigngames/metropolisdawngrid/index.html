@@ -388,6 +388,10 @@
       if(ddx>ddy&&ddx>ddz)rx=-ry-rz; else if(ddy>ddz)ry=-rx-rz; else rz=-rx-ry;
       out.push([rx+((rz-(rz&1))>>1), rz]);}
     return out;}
+  function hexDist(c1,r1,c2,r2){                           // hex distance in cube coords (odd-r) — for resource distance bands
+    function cu(c,r){var q=c-((r-(r&1))>>1);return [q,-q-r,r];}
+    var A=cu(c1,r1),B=cu(c2,r2);
+    return (Math.abs(A[0]-B[0])+Math.abs(A[1]-B[1])+Math.abs(A[2]-B[2]))/2;}
   // draw a sprite meant for a CELL×CELL square INSIDE the hex: scale to the inscribed square (~0.73)
   var SPR=2/(1+SQRT3);
   function spriteIn(c,r,fn){ctx.save();ctx.translate(hcx(c,r),hcy(r));ctx.scale(SPR,SPR);ctx.translate(-CELL/2,-CELL/2);fn(0,0);ctx.restore();}
@@ -587,6 +591,24 @@
   // low-freq fields GATHER the blockers into coherent lakes & ranges (not high-freq speckle); water and
   // mountain are INDEPENDENT fields, so a ridge can rise right at a lakeshore (dramatic side-by-side).
   function tfbm(wc,wr,s){return vnoise(wc,wr,s)*0.85+vnoise(wc+90,wr+40,s*0.6)*0.15;}   // large low-freq base + faint edge detail (no speckle)
+  // ---- resource profile: which raw resources this region has, and at what distance (the trade driver) ----
+  // Six tradeable raw resources; each region gets ONE near, ONE medium-far, ONE very-far, the REST absent
+  // (must be imported). Deterministic pure function of the region's noise offset → globe & surface agree.
+  var RESIDS=['lumber','grain','ore','stone','oil','fish'];
+  var _profCache={};
+  function regionProfile(ox,oy){
+    var key=ox+','+oy; if(_profCache[key])return _profCache[key];
+    var scored=RESIDS.map(function(id,i){return {id:id,s:hash2((ox*31+i*101)|0,(oy*17+i*263)|0)};});  // raw hash → well-spread per-resource ordering
+    scored.sort(function(a,b){return a.s-b.s||(a.id<b.id?-1:1);});          // stable deterministic order
+    var order=scored.map(function(x){return x.id;});
+    if(order.indexOf('grain')>2&&order.indexOf('lumber')>2){                // guarantee a viable start: at least one staple is PRESENT (near/med/far), not absent
+      var gi=order.indexOf('grain'),li=order.indexOf('lumber'),pick=Math.min(gi,li);
+      var s=order.splice(pick,1)[0];order.splice(2,0,s);}                   // slot it at 'far' — near stays varied
+    var prof={near:order[0],med:order[1],far:order[2],absent:order.slice(3),band:{},has:{}};
+    prof.band[order[0]]='near';prof.band[order[1]]='med';prof.band[order[2]]='far';
+    prof.has[order[0]]=prof.has[order[1]]=prof.has[order[2]]=true;
+    _profCache[key]=prof; return prof;
+  }
   function terrClass(wc,wr){                                   // world-space classifier — the single source of truth
     if(tfbm(wc,wr,24)<0.30)return 'water';                     // large basins fill → coherent lakes/seas (water wins ties)
     if(tfbm(wc+310,wr+190,22)>0.76)return 'mountain';          // separate ridge field → gathered ranges; mine ore from ADJACENT tiles
@@ -663,14 +685,16 @@
   // ranges. Instead ONE freeway arrives from the compass direction that faces the parent hub and
   // terminates at an INTERCHANGE near the buildable centre — the city's single link to the world.
   // The interchange lane is slid to the clearest ground; roads/rail join it via the usual perpendicular ramp.
-  var HWDIR='W', HWGC=0, HWGR=0;
+  var HWDIR='W', HWGC=0, HWGR=0, BANDC=0, BANDR=0;
   function hwDirVec(){return HWDIR==='W'?[-1,0]:HWDIR==='E'?[1,0]:HWDIR==='N'?[0,-1]:[0,1];}   // OUTWARD — toward the hub / map edge
   function hwGeom(){
     var d=vnoise(WOX+5,WOY+61,5);
     HWDIR = d<0.25?'W':d<0.5?'E':d<0.72?'N':'S';                                                // which way the freeway comes in from
     HWGC = Math.max(6,Math.min(cols-7, Math.round(cols*0.5+(vnoise(WOX+41,WOY+7,7)-0.5)*22)));  // interchange near the centre, region-jittered
     HWGR = Math.max(6,Math.min(rows-7, Math.round(rows*0.5+(vnoise(WOX+13,WOY+29,7)-0.5)*22)));
+    BANDC=HWGC; BANDR=HWGR;   // resource distance bands measure from the RAW interchange (stable; ensureHighway may nudge HWGC/HWGR off water/rock afterward)
   }
+  function bandOf(c,r){var d=hexDist(c,r,BANDC,BANDR);return d<=7?'near':d<=14?'med':d<=26?'far':'none';}  // resource distance rings from the city origin
   var HWEC=0, HWER=0;                                   // where the freeway actually leaves the map (set by the route)
   function ensureHighway(){
     hwGeom();
@@ -943,6 +967,7 @@
   window.addEventListener('pointerup',function(){mmDrag=false;});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
+    hwGeom();                                            // interchange (+ resource bands) before regenerating terrain
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
     try{localStorage.removeItem(TUTOR_KEY);}catch(e){}tutorDone=false;tutorActive=true;tutorStep=-1;   // a Reset is a true fresh start — replay the intro quest
     ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();hist={pop:[],cash:[],net:[],cong:[]};activeEv=null;evCooldown=160;evalEventMods();renderEvent();POL={tax:1,cp:false,sm:false,ft:false};renderPolicy();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();seedRampIfEmpty();showTutor();dirty=true;scheduleSave();
@@ -2247,7 +2272,7 @@
   // ---- boot ----
   readTheme();
   window.addEventListener('resize',resize);
-  resize();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // build the fixed world, lay the gateway, aim the camera at the interchange
+  resize();hwGeom();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // hwGeom first so terrain's resource bands measure from the interchange; build world, lay gateway, aim camera
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
   else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); seedRampIfEmpty(); netBootPull(); }   // give even a first-run player a starter on-ramp to build from; pull a cloud save if this device has none
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();renderEvent();renderPolicy();
@@ -2299,7 +2324,9 @@
     center:function(c,r){return {x:hcx(c,r),y:hcy(r)};},cam:function(){return {camX:camX,camY:camY,zoom:zoom};},
     brush:function(){return brush;},grid:function(c,r){return inB(c,r)?grid[idx(c,r)]:null;},
     info:function(c,r){return tileInfo(c,r);},
-    setGoal:function(k,t){setMyGoal(k,t);},goal:function(){return myGoal;},clearGoal:function(){clearMyGoal();}
+    setGoal:function(k,t){setMyGoal(k,t);},goal:function(){return myGoal;},clearGoal:function(){clearMyGoal();},
+    profile:function(){return regionProfile(WOX,WOY);},band:function(c,r){return bandOf(c,r);},terr:function(c,r){return inB(c,r)?grid[idx(c,r)].terr:null;},
+    hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};}
   };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
