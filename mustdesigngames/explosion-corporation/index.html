@@ -32,6 +32,34 @@
   .foot { position:fixed; bottom:8px; width:100%; text-align:center; font-size:11px; color:#5f7480; z-index:5; }
   .keycap { display:inline-block; background:#22303b; border:1px solid #3a4c58; border-radius:5px;
     padding:0 6px; margin:0 1px; font-size:12px; color:#cfe0ea; }
+  /* ── Map Maker ── */
+  .ed { position:fixed; inset:0; z-index:20; pointer-events:none; }
+  .ed.hidden { display:none; }
+  .ed-bar { position:absolute; top:0; left:0; right:0; display:flex; gap:6px; align-items:center;
+    flex-wrap:wrap; padding:7px 12px; background:rgba(8,11,15,.88); pointer-events:auto; }
+  .ed-bar b { color:var(--amber); letter-spacing:.08em; margin-right:4px; font-size:13px; }
+  .ed-bar button { font:inherit; font-weight:700; font-size:13px; cursor:pointer; border:0;
+    border-radius:8px; padding:7px 11px; background:#22303b; color:#cfe0ea; }
+  .ed-bar button:active { transform:translateY(1px); }
+  .ed-tool.sel { background:var(--amber); color:#20140a; }
+  #ed-play.act { background:var(--amber); color:#20140a; }
+  .ed-sep { width:1px; height:22px; background:#33434f; margin:0 4px; }
+  .ed-panel { position:absolute; top:54px; right:12px; width:236px; background:rgba(12,17,22,.94);
+    border:1px solid #2a3947; border-radius:12px; padding:12px; pointer-events:auto;
+    display:flex; flex-direction:column; gap:9px; font-size:13px; color:#cfe0ea; }
+  .ed-panel label { display:flex; flex-direction:column; gap:3px; font-weight:600; }
+  .ed-panel input[type=text] { background:#0c1116; border:1px solid #33434f; color:#e8eef2;
+    border-radius:6px; padding:6px; font:inherit; }
+  .ed-panel input[type=range] { width:100%; accent-color:var(--amber); }
+  .ed-tints { display:flex; gap:5px; margin-top:2px; }
+  .ed-sw { width:28px; height:20px; border-radius:5px; border:2px solid transparent; cursor:pointer; }
+  .ed-sw.on { border-color:var(--amber); }
+  #ed-selbox { border-top:1px solid #2a3947; padding-top:8px; display:flex; flex-direction:column; gap:6px; }
+  #ed-del { background:#5a2a2a; color:#ffdede; border:0; border-radius:6px; padding:6px; font:inherit;
+    font-weight:700; cursor:pointer; }
+  .ed-read { font-size:12px; color:#9db0bd; min-height:15px; }
+  .ed-hint { font-size:11px; color:#7d909d; line-height:1.45; }
+  #editor:not(.hidden) ~ #wrap canvas, .ed-editing { cursor:crosshair; }
 </style>
 </head>
 <body>
@@ -48,7 +76,10 @@
   </div>
   <div class="levels" id="levelPick"></div>
   <div class="tag" id="ctrlHint"></div>
-  <button id="startBtn">START DEMOLITION</button>
+  <div class="row">
+    <button id="startBtn">START DEMOLITION</button>
+    <button id="makerBtn" class="ghost">✏️ Map Maker</button>
+  </div>
 </div>
 
 <!-- WIN / LOSE -->
@@ -58,6 +89,35 @@
   <div class="row">
     <button id="againBtn">Try Again</button>
     <button id="menuBtn" class="ghost">Level Select</button>
+  </div>
+</div>
+
+<!-- MAP MAKER -->
+<div id="editor" class="ed hidden">
+  <div class="ed-bar">
+    <b>MAP&nbsp;MAKER</b>
+    <button class="ed-tool sel" data-tool="building">🏢 Build</button>
+    <button class="ed-tool" data-tool="path">🛣️ Route</button>
+    <button class="ed-tool" data-tool="erase">🧽 Erase</button>
+    <span class="ed-sep"></span>
+    <button id="ed-play" class="act">▶ Playtest</button>
+    <button id="ed-save">💾 Save</button>
+    <button id="ed-share">🔗 Share</button>
+    <button id="ed-load">📥 Load</button>
+    <button id="ed-new">＋ New</button>
+    <button id="ed-exit">✕ Exit</button>
+  </div>
+  <div class="ed-panel">
+    <label>Map name <input type="text" id="ed-name" maxlength="40" /></label>
+    <label>Ground <span class="ed-tints" id="ed-tints"></span></label>
+    <label>Hauler speed <input type="range" id="ed-speed" min="20" max="70" step="2" /></label>
+    <label>Head-start (sec) <input type="range" id="ed-delay" min="2" max="8" step="1" /></label>
+    <div id="ed-selbox" hidden>
+      <label>Building HP <input type="range" id="ed-hp" min="30" max="140" step="5" /></label>
+      <button id="ed-del">Delete building</button>
+    </div>
+    <div class="ed-read" id="ed-read"></div>
+    <div class="ed-hint"><b>Build:</b> drag on the ground to place a building; drag it to move, corner handle to resize. <b>Route:</b> click to add hauler waypoints, drag to move, click a line to insert, select + Delete to remove. Buildings in the <span style="color:#ff8a5a">red lane</span> are mandatory to clear.</div>
   </div>
 </div>
 
@@ -156,7 +216,7 @@ function pointAt(path, d){ // distance along polyline -> {x,y,ang}
 }
 
 function newGame(){
-  const lv = LEVELS[S.levelIx];
+  const lv = S.customLevel || LEVELS[S.levelIx];   // customLevel set when playtesting / playing a user map
   const segs = laneSegments(lv.path);
   const buildings = lv.b.map(o=>({ ...o, hp:o.hp0, dead:false, blocks:false, hit:0 }));
   buildings.forEach(b=> b.blocks = inLane(b, segs));
@@ -389,6 +449,7 @@ function boxDraw(corners,h,baseRGB,topRGB){
 }
 
 function render(){
+  if(S.screen==="editor"){ renderEditor(); return; }
   sizeBuffer();
   if(g){ const ti=hexRGB(g.lv.tint); FOGc=[ti[0]*0.7+12,ti[1]*0.7+14,ti[2]*0.7+20]; }
   lctx.setTransform(1,0,0,1,0,0);
@@ -531,6 +592,18 @@ function renderLevelPick(){
     b.onclick=()=>{ S.levelIx=i; renderLevelPick(); };
     wrap.appendChild(b);
   });
+  // your saved maps (localStorage)
+  loadMaps().forEach(m=>{
+    const b=document.createElement("button"); b.className="ghost";
+    b.appendChild(document.createTextNode("▶ "+m.name));
+    const d=document.createElement("div"); d.className="lil"; d.textContent=(m.b?m.b.length:0)+" buildings · your map";
+    b.appendChild(d);
+    b.onclick=()=>{ S.customLevel=editorToLevel(m); S.playtesting=false; start(); };
+    wrap.appendChild(b);
+    const e=document.createElement("button"); e.className="ghost"; e.textContent="✏️"; e.title="Edit in Map Maker";
+    e.style.minWidth="0"; e.onclick=()=>openEditor(JSON.parse(JSON.stringify(m)));
+    wrap.appendChild(e);
+  });
 }
 function updateCtrlHint(){
   $("ctrlHint").innerHTML = S.mode===2
@@ -539,16 +612,20 @@ function updateCtrlHint(){
 }
 $("mode1").onclick=()=>{ S.mode=1; $("mode1").classList.add("sel"); $("mode2").classList.remove("sel"); updateCtrlHint(); };
 $("mode2").onclick=()=>{ S.mode=2; $("mode2").classList.add("sel"); $("mode1").classList.remove("sel"); updateCtrlHint(); };
-$("startBtn").onclick=start;
+$("startBtn").onclick=()=>{ S.customLevel=null; S.playtesting=false; start(); };
 $("againBtn").onclick=()=>{ endEl.classList.add("hidden"); start(); };
-$("menuBtn").onclick=()=>{ endEl.classList.add("hidden"); titleEl.classList.remove("hidden"); S.screen="title"; renderLevelPick(); };
+$("menuBtn").onclick=()=>{ endEl.classList.add("hidden");
+  if(S.playtesting){ openEditor(ED.map); }
+  else { titleEl.classList.remove("hidden"); S.screen="title"; renderLevelPick(); } };
 
 function start(){
   titleEl.classList.add("hidden"); endEl.classList.add("hidden");
+  const ed=document.getElementById("editor"); if(ed) ed.classList.add("hidden");
   S.screen="play"; newGame(); g.started=true;
 }
 function showEnd(){
   S.screen="end";
+  $("menuBtn").textContent = S.playtesting ? "◀ Map Maker" : "Level Select";
   const o=g.over;
   $("endTitle").innerHTML = o.win ? 'ROUTE&nbsp;<span class="b" style="color:#3ad07a;text-shadow:none">CLEARED</span>'
                                   : '💥&nbsp;<span class="b">DETONATED</span>';
@@ -564,6 +641,143 @@ function showEnd(){
 updateCtrlHint(); renderLevelPick();
 $("foot").innerHTML = "Explosion Corporation · local prototype · online co-op demolition";
 
+// ---------- Map Maker (v1) ----------
+const TINTS=["#20303a","#26222f","#2c2622","#1b2a22","#2a2030","#222c33"];
+const ED={ map:null, tool:"building", sel:{type:null,idx:-1}, drag:null };
+function blankMap(){ return { name:"My Map", tint:"#20303a", speed:40, delay:5, path:[[70,320],[930,320]], b:[] }; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function clampNum(v,a,b,dflt){ v=+v; return Number.isFinite(v)?Math.max(a,Math.min(b,v)):dflt; }
+function loadMaps(){ try{ return JSON.parse(localStorage.getItem("ec_maps")||"[]"); }catch(e){ return []; } }
+function saveMaps(a){ try{ localStorage.setItem("ec_maps",JSON.stringify(a)); }catch(e){} }
+function editorToLevel(m){ return { name:m.name||"Custom Map", tint:m.tint||"#20303a",
+  speed:m.speed||40, delay:m.delay==null?5:m.delay, path:m.path.map(p=>[p[0],p[1]]),
+  b:m.b.map(o=>mk(o.x,o.y,o.w,o.h,o.hp||70)) }; }
+function mapToCode(m){ const o={ n:m.name, t:m.tint, s:m.speed, d:m.delay,
+  p:m.path.map(p=>[Math.round(p[0]),Math.round(p[1])]),
+  b:m.b.map(x=>[Math.round(x.x),Math.round(x.y),Math.round(x.w),Math.round(x.h),Math.round(x.hp||70)]) };
+  return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/=+$/,""); }
+function codeToMap(code){ const o=JSON.parse(decodeURIComponent(escape(atob(code))));
+  const m={ name:String(o.n||"Shared Map").slice(0,40), tint:/^#[0-9a-fA-F]{6}$/.test(o.t)?o.t:"#20303a",
+    speed:clampNum(o.s,20,70,40), delay:clampNum(o.d,0,10,5),
+    path:(o.p||[]).map(p=>[clampNum(p[0],0,W,0),clampNum(p[1],0,H,0)]),
+    b:(o.b||[]).map(a=>({x:clampNum(a[0],0,W-16,0),y:clampNum(a[1],0,H-16,0),w:clampNum(a[2],16,400,60),h:clampNum(a[3],16,400,60),hp:clampNum(a[4],10,300,70)})) };
+  if(m.path.length<2) throw new Error("bad map"); return m; }
+
+const edEl=$("editor"), nameI=$("ed-name"), speedI=$("ed-speed"), delayI=$("ed-delay"), hpI=$("ed-hp"),
+      selBox=$("ed-selbox"), readEl=$("ed-read"), tintsEl=$("ed-tints");
+TINTS.forEach(t=>{ const s=document.createElement("span"); s.className="ed-sw"; s.style.background=t; s.dataset.t=t;
+  s.onclick=()=>{ ED.map.tint=t; syncPanel(); }; tintsEl.appendChild(s); });
+function syncPanel(){ if(!ED.map) return;
+  nameI.value=ED.map.name; speedI.value=ED.map.speed; delayI.value=ED.map.delay;
+  [...tintsEl.children].forEach(s=>s.classList.toggle("on", s.dataset.t===ED.map.tint));
+  if(ED.sel.type==="b"&&ED.map.b[ED.sel.idx]){ selBox.hidden=false; hpI.value=ED.map.b[ED.sel.idx].hp||70; } else selBox.hidden=true;
+  const segs=ED.map.path.length>1?laneSegments(ED.map.path):[];
+  const blk=ED.map.b.filter(b=>segs.length&&inLane(b,segs)).length;
+  readEl.textContent=`${ED.map.b.length} buildings · ${blk} in the lane (mandatory) · ${ED.map.path.length} route points`; }
+nameI.oninput=()=>{ ED.map.name=nameI.value.slice(0,40); };
+speedI.oninput=()=>{ ED.map.speed=+speedI.value; };
+delayI.oninput=()=>{ ED.map.delay=+delayI.value; };
+hpI.oninput=()=>{ if(ED.sel.type==="b"&&ED.map.b[ED.sel.idx]){ ED.map.b[ED.sel.idx].hp=+hpI.value; syncPanel(); } };
+$("ed-del").onclick=()=>{ if(ED.sel.type==="b"&&ED.map.b[ED.sel.idx]){ ED.map.b.splice(ED.sel.idx,1); ED.sel={type:null,idx:-1}; syncPanel(); } };
+document.querySelectorAll(".ed-tool").forEach(b=>b.onclick=()=>{ ED.tool=b.dataset.tool;
+  document.querySelectorAll(".ed-tool").forEach(x=>x.classList.toggle("sel",x===b)); });
+
+function openEditor(map){ ED.map=map||ED.map||blankMap(); ED.sel={type:null,idx:-1}; ED.drag=null;
+  S.screen="editor"; S.customLevel=null; S.playtesting=false; g=null;
+  titleEl.classList.add("hidden"); endEl.classList.add("hidden"); edEl.classList.remove("hidden"); syncPanel(); }
+if($("makerBtn")) $("makerBtn").onclick=()=>openEditor(ED.map||blankMap());
+$("ed-exit").onclick=()=>{ edEl.classList.add("hidden"); S.screen="title"; S.customLevel=null; S.playtesting=false;
+  titleEl.classList.remove("hidden"); renderLevelPick(); };
+$("ed-new").onclick=()=>{ if(confirm("New blank map? Unsaved changes are lost.")) openEditor(blankMap()); };
+$("ed-play").onclick=()=>{ if(ED.map.path.length<2){ alert("Add at least a start and a goal with the Route tool."); return; }
+  S.customLevel=editorToLevel(ED.map); S.playtesting=true; edEl.classList.add("hidden"); start(); };
+$("ed-save").onclick=()=>{ const name=(ED.map.name||"My Map").trim()||"My Map"; ED.map.name=name;
+  const maps=loadMaps(), i=maps.findIndex(m=>m.name===name), rec=JSON.parse(JSON.stringify(ED.map));
+  if(i>=0) maps[i]=rec; else maps.push(rec); saveMaps(maps); readEl.textContent=`Saved “${name}” ✓`; };
+$("ed-share").onclick=()=>{ if(ED.map.path.length<2){ alert("Add a route first."); return; }
+  const url=location.origin+location.pathname+"?m="+mapToCode(ED.map);
+  try{ navigator.clipboard&&navigator.clipboard.writeText(url); }catch(e){}
+  prompt("Share this map — send the link (copied to your clipboard):", url); };
+$("ed-load").onclick=()=>{ const inp=prompt("Paste a shared map link or code:"); if(!inp) return;
+  let code=inp.trim(); const mi=code.indexOf("m="); if(mi>=0) code=code.slice(mi+2);
+  try{ ED.map=codeToMap(code); ED.sel={type:null,idx:-1}; syncPanel(); readEl.textContent=`Loaded “${ED.map.name}” ✓`; }
+  catch(e){ alert("Couldn't read that map code / link."); } };
+
+// canvas interaction
+function edArena(e){ const r=cvs.getBoundingClientRect(); return { x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H }; }
+function hitBuilding(x,y){ for(let i=ED.map.b.length-1;i>=0;i--){ const b=ED.map.b[i]; if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h) return i; } return -1; }
+function hitHandle(x,y){ if(ED.sel.type!=="b")return false; const b=ED.map.b[ED.sel.idx]; return !!b&&x>=b.x+b.w-10&&x<=b.x+b.w+10&&y>=b.y+b.h-10&&y<=b.y+b.h+10; }
+function hitNode(x,y){ for(let i=0;i<ED.map.path.length;i++){ const p=ED.map.path[i]; if(Math.hypot(p[0]-x,p[1]-y)<13) return i; } return -1; }
+function nearestSeg(x,y){ const p=ED.map.path; let best=null,bd=13;
+  for(let i=0;i<p.length-1;i++){ const ax=p[i][0],ay=p[i][1],dx=p[i+1][0]-ax,dy=p[i+1][1]-ay,L2=dx*dx+dy*dy||1;
+    let t=clamp(((x-ax)*dx+(y-ay)*dy)/L2,0,1), qx=ax+dx*t, qy=ay+dy*t, d=Math.hypot(qx-x,qy-y);
+    if(d<bd){ bd=d; best=i; } } return best; }
+cvs.addEventListener("mousedown",e=>{ if(S.screen!=="editor")return; const {x,y}=edArena(e);
+  if(ED.tool==="building"){
+    if(hitHandle(x,y)){ ED.drag={mode:"resize"}; return; }
+    const hi=hitBuilding(x,y);
+    if(hi>=0){ ED.sel={type:"b",idx:hi}; const b=ED.map.b[hi]; ED.drag={mode:"move",ox:x-b.x,oy:y-b.y}; }
+    else { ED.sel={type:null,idx:-1}; ED.drag={mode:"create",sx:x,sy:y,rect:{x,y,w:0,h:0}}; } syncPanel();
+  } else if(ED.tool==="path"){
+    const ni=hitNode(x,y);
+    if(ni>=0){ ED.sel={type:"p",idx:ni}; ED.drag={mode:"node"}; }
+    else { const seg=nearestSeg(x,y), at=seg==null?ED.map.path.length:seg+1;
+      ED.map.path.splice(at,0,[x,y]); ED.sel={type:"p",idx:at}; ED.drag={mode:"node"}; } syncPanel();
+  } else { const hi=hitBuilding(x,y);
+    if(hi>=0){ ED.map.b.splice(hi,1); ED.sel={type:null,idx:-1}; }
+    else { const ni=hitNode(x,y); if(ni>=0&&ED.map.path.length>2) ED.map.path.splice(ni,1); } syncPanel();
+  }
+});
+addEventListener("mousemove",e=>{ if(S.screen!=="editor"||!ED.drag)return; const {x,y}=edArena(e), d=ED.drag;
+  if(d.mode==="create"){ d.rect={x:Math.min(x,d.sx),y:Math.min(y,d.sy),w:Math.abs(x-d.sx),h:Math.abs(y-d.sy)}; }
+  else if(d.mode==="move"){ const b=ED.map.b[ED.sel.idx]; if(b){ b.x=clamp(x-d.ox,0,W-b.w); b.y=clamp(y-d.oy,0,H-b.h); } }
+  else if(d.mode==="resize"){ const b=ED.map.b[ED.sel.idx]; if(b){ b.w=clamp(x-b.x,16,W-b.x); b.h=clamp(y-b.y,16,H-b.y); syncPanel(); } }
+  else if(d.mode==="node"){ const p=ED.map.path[ED.sel.idx]; if(p){ p[0]=clamp(x,0,W); p[1]=clamp(y,0,H); syncPanel(); } }
+});
+addEventListener("mouseup",()=>{ if(ED.drag&&ED.drag.mode==="create"){ const r=ED.drag.rect;
+  if(r.w>=16&&r.h>=16){ ED.map.b.push({x:r.x,y:r.y,w:r.w,h:r.h,hp:70}); ED.sel={type:"b",idx:ED.map.b.length-1}; syncPanel(); } }
+  ED.drag=null; });
+addEventListener("keydown",e=>{ if(S.screen!=="editor")return; if(/input|textarea/i.test(e.target.tagName))return;
+  if(e.code==="Delete"||e.code==="Backspace"){ e.preventDefault();
+    if(ED.sel.type==="b"&&ED.map.b[ED.sel.idx]){ ED.map.b.splice(ED.sel.idx,1); ED.sel={type:null,idx:-1}; syncPanel(); }
+    else if(ED.sel.type==="p"&&ED.map.path.length>2){ ED.map.path.splice(ED.sel.idx,1); ED.sel={type:null,idx:-1}; syncPanel(); } } });
+
+function edLine(x1,y1,x2,y2){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+function edPath(p){ ctx.beginPath(); ctx.moveTo(p[0][0],p[0][1]); for(let i=1;i<p.length;i++) ctx.lineTo(p[i][0],p[i][1]); ctx.stroke(); }
+function renderEditor(){ const DS=cvs.width/W, m=ED.map;
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle="#0c1116"; ctx.fillRect(0,0,cvs.width,cvs.height);
+  if(!m) return;
+  ctx.setTransform(DS,0,0,DS,0,0);
+  ctx.fillStyle=m.tint; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle="rgba(255,255,255,.06)"; ctx.lineWidth=1;
+  for(let x=0;x<=W;x+=50) edLine(x,0,x,H);
+  for(let y=0;y<=H;y+=50) edLine(0,y,W,y);
+  const half=CARRIER.h/2+LANE_PAD, segs=m.path.length>1?laneSegments(m.path):[];
+  if(m.path.length>1){ ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.strokeStyle="rgba(255,90,77,.16)"; ctx.lineWidth=half*2; edPath(m.path);
+    ctx.setLineDash([12,12]); ctx.strokeStyle="rgba(255,90,77,.6)"; ctx.lineWidth=2; edPath(m.path); ctx.setLineDash([]); }
+  ctx.textAlign="center";
+  m.b.forEach((b,i)=>{ const blk=segs.length&&inLane(b,segs), seld=ED.sel.type==="b"&&ED.sel.idx===i;
+    ctx.fillStyle=blk?"#e0745a":"#93a7b5"; ctx.fillRect(b.x,b.y,b.w,b.h);
+    ctx.strokeStyle=seld?"#ffd24f":(blk?"#ff5a4d":"rgba(0,0,0,.4)"); ctx.lineWidth=seld?3:1.5; ctx.strokeRect(b.x,b.y,b.w,b.h);
+    ctx.fillStyle="rgba(0,0,0,.6)"; ctx.font="12px system-ui"; ctx.fillText("HP "+(b.hp||70), b.x+b.w/2, b.y+b.h/2+4);
+    if(seld){ ctx.fillStyle="#ffd24f"; ctx.fillRect(b.x+b.w-6,b.y+b.h-6,12,12); } });
+  ctx.fillStyle="#4fd0e0"; ctx.beginPath(); ctx.arc(120,H/2-70,7,0,7); ctx.fill();
+  ctx.fillStyle="#ffd24f"; ctx.beginPath(); ctx.arc(120,H/2+70,7,0,7); ctx.fill();
+  ctx.fillStyle="rgba(255,255,255,.55)"; ctx.font="10px system-ui"; ctx.fillText("spawns",120,H/2+3);
+  m.path.forEach((p,i)=>{ const seld=ED.sel.type==="p"&&ED.sel.idx===i;
+    ctx.beginPath(); ctx.arc(p[0],p[1],seld?9:7,0,7);
+    ctx.fillStyle=i===0?"#7fd0ff":i===m.path.length-1?"#3ad07a":"#ffb454"; ctx.fill();
+    ctx.strokeStyle=seld?"#fff":"rgba(0,0,0,.5)"; ctx.lineWidth=2; ctx.stroke(); });
+  if(m.path.length){ ctx.font="bold 13px system-ui";
+    ctx.fillStyle="#7fd0ff"; ctx.fillText("START", m.path[0][0], m.path[0][1]-13);
+    ctx.fillStyle="#3ad07a"; ctx.fillText("GOAL", m.path[m.path.length-1][0], m.path[m.path.length-1][1]-13); }
+  if(ED.drag&&ED.drag.mode==="create"){ const r=ED.drag.rect; ctx.strokeStyle="#ffd24f"; ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.strokeRect(r.x,r.y,r.w,r.h); ctx.setLineDash([]); }
+  ctx.setTransform(1,0,0,1,0,0);
+}
+// shared-map link: ?m=CODE opens the editor with that map loaded
+try{ const um=new URLSearchParams(location.search).get("m"); if(um) openEditor(codeToMap(um)); }catch(e){}
+
 // ---------- debug hook (headless verification) ----------
 if(DBG){
   window.EC = {
@@ -571,6 +785,8 @@ if(DBG){
     setLevel:i=>{ S.levelIx=i; }, setMode:m=>{ S.mode=m; },
     inject:(id,x,y)=>{ INJECT[id]={x,y}; }, clearInject:id=>{ delete INJECT[id]; },
     step:(dt)=>{ if(g){ g.started=true; update(dt); } },
+    openEditor, blankMap, editorToLevel, mapToCode, codeToMap, loadMaps, get ED(){ return ED; },
+    playCustom:(map)=>{ S.customLevel=editorToLevel(map); S.playtesting=true; newGame(); g.started=true; },
     status:()=>{ if(!g) return {none:true};
       return { t:g.t, over:g.over, carrierD:g.carrier.d, pathLen:g.pathLen,
         blockersLeft:g.buildings.filter(b=>b.blocks&&!b.dead).length,
