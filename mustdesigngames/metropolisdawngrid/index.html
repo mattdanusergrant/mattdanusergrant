@@ -1921,10 +1921,24 @@
       h+='<div><span class="ik">Road</span> '+yn(nearConnected(c,r))+' <span class="ik">Power</span> '+yn(powered&&powered[i])+' <span class="ik">Water</span> '+yn(watered&&watered[i])+'</div>';
       var bl=blocker(c,r),why={disc:'needs a road link',pow:'needs power',wat:'needs water',goods:'waiting on Goods',mat:'waiting on Materials'}[bl];
       h+=why?'<div class="no">⏸ '+why+'</div>':(g.lvl<MAXLVL?'<div class="ok">▲ growing</div>':'<div class="ok">✓ maxed</div>');
-      if(t==='ind')h+='<div class="ik">'+(nearMountain(c,r)?'By a mountain — +80% ore':g.terr==='forest'?'On forest — +40% timber':'No terrain boost')+'</div>';
+      if(g.lvl>0){                                         // concrete per-building economic contribution (mirrors the sim)
+        var eo='';
+        if(t==='ind'){var mm=nearMountain(c,r)?1.8:g.terr==='forest'?1.4:1,boost=nearMountain(c,r)?' <span class="ik">(mountain +80% ore)</span>':g.terr==='forest'?' <span class="ik">(forest +40% timber)</span>':'';eo='Mines <b>+'+(+(g.lvl*2*mm).toFixed(1))+'</b> Materials/tick'+boost;}
+        else if(t==='fac')eo='Converts <b>'+(g.lvl*3)+'</b> Materials → <b>'+(g.lvl*2)+'</b> Goods/tick';
+        else if(t==='com')eo='Sells <b>'+(+(g.lvl*1.5).toFixed(1))+'</b> Goods/tick';
+        else if(t==='res')eo='Houses <b>'+(g.lvl*g.lvl*45).toLocaleString()+'</b> people';
+        else if(t==='tower')eo='Houses <b>'+(g.lvl*g.lvl*135).toLocaleString()+'</b> people';
+        if(eo)h+='<div class="ik">'+eo+'</div>';
+        var pu=(POWERUSE[t]||0)*g.lvl,wu=(WATERUSE[t]||0)*g.lvl;
+        if(pu||wu)h+='<div><span class="ik">Draws</span> <b>'+pu+'</b> <span class="ik">power ·</span> <b>'+wu+'</b> <span class="ik">water</span></div>';
+      } else if(t==='ind'){                                 // level 0: name the terrain the Works will exploit once grown
+        h+='<div class="ik">'+(nearMountain(c,r)?'By a mountain — +80% ore once grown':g.terr==='forest'?'On forest — +40% timber once grown':'No terrain boost')+'</div>';
+      }
     } else {
       var desc={park:'Lifts nearby land',power:'Generates power for the grid',solar:'Clean power — cheap to run, boosted by Rooftop Solar tech',water:'Supplies water to the grid',bank:'Raises your credit ceiling + earns interest',port:'Boosts export revenue',transit:'Moves people — relieves traffic so a dense city keeps growing'}[t];
       if(desc)h+='<div class="ik">'+desc+'</div>';
+      var out={power:'Generates <b>'+POWER_OUT.toLocaleString()+'</b> power',solar:'Generates <b>~'+Math.round(SOLAR_OUT*solarMult).toLocaleString()+'</b> power',water:'Supplies <b>'+WATER_OUT.toLocaleString()+'</b> water',transit:'Carries <b>'+TRANSIT_CAP+'</b> trips'}[t];
+      if(out)h+='<div class="ik">'+out+'</div>';
       h+='<div><span class="ik">On the road grid</span> '+yn(nearConnected(c,r))+'</div>';}
     return h;}
   var inspectEl=document.getElementById('inspect');
@@ -2198,7 +2212,8 @@
     reasons:function(){var o={};for(var i=0;i<grid.length;i++){var g=grid[i];if(!g||!ZONES[g.t])continue;var b=blocker(i%cols,(i/cols)|0);o[b||'ok']=(o[b||'ok']||0)+1;}return o;},
     nbs:function(c,r){return nbs(c,r);},cellAt:function(x,y){return cellAt(x,y);},
     center:function(c,r){return {x:hcx(c,r),y:hcy(r)};},cam:function(){return {camX:camX,camY:camY,zoom:zoom};},
-    brush:function(){return brush;},grid:function(c,r){return inB(c,r)?grid[idx(c,r)]:null;}
+    brush:function(){return brush;},grid:function(c,r){return inB(c,r)?grid[idx(c,r)]:null;},
+    info:function(c,r){return tileInfo(c,r);}
   };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
