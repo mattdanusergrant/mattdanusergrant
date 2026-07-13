@@ -1485,11 +1485,15 @@
       if(!drivable(car.cc,car.cr)){var s=spawnCar();if(s)cars[i]=s;else cars.splice(i,1);continue;}
       car.p+=dt*2.0*(1-congestion*0.82);                 // traffic crawls to a near-standstill under gridlock
       if(car.p<0)car.p=0;
-      while(car.p>=1){car.p-=1;car.cc=car.tc;car.cr=car.tr;var a=adjDrive(car.cc,car.cr);
-        if(a.length>1)a=a.filter(function(n){return !(n[0]===car.pc&&n[1]===car.pr);});
+      while(car.p>=1){car.p-=1;
+        var oc=car.cc,ocr=car.cr;                         // the tile we're leaving becomes 'previous'
+        car.cc=car.tc;car.cr=car.tr;                       // advance into the target tile
+        car.pc=oc;car.pr=ocr;                              // ← was set to the NEW tile (pc==cc) → the car skipped the entry half of every hex
+        var a=adjDrive(car.cc,car.cr);
+        if(a.length>1)a=a.filter(function(n){return !(n[0]===car.pc&&n[1]===car.pr);});   // don't immediately U-turn
         if(!a.length)a=adjDrive(car.cc,car.cr);
         var nt=a.length?a[(Math.random()*a.length)|0]:[car.cc,car.cr];
-        car.pc=car.cc;car.pr=car.cr;car.tc=nt[0];car.tr=nt[1];}
+        car.tc=nt[0];car.tr=nt[1];}
     }
   }
 
@@ -1630,7 +1634,21 @@
       if(connOf(c,r,pred).length>=3){ctx.beginPath();ctx.arc(hcx(c,r),hcy(r),rad,0,6.2832);ctx.fill();}}
   }
   function terrCells(cells,t){return cells.filter(function(p){return grid[idx(p[0],p[1])].terr===t;});}
-  function throughCells(cells,pred){return cells.filter(function(p){return connOf(p[0],p[1],pred).length<=2;});}
+  // even centre-line: ONE dash per through-hex, hugging the hex's own curve. Because canvas dash
+  // arrays reset phase at every sub-path (and hex arc-lengths differ), a dashed stroke drifts and
+  // looks uneven — one dash per hex is regular by construction.
+  function quadPt(P0,C,P1,t){var u=1-t;return [u*u*P0[0]+2*u*t*C[0]+t*t*P1[0], u*u*P0[1]+2*u*t*C[1]+t*t*P1[1]];}
+  function quadDer(P0,C,P1,t){return [2*((1-t)*(C[0]-P0[0])+t*(P1[0]-C[0])), 2*((1-t)*(C[1]-P0[1])+t*(P1[1]-C[1]))];}
+  function centreLine(cells,pred,color,width,f0,f1){
+    ctx.beginPath();
+    for(var i=0;i<cells.length;i++){var c=cells[i][0],r=cells[i][1],mids=connOf(c,r,pred);
+      if(mids.length!==2)continue;                                             // only through-runs carry a centre dash
+      var P0=mids[0],C=[hcx(c,r),hcy(r)],P1=mids[1];
+      var a=quadPt(P0,C,P1,f0),bq=quadPt(P0,C,P1,f1),d0=quadDer(P0,C,P1,f0);
+      var ctrl=[a[0]+(f1-f0)*0.5*d0[0], a[1]+(f1-f0)*0.5*d0[1]];               // sub-curve control → the dash follows the road's bend
+      ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo(ctrl[0],ctrl[1],bq[0],bq[1]);}
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+  }
   function railTwin(c,r){                                   // twin running rails + crossing marks — thin, same-colour, safe to draw per hex
     var mids=connOf(c,r,isRail),cx0=hcx(c,r),cy0=hcy(r);
     ctx.strokeStyle=pal.rail;ctx.lineWidth=1.2;ctx.lineCap='round';
@@ -1655,13 +1673,13 @@
     // ---- FREEWAY (bottom) ----
     ribbonLayer(terrCells(hwy,'water'),isHwy,'#8a7f6a',21);ribbonLayer(terrCells(hwy,'mountain'),isHwy,'#6f6c72',21);   // viaduct/tunnel casings
     ribbonLayer(hwy,isHwy,pal.hw,17);ribbonLayer(hwy,isHwy,pal.hwLane,13);ribbonLayer(hwy,isHwy,pal.hw,10);             // carriageway + pale edge lanes
-    ribbonLayer(throughCells(hwy,isHwy),isHwy,pal.hwMed,1.6,[5,7]);junctionDots(hwy,isHwy,pal.hwMed,2);                 // flowing gold centre-line
+    centreLine(hwy,isHwy,pal.hwMed,1.8,0.20,0.80);junctionDots(hwy,isHwy,pal.hwMed,2);                                 // even gold centre-line (one dash per hex)
     for(var hi=0;hi<hwy.length;hi++)highwayExtras(hwy[hi][0],hwy[hi][1]);                                              // ramps + interchange
     // ---- ROADS ----
     ribbonLayer(terrCells(road,'water'),drivable,'#8a7f6a',15);ribbonLayer(terrCells(road,'mountain'),drivable,'#6f6c72',15);   // bridge/tunnel decks
     ribbonLayer(road,drivable,pal.curb,10);                                                                            // continuous shoulder (all cells)…
     ribbonLayer(road,drivable,pal.road,7);                                                                             // …then the surface on top → one unbroken ribbon
-    ribbonLayer(throughCells(road,drivable),drivable,pal.lane,1,[3,5]);junctionDots(road,drivable,pal.lane,1.4);       // centre dashes / junction dots
+    centreLine(road,drivable,pal.lane,1.2,0.28,0.72);junctionDots(road,drivable,pal.lane,1.4);                         // even centre dashes (one per hex) / junction dots
     // ---- RAIL (on top) ----
     var railDeck=rail.filter(function(p){return grid[idx(p[0],p[1])].t!=='road';});
     ribbonLayer(terrCells(railDeck,'water'),isRail,'#8a7f6a',13);ribbonLayer(terrCells(railDeck,'mountain'),isRail,'#6f6c72',13);
