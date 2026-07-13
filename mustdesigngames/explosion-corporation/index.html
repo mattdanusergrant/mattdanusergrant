@@ -92,6 +92,17 @@
   </div>
 </div>
 
+<!-- PAUSE -->
+<div id="pause" class="overlay hidden">
+  <h1>PAUSED</h1>
+  <div class="row">
+    <button id="resumeBtn">Resume</button>
+    <button id="restartBtn" class="ghost">Restart</button>
+    <button id="quitBtn" class="ghost">Quit</button>
+  </div>
+  <div class="tag">Press <span class="keycap">Esc</span> to resume.</div>
+</div>
+
 <!-- MAP MAKER -->
 <div id="editor" class="ed hidden">
   <div class="ed-bar">
@@ -246,6 +257,7 @@ const P1 = { up:"KeyW", down:"KeyS", left:"KeyA", right:"KeyD" };
 const P2 = { up:"ArrowUp", down:"ArrowDown", left:"ArrowLeft", right:"ArrowRight" };
 addEventListener("keydown", e=>{
   keys[e.code]=true;
+  if(e.code==="Escape" && S.screen==="play"){ if(g && g.paused) resumeGame(); else pauseGame(); }
   if([ "ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space" ].includes(e.code)) e.preventDefault();
 });
 addEventListener("keyup", e=>{ keys[e.code]=false; });
@@ -290,6 +302,7 @@ function burst(x,y,n,col){ for(let i=0;i<n;i++){ const a=Math.random()*7, s=40+M
   g.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.4+Math.random()*.5,col}); } }
 
 function update(dt){
+  if(g && g.paused) return;
   if(!g || g.over) { if(g) stepParticles(dt); return; }
   g.t += dt;
 
@@ -562,6 +575,9 @@ function drawHUD(){
     ctx.fillText("GET READY — CLEAR THE RED LANE", W/2, H/2-40);
     ctx.font="bold 90px system-ui"; ctx.fillStyle="#ffb454";
     ctx.fillText(Math.ceil(g.startDelay-g.t), W/2, H/2+50); }
+  // pause hint
+  ctx.textAlign="right"; ctx.fillStyle="rgba(207,224,234,.4)"; ctx.font="11px system-ui";
+  ctx.fillText("Esc = pause / quit", W-14, 47);
   // carrier progress bar
   const frac=Math.min(1,g.carrier.d/g.pathLen);
   ctx.fillStyle="rgba(255,255,255,.1)"; ctx.fillRect(14,H-16,W-28,7);
@@ -573,10 +589,12 @@ function drawHUD(){
 let last=0;
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000)||0; last=t;
-  if(g && g.started) update(dt);
+  if(g && g.started && !g.paused) update(dt);
   render();
   requestAnimationFrame(frame);
 }
+function pauseGame(){ if(S.screen!=="play"||!g||g.over) return; g.paused=true; $("pause").classList.remove("hidden"); }
+function resumeGame(){ if(!g) return; g.paused=false; $("pause").classList.add("hidden"); }
 requestAnimationFrame(frame);
 
 // ---------- UI wiring ----------
@@ -617,10 +635,16 @@ $("againBtn").onclick=()=>{ endEl.classList.add("hidden"); start(); };
 $("menuBtn").onclick=()=>{ endEl.classList.add("hidden");
   if(S.playtesting){ openEditor(ED.map); }
   else { titleEl.classList.remove("hidden"); S.screen="title"; renderLevelPick(); } };
+$("resumeBtn").onclick=resumeGame;
+$("restartBtn").onclick=()=>{ $("pause").classList.add("hidden"); start(); };
+$("quitBtn").onclick=()=>{ $("pause").classList.add("hidden"); g=null;
+  if(S.playtesting){ openEditor(ED.map); }
+  else { S.customLevel=null; S.playtesting=false; S.screen="title"; titleEl.classList.remove("hidden"); renderLevelPick(); } };
 
 function start(){
   titleEl.classList.add("hidden"); endEl.classList.add("hidden");
   const ed=document.getElementById("editor"); if(ed) ed.classList.add("hidden");
+  const pe=document.getElementById("pause"); if(pe) pe.classList.add("hidden");
   S.screen="play"; newGame(); g.started=true;
 }
 function showEnd(){
