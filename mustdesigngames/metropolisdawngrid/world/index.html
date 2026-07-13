@@ -198,15 +198,25 @@
     if(tfbm(wc,wr,24)<0.30)return 'water';
     if(tfbm(wc+310,wr+190,22)>0.76)return 'mountain';
     if(tnoise(wc+80,wr+40,6)>0.6)return 'forest';return 'plains';}
-  function terrainClass(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919,ct={plains:0,forest:0,mountain:0,water:0};
-    for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrAt(c,r,ox,oy)]++;
-    var land=ct.plains+ct.forest||1,oS=(ct.mountain/(ct.mountain+land))/0.16,fS=(ct.forest/land)/0.30,wS=(ct.water/(ct.water+land))/0.17,mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'plains';if(mx===oS)return 'mountain';if(mx===fS)return 'forest';return 'coast';}
-  // Both the found-card label and every neighbour blurb are DERIVED from terrainClass — no hand-written
-  // per-city text that can drift from the sim. SPEC strings mirror the builder's regionSpec (keep in sync).
-  var SPEC={mountain:'mountainous · Works +80% by the peaks',forest:'forested · Works +40% timber',coast:'coastal shelf · free water, tight land',plains:'open grassland · balanced start'};
-  var TRADE={mountain:'Rich ore — exports raw Materials; buys Goods.',forest:'Timber Materials to spare; trades for Goods.',coast:'Dense in Goods; short on raw Materials.',plains:'Balanced land — no terrain edge; trades opportunistically.'};
-  function siteSpec(lat,lon){return SPEC[terrainClass(lat,lon)];}
+  // ---- resource profile: MIRRORS the builder's regionProfile (../index.html). Same deterministic
+  //      near/med/far/absent assignment, so the globe names each city's specialisation identically. ----
+  var RESIDS=['lumber','grain','ore','stone','oil','fish'];
+  var RESICON={lumber:'🪵',grain:'🌾',ore:'⛏',stone:'🧱',oil:'🛢',fish:'🐟'};
+  var RESNAME={lumber:'Lumber',grain:'Grain',ore:'Ore',stone:'Stone',oil:'Oil',fish:'Fish'};
+  var _prof={};
+  function regionProfile(ox,oy){var key=ox+','+oy;if(_prof[key])return _prof[key];
+    var sc=RESIDS.map(function(id,i){return {id:id,s:thash((ox*31+i*101)|0,(oy*17+i*263)|0)};});
+    sc.sort(function(a,b){return a.s-b.s||(a.id<b.id?-1:1);});
+    var order=sc.map(function(x){return x.id;});
+    if(order.indexOf('grain')>2&&order.indexOf('lumber')>2){var gi=order.indexOf('grain'),li=order.indexOf('lumber'),pk=Math.min(gi,li);var s=order.splice(pk,1)[0];order.splice(2,0,s);}
+    var prof={near:order[0],med:order[1],far:order[2],absent:order.slice(3)};_prof[key]=prof;return prof;}
+  function profAt(lat,lon){return regionProfile(Math.round(lon*137)+9973,Math.round(lat*151)+7919);}
+  function terrainClass(lat,lon){return profAt(lat,lon).near;}   // the region's NEAR (headline) resource id
+  // SPEC/TRADE keyed by resource id — the city's headline strength + how it trades. Derived, never hand-written.
+  var SPEC={lumber:'🪵 Lumber-rich · timber country',grain:'🌾 Grain-rich · farm belt',ore:'⛏ Ore-rich · mining country',stone:'🧱 Stone-rich · quarry country',oil:'🛢 Oil-rich · derrick country',fish:'🐟 Fishery coast · rich waters'};
+  var TRADE={lumber:'Exports Lumber; imports what its land lacks.',grain:'Exports Grain; imports what its land lacks.',ore:'Exports Ore; imports what its land lacks.',stone:'Exports Stone; imports what its land lacks.',oil:'Exports Oil; imports what its land lacks.',fish:'Exports Fish; imports what its land lacks.'};
+  function absList(lat,lon){return profAt(lat,lon).absent.map(function(id){return RESICON[id];}).join('');}
+  function siteSpec(lat,lon){return SPEC[terrainClass(lat,lon)]+' · lacks '+absList(lat,lon);}
   function neighbourSpec(lat,lon){var k=terrainClass(lat,lon);return SPEC[k]+' — '+TRADE[k];}
 
   // remember where the player founded their city, so the marker + dive persist across visits
@@ -616,8 +626,8 @@
     else{b.textContent=(n>0?'🤝 Add trade':'🤝 Trade');b.classList.remove('active','full');}}
   function showNeighbour(c){var k=terrainClass(c.lat,c.lon),t=grownTier(c);ncVisitCity=c;
     document.getElementById('nc-name').textContent=c.name;
-    var supplies=(k==='coast')?'ships finished <b>Goods</b>':'ships raw <b>Materials</b>';
-    var wants=(k!=='coast')?' and pays a premium for your <b>Goods</b>':'';
+    var supplies='ships raw <b>'+RESICON[k]+' '+RESNAME[k]+'</b>';
+    var wants=' and pays a premium for your <b>Goods</b>';
     var nx=nextTierMs(c);
     var growth=(nx!=null)?'<span style="opacity:.85">▲ Growing — <b>'+TIERNAME[t+1]+'</b> in ~'+fmtDur(nx)+'</span><br>':(t>=5?'<span style="opacity:.85">▲ <b>Megacity</b> — fully grown</span><br>':'');
     document.getElementById('nc-msg').innerHTML='<b>'+TIERNAME[t]+'</b> · ~'+TIERPOP[t].toLocaleString()+' people · '+SPEC[k]+'<br>'+growth+TRADE[k]+'<br><span style="opacity:.85">🤝 As a trade partner, '+supplies+' to your city over rail'+wants+'.</span><br><span style="opacity:.7">An AI-run city on the shared world — visit to walk its streets.</span>';

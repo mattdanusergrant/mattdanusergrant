@@ -77,6 +77,15 @@
   .obj-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#E7A93E,#5FBE6E);border-radius:3px;transition:width .45s ease}
   .obj-rew{align-self:flex-end;font-size:9.5px;font-weight:700;color:#3E8E6E;letter-spacing:.03em}
   @media(max-width:640px){.objectives{display:none}}
+  .mygoal{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:5;min-width:196px;max-width:280px;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:8px 12px;cursor:pointer}
+  .mygoal .mg-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:5px}
+  .mygoal .mg-txt{font:600 12px system-ui,sans-serif;color:var(--ink)}
+  .mygoal .mg-txt b{font-weight:700}
+  .mygoal .mg-pct{font:700 11px system-ui;color:#3E8E6E;white-space:nowrap}
+  .mygoal .mg-bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+  .mygoal .mg-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#E7A93E,#5FBE6E);border-radius:3px;transition:width .45s ease}
+  .mygoal.done{border-color:#5FBE6E;background:rgba(95,190,110,.10)}
+  @media(max-width:520px){.mygoal{display:none}}
   .eventcard{position:absolute;left:14px;bottom:64px;z-index:6;width:252px;background:var(--paper);border:1.5px solid #E0A93E;border-radius:10px;box-shadow:var(--shadow);padding:10px 12px 11px}
   .eventcard .ev-h{font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:6px;margin-bottom:4px}
   .eventcard .ev-d{font-size:11px;color:var(--ink-2);line-height:1.4;margin-bottom:8px}
@@ -224,11 +233,10 @@
       <div class="meter"><span class="bar"><i id="dem-com"></i></span><b>C</b></div>
       <div class="meter"><span class="bar"><i id="dem-ind"></i></span><b>I</b></div>
     </div>
-    <div class="res" id="res" title="Supply chain — Works make Materials, Factories turn Materials into Goods, Shops sell Goods">
-      <div class="rstat"><span class="rn" id="mat">0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Materials</span></div>
+    <div class="res" id="res" style="cursor:pointer" title="Raw resources — Works extract them from the land (each terrain a different one); your city needs a basket. Short on one? Trade for it. Tap for the full breakdown.">
+      <div class="rstat" id="rstat-res"><span class="rn" id="reslow">✓</span><span class="rl"><span class="dot" style="background:#8AA84A"></span>Resources</span></div>
       <div class="rstat"><span class="rn" id="goods">0</span><span class="rl"><span class="dot" style="background:#7C6CB0"></span>Goods</span></div>
       <div class="rstat"><span class="rn" id="exp">0</span><span class="rl"><span class="dot" style="background:#5C8A55"></span>Exports</span></div>
-      <div class="rstat" id="terrstat" title="Extra Materials per tick your Works earn from ore (+80%) and forest (+40%) terrain — put Works where the land favours them"><span class="rn" id="terrb">+0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Terrain</span></div>
       <div class="rstat" id="pwrstat" title="City power — stations generate it, buildings draw it, roads carry it. A deficit browns out unpowered buildings until you add capacity."><span class="rn" id="pwr">0</span><span class="rl"><span class="dot" style="background:#E0A93E"></span>Power</span></div>
       <div class="rstat" id="watstat" title="City water — towers (and coasts/lakes) supply it, buildings draw it, roads carry it. A deficit leaves buildings dry until you add capacity."><span class="rn" id="wat">0</span><span class="rl"><span class="dot" style="background:#4C88B8"></span>Water</span></div>
       <div class="rstat" id="trafstat" title="Traffic — a growing city generates trips. Roads carry some; Transit stops carry far more. When demand outruns capacity the streets jam and growth slows — build Transit to keep it moving."><span class="rn" id="traf">0%</span><span class="rl"><span class="dot" style="background:#C0563F"></span>Transit</span></div>
@@ -255,6 +263,7 @@
       <ol class="tutor-l" id="tutor-l"></ol>
     </div>
     <div class="objectives" id="objectives" hidden><div class="obj-h">📋 Contracts <b id="obj-done"></b></div><ul class="obj-l" id="obj-l"></ul></div>
+    <div class="mygoal" id="mygoal" hidden title="Your self-set goal — tap to change or clear it"><div class="mg-row"><span class="mg-txt" id="mg-txt"></span><span class="mg-pct" id="mg-pct"></span></div><div class="mg-bar"><i id="mg-fill"></i></div></div>
     <div class="eventcard" id="eventcard" hidden></div>
     <div class="obs" id="obs" hidden><b>👁 Observing an AI-run city</b> · read-only — <a href="world/">← back to the world</a></div>
     <div class="obs warn" id="insolvent" hidden><b>⚠ Insolvent</b> · income can’t cover upkeep — export Goods or <b>Clear</b> costly buildings to climb out</div>
@@ -307,6 +316,8 @@
       <div class="catmenu polmenu" id="polmenu"></div></div>
     <div class="cat" data-cat="settings" id="setcat" title="Settings — theme, stats, awards, save data"><span class="cico">⚙️</span><span class="clabel">Settings</span>
       <div class="catmenu setmenu"><span class="menuhd">Settings</span>
+        <div class="tool" data-act="goal" title="Set a personal goal to chase — tracked live on the map"><span class="ico">🎯</span>Set a Goal</div>
+        <div class="tool" data-act="econ" title="Economy — production vs consumption for each resource"><span class="ico">📈</span>Economy</div>
         <div class="tool" data-act="stats" title="City history — population, treasury, congestion"><span class="ico">📊</span>Stats</div>
         <div class="tool" data-act="ach" title="Achievements — earned across every city you build"><span class="ico">🏅</span>Awards</div>
         <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
@@ -376,6 +387,10 @@
       if(ddx>ddy&&ddx>ddz)rx=-ry-rz; else if(ddy>ddz)ry=-rx-rz; else rz=-rx-ry;
       out.push([rx+((rz-(rz&1))>>1), rz]);}
     return out;}
+  function hexDist(c1,r1,c2,r2){                           // hex distance in cube coords (odd-r) — for resource distance bands
+    function cu(c,r){var q=c-((r-(r&1))>>1);return [q,-q-r,r];}
+    var A=cu(c1,r1),B=cu(c2,r2);
+    return (Math.abs(A[0]-B[0])+Math.abs(A[1]-B[1])+Math.abs(A[2]-B[2]))/2;}
   // draw a sprite meant for a CELL×CELL square INSIDE the hex: scale to the inscribed square (~0.73)
   var SPR=2/(1+SQRT3);
   function spriteIn(c,r,fn){ctx.save();ctx.translate(hcx(c,r),hcy(r));ctx.scale(SPR,SPR);ctx.translate(-CELL/2,-CELL/2);fn(0,0);ctx.restore();}
@@ -407,9 +422,9 @@
     if(!list){var old=localStorage.getItem('mdg-trade-partner');if(old){var o=JSON.parse(old);list=o?[o]:[];}}  // migrate single-partner key
     if(!Array.isArray(list))list=[];
     return list.filter(function(t){return t&&!isNaN(t.lat)&&!isNaN(t.lon);}).map(function(t){
-      t.cls=classAt(t.lat,t.lon);                     // partner's terrain decides what they trade
-      t.supplies=(t.cls==='coast')?'goods':'mat';     // coast is dense in Goods; everyone else exports raw Materials
-      t.wantsGoods=(t.cls!=='coast');                 // land cities are short on Goods → pay a premium for yours
+      t.cls=classAt(t.lat,t.lon);                     // partner's region decides what raw resource they export (their NEAR resource)
+      t.supplies=t.cls;                               // a resource id (lumber/grain/ore/stone/oil/fish) — flowed into the matching pool in the trade phase
+      t.wantsGoods=true;                              // land cities are short on finished Goods → pay a premium for yours
       return t;});
   }catch(e){return [];}})();
   var SAVE_KEY=REGION?('mdg-region-'+REGION.slug):'mdg-district-grid-v1';   // each region is its own saved patch
@@ -575,40 +590,95 @@
   // low-freq fields GATHER the blockers into coherent lakes & ranges (not high-freq speckle); water and
   // mountain are INDEPENDENT fields, so a ridge can rise right at a lakeshore (dramatic side-by-side).
   function tfbm(wc,wr,s){return vnoise(wc,wr,s)*0.85+vnoise(wc+90,wr+40,s*0.6)*0.15;}   // large low-freq base + faint edge detail (no speckle)
-  function terrClass(wc,wr){                                   // world-space classifier — the single source of truth
-    if(tfbm(wc,wr,24)<0.30)return 'water';                     // large basins fill → coherent lakes/seas (water wins ties)
-    if(tfbm(wc+310,wr+190,22)>0.76)return 'mountain';          // separate ridge field → gathered ranges; mine ore from ADJACENT tiles
-    if(vnoise(wc+80,wr+40,6)>0.6)return 'forest';              // forest — good for Works (timber)
-    return 'plains';                                           // grasslands (the default)
+  // ---- resource profile: which raw resources this region has, and at what distance (the trade driver) ----
+  // Six tradeable raw resources; each region gets ONE near, ONE medium-far, ONE very-far, the REST absent
+  // (must be imported). Deterministic pure function of the region's noise offset → globe & surface agree.
+  var RESIDS=['lumber','grain','ore','stone','oil','fish'];
+  var RESICON={lumber:'🪵',grain:'🌾',ore:'⛏',stone:'🧱',oil:'🛢',fish:'🐟'};
+  var RESNAME={lumber:'Lumber',grain:'Grain',ore:'Ore',stone:'Stone',oil:'Oil',fish:'Fish'};
+  var RESMETA={lumber:{c:'#4E7A38',src:'forest',use:'Construction uses'},grain:{c:'#C9A23A',src:'farmland',use:'Population eats'},
+               ore:{c:'#8A8378',src:'mountains',use:'Factories draw'},stone:{c:'#A98F6E',src:'hills',use:'Factories draw'},
+               oil:{c:'#5A5560',src:'the desert',use:'Towers draw'},fish:{c:'#3E8EA8',src:'the coast',use:'Food (subs. grain)'}};
+  var TERR2RES={forest:'lumber',plains:'grain',hills:'stone',desert:'oil'};   // buildable resource terrains (gated by region profile); ore/fish are adjacency-mined from always-present mountain/water
+  var RES2TERR={lumber:'forest',grain:'plains',stone:'hills',oil:'desert',ore:'mountain',fish:'water'};
+  var _profCache={},_anchorCache={};
+  // each PRESENT resource gets a guaranteed patch at a deterministic point in its band ring, so a
+  // region "rich in grain" always has reachable farmland even where the noise field produced none.
+  function _anchorLand(ac,ar){                                  // BFS to nearest buildable land (pure terrClass; grid not yet built at gen time)
+    var q=[[ac,ar]],seen={},h=0; seen[ac+','+ar]=1;
+    while(h<q.length&&h<260){var cur=q[h++],t=terrClass(cur[0]+WOX,cur[1]+WOY);
+      if(cur[1]>0&&t!=='water'&&t!=='mountain')return cur;
+      var nn=nbs(cur[0],cur[1]);
+      for(var k=0;k<6;k++){var nc=nn[k][0],nr=nn[k][1],kk=nc+','+nr;
+        if(!seen[kk]&&inB(nc,nr)){seen[kk]=1;q.push([nc,nr]);}}}
+    return [ac,ar];}
+  function resAnchors(){
+    var key=WOX+','+WOY+','+BANDC+','+BANDR; if(_anchorCache[key])return _anchorCache[key];
+    var prof=regionProfile(WOX,WOY),out={},bands=['near','med','far'];
+    for(var bi=0;bi<3;bi++){var res=prof[bands[bi]],dist=bi===0?5:bi===1?11:19,ri=RESIDS.indexOf(res);
+      var a=hash2((WOX*13+ri*71+5)|0,(WOY*7+ri*97+3)|0)*6.2832;
+      var ac=Math.max(1,Math.min(cols-2,Math.round(BANDC+dist*Math.cos(a)))),ar=Math.max(1,Math.min(rows-2,Math.round(BANDR+dist*Math.sin(a))));
+      if(res!=='ore'&&res!=='fish'){var la=_anchorLand(ac,ar);ac=la[0];ar=la[1];}   // buildable patches need land; ore/fish stamp mountain/water
+      out[res]=[ac,ar];}
+    _anchorCache[key]=out;return out;}
+  function regionProfile(ox,oy){
+    var key=ox+','+oy; if(_profCache[key])return _profCache[key];
+    var scored=RESIDS.map(function(id,i){return {id:id,s:hash2((ox*31+i*101)|0,(oy*17+i*263)|0)};});  // raw hash → well-spread per-resource ordering
+    scored.sort(function(a,b){return a.s-b.s||(a.id<b.id?-1:1);});          // stable deterministic order
+    var order=scored.map(function(x){return x.id;});
+    if(order.indexOf('grain')>2&&order.indexOf('lumber')>2){                // guarantee a viable start: at least one staple is PRESENT (near/med/far), not absent
+      var gi=order.indexOf('grain'),li=order.indexOf('lumber'),pick=Math.min(gi,li);
+      var s=order.splice(pick,1)[0];order.splice(2,0,s);}                   // slot it at 'far' — near stays varied
+    var prof={near:order[0],med:order[1],far:order[2],absent:order.slice(3),band:{},has:{}};
+    prof.band[order[0]]='near';prof.band[order[1]]='med';prof.band[order[2]]='far';
+    prof.has[order[0]]=prof.has[order[1]]=prof.has[order[2]]=true;
+    _profCache[key]=prof; return prof;
   }
-  function terrainAt(c,r){if(r<=0)return 'plains';return terrClass(c+WOX,r+WOY);}   // highway row stays buildable/clear
+  function terrClass(wc,wr){                                   // world-space CANDIDATE classifier (pure, no region/band awareness)
+    if(tfbm(wc,wr,24)<0.30)return 'water';                     // large basins fill → coherent lakes/seas (water wins ties)
+    if(tfbm(wc+310,wr+190,22)>0.76)return 'mountain';          // separate ridge field → gathered ranges; ore mined from ADJACENT tiles
+    if(vnoise(wc+80,wr+40,6)>0.62)return 'forest';             // 🪵 lumber
+    if(vnoise(wc+150,wr+220,7)>0.66)return 'hills';            // 🧱 stone
+    if(vnoise(wc+500,wr+330,8)>0.68)return 'desert';           // 🛢 oil
+    if(vnoise(wc+260,wr+120,6)>0.60)return 'plains';           // 🌾 farmland (grain)
+    return 'grass';                                            // neutral buildable base (the city proper)
+  }
+  // region+distance-aware: a buildable resource terrain survives ONLY if this region has that resource
+  // AND the cell falls in the resource's assigned distance ring; otherwise it's neutral grass.
+  function terrainAt(c,r){
+    if(r<=0)return 'grass';                                    // highway row stays neutral/buildable
+    var cand=terrClass(c+WOX,r+WOY),prof=regionProfile(WOX,WOY),anch=resAnchors(),bands=['near','med','far'];
+    for(var bi=0;bi<3;bi++){var res=prof[bands[bi]],a=anch[res];   // guaranteed anchor patch for each present resource
+      if(a&&hexDist(c,r,a[0],a[1])<=2.4+vnoise((c+WOX)*3+11,(r+WOY)*3+7,2)*2){
+        var terr=RES2TERR[res];
+        if(terr==='mountain'||terr==='water')return terr;      // ore/fish: guarantee mineable mountain/water in-band
+        if(cand!=='water'&&cand!=='mountain')return terr;}}     // buildable resource: on land only (yield to lakes/peaks)
+    if(cand==='water'||cand==='mountain')return cand;          // global lakes / barriers / water supply
+    var res2=TERR2RES[cand];                                   // organic in-band scatter beyond the anchor patch
+    if(res2&&prof.has[res2]&&bandOf(c,r)===prof.band[res2])return cand;
+    return 'grass';
+  }
   function noBuild(t){return t==='water'||t==='mountain';}     // water & mountains can't be built on
-  function nearMountain(c,r){                                  // a Works next to a peak mines its ore (+80%)
+  function nearMountain(c,r){                                  // a Works next to a peak mines its ore
     var nn=nbs(c,r);
     for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];
       if(inB(a,b)&&grid[idx(a,b)].terr==='mountain')return true;}
     return false;
   }
+  function nearWater(c,r){                                     // a Works next to water works the fishery
+    var nn=nbs(c,r);
+    for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];
+      if(inB(a,b)&&grid[idx(a,b)].terr==='water')return true;}
+    return false;
+  }
   // terrain make-up over a representative window, scored against the cross-world baseline →
   // a one-line "why here" label naming this patch's comparative advantage (the reason to trade)
-  function regionSpec(){
-    var ct={plains:0,forest:0,mountain:0,water:0};
-    for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrainAt(c,r)]++;
-    var land=ct.plains+ct.forest||1;                           // buildable land (mountains aren't buildable)
-    var oS=(ct.mountain/(ct.mountain+land))/0.16, fS=(ct.forest/land)/0.30, wS=(ct.water/(ct.water+land))/0.17;
-    var mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'open grassland · balanced start';
-    if(mx===oS)return 'mountainous · Works +80% by the peaks';
-    if(mx===fS)return 'forested · Works +40% timber';
-    return 'coastal shelf · free water, tight land';
+  function regionSpec(){                                       // header chip: names the local strength + what to trade for
+    var pr=regionProfile(WOX,WOY);
+    return RESICON[pr.near]+' '+RESNAME[pr.near]+'-rich · short on '+pr.absent.map(function(id){return RESICON[id];}).join(' ')+' — trade for them';
   }
-  // terrain class at an arbitrary world location (for a trade partner) — mirrors the globe's terrainClass
-  function classAt(lat,lon){
-    var ox=Math.round(lon*137)+9973, oy=Math.round(lat*151)+7919, ct={plains:0,forest:0,mountain:0,water:0};
-    for(var r=1;r<32;r++)for(var c=0;c<48;c++)ct[terrClass(c+ox,r+oy)]++;   // same classifier the surface uses
-    var land=ct.plains+ct.forest||1, oS=(ct.mountain/(ct.mountain+land))/0.16, fS=(ct.forest/land)/0.30, wS=(ct.water/(ct.water+land))/0.17, mx=Math.max(oS,fS,wS);
-    if(mx<1.15)return 'plains'; if(mx===oS)return 'mountain'; if(mx===fS)return 'forest'; return 'coast';
-  }
+  // the resource a location is richest in (its NEAR resource) — drives trade partners; mirrors the globe
+  function classAt(lat,lon){var ox=Math.round(lon*137)+9973, oy=Math.round(lat*151)+7919;return regionProfile(ox,oy).near;}
 
   // ---- palettes ----
   var PAL={
@@ -629,7 +699,8 @@
       transitBody:'#3E8E7E',transitRoof:'#2E6A5D',transitGlass:'#CDEAE2',transitSign:'#F3C24A',transitPost:'#5F574B',
 
       lot:'rgba(0,0,0,.05)',starve:'#C77A46',cuePow:'#E0A93E',cueWat:'#4C9AD1',cueMat:'#BF8F45',cueGood:'#7C6CB0',side:'rgba(0,0,0,.14)',
-      terrGrass:'rgba(130,196,100,.24)',terrWater:'rgba(74,150,200,.28)',terrMountain:'rgba(126,128,136,.34)',terrForest:'rgba(36,98,46,.5)',terrPeak:'rgba(88,90,98,.55)',
+      terrGrass:'rgba(130,196,100,.20)',terrWater:'rgba(74,150,200,.28)',terrMountain:'rgba(126,128,136,.34)',terrForest:'rgba(36,98,46,.5)',terrPeak:'rgba(88,90,98,.55)',
+      terrPlains:'rgba(214,178,72,.34)',terrHills:'rgba(150,128,92,.34)',terrDesert:'rgba(228,200,128,.40)',terrWheat:'rgba(150,120,40,.55)',terrRock:'rgba(110,100,86,.6)',terrDune:'rgba(196,168,110,.6)',
       railBed:'#C9C2B0',tie:'#9A8E78',rail:'#7C7566',trainEngine:'#3E3D48',
       car:['#C6553F','#4C7EA8','#D9AE52','#E7E1D2','#5C8A55']
     }
@@ -651,14 +722,16 @@
   // ranges. Instead ONE freeway arrives from the compass direction that faces the parent hub and
   // terminates at an INTERCHANGE near the buildable centre — the city's single link to the world.
   // The interchange lane is slid to the clearest ground; roads/rail join it via the usual perpendicular ramp.
-  var HWDIR='W', HWGC=0, HWGR=0;
+  var HWDIR='W', HWGC=0, HWGR=0, BANDC=0, BANDR=0;
   function hwDirVec(){return HWDIR==='W'?[-1,0]:HWDIR==='E'?[1,0]:HWDIR==='N'?[0,-1]:[0,1];}   // OUTWARD — toward the hub / map edge
   function hwGeom(){
     var d=vnoise(WOX+5,WOY+61,5);
     HWDIR = d<0.25?'W':d<0.5?'E':d<0.72?'N':'S';                                                // which way the freeway comes in from
     HWGC = Math.max(6,Math.min(cols-7, Math.round(cols*0.5+(vnoise(WOX+41,WOY+7,7)-0.5)*22)));  // interchange near the centre, region-jittered
     HWGR = Math.max(6,Math.min(rows-7, Math.round(rows*0.5+(vnoise(WOX+13,WOY+29,7)-0.5)*22)));
+    BANDC=HWGC; BANDR=HWGR;   // resource distance bands measure from the RAW interchange (stable; ensureHighway may nudge HWGC/HWGR off water/rock afterward)
   }
+  function bandOf(c,r){var d=hexDist(c,r,BANDC,BANDR);return d<=7?'near':d<=14?'med':d<=26?'far':'none';}  // resource distance rings from the city origin
   var HWEC=0, HWER=0;                                   // where the freeway actually leaves the map (set by the route)
   function ensureHighway(){
     hwGeom();
@@ -905,7 +978,7 @@
   var mmOff=document.createElement('canvas');mmOff.width=mmOff.height=WORLD;var mmoc=mmOff.getContext('2d');
   var mapDirty=true;
   function hex2rgb(h){h=h.replace('#','');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];var n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
-  var MMTERR={water:'#a9cbe4',mountain:'#b7b7bd',forest:'#5f8f5a',plains:'#bcd6ad'};
+  var MMTERR={water:'#a9cbe4',mountain:'#b7b7bd',forest:'#5f8f5a',grass:'#bcd6ad',plains:'#d9c479',hills:'#b6a17e',desert:'#e0cd94'};
   var MMRAIL='#6f6552';                                              // rail reads darker/warmer than road on the overview
   function paintMinimap(){
     var img=mmoc.createImageData(WORLD,WORLD),d=img.data;
@@ -931,6 +1004,7 @@
   window.addEventListener('pointerup',function(){mmDrag=false;});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
+    hwGeom();                                            // interchange (+ resource bands) before regenerating terrain
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
     try{localStorage.removeItem(TUTOR_KEY);}catch(e){}tutorDone=false;tutorActive=true;tutorStep=-1;   // a Reset is a true fresh start — replay the intro quest
     ensureHighway();if(!tutorActive)seedRampIfEmpty();maxMS=-1;MAXLVL=densCap();syncTech();treasury=CASH_START;netRate=0;contracts=[];contractsDone=0;renderContracts();hist={pop:[],cash:[],net:[],cong:[]};activeEv=null;evCooldown=160;evalEventMods();renderEvent();POL={tax:1,cp:false,sm:false,ft:false};renderPolicy();updateCashUI();updateToolLocks();cars=[];trains=[];computeServices();seedRampIfEmpty();showTutor();dirty=true;scheduleSave();
@@ -1023,43 +1097,77 @@
     if(!okC)return 'disc';
     if(!okP)return 'pow';
     if(!okW)return 'wat';
-    var t=g.t;
-    if(t==='com'&&!(goodsStock>0.01||goodsHealthy))return 'goods';  // shops need Goods
-    if(t==='fac'&&!(matStock>0.01||matHealthy))return 'mat';        // factories need Materials
-    return '';
+    return '';   // resources no longer HARD-block growth — a shortage SLOWS it (soft, via growthSup() in tick)
   }
-  // supply chain: Works → Materials → Factories → Goods → Shops (city-wide pools, no routing)
-  var matWanted=false, terrBonus=0;
-  var tradePremium=1, tradeMatIn=0, tradeGoodsIn=0;     // set each tick from the trade partners' inflow
+  // ---- multi-resource economy: each terrain yields a distinct raw resource; the city needs a BASKET ----
+  // Works are generic EXTRACTORS — output is set by the terrain they sit on / are adjacent to. Buildings
+  // consume a basket (grain→pop, lumber→construction, ore+stone→goods, oil→towers, fish→food alt); a
+  // resource the map lacks must be imported. SUP[id] (0.35..1) is how well each need is met → soft slowdown.
+  var STOCK={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};   // city-wide raw-resource pools
+  var SUP={lumber:1,grain:1,ore:1,stone:1,oil:1,fish:1};     // supply ratio per resource (floored 0.35) — throttles growth
+  var RES_YIELD=2.4;                                          // raw units per extractor level per tick
+  var matWanted=false, terrBonus=0, matStock=0;              // matStock kept as ore+stone (legacy blocker compat)
+  var tradePremium=1, tradeGoodsIn=0, tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};
+  var econ={res:{},goods:{make:0,imp:0,sell:0,need:0,exp:0,stock:0,facs:0,shops:0}};
+  RESIDS.forEach(function(id){econ.res[id]={make:0,imp:0,use:0,need:0,stock:0,sup:1};});
+  function extractorOutput(c,r,g){                            // the resource a Works pulls, decided by its terrain
+    var t=g.terr, prof=regionProfile(WOX,WOY);
+    if(t==='forest')return 'lumber'; if(t==='plains')return 'grain';
+    if(t==='hills')return 'stone';   if(t==='desert')return 'oil';
+    if(nearMountain(c,r))return (prof.has.ore&&bandOf(c,r)===prof.band.ore)?'ore':null;   // ore only where the region has it, in its band
+    if(nearWater(c,r))return (prof.has.fish&&bandOf(c,r)===prof.band.fish)?'fish':null;   // fishery likewise
+    return null;                                              // a Works on bare grass extracts nothing — site it on resource terrain
+  }
+  function supOf(avail,need){return need<1?1:Math.max(0.35,Math.min(1,avail/need));}   // <1/tick need = ungated (early-game bootstrap grace)
+  var ZONE_NEEDS={res:['grain','lumber'],tower:['grain','lumber','oil'],com:['goods','lumber'],ind:['lumber'],fac:['ore','stone','lumber']};
+  function growthSup(t){var need=ZONE_NEEDS[t];if(!need)return 1;var s=1;for(var k=0;k<need.length;k++){var v=SUP[need[k]];if(v!=null&&v<s)s=v;}return s;}
   function computeResources(){
-    var works=0,facs=0,shops=0,matYield=0;terrBonus=0;
-    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
-      if(g.t==='ind'){var wc=i%cols,wr=(i/cols)|0;works+=g.lvl;var mult=nearMountain(wc,wr)?1.8:g.terr==='forest'?1.4:1;matYield+=g.lvl*2*mult;terrBonus+=g.lvl*2*(mult-1);} // Works by a mountain mine ore (+80%); on forest = timber (+40%)
-      else if(g.t==='fac')facs+=g.lvl;else if(g.t==='com')shops+=g.lvl;}
-    matStock+=matYield;                                  // Works extract Materials (ore/forest yield more)
-    // trade partners: each ships surplus in over the shared rail link (Materials, or Goods from coast cities)
-    tradeMatIn=0;tradeGoodsIn=0;tradePremium=1;
+    var facs=0,shops=0,works=0,resLv=0,towerLv=0,zoneLv=0,ti,tp;
+    var make={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(!g||!g.lvl)continue;var t=g.t;
+      if(t==='ind'){works+=g.lvl;var id=extractorOutput(i%cols,(i/cols)|0,g);if(id)make[id]+=g.lvl*RES_YIELD;}
+      else if(t==='fac')facs+=g.lvl; else if(t==='com')shops+=g.lvl;
+      else if(t==='res')resLv+=g.lvl; else if(t==='tower')towerLv+=g.lvl;
+      if(ZONES[t])zoneLv+=g.lvl;}
+    // trade imports per resource (filled by the trade phase from rail partners)
+    tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};tradeGoodsIn=0;tradePremium=1;
     if(TRADES.length&&railToWorld){
       var landCount=0, perRail=Math.min(connectedRailCount*0.8,25);
-      for(var ti=0;ti<TRADES.length;ti++){var tp=TRADES[ti], flow=perRail*(1+(tp.tier||2)*0.15);
-        if(tp.supplies==='goods')tradeGoodsIn+=flow; else {tradeMatIn+=flow;landCount++;}}
-      tradeMatIn=Math.min(tradeMatIn,34); tradeGoodsIn=Math.min(tradeGoodsIn,22);   // the rail line has finite throughput
-      if(landCount>0)tradePremium=Math.min(1.7,1.5+landCount*0.05);   // land partners short on Goods pay a premium for your exports
+      for(ti=0;ti<TRADES.length;ti++){tp=TRADES[ti];var flow=perRail*(1+(tp.tier||2)*0.15);
+        if(tp.supplies==='goods')tradeGoodsIn+=flow; else if(tradeImp[tp.supplies]!==undefined){tradeImp[tp.supplies]+=flow;landCount++;}}
+      var cap=28;RESIDS.forEach(function(id){tradeImp[id]=Math.min(tradeImp[id],cap);});tradeGoodsIn=Math.min(tradeGoodsIn,22);
+      if(landCount>0)tradePremium=Math.min(1.7,1.5+landCount*0.05);   // partners short on Goods pay a premium for your exports
     }
-    matStock+=tradeMatIn;                                // ore/timber partners ship raw Materials
-    var facCap=facs*3, drawn=Math.min(matStock,facCap);
-    matStock-=drawn; goodsStock+=drawn*(2/3);            // Factories convert 3 Materials → 2 Goods
-    goodsStock+=tradeGoodsIn;                            // coast partners ship finished Goods straight in
-    var need=shops*1.5, sold=Math.min(goodsStock,need);
-    goodsStock-=sold;
-    // rail exports: a rail line reaching the highway ships surplus Goods out to the world (seed of inter-city trade)
+    RESIDS.forEach(function(id){STOCK[id]+=make[id]+tradeImp[id];});     // production + imports into the pools
+    // ---- needs (per tick) ----
+    var need={grain:resLv*0.4+towerLv*0.7, lumber:zoneLv*0.2, ore:facs*1.5, stone:facs*1.5, oil:towerLv*0.4, fish:0};
+    var foodAvail=STOCK.grain+STOCK.fish;                                // fish substitutes for grain as food
+    SUP.grain=supOf(foodAvail,need.grain);
+    SUP.lumber=supOf(STOCK.lumber,need.lumber);
+    SUP.ore=supOf(STOCK.ore,need.ore); SUP.stone=supOf(STOCK.stone,need.stone);
+    SUP.oil=supOf(STOCK.oil,need.oil); SUP.fish=1;
+    // ---- consumption ----
+    var foodUse=Math.min(foodAvail,need.grain);
+    if(foodAvail>0){var fg=foodUse*STOCK.grain/foodAvail;STOCK.grain-=fg;STOCK.fish-=(foodUse-fg);}
+    STOCK.lumber-=Math.min(STOCK.lumber,need.lumber);
+    STOCK.oil-=Math.min(STOCK.oil,need.oil);
+    var made=Math.min(STOCK.ore,STOCK.stone,facs*1.5);                   // Factories need BOTH ore AND stone → Goods
+    STOCK.ore-=made;STOCK.stone-=made;goodsStock+=made*(2/1.5)+tradeGoodsIn;
+    var needG=shops*1.5, sold=Math.min(goodsStock,needG);goodsStock-=sold;
     exportRate=0;
-    if(railToWorld&&goodsStock>0.01){var cap=Math.min(connectedRailCount*1.2,60);exportRate=Math.min(goodsStock,cap);goodsStock-=exportRate;}
-    matStock=Math.max(0,Math.min(matStock,CAPRES)); goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));
-    matHealthy=(facCap-drawn)<=0.01;                     // factories got all the Materials they wanted
-    goodsHealthy=(need-sold)<=0.01;                      // shops got all the Goods they wanted
-    matWanted=(facCap-drawn>0.01);                       // Works in demand when factories are starved
-    demand.fac=(shops>0&&(!goodsHealthy||goodsStock<need+1))?3:(matStock>2?1:(facs<shops?1:-1));  // feed shops, or process piled-up Materials (bootstraps the chain)
+    if(railToWorld&&goodsStock>0.01){var xcap=Math.min(connectedRailCount*1.2,60);exportRate=Math.min(goodsStock,xcap);goodsStock-=exportRate;}
+    RESIDS.forEach(function(id){STOCK[id]=Math.max(0,Math.min(STOCK[id],CAPRES));});
+    goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));
+    // ---- flags + legacy compat ----
+    matStock=STOCK.ore+STOCK.stone;
+    matHealthy=(SUP.ore>=0.999&&SUP.stone>=0.999); goodsHealthy=(needG-sold)<=0.01;
+    matWanted=(SUP.lumber<1||SUP.grain<1||SUP.ore<1||SUP.stone<1);       // Works speed up when any raw is short
+    SUP.goods=supOf(goodsStock+sold,needG);
+    demand.fac=(shops>0&&!goodsHealthy)?3:((STOCK.ore>2&&STOCK.stone>2)?1:(facs<shops?1:-1));
+    // ---- flow snapshot for the Economy panel ----
+    RESIDS.forEach(function(id){var e=econ.res[id];e.make=make[id];e.imp=tradeImp[id];e.need=need[id];e.stock=STOCK[id];e.sup=SUP[id];});
+    econ.res.grain.food=foodAvail;                                       // grain panel notes fish-as-food
+    econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=made*(2/1.5);econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=needG;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;econ.goods.sup=SUP.goods;
   }
 
   function complement(c,r,t){
@@ -1090,15 +1198,16 @@
       if(!ZONES[cell.t]||cell.lvl>=MAXLVL)continue;
       if(blocker(c,r))continue;                          // connection + power + water + supply chain
       var rate=demand[cell.t]>0?1:0.28;
-      if(cell.t==='ind'&&matWanted)rate=1;               // Works speed up when Materials are short
+      if(cell.t==='ind'&&matWanted)rate=1;               // Works speed up when a raw resource is short
       if(complement(c,r,cell.t))rate*=1.6;
+      rate*=growthSup(cell.t);                           // SOFT scarcity: short on a needed resource → slower growth (floored 0.35), never a hard stall
       rate*=(1-congestion*0.6)*EVMOD.growth*TAXP[POL.tax].gr;               // gridlock throttles growth; events can surge or stall it
       if(auraMap&&auraMap[idx(c,r)])rate*=1+auraMap[idx(c,r)];           // landmark aura
       if(obsBuilt)rate*=1.15;                                            // the Observatory lifts the whole city
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();dirty=true;updateDemandUI();updateResourceUI();trafficCoach();growthCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
+    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();dirty=true;updateDemandUI();updateResourceUI();trafficCoach();growthCoach();checkMilestone();updateGoalUI();updateMyGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -1107,7 +1216,7 @@
     if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='tower')p+=g.lvl*g.lvl*135;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;else if(LMARK[g.t])p+=60;}
     p+=Math.round(exportRate*35);                         // trade income from rail exports sustains extra population
     popTarget=p;}
-  var matEl=document.getElementById('mat'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp'),terrEl=document.getElementById('terrb'),terrStat=document.getElementById('terrstat');
+  var reslowEl=document.getElementById('reslow'),reswStat=document.getElementById('rstat-res'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp');
   var pwrEl=document.getElementById('pwr'),pwrStat=document.getElementById('pwrstat'),watEl=document.getElementById('wat'),watStat=document.getElementById('watstat');
   var trafEl=document.getElementById('traf'),trafStat=document.getElementById('trafstat');
   function meterUI(el,stat,gen,use,label,src){var net=gen-use;
@@ -1115,9 +1224,13 @@
     el.style.color=gen===0?'':(net>=0?'#5FBE6E':'#F0876A');
     stat.title='City '+label+' — generating '+gen.toLocaleString()+', using '+use.toLocaleString()+(net<0?' · DEFICIT: buildings going without, add '+src:' · surplus')+'. Roads carry '+label+'.';
     stat.style.opacity=(gen>0||use>0)?1:0.38;}
-  function updateResourceUI(){matEl.textContent=Math.round(matStock);goodsEl.textContent=Math.round(goodsStock);expEl.textContent=Math.round(exportRate);
-    matEl.style.color=matHealthy?'':'#F0876A';goodsEl.style.color=goodsHealthy?'':'#F0876A';expEl.style.color=exportRate>0.5?'#5FBE6E':'';
-    terrEl.textContent='+'+Math.round(terrBonus);terrStat.style.opacity=terrBonus>0.5?1:0.38;
+  function updateResourceUI(){goodsEl.textContent=Math.round(goodsStock);expEl.textContent=Math.round(exportRate);
+    goodsEl.style.color=goodsHealthy?'':'#F0876A';expEl.style.color=exportRate>0.5?'#5FBE6E':'';
+    // Resources tile: surface the worst-supplied resource (buildings needing it grow slowly until you trade for it)
+    var worst=null,ws=1.01;RESIDS.forEach(function(id){if(econ.res[id].need>0.05&&SUP[id]<ws){ws=SUP[id];worst=id;}});
+    if(!worst){reslowEl.textContent='✓';reslowEl.style.color='#5FBE6E';reswStat.title='All resource needs met.';reswStat.style.opacity=0.72;}
+    else{reslowEl.textContent=RESICON[worst]+' '+Math.round(ws*100)+'%';reslowEl.style.color=ws<0.6?'#E4553C':ws<0.95?'#E0A93E':'#5FBE6E';
+      reswStat.title='Lowest resource: '+RESNAME[worst]+' at '+Math.round(ws*100)+'% of demand'+(ws<0.999?' — buildings needing it grow slowly; extract more or trade for it.':'.');reswStat.style.opacity=1;}
     meterUI(pwrEl,pwrStat,powerGen,powerUse,'power','a station');
     meterUI(watEl,watStat,waterGen,waterUse,'water','a tower');
     if(trafEl){var cp=Math.round(congestion*100);trafEl.textContent=cp+'%';
@@ -1201,6 +1314,47 @@
     for(var j=0;j<contracts.length;j++){var c2=contracts[j],v2=CDEF[c2.key].val(),
       pf=c2.inv?(v2<=c2.target?1:Math.max(0,Math.min(1,(100-v2)/(100-c2.target)))):Math.max(0,Math.min(1,v2/c2.target));
       if(bars[j])bars[j].style.width=(pf*100).toFixed(1)+'%';}
+  }
+
+  // ---- Set a Goal: a player-authored optimisation target, tracked live on the map ----
+  // Distinct from Contracts (game-issued, rewarded, rotating), Milestones (fixed tier ladder) and
+  // Awards (passive trophies): this is the ONE goal the player chooses for themselves. No reward —
+  // its value is direction. Persisted globally so it survives a reload and follows across cities.
+  var GOALDEF={
+    pop:  {icon:'🏘',label:'Population',      unit:'people',    val:function(){return popTarget;},         suggest:function(){return niceNum(popTarget*1.5+300);}},
+    cash: {icon:'🏦',label:'Treasury',        unit:'banked',    money:true, val:function(){return treasury;}, suggest:function(){return niceNum(treasury*1.6+3000);}},
+    net:  {icon:'📈',label:'Monthly surplus', unit:'per mo',    money:true, val:function(){return netRate;},  suggest:function(){return niceNum(Math.max(200,netRate*1.6+300));}},
+    exp:  {icon:'📦',label:'Exports',         unit:'Goods/mo',  val:function(){return exportRate;},         suggest:function(){return niceNum(Math.max(10,exportRate*1.6+8));}},
+    fac:  {icon:'🏭',label:'Factories',       unit:'built',     val:function(){return censusCount('fac');}, suggest:function(){return censusCount('fac')+3;}},
+    tower:{icon:'🏙️',label:'Towers',          unit:'built',     val:function(){return censusCount('tower');},suggest:function(){return censusCount('tower')+3;}},
+    park: {icon:'🌳',label:'Parks',           unit:'open',      val:function(){return censusCount('park');},suggest:function(){return censusCount('park')+4;}},
+    cong: {icon:'🚦',label:'Congestion under',unit:'%',  inv:true,val:function(){return congestion*100;},   suggest:function(){return 15;}}
+  };
+  var MYGOAL_KEY='mdg-goal-v1', myGoal=null;
+  try{myGoal=JSON.parse(localStorage.getItem(MYGOAL_KEY)||'null');}catch(e){myGoal=null;}
+  if(myGoal&&!GOALDEF[myGoal.key])myGoal=null;                 // drop a goal whose metric no longer exists
+  function saveMyGoal(){try{myGoal?localStorage.setItem(MYGOAL_KEY,JSON.stringify(myGoal)):localStorage.removeItem(MYGOAL_KEY);}catch(e){}}
+  function setMyGoal(k,t){myGoal={key:k,target:t,done:false};saveMyGoal();updateMyGoalUI();}
+  function clearMyGoal(){myGoal=null;saveMyGoal();updateMyGoalUI();}
+  function goalVal(d){return d.money?'₵'+Math.round(d.val()).toLocaleString():d.inv?Math.round(d.val())+'%':Math.round(d.val()).toLocaleString();}
+  function goalTgt(d,t){return d.money?'₵'+t.toLocaleString():d.inv?t+'%':t.toLocaleString();}
+  var mgEl,mgTxt,mgPct,mgFill;
+  function updateMyGoalUI(){
+    if(!mgEl){mgEl=document.getElementById('mygoal');mgTxt=document.getElementById('mg-txt');mgPct=document.getElementById('mg-pct');mgFill=document.getElementById('mg-fill');}
+    if(!mgEl)return;
+    if(!myGoal||OBSERVE){mgEl.hidden=true;return;}
+    var d=GOALDEF[myGoal.key];if(!d){mgEl.hidden=true;return;}
+    mgEl.hidden=false;
+    var v=d.val(),tg=myGoal.target;
+    var pf=d.inv?(v<=tg?1:Math.max(0,Math.min(1,(100-v)/(100-tg)))):Math.max(0,Math.min(1,tg>0?v/tg:1));
+    var done=d.inv?v<=tg:v>=tg;
+    mgTxt.innerHTML=d.icon+' '+(d.inv?d.label+' <b>'+goalTgt(d,tg)+'</b>':'<b>'+goalTgt(d,tg)+'</b> '+d.unit);
+    mgPct.textContent=done?goalVal(d)+' ✓':goalVal(d)+' · '+Math.round(pf*100)+'%';
+    mgFill.style.width=(pf*100)+'%';
+    mgEl.classList.toggle('done',done);
+    if(done&&!myGoal.done){myGoal.done=true;saveMyGoal();
+      toastEl.innerHTML='🎯 Goal reached — <b>'+d.icon+' '+goalTgt(d,tg)+(d.inv?'':' '+d.unit)+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3800);}
+    else if(!done&&myGoal.done){myGoal.done=false;saveMyGoal();}   // slipped back below target → re-arm the celebration
   }
 
   // ---- city events: state-triggered situations with a decision — spend to shape the outcome, or ride it out ----
@@ -1368,6 +1522,91 @@
       ioBox.innerHTML=sh;
       var cvs=ioBox.querySelectorAll('canvas.spark');
       for(var ci2=0;ci2<rows.length;ci2++)sparkline(cvs[ci2],rows[ci2][1],rows[ci2][2],rows[ci2][3]);
+    } else if(kind==='goal'){
+      // Set a Goal — a two-step setter: choose a metric, tune the target, pin it. Self-managing modal.
+      var draft=myGoal?{key:myGoal.key,target:myGoal.target}:null;
+      var stepFor=function(d,t){if(d.inv)return 5;if(d.money)return Math.max(500,niceNum(t*0.1));if(/built|open/.test(d.unit))return 1;if(/Goods/.test(d.unit))return 5;return Math.max(50,niceNum(t*0.1));};
+      var clampT=function(d,t){return d.inv?Math.max(5,Math.min(60,t)):Math.max(stepFor(d,t),Math.round(t));};
+      var render=function(){
+        var keys=Object.keys(GOALDEF),h='<h3>🎯 Set a Goal</h3><p>Pick a target to chase — your own optimisation challenge, tracked live on the map. Separate from Contracts, and it never expires.</p>';
+        h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+        for(var i=0;i<keys.length;i++){var k=keys[i],d=GOALDEF[k],on=draft&&draft.key===k;
+          h+='<button type="button" data-gk="'+k+'" style="text-align:left;padding:7px 9px;border:1.5px solid '+(on?'#3E8E6E':'var(--line-2)')+';border-radius:8px;background:'+(on?'rgba(62,142,110,.10)':'var(--bg)')+';color:var(--ink);font:600 11.5px system-ui;cursor:pointer">'+d.icon+' '+d.label+'<br><span style="font-weight:500;font-size:10px;color:var(--muted)">now '+goalVal(d)+'</span></button>';}
+        h+='</div>';
+        if(draft){var dd=GOALDEF[draft.key];
+          h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:11px;padding:9px 11px;border:1.5px solid var(--line-2);border-radius:9px;background:var(--bg)">'
+            +'<span style="font:600 11.5px system-ui;color:var(--ink)">'+dd.icon+' Target</span>'
+            +'<span style="display:flex;align-items:center;gap:9px">'
+            +'<button type="button" id="g-dn" style="width:30px;height:30px;border-radius:7px;border:1.5px solid var(--line-2);background:var(--paper);color:var(--ink);font:700 17px system-ui;cursor:pointer;line-height:1">−</button>'
+            +'<b style="min-width:104px;text-align:center;font:700 13px system-ui;color:var(--ink)">'+goalTgt(dd,draft.target)+(dd.inv?'':' <span style="font-weight:500;color:var(--muted)">'+dd.unit+'</span>')+'</b>'
+            +'<button type="button" id="g-up" style="width:30px;height:30px;border-radius:7px;border:1.5px solid var(--line-2);background:var(--paper);color:var(--ink);font:700 17px system-ui;cursor:pointer;line-height:1">+</button>'
+            +'</span></div>';}
+        h+='<div class="iorow">'+(myGoal?'<button type="button" id="g-clr">Clear goal</button>':'')+'<button type="button" id="io-x">'+(draft?'Cancel':'Close')+'</button>'+(draft?'<button type="button" class="pri" id="g-set">Set goal</button>':'')+'</div>';
+        ioBox.innerHTML=h;
+        var gks=ioBox.querySelectorAll('[data-gk]');
+        for(var j=0;j<gks.length;j++)gks[j].addEventListener('click',function(){var k=this.getAttribute('data-gk'),d=GOALDEF[k];draft={key:k,target:(myGoal&&myGoal.key===k)?myGoal.target:clampT(d,d.suggest())};render();});
+        var up=document.getElementById('g-up'),dn=document.getElementById('g-dn');
+        if(up)up.addEventListener('click',function(){var d=GOALDEF[draft.key];draft.target=clampT(d,draft.target+stepFor(d,draft.target));render();});
+        if(dn)dn.addEventListener('click',function(){var d=GOALDEF[draft.key];draft.target=clampT(d,draft.target-stepFor(d,draft.target));render();});
+        var st=document.getElementById('g-set');if(st)st.addEventListener('click',function(){setMyGoal(draft.key,draft.target);ioModal.hidden=true;});
+        var cl=document.getElementById('g-clr');if(cl)cl.addEventListener('click',function(){clearMyGoal();ioModal.hidden=true;});
+        document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
+      };
+      render();ioModal.hidden=false;return;
+    } else if(kind==='econ'){
+      // Economy readout — production vs consumption balance per resource, so the supply chain is legible
+      var e=econ;
+      var ef=function(n){var r=Math.round(n*10)/10;return Math.abs(r).toLocaleString();};
+      var flowRow=function(label,val,into){var pos=into;   // into=true → a source (+, green); false → a sink (−, red)
+        return '<div style="display:flex;justify-content:space-between;font:500 11px system-ui;color:var(--ink-2);padding:2px 0">'
+          +'<span>'+label+'</span><b style="color:'+(pos?'#3E8E6E':'#C0563F')+'">'+(pos?'+':'−')+ef(val)+'</b></div>';};
+      var block=function(title,color,rowsHtml,net,stockLabel,hint){
+        var nc=net>=0.05?'#3E8E6E':(net<=-0.05?'#C0563F':'var(--muted)'),ns=net>=0.05?'surplus':(net<=-0.05?'deficit':'balanced');
+        return '<div style="border:1.5px solid var(--line-2);border-radius:9px;padding:8px 11px;margin:8px 0;background:var(--bg)">'
+          +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">'
+            +'<span style="font:700 12.5px system-ui;color:var(--ink)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+color+';margin-right:6px;vertical-align:middle"></span>'+title+'</span>'
+            +'<span style="font:500 10px system-ui;color:var(--muted)">'+stockLabel+'</span></div>'
+          +rowsHtml
+          +'<div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:5px;padding-top:5px;font:700 11.5px system-ui;color:var(--ink)">'
+            +'<span>Net / tick</span><b style="color:'+nc+'">'+(net>=0.05?'+':net<=-0.05?'−':'')+ef(net)+' · '+ns+'</b></div>'
+          +(hint?'<div style="font:500 10px system-ui;color:var(--muted);margin-top:4px;line-height:1.4">'+hint+'</div>':'')+'</div>';};
+
+      var prof=regionProfile(WOX,WOY);
+      // one block per raw resource in play: extractors produce + rail imports → consumers draw
+      var resBlocks='';
+      RESIDS.forEach(function(id){var r=e.res[id],m=RESMETA[id];
+        if(r.make<0.05&&r.need<0.05&&r.stock<0.5&&r.imp<0.05)return;    // skip resources not in play
+        var rows=flowRow('Extractors produce',r.make,true);
+        if(r.imp>0.05)rows+=flowRow('Imported by rail',r.imp,true);
+        if(r.need>0.05)rows+=flowRow(m.use,r.need,false);
+        var net=r.make+r.imp-r.need;
+        var absent=!prof.has[id]&&(id==='ore'||id==='fish'?!prof.has[id]:prof.absent.indexOf(id)>=0);
+        var hint=r.sup<0.999
+          ?(r.make<0.05?('No '+RESNAME[id]+' extracted — '+(prof.has[id]?'site a Works on '+m.src:'not on this map, <b>import it by rail</b>')+'.')
+            :'Short on '+RESNAME[id]+' — add a Works on '+m.src+', or trade for it.')
+          :(net>3?RESNAME[id]+' surplus — a partner short on it will trade for yours.':'');
+        var supLbl=r.sup<0.999?' · ⚠ '+Math.round(r.sup*100)+'%':'';
+        resBlocks+=block(RESICON[id]+' '+RESNAME[id],m.c,rows,net,'stock '+Math.round(r.stock)+supLbl,hint);
+      });
+      // Goods: Factories turn Ore+Stone into Goods → Shops sell + rail exports
+      var g=e.goods,gNet=g.make+g.imp-g.sell-g.exp,gRows=flowRow('Factories produce',g.make,true);
+      if(g.imp>0.05)gRows+=flowRow('Imported by rail',g.imp,true);
+      gRows+=flowRow('Shops sell',g.sell,false);
+      if(g.exp>0.05)gRows+=flowRow('Exported to '+hubShort(),g.exp,false);
+      var gHint=g.facs===0?'No Factories yet — they turn Ore + Stone into Goods, which Shops sell.'
+        :(g.sell<g.need-0.05?'Shops want '+ef(g.need)+'/tick but only get '+ef(g.sell)+' — feed Factories more Ore & Stone.'
+        :(g.exp>0.05?'Surplus Goods rail out to '+hubShort()+' for export income.':(gNet>2?'Goods surplus — lay rail to the highway to export them.':'')));
+      var pNet=powerGen-powerUse,wNet=waterGen-waterUse;
+      var pRows=flowRow('Stations generate',powerGen,true)+flowRow('Buildings draw',powerUse,false);
+      var wRows=flowRow('Towers &amp; coast supply',waterGen,true)+flowRow('Buildings draw',waterUse,false);
+      var body='<div style="max-height:min(60vh,440px);overflow-y:auto;margin:0 -2px;padding:0 2px">'
+        +(resBlocks||'<div style="font:500 11px system-ui;color:var(--muted);padding:6px 0">No extractors yet — build a Works (🔍 Tools) on a resource terrain to start pulling raw materials.</div>')
+        +block('📦 Goods','#7C6CB0',gRows,gNet,'stock '+Math.round(g.stock),gHint)
+        +block('⚡ Power','#E0A93E',pRows,pNet,pNet>=0?'covered':'short',pNet<0?'A deficit browns out unpowered buildings — add a station or Solar.':'')
+        +block('💧 Water','#4C88B8',wRows,wNet,wNet>=0?'covered':'short',wNet<0?'A deficit leaves buildings dry — add a Water Tower (or build by a coast/lake).':'')
+        +'</div>';
+      ioBox.innerHTML='<h3>📈 Economy</h3><p>Each terrain yields a different raw resource; your city needs a basket. A surplus feeds growth; a shortfall slows the buildings that need it until you extract more — or <b>trade for what your land lacks</b>.</p>'
+        +body+'<div class="iorow"><button type="button" id="io-x">Close</button></div>';
     } else {
       ioBox.innerHTML='<h3>📥 Import city</h3><p>Paste a share code below. <b>This replaces the city currently on this patch</b> — export it first if you want to keep it.</p>'
         +'<textarea id="io-t" placeholder="MDG1.…"></textarea><div class="ioerr" id="io-e"></div>'
@@ -1380,6 +1619,9 @@
     document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
     ioModal.hidden=false;
   }
+  document.getElementById('res').addEventListener('click',function(){ioOpen('econ');});   // tap the HUD numbers → full economy breakdown
+  document.getElementById('mygoal').addEventListener('click',function(){ioOpen('goal');}); // tap the pinned goal → change or clear it
+  updateMyGoalUI();                                                                        // paint a saved goal immediately on load
 
   // ---- budget & policy: the tax lever + tier-unlocked ordinances (the city's standing rules) ----
   var POL={tax:1,cp:false,sm:false,ft:false};
@@ -1532,14 +1774,15 @@
   function drawGridPaper(vx0,vy0,vx1,vy1){
     ctx.fillStyle=C.bg;ctx.fillRect(vx0*CELL-CELL,vy0*VSTEP-CELLH,(vx1-vx0+2)*CELL,(vy1-vy0)*VSTEP+2*CELLH);
     // the honeycomb: 4 batched fills (one per terrain) + one stroke pass for the whole grid
-    var batches={grass:[],water:[],mountain:[],forest:[]},tr,tc,g;
+    var batches={grass:[],water:[],mountain:[],forest:[],plains:[],hills:[],desert:[]},tr,tc,g;
     for(tr=vy0;tr<vy1;tr++)for(tc=vx0;tc<vx1;tc++){g=grid[idx(tc,tr)];if(!g)continue;
-      var tt=g.terr;(tt==='water'?batches.water:tt==='mountain'?batches.mountain:tt==='forest'?batches.forest:batches.grass).push([tc,tr]);}
+      (batches[g.terr]||batches.grass).push([tc,tr]);}
     function fillBatch(list,color){if(!list.length)return;ctx.beginPath();
       for(var i=0;i<list.length;i++)hexPath(hx(list[i][0],list[i][1]),hy(list[i][1]));
       ctx.fillStyle=color;ctx.fill();}
     fillBatch(batches.grass,pal.terrGrass);fillBatch(batches.water,pal.terrWater);
     fillBatch(batches.mountain,pal.terrMountain);fillBatch(batches.forest,pal.terrForest);
+    fillBatch(batches.plains,pal.terrPlains);fillBatch(batches.hills,pal.terrHills);fillBatch(batches.desert,pal.terrDesert);
     ctx.beginPath();                                              // one stroke pass = the hex grid paper
     for(tr=vy0;tr<vy1;tr++)for(tc=vx0;tc<vx1;tc++)hexPath(hx(tc,tr),hy(tr));
     ctx.strokeStyle=C.line;ctx.lineWidth=1;ctx.stroke();
@@ -1547,6 +1790,16 @@
       var mx=hcx(mc,mr),myy=hcy(mr);
       ctx.fillStyle=pal.terrPeak;ctx.beginPath();ctx.moveTo(mx,myy-9);ctx.lineTo(mx+8,myy+8);ctx.lineTo(mx-8,myy+8);ctx.closePath();ctx.fill();
       ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.moveTo(mx,myy-9);ctx.lineTo(mx+3,myy-3);ctx.lineTo(mx-3,myy-3);ctx.closePath();ctx.fill();}
+    // light resource-terrain sprites (unmistakable at a glance, like the peaks)
+    var pi,pc,prw,px,py;
+    ctx.lineWidth=1.6;ctx.lineCap='round';
+    for(pi=0;pi<batches.plains.length;pi++){pc=batches.plains[pi];px=hcx(pc[0],pc[1]);py=hcy(pc[1]);   // farmland: furrow rows
+      ctx.strokeStyle=pal.terrWheat;ctx.beginPath();
+      ctx.moveTo(px-7,py-3);ctx.lineTo(px+7,py-3);ctx.moveTo(px-7,py+1);ctx.lineTo(px+7,py+1);ctx.moveTo(px-7,py+5);ctx.lineTo(px+7,py+5);ctx.stroke();}
+    for(pi=0;pi<batches.hills.length;pi++){pc=batches.hills[pi];px=hcx(pc[0],pc[1]);py=hcy(pc[1]);   // hills: two rounded bumps
+      ctx.fillStyle=pal.terrRock;ctx.beginPath();ctx.arc(px-4,py+3,4,Math.PI,0);ctx.arc(px+4,py+3,3.2,Math.PI,0);ctx.fill();}
+    for(pi=0;pi<batches.desert.length;pi++){pc=batches.desert[pi];px=hcx(pc[0],pc[1]);py=hcy(pc[1]);   // desert: a dune ripple
+      ctx.strokeStyle=pal.terrDune;ctx.beginPath();ctx.moveTo(px-7,py+3);ctx.quadraticCurveTo(px-2,py-3,px+2,py+2);ctx.quadraticCurveTo(px+5,py+5,px+8,py);ctx.stroke();}
   }
   function highwayExtras(c,r){                                                 // per-hex bits drawn on top of the layered carriageway: ramps + the interchange plaza
     var cx0=hcx(c,r),cy0=hcy(r),rampMids=connOf(c,r,isRoadCell);
@@ -1841,7 +2094,7 @@
     if(g.t==='highway'||noBuild(g.terr)||g.t==='road'||g.rail)return false;
     if(g.t!=='empty')return false; return canAfford(COST[brush]||0);}   // one clear hex is all any building needs
   var TYPELABEL={empty:'Empty lot',road:'Road',rail:'Rail',highway:'Freeway',res:'Homes',com:'Shops',ind:'Works',fac:'Factory',tower:'Tower',park:'Park',power:'Power station',solar:'Solar array',water:'Water tower',bank:'Bank',port:'Port',transit:'Transit stop',mon1:'Monument',mon2:'Solar Beacon',mon3:'Star Observatory'};
-  var TERRLABEL={plains:'Grassland',forest:'Forest',mountain:'Mountain',water:'Water'};
+  var TERRLABEL={grass:'Grassland',plains:'Farmland',forest:'Forest',mountain:'Mountain',hills:'Hills',desert:'Desert',water:'Water'};
   var ZONEK={res:1,com:1,ind:1,fac:1,tower:1};
   function yn(v){return v?'<span class="ok">yes</span>':'<span class="no">no</span>';}
   function tileInfo(c,r){if(!inB(c,r))return '';
@@ -1860,12 +2113,32 @@
     else if(ZONEK[t]){
       h+='<div><span class="ik">Level</span> <b>'+g.lvl+' / '+MAXLVL+'</b></div>';
       h+='<div><span class="ik">Road</span> '+yn(nearConnected(c,r))+' <span class="ik">Power</span> '+yn(powered&&powered[i])+' <span class="ik">Water</span> '+yn(watered&&watered[i])+'</div>';
-      var bl=blocker(c,r),why={disc:'needs a road link',pow:'needs power',wat:'needs water',goods:'waiting on Goods',mat:'waiting on Materials'}[bl];
-      h+=why?'<div class="no">⏸ '+why+'</div>':(g.lvl<MAXLVL?'<div class="ok">▲ growing</div>':'<div class="ok">✓ maxed</div>');
-      if(t==='ind')h+='<div class="ik">'+(nearMountain(c,r)?'By a mountain — +80% ore':g.terr==='forest'?'On forest — +40% timber':'No terrain boost')+'</div>';
+      var bl=blocker(c,r),why={disc:'needs a road link',pow:'needs power',wat:'needs water'}[bl];
+      if(why)h+='<div class="no">⏸ '+why+'</div>';
+      else if(g.lvl>=MAXLVL)h+='<div class="ok">✓ maxed</div>';
+      else{var nd=ZONE_NEEDS[t],lim=nd?nd[0]:null;if(nd)for(var qi=1;qi<nd.length;qi++)if(SUP[nd[qi]]<SUP[lim])lim=nd[qi];
+        if(lim&&SUP[lim]<0.94)h+='<div class="no">🐌 slow — short on '+(RESICON[lim]||'📦')+' '+(RESNAME[lim]||'Goods')+' (import it)</div>';
+        else h+='<div class="ok">▲ growing</div>';}
+      if(g.lvl>0){                                         // concrete per-building economic contribution (mirrors the sim)
+        var eo='';
+        if(t==='ind'){var oid=extractorOutput(c,r,g);
+          eo=oid?'Extracts <b>+'+(+(g.lvl*RES_YIELD).toFixed(1))+'</b> '+RESICON[oid]+' '+RESNAME[oid]+'/tick':'<span class="no">No resource here</span> <span class="ik">— site on forest/farmland/hills/desert or beside a mountain/coast</span>';}
+        else if(t==='fac')eo='Turns <b>'+(g.lvl*1.5)+'</b> ⛏Ore + <b>'+(g.lvl*1.5)+'</b> 🧱Stone → <b>'+(g.lvl*2)+'</b> Goods/tick';
+        else if(t==='com')eo='Sells <b>'+(+(g.lvl*1.5).toFixed(1))+'</b> Goods/tick';
+        else if(t==='res')eo='Houses <b>'+(g.lvl*g.lvl*45).toLocaleString()+'</b> people';
+        else if(t==='tower')eo='Houses <b>'+(g.lvl*g.lvl*135).toLocaleString()+'</b> people';
+        if(eo)h+='<div class="ik">'+eo+'</div>';
+        var pu=(POWERUSE[t]||0)*g.lvl,wu=(WATERUSE[t]||0)*g.lvl;
+        if(pu||wu)h+='<div><span class="ik">Draws</span> <b>'+pu+'</b> <span class="ik">power ·</span> <b>'+wu+'</b> <span class="ik">water</span></div>';
+      } else if(t==='ind'){                                 // level 0: name the resource this Works will pull once grown
+        var oid0=extractorOutput(c,r,g);
+        h+='<div class="ik">'+(oid0?'On '+RESNAME[oid0]+' terrain — extracts '+RESICON[oid0]+' '+RESNAME[oid0]+' once grown':'No resource here — move to resource terrain (forest/farmland/hills/desert) or beside a mountain/coast')+'</div>';
+      }
     } else {
       var desc={park:'Lifts nearby land',power:'Generates power for the grid',solar:'Clean power — cheap to run, boosted by Rooftop Solar tech',water:'Supplies water to the grid',bank:'Raises your credit ceiling + earns interest',port:'Boosts export revenue',transit:'Moves people — relieves traffic so a dense city keeps growing'}[t];
       if(desc)h+='<div class="ik">'+desc+'</div>';
+      var out={power:'Generates <b>'+POWER_OUT.toLocaleString()+'</b> power',solar:'Generates <b>~'+Math.round(SOLAR_OUT*solarMult).toLocaleString()+'</b> power',water:'Supplies <b>'+WATER_OUT.toLocaleString()+'</b> water',transit:'Carries <b>'+TRANSIT_CAP+'</b> trips'}[t];
+      if(out)h+='<div class="ik">'+out+'</div>';
       h+='<div><span class="ik">On the road grid</span> '+yn(nearConnected(c,r))+'</div>';}
     return h;}
   var inspectEl=document.getElementById('inspect');
@@ -1991,12 +2264,13 @@
       if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,1]);}   // one hex per building
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
-    var payload=JSON.stringify({v:9,ms:maxMS,mat:matStock,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
+    var payload=JSON.stringify({v:10,ms:maxMS,stock:STOCK,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
     localStorage.setItem(SAVE_KEY,payload);netSaveCity(payload);}catch(e){}}   // mirror to the cloud (throttled, offline-safe)
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
-    if(!Array.isArray(d)&&d.v!==9){try{localStorage.removeItem(SAVE_KEY);}catch(e2){}return;}   // HEX WORLD: square-era saves (v<9) start fresh
+    if(!Array.isArray(d)&&d.v!==10){try{localStorage.removeItem(SAVE_KEY);}catch(e2){}return;}   // multi-resource economy: pre-v10 saves start fresh
     var list=Array.isArray(d)?[]:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
-    if(!Array.isArray(d)){if(typeof d.mat==='number')matStock=d.mat;if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
+    if(!Array.isArray(d)){if(d.stock&&typeof d.stock==='object')RESIDS.forEach(function(k){if(typeof d.stock[k]==='number')STOCK[k]=d.stock[k];});
+      if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
       if(Array.isArray(d.ct))contracts=d.ct.filter(function(a){return CDEF[a[0]];}).map(function(a){return {key:a[0],target:a[1],reward:a[2],inv:!!a[3],text:a[4]};});
       if(typeof d.cd==='number')contractsDone=d.cd;
       if(d.ev&&EVDEF[d.ev.k])activeEv={key:d.ev.k,left:Math.max(1,d.ev.l|0),chosen:d.ev.c||null};
@@ -2089,7 +2363,7 @@
   // ---- boot ----
   readTheme();
   window.addEventListener('resize',resize);
-  resize();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // build the fixed world, lay the gateway, aim the camera at the interchange
+  resize();hwGeom();initWorld();ensureHighway();centerCam(HWGC,HWGR);   // hwGeom first so terrain's resource bands measure from the interchange; build world, lay gateway, aim camera
   if(AI){ planCity(AI.tier); }                 // AI-run city: build a real city on this terrain (read-only)
   else { load(); MAXLVL=densCap(); syncTech(); initTutorDecision(); seedRampIfEmpty(); netBootPull(); }   // give even a first-run player a starter on-ramp to build from; pull a cloud save if this device has none
   computeServices();updatePop();computeDemand();computeResources();updateDemandUI();updateResourceUI();updateGoalUI();updateCashUI();updateToolLocks();renderContracts();renderEvent();renderPolicy();
@@ -2119,9 +2393,10 @@
         +(landN>0?('; your Goods exports earn up to +'+Math.round((Math.min(1.7,1.5+landN*0.05)-1)*100)+'% (partners short on Goods)'):'')
         +'. Add or clear partners on the world map.';}
     setTimeout(function(){
+      var s0=TRADES[0].supplies,inLbl=s0==='goods'?'Goods':(RESICON[s0]?RESICON[s0]+' '+RESNAME[s0]:'raw resources');
       toastEl.innerHTML=n>1
-        ?('🤝 Trading with <b>'+n+' neighbours</b> — surplus flows in over rail'+(landN>0?', exports boosted':''))
-        :('🤝 Trading with <b>'+escT(names[0])+'</b> — '+(TRADES[0].supplies==='goods'?'Goods flow in':'Materials flow in')+(landN>0?', exports +'+Math.round((Math.min(1.7,1.5+landN*0.05)-1)*100)+'%':'')+' over rail');
+        ?('🤝 Trading with <b>'+n+' neighbours</b> — their surplus resources flow in over rail'+(landN>0?', exports boosted':''))
+        :('🤝 Trading with <b>'+escT(names[0])+'</b> — <b>'+inLbl+'</b> flows in'+(landN>0?', exports +'+Math.round((Math.min(1.7,1.5+landN*0.05)-1)*100)+'%':'')+' over rail');
       toastEl.classList.add('on');clearTimeout(toastTimer);
       toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3600);
     },REGION?3600:200);
@@ -2139,7 +2414,16 @@
     reasons:function(){var o={};for(var i=0;i<grid.length;i++){var g=grid[i];if(!g||!ZONES[g.t])continue;var b=blocker(i%cols,(i/cols)|0);o[b||'ok']=(o[b||'ok']||0)+1;}return o;},
     nbs:function(c,r){return nbs(c,r);},cellAt:function(x,y){return cellAt(x,y);},
     center:function(c,r){return {x:hcx(c,r),y:hcy(r)};},cam:function(){return {camX:camX,camY:camY,zoom:zoom};},
-    brush:function(){return brush;},grid:function(c,r){return inB(c,r)?grid[idx(c,r)]:null;}
+    brush:function(){return brush;},grid:function(c,r){return inB(c,r)?grid[idx(c,r)]:null;},
+    info:function(c,r){return tileInfo(c,r);},
+    setGoal:function(k,t){setMyGoal(k,t);},goal:function(){return myGoal;},clearGoal:function(){clearMyGoal();},
+    profile:function(){return regionProfile(WOX,WOY);},band:function(c,r){return bandOf(c,r);},terr:function(c,r){return inB(c,r)?grid[idx(c,r)].terr:null;},
+    hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};},anchors:function(){return resAnchors();},hdist:function(c,r){return hexDist(c,r,BANDC,BANDR);},
+    stock:function(){return STOCK;},sup:function(){return SUP;},extract:function(c,r){return inB(c,r)?extractorOutput(c,r,grid[idx(c,r)]):null;},econres:function(){return econ.res;},
+    growthsup:function(t){return growthSup(t);},blocked:function(c,r){return blocker(c,r);},tick:function(){tick();},
+    tradeTest:function(res){TRADES.length=0;TRADES.push({lat:0,lon:0,tier:3,supplies:res,wantsGoods:true,name:'TestPartner'});railToWorld=true;connectedRailCount=12;},
+    computeRes:function(){computeResources();},   // resource step only (skips computeServices' rail recompute) — test harness
+    save:function(){save();},saveKey:function(){return SAVE_KEY;}
   };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
