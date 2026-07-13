@@ -232,7 +232,7 @@
   </header>
 
   <div class="glance">
-    <div class="stat am"><div class="k" data-t="g1k"></div><div class="v">8:00–2:30</div></div>
+    <div class="stat am"><div class="k" data-t="g1k"></div><div class="v">8:30–2:30</div></div>
     <div class="stat pm"><div class="k" data-t="g2k"></div><div class="v">2:30–6:30</div></div>
   </div>
 
@@ -336,8 +336,8 @@ const N1 = {en:"Nanny 1", es:"Niñera 1"};
 const N2 = {en:"Nanny 2", es:"Niñera 2"};
 const HANDOFF = {en:"Handoff", es:"Cambio"};
 const TIMELINE = [
-  {t:"8:00", who:N1, cls:"am", en:"Shops on the way in (paid from 8:00) using last night's list", es:"Va de compras de camino (pagada desde las 8:00) con la lista de anoche"},
-  {t:"8:30", who:{en:"Nanny 1 · Morning Ritual", es:"Niñera 1 · Ritual de la Mañana"}, cls:"am", en:"Put away the groceries (if any), open all the blinds, then start making breakfast for the children", es:"Guardar las compras (si hay), abrir todas las persianas, y empezar a hacer el desayuno de los niños"},
+  {t:"8:00", who:{en:"Nanny 1 · Off-site", es:"Niñera 1 · Fuera de sitio"}, cls:"am", en:"Grocery run on the way in, from last night's list. Claim this half hour as off-site work only on days groceries are needed (not every day).", es:"Compra de camino, con la lista de anoche. Reclamar esta media hora como trabajo fuera de sitio solo los días que se necesiten compras (no todos los días)."},
+  {t:"8:30", who:{en:"Nanny 1 · On-site start", es:"Niñera 1 · Inicio en sitio"}, cls:"am", en:"Official on-site start. Morning ritual: put away the groceries (if any), open all the blinds, then start making breakfast for the children.", es:"Inicio oficial en sitio. Ritual de la mañana: guardar las compras (si hay), abrir todas las persianas, y empezar a hacer el desayuno de los niños."},
   {t:"10:00", who:N1, cls:"am", en:"Snack #1 for the kids", es:"Merienda #1 para los niños"},
   {t:"11:30", who:N1, cls:"am", en:"Makes lunch for the children", es:"Hace el almuerzo de los niños"},
   {t:"12:00", who:N1, cls:"am", en:"Gets the 2-yr-old ready for a nap; takes the 6-yr-old to color or play outside", es:"Prepara al de 2 años para la siesta; lleva al de 6 a colorear o a jugar afuera"},
@@ -349,7 +349,8 @@ const TIMELINE = [
 ];
 
 const ROLES = [
-  {name:N1, cls:"am", hrs:{en:"Morning · 8:00–2:30 · EN + ES", es:"Mañana · 8:00–2:30 · EN + ES"}, items:[
+  {name:N1, cls:"am", hrs:{en:"On-site 8:30–2:30 · EN + ES", es:"En sitio 8:30–2:30 · EN + ES"}, items:[
+    {en:"<b>On-site start is 8:30.</b> The 8:00–8:30 grocery run is off-site — claimed only on days groceries are needed", es:"<b>El inicio en sitio es a las 8:30.</b> La compra de 8:00–8:30 es fuera de sitio — solo los días que se necesiten compras"},
     {en:"<b>Makes breakfast &amp; lunch for the children</b> every day", es:"<b>Hace el desayuno y el almuerzo de los niños</b> cada día"},
     {en:"<b>Owns kitchen organization</b> — where things go & the labels", es:"<b>Dueña de la organización de la cocina</b> — dónde va cada cosa y las etiquetas"},
     {en:"Shops on the way in, from the shortage list", es:"Compra de camino, con la lista de faltantes"},
