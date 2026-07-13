@@ -77,6 +77,15 @@
   .obj-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#E7A93E,#5FBE6E);border-radius:3px;transition:width .45s ease}
   .obj-rew{align-self:flex-end;font-size:9.5px;font-weight:700;color:#3E8E6E;letter-spacing:.03em}
   @media(max-width:640px){.objectives{display:none}}
+  .mygoal{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:5;min-width:196px;max-width:280px;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:8px 12px;cursor:pointer}
+  .mygoal .mg-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:5px}
+  .mygoal .mg-txt{font:600 12px system-ui,sans-serif;color:var(--ink)}
+  .mygoal .mg-txt b{font-weight:700}
+  .mygoal .mg-pct{font:700 11px system-ui;color:#3E8E6E;white-space:nowrap}
+  .mygoal .mg-bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+  .mygoal .mg-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#E7A93E,#5FBE6E);border-radius:3px;transition:width .45s ease}
+  .mygoal.done{border-color:#5FBE6E;background:rgba(95,190,110,.10)}
+  @media(max-width:520px){.mygoal{display:none}}
   .eventcard{position:absolute;left:14px;bottom:64px;z-index:6;width:252px;background:var(--paper);border:1.5px solid #E0A93E;border-radius:10px;box-shadow:var(--shadow);padding:10px 12px 11px}
   .eventcard .ev-h{font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:6px;margin-bottom:4px}
   .eventcard .ev-d{font-size:11px;color:var(--ink-2);line-height:1.4;margin-bottom:8px}
@@ -255,6 +264,7 @@
       <ol class="tutor-l" id="tutor-l"></ol>
     </div>
     <div class="objectives" id="objectives" hidden><div class="obj-h">📋 Contracts <b id="obj-done"></b></div><ul class="obj-l" id="obj-l"></ul></div>
+    <div class="mygoal" id="mygoal" hidden title="Your self-set goal — tap to change or clear it"><div class="mg-row"><span class="mg-txt" id="mg-txt"></span><span class="mg-pct" id="mg-pct"></span></div><div class="mg-bar"><i id="mg-fill"></i></div></div>
     <div class="eventcard" id="eventcard" hidden></div>
     <div class="obs" id="obs" hidden><b>👁 Observing an AI-run city</b> · read-only — <a href="world/">← back to the world</a></div>
     <div class="obs warn" id="insolvent" hidden><b>⚠ Insolvent</b> · income can’t cover upkeep — export Goods or <b>Clear</b> costly buildings to climb out</div>
@@ -307,6 +317,7 @@
       <div class="catmenu polmenu" id="polmenu"></div></div>
     <div class="cat" data-cat="settings" id="setcat" title="Settings — theme, stats, awards, save data"><span class="cico">⚙️</span><span class="clabel">Settings</span>
       <div class="catmenu setmenu"><span class="menuhd">Settings</span>
+        <div class="tool" data-act="goal" title="Set a personal goal to chase — tracked live on the map"><span class="ico">🎯</span>Set a Goal</div>
         <div class="tool" data-act="econ" title="Economy — production vs consumption for each resource"><span class="ico">📈</span>Economy</div>
         <div class="tool" data-act="stats" title="City history — population, treasury, congestion"><span class="ico">📊</span>Stats</div>
         <div class="tool" data-act="ach" title="Achievements — earned across every city you build"><span class="ico">🏅</span>Awards</div>
@@ -1105,7 +1116,7 @@
       cell.grow+=rate;
       if(cell.grow>=GROW_NEED){cell.grow=0;cell.lvl++;cell.pulse=lastPulseAt=performance.now();dirty=true;scheduleSave();}
     }
-    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();dirty=true;updateDemandUI();updateResourceUI();trafficCoach();growthCoach();checkMilestone();updateGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
+    _tickN++;updatePop();economy();if(_tickN%4===0)histSample();if(_tickN%5===0)achTick();dirty=true;updateDemandUI();updateResourceUI();trafficCoach();growthCoach();checkMilestone();updateGoalUI();updateMyGoalUI();evalContracts();evTick();manageCars();manageTrains();tutorTick();
   }
 
   // ---- population, demand UI, milestones ----
@@ -1208,6 +1219,47 @@
     for(var j=0;j<contracts.length;j++){var c2=contracts[j],v2=CDEF[c2.key].val(),
       pf=c2.inv?(v2<=c2.target?1:Math.max(0,Math.min(1,(100-v2)/(100-c2.target)))):Math.max(0,Math.min(1,v2/c2.target));
       if(bars[j])bars[j].style.width=(pf*100).toFixed(1)+'%';}
+  }
+
+  // ---- Set a Goal: a player-authored optimisation target, tracked live on the map ----
+  // Distinct from Contracts (game-issued, rewarded, rotating), Milestones (fixed tier ladder) and
+  // Awards (passive trophies): this is the ONE goal the player chooses for themselves. No reward —
+  // its value is direction. Persisted globally so it survives a reload and follows across cities.
+  var GOALDEF={
+    pop:  {icon:'🏘',label:'Population',      unit:'people',    val:function(){return popTarget;},         suggest:function(){return niceNum(popTarget*1.5+300);}},
+    cash: {icon:'🏦',label:'Treasury',        unit:'banked',    money:true, val:function(){return treasury;}, suggest:function(){return niceNum(treasury*1.6+3000);}},
+    net:  {icon:'📈',label:'Monthly surplus', unit:'per mo',    money:true, val:function(){return netRate;},  suggest:function(){return niceNum(Math.max(200,netRate*1.6+300));}},
+    exp:  {icon:'📦',label:'Exports',         unit:'Goods/mo',  val:function(){return exportRate;},         suggest:function(){return niceNum(Math.max(10,exportRate*1.6+8));}},
+    fac:  {icon:'🏭',label:'Factories',       unit:'built',     val:function(){return censusCount('fac');}, suggest:function(){return censusCount('fac')+3;}},
+    tower:{icon:'🏙️',label:'Towers',          unit:'built',     val:function(){return censusCount('tower');},suggest:function(){return censusCount('tower')+3;}},
+    park: {icon:'🌳',label:'Parks',           unit:'open',      val:function(){return censusCount('park');},suggest:function(){return censusCount('park')+4;}},
+    cong: {icon:'🚦',label:'Congestion under',unit:'%',  inv:true,val:function(){return congestion*100;},   suggest:function(){return 15;}}
+  };
+  var MYGOAL_KEY='mdg-goal-v1', myGoal=null;
+  try{myGoal=JSON.parse(localStorage.getItem(MYGOAL_KEY)||'null');}catch(e){myGoal=null;}
+  if(myGoal&&!GOALDEF[myGoal.key])myGoal=null;                 // drop a goal whose metric no longer exists
+  function saveMyGoal(){try{myGoal?localStorage.setItem(MYGOAL_KEY,JSON.stringify(myGoal)):localStorage.removeItem(MYGOAL_KEY);}catch(e){}}
+  function setMyGoal(k,t){myGoal={key:k,target:t,done:false};saveMyGoal();updateMyGoalUI();}
+  function clearMyGoal(){myGoal=null;saveMyGoal();updateMyGoalUI();}
+  function goalVal(d){return d.money?'₵'+Math.round(d.val()).toLocaleString():d.inv?Math.round(d.val())+'%':Math.round(d.val()).toLocaleString();}
+  function goalTgt(d,t){return d.money?'₵'+t.toLocaleString():d.inv?t+'%':t.toLocaleString();}
+  var mgEl,mgTxt,mgPct,mgFill;
+  function updateMyGoalUI(){
+    if(!mgEl){mgEl=document.getElementById('mygoal');mgTxt=document.getElementById('mg-txt');mgPct=document.getElementById('mg-pct');mgFill=document.getElementById('mg-fill');}
+    if(!mgEl)return;
+    if(!myGoal||OBSERVE){mgEl.hidden=true;return;}
+    var d=GOALDEF[myGoal.key];if(!d){mgEl.hidden=true;return;}
+    mgEl.hidden=false;
+    var v=d.val(),tg=myGoal.target;
+    var pf=d.inv?(v<=tg?1:Math.max(0,Math.min(1,(100-v)/(100-tg)))):Math.max(0,Math.min(1,tg>0?v/tg:1));
+    var done=d.inv?v<=tg:v>=tg;
+    mgTxt.innerHTML=d.icon+' '+(d.inv?d.label+' <b>'+goalTgt(d,tg)+'</b>':'<b>'+goalTgt(d,tg)+'</b> '+d.unit);
+    mgPct.textContent=done?goalVal(d)+' ✓':goalVal(d)+' · '+Math.round(pf*100)+'%';
+    mgFill.style.width=(pf*100)+'%';
+    mgEl.classList.toggle('done',done);
+    if(done&&!myGoal.done){myGoal.done=true;saveMyGoal();
+      toastEl.innerHTML='🎯 Goal reached — <b>'+d.icon+' '+goalTgt(d,tg)+(d.inv?'':' '+d.unit)+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3800);}
+    else if(!done&&myGoal.done){myGoal.done=false;saveMyGoal();}   // slipped back below target → re-arm the celebration
   }
 
   // ---- city events: state-triggered situations with a decision — spend to shape the outcome, or ride it out ----
@@ -1375,6 +1427,37 @@
       ioBox.innerHTML=sh;
       var cvs=ioBox.querySelectorAll('canvas.spark');
       for(var ci2=0;ci2<rows.length;ci2++)sparkline(cvs[ci2],rows[ci2][1],rows[ci2][2],rows[ci2][3]);
+    } else if(kind==='goal'){
+      // Set a Goal — a two-step setter: choose a metric, tune the target, pin it. Self-managing modal.
+      var draft=myGoal?{key:myGoal.key,target:myGoal.target}:null;
+      var stepFor=function(d,t){if(d.inv)return 5;if(d.money)return Math.max(500,niceNum(t*0.1));if(/built|open/.test(d.unit))return 1;if(/Goods/.test(d.unit))return 5;return Math.max(50,niceNum(t*0.1));};
+      var clampT=function(d,t){return d.inv?Math.max(5,Math.min(60,t)):Math.max(stepFor(d,t),Math.round(t));};
+      var render=function(){
+        var keys=Object.keys(GOALDEF),h='<h3>🎯 Set a Goal</h3><p>Pick a target to chase — your own optimisation challenge, tracked live on the map. Separate from Contracts, and it never expires.</p>';
+        h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+        for(var i=0;i<keys.length;i++){var k=keys[i],d=GOALDEF[k],on=draft&&draft.key===k;
+          h+='<button type="button" data-gk="'+k+'" style="text-align:left;padding:7px 9px;border:1.5px solid '+(on?'#3E8E6E':'var(--line-2)')+';border-radius:8px;background:'+(on?'rgba(62,142,110,.10)':'var(--bg)')+';color:var(--ink);font:600 11.5px system-ui;cursor:pointer">'+d.icon+' '+d.label+'<br><span style="font-weight:500;font-size:10px;color:var(--muted)">now '+goalVal(d)+'</span></button>';}
+        h+='</div>';
+        if(draft){var dd=GOALDEF[draft.key];
+          h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:11px;padding:9px 11px;border:1.5px solid var(--line-2);border-radius:9px;background:var(--bg)">'
+            +'<span style="font:600 11.5px system-ui;color:var(--ink)">'+dd.icon+' Target</span>'
+            +'<span style="display:flex;align-items:center;gap:9px">'
+            +'<button type="button" id="g-dn" style="width:30px;height:30px;border-radius:7px;border:1.5px solid var(--line-2);background:var(--paper);color:var(--ink);font:700 17px system-ui;cursor:pointer;line-height:1">−</button>'
+            +'<b style="min-width:104px;text-align:center;font:700 13px system-ui;color:var(--ink)">'+goalTgt(dd,draft.target)+(dd.inv?'':' <span style="font-weight:500;color:var(--muted)">'+dd.unit+'</span>')+'</b>'
+            +'<button type="button" id="g-up" style="width:30px;height:30px;border-radius:7px;border:1.5px solid var(--line-2);background:var(--paper);color:var(--ink);font:700 17px system-ui;cursor:pointer;line-height:1">+</button>'
+            +'</span></div>';}
+        h+='<div class="iorow">'+(myGoal?'<button type="button" id="g-clr">Clear goal</button>':'')+'<button type="button" id="io-x">'+(draft?'Cancel':'Close')+'</button>'+(draft?'<button type="button" class="pri" id="g-set">Set goal</button>':'')+'</div>';
+        ioBox.innerHTML=h;
+        var gks=ioBox.querySelectorAll('[data-gk]');
+        for(var j=0;j<gks.length;j++)gks[j].addEventListener('click',function(){var k=this.getAttribute('data-gk'),d=GOALDEF[k];draft={key:k,target:(myGoal&&myGoal.key===k)?myGoal.target:clampT(d,d.suggest())};render();});
+        var up=document.getElementById('g-up'),dn=document.getElementById('g-dn');
+        if(up)up.addEventListener('click',function(){var d=GOALDEF[draft.key];draft.target=clampT(d,draft.target+stepFor(d,draft.target));render();});
+        if(dn)dn.addEventListener('click',function(){var d=GOALDEF[draft.key];draft.target=clampT(d,draft.target-stepFor(d,draft.target));render();});
+        var st=document.getElementById('g-set');if(st)st.addEventListener('click',function(){setMyGoal(draft.key,draft.target);ioModal.hidden=true;});
+        var cl=document.getElementById('g-clr');if(cl)cl.addEventListener('click',function(){clearMyGoal();ioModal.hidden=true;});
+        document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
+      };
+      render();ioModal.hidden=false;return;
     } else if(kind==='econ'){
       // Economy readout — production vs consumption balance per resource, so the supply chain is legible
       var e=econ;
@@ -1439,6 +1522,8 @@
     ioModal.hidden=false;
   }
   document.getElementById('res').addEventListener('click',function(){ioOpen('econ');});   // tap the HUD numbers → full economy breakdown
+  document.getElementById('mygoal').addEventListener('click',function(){ioOpen('goal');}); // tap the pinned goal → change or clear it
+  updateMyGoalUI();                                                                        // paint a saved goal immediately on load
 
   // ---- budget & policy: the tax lever + tier-unlocked ordinances (the city's standing rules) ----
   var POL={tax:1,cp:false,sm:false,ft:false};
@@ -2213,7 +2298,8 @@
     nbs:function(c,r){return nbs(c,r);},cellAt:function(x,y){return cellAt(x,y);},
     center:function(c,r){return {x:hcx(c,r),y:hcy(r)};},cam:function(){return {camX:camX,camY:camY,zoom:zoom};},
     brush:function(){return brush;},grid:function(c,r){return inB(c,r)?grid[idx(c,r)]:null;},
-    info:function(c,r){return tileInfo(c,r);}
+    info:function(c,r){return tileInfo(c,r);},
+    setGoal:function(k,t){setMyGoal(k,t);},goal:function(){return myGoal;},clearGoal:function(){clearMyGoal();}
   };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
