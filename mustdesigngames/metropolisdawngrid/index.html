@@ -2392,9 +2392,10 @@
         +(landN>0?('; your Goods exports earn up to +'+Math.round((Math.min(1.7,1.5+landN*0.05)-1)*100)+'% (partners short on Goods)'):'')
         +'. Add or clear partners on the world map.';}
     setTimeout(function(){
+      var s0=TRADES[0].supplies,inLbl=s0==='goods'?'Goods':(RESICON[s0]?RESICON[s0]+' '+RESNAME[s0]:'raw resources');
       toastEl.innerHTML=n>1
-        ?('🤝 Trading with <b>'+n+' neighbours</b> — surplus flows in over rail'+(landN>0?', exports boosted':''))
-        :('🤝 Trading with <b>'+escT(names[0])+'</b> — '+(TRADES[0].supplies==='goods'?'Goods flow in':'Materials flow in')+(landN>0?', exports +'+Math.round((Math.min(1.7,1.5+landN*0.05)-1)*100)+'%':'')+' over rail');
+        ?('🤝 Trading with <b>'+n+' neighbours</b> — their surplus resources flow in over rail'+(landN>0?', exports boosted':''))
+        :('🤝 Trading with <b>'+escT(names[0])+'</b> — <b>'+inLbl+'</b> flows in'+(landN>0?', exports +'+Math.round((Math.min(1.7,1.5+landN*0.05)-1)*100)+'%':'')+' over rail');
       toastEl.classList.add('on');clearTimeout(toastTimer);
       toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3600);
     },REGION?3600:200);
@@ -2418,7 +2419,9 @@
     profile:function(){return regionProfile(WOX,WOY);},band:function(c,r){return bandOf(c,r);},terr:function(c,r){return inB(c,r)?grid[idx(c,r)].terr:null;},
     hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};},anchors:function(){return resAnchors();},hdist:function(c,r){return hexDist(c,r,BANDC,BANDR);},
     stock:function(){return STOCK;},sup:function(){return SUP;},extract:function(c,r){return inB(c,r)?extractorOutput(c,r,grid[idx(c,r)]):null;},econres:function(){return econ.res;},
-    growthsup:function(t){return growthSup(t);},blocked:function(c,r){return blocker(c,r);},tick:function(){tick();}
+    growthsup:function(t){return growthSup(t);},blocked:function(c,r){return blocker(c,r);},tick:function(){tick();},
+    tradeTest:function(res){TRADES.length=0;TRADES.push({lat:0,lon:0,tier:3,supplies:res,wantsGoods:true,name:'TestPartner'});railToWorld=true;connectedRailCount=12;},
+    computeRes:function(){computeResources();}   // resource step only (skips computeServices' rail recompute) — test harness
   };}
   requestAnimationFrame(frame);
   setInterval(tick,650);
