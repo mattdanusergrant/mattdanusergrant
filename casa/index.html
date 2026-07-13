@@ -179,6 +179,18 @@
   .quiet .why{font-size:13px; color:var(--muted); margin:1px 0 5px; font-weight:600;}
   .quiet .do{font-size:14px;}
 
+  /* Cats */
+  .cats{display:flex; flex-direction:column; gap:12px;}
+  .cat{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow:var(--shadow);}
+  .cat .hd{display:flex; align-items:center; gap:9px; margin-bottom:6px; flex-wrap:wrap;}
+  .cat .sw{width:16px; height:16px; border-radius:50%; background:var(--c); flex:none;
+    box-shadow:0 0 0 1.5px var(--line), inset 0 0 0 1px rgba(255,255,255,.18);}
+  .cat .cn{font-size:17px; font-weight:800; letter-spacing:-.01em;}
+  .cat .cw{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700;
+    color:var(--muted); background:var(--line-soft); padding:3px 9px; border-radius:999px;}
+  .cat .cnote{font-size:14px;}
+  .cats-note{margin-top:12px;}
+
   /* Chat sample */
   .chat{background:var(--pm-soft); border:1px solid color-mix(in srgb,var(--pm) 25%, var(--line)); border-radius:14px; padding:13px 14px; margin-top:12px;}
   .chat .cap{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--pm-ink); margin-bottom:7px;}
@@ -245,6 +257,12 @@
   </section>
 
   <section>
+    <h2 data-t="s_cats">Cats</h2>
+    <div class="cats" id="cats"></div>
+    <div class="note cats-note" data-t="cats_note"></div>
+  </section>
+
+  <section>
     <h2 data-t="s_loop">The Shopping Loop</h2>
     <div class="loop" id="loop"></div>
     <div class="chat">
@@ -275,6 +293,8 @@ const T = {
   s_loop:{en:"The Shopping Loop", es:"El Circuito de Compras"},
   s_quiet:{en:"Quiet Times", es:"Horas de Silencio"},
   s_assist:{en:"Assist Areas", es:"Áreas de Apoyo"},
+  s_cats:{en:"Cats", es:"Gatos"},
+  cats_note:{en:"Feeding the grey cat outside leaves dishes out there. <b>Both nannies:</b> bring any empty dishes inside to the sink to soak or wash.", es:"Alimentar al gato gris afuera deja platos sucios ahí. <b>Las dos niñeras:</b> traer los platos vacíos adentro al fregadero para remojar o lavar."},
   assist_note:{en:"Each nanny owns her areas — but helps set up the other's for success.", es:"Cada niñera es dueña de sus áreas — pero ayuda a preparar las de la otra."},
   s_labels:{en:"Labels", es:"Etiquetas"},
   own_am_l:{en:"Kitchen", es:"Cocina"},
@@ -324,6 +344,11 @@ const ROLES = [
   ]},
 ];
 
+const CATS = [
+  {sw:"#2b2b2b", name:{en:"Black cat", es:"Gato negro"}, where:{en:"Indoor / outdoor", es:"Adentro y afuera"}, note:{en:"May have fresh wet food whenever he wishes. His leftovers can then be put outside for the grey cat.", es:"Puede comer comida húmeda fresca cuando quiera. Sus sobras luego se pueden poner afuera para el gato gris."}},
+  {sw:"#9ca3af", name:{en:"Grey cat", es:"Gato gris"}, where:{en:"Outdoor only", es:"Solo afuera"}, note:{en:"Eats outside — including the black cat's leftovers.", es:"Come afuera — incluidas las sobras del gato negro."}},
+];
+
 const QUIET = [
   {t:"8:00 – 9:00", why:{en:"Children may still be sleeping", es:"Los niños pueden seguir dormidos"}, dono:{en:"Enter as quietly as possible; only quiet tasks until the children are awake.", es:"Entrar lo más callado posible; solo tareas silenciosas hasta que los niños despierten."}},
   {t:"12:00 – 3:00", why:{en:"Toddler nap hours", es:"Horas de siesta del bebé"}, dono:{en:"Enter as quietly as possible; only quiet tasks until the children are awake.", es:"Entrar lo más callado posible; solo tareas silenciosas hasta que los niños despierten."}},
@@ -365,6 +390,12 @@ function render(){
     <div class="role ${role.cls}">
       <div class="top"><span class="name">${role.name[lang]}</span><span class="hrs">${role.hrs[lang]}</span></div>
       <ul>${role.items.map(i=>`<li>${i[lang]}</li>`).join("")}</ul>
+    </div>`).join("");
+
+  document.getElementById("cats").innerHTML = CATS.map(c=>`
+    <div class="cat">
+      <div class="hd"><span class="sw" style="--c:${c.sw}"></span><span class="cn">${c.name[lang]}</span><span class="cw">${c.where[lang]}</span></div>
+      <div class="cnote">${c.note[lang]}</div>
     </div>`).join("");
 
   document.getElementById("quiet").innerHTML = QUIET.map(q=>`
