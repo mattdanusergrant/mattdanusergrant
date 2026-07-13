@@ -2,6 +2,13 @@ name = "mdg-world"
 main = "worker.js"
 compatibility_date = "2024-11-01"
 
+# Hub-player config. WORLD_INVITE_ONLY=true gates shared-world claims behind hub
+# membership (players must redeem an invite code). Set false for open play.
+# ADMIN_KEY is a SECRET — do NOT put it here; set it with:
+#   wrangler secret put ADMIN_KEY
+[vars]
+WORLD_INVITE_ONLY = "true"
+
 # Bind a KV namespace before deploying:
 #   wrangler kv namespace create WORLD
 # then paste the returned id below (and a preview_id for `wrangler dev`).
