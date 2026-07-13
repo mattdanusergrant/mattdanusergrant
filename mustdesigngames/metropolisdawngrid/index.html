@@ -224,7 +224,7 @@
       <div class="meter"><span class="bar"><i id="dem-com"></i></span><b>C</b></div>
       <div class="meter"><span class="bar"><i id="dem-ind"></i></span><b>I</b></div>
     </div>
-    <div class="res" id="res" title="Supply chain — Works make Materials, Factories turn Materials into Goods, Shops sell Goods">
+    <div class="res" id="res" style="cursor:pointer" title="Supply chain — Works make Materials, Factories turn Materials into Goods, Shops sell Goods. Tap for the full production vs consumption breakdown.">
       <div class="rstat"><span class="rn" id="mat">0</span><span class="rl"><span class="dot" style="background:#BF8F45"></span>Materials</span></div>
       <div class="rstat"><span class="rn" id="goods">0</span><span class="rl"><span class="dot" style="background:#7C6CB0"></span>Goods</span></div>
       <div class="rstat"><span class="rn" id="exp">0</span><span class="rl"><span class="dot" style="background:#5C8A55"></span>Exports</span></div>
@@ -307,6 +307,7 @@
       <div class="catmenu polmenu" id="polmenu"></div></div>
     <div class="cat" data-cat="settings" id="setcat" title="Settings — theme, stats, awards, save data"><span class="cico">⚙️</span><span class="clabel">Settings</span>
       <div class="catmenu setmenu"><span class="menuhd">Settings</span>
+        <div class="tool" data-act="econ" title="Economy — production vs consumption for each resource"><span class="ico">📈</span>Economy</div>
         <div class="tool" data-act="stats" title="City history — population, treasury, congestion"><span class="ico">📊</span>Stats</div>
         <div class="tool" data-act="ach" title="Achievements — earned across every city you build"><span class="ico">🏅</span>Awards</div>
         <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
@@ -1031,6 +1032,9 @@
   // supply chain: Works → Materials → Factories → Goods → Shops (city-wide pools, no routing)
   var matWanted=false, terrBonus=0;
   var tradePremium=1, tradeMatIn=0, tradeGoodsIn=0;     // set each tick from the trade partners' inflow
+  // per-tick flow snapshot for the Economy readout panel (production vs consumption, per resource)
+  var econ={mat:{make:0,terr:0,imp:0,use:0,cap:0,stock:0,works:0},
+            goods:{make:0,imp:0,sell:0,need:0,exp:0,stock:0,facs:0,shops:0}};
   function computeResources(){
     var works=0,facs=0,shops=0,matYield=0;terrBonus=0;
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
@@ -1060,6 +1064,9 @@
     goodsHealthy=(need-sold)<=0.01;                      // shops got all the Goods they wanted
     matWanted=(facCap-drawn>0.01);                       // Works in demand when factories are starved
     demand.fac=(shops>0&&(!goodsHealthy||goodsStock<need+1))?3:(matStock>2?1:(facs<shops?1:-1));  // feed shops, or process piled-up Materials (bootstraps the chain)
+    // snapshot this tick's flows so the Economy panel can show production vs consumption per resource
+    econ.mat.works=works;econ.mat.make=matYield;econ.mat.terr=terrBonus;econ.mat.imp=tradeMatIn;econ.mat.use=drawn;econ.mat.cap=facCap;econ.mat.stock=matStock;
+    econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=drawn*(2/3);econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=need;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;
   }
 
   function complement(c,r,t){
@@ -1368,6 +1375,57 @@
       ioBox.innerHTML=sh;
       var cvs=ioBox.querySelectorAll('canvas.spark');
       for(var ci2=0;ci2<rows.length;ci2++)sparkline(cvs[ci2],rows[ci2][1],rows[ci2][2],rows[ci2][3]);
+    } else if(kind==='econ'){
+      // Economy readout — production vs consumption balance per resource, so the supply chain is legible
+      var e=econ;
+      var ef=function(n){var r=Math.round(n*10)/10;return Math.abs(r).toLocaleString();};
+      var flowRow=function(label,val,into){var pos=into;   // into=true → a source (+, green); false → a sink (−, red)
+        return '<div style="display:flex;justify-content:space-between;font:500 11px system-ui;color:var(--ink-2);padding:2px 0">'
+          +'<span>'+label+'</span><b style="color:'+(pos?'#3E8E6E':'#C0563F')+'">'+(pos?'+':'−')+ef(val)+'</b></div>';};
+      var block=function(title,color,rowsHtml,net,stockLabel,hint){
+        var nc=net>=0.05?'#3E8E6E':(net<=-0.05?'#C0563F':'var(--muted)'),ns=net>=0.05?'surplus':(net<=-0.05?'deficit':'balanced');
+        return '<div style="border:1.5px solid var(--line-2);border-radius:9px;padding:8px 11px;margin:8px 0;background:var(--bg)">'
+          +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">'
+            +'<span style="font:700 12.5px system-ui;color:var(--ink)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+color+';margin-right:6px;vertical-align:middle"></span>'+title+'</span>'
+            +'<span style="font:500 10px system-ui;color:var(--muted)">'+stockLabel+'</span></div>'
+          +rowsHtml
+          +'<div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:5px;padding-top:5px;font:700 11.5px system-ui;color:var(--ink)">'
+            +'<span>Net / tick</span><b style="color:'+nc+'">'+(net>=0.05?'+':net<=-0.05?'−':'')+ef(net)+' · '+ns+'</b></div>'
+          +(hint?'<div style="font:500 10px system-ui;color:var(--muted);margin-top:4px;line-height:1.4">'+hint+'</div>':'')+'</div>';};
+
+      // Materials: Works produce (terrain-boosted) + rail imports → Factories consume
+      var mNet=e.mat.make+e.mat.imp-e.mat.use,mRows='';
+      mRows+=flowRow('Works produce'+(e.mat.terr>0.05?' (terrain +'+ef(e.mat.terr)+')':''),e.mat.make,true);
+      if(e.mat.imp>0.05)mRows+=flowRow('Imported by rail',e.mat.imp,true);
+      mRows+=flowRow('Factories consume',e.mat.use,false);
+      var mHint=e.mat.works===0?'No Works yet — Works mine Materials (put them by mountains for ore +80%, on forest +40%).'
+        :(e.mat.use<e.mat.cap-0.05?'Factories want '+ef(e.mat.cap)+'/tick but only get '+ef(e.mat.use)+' — add Works or import more.'
+        :(mNet>2?'Materials piling up — add a Factory to turn them into Goods.':''));
+
+      // Goods: Factories produce + imports → Shops sell + rail exports
+      var gNet=e.goods.make+e.goods.imp-e.goods.sell-e.goods.exp,gRows='';
+      gRows+=flowRow('Factories produce',e.goods.make,true);
+      if(e.goods.imp>0.05)gRows+=flowRow('Imported by rail',e.goods.imp,true);
+      gRows+=flowRow('Shops sell',e.goods.sell,false);
+      if(e.goods.exp>0.05)gRows+=flowRow('Exported to '+hubShort(),e.goods.exp,false);
+      var gHint=e.goods.facs===0?'No Factories yet — they turn 3 Materials into 2 Goods, which Shops sell.'
+        :(e.goods.sell<e.goods.need-0.05?'Shops want '+ef(e.goods.need)+'/tick but only get '+ef(e.goods.sell)+' — add Factories or Works upstream.'
+        :(e.goods.exp>0.05?'Surplus Goods rail out to '+hubShort()+' for export income.'
+        :(gNet>2?'Goods surplus — lay rail to the highway to export them for income.':'')));
+
+      // Power & Water: city-wide budgets (already computed each tick)
+      var pNet=powerGen-powerUse,wNet=waterGen-waterUse;
+      var pRows=flowRow('Stations generate',powerGen,true)+flowRow('Buildings draw',powerUse,false);
+      var wRows=flowRow('Towers &amp; coast supply',waterGen,true)+flowRow('Buildings draw',waterUse,false);
+
+      var body='<div style="max-height:min(58vh,430px);overflow-y:auto;margin:0 -2px;padding:0 2px">'
+        +block('Materials','#BF8F45',mRows,mNet,'stock '+Math.round(e.mat.stock),mHint)
+        +block('Goods','#7C6CB0',gRows,gNet,'stock '+Math.round(e.goods.stock),gHint)
+        +block('Power','#E0A93E',pRows,pNet,pNet>=0?'covered':'short',pNet<0?'A deficit browns out unpowered buildings — add a station or Solar.':'')
+        +block('Water','#4C88B8',wRows,wNet,wNet>=0?'covered':'short',wNet<0?'A deficit leaves buildings dry — add a Water Tower (or build by a coast/lake).':'')
+        +'</div>';
+      ioBox.innerHTML='<h3>📈 Economy</h3><p>Production vs. consumption each tick, per resource. A surplus feeds growth (and exports); a deficit starves the chain downstream.</p>'
+        +body+'<div class="iorow"><button type="button" id="io-x">Close</button></div>';
     } else {
       ioBox.innerHTML='<h3>📥 Import city</h3><p>Paste a share code below. <b>This replaces the city currently on this patch</b> — export it first if you want to keep it.</p>'
         +'<textarea id="io-t" placeholder="MDG1.…"></textarea><div class="ioerr" id="io-e"></div>'
@@ -1380,6 +1438,7 @@
     document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
     ioModal.hidden=false;
   }
+  document.getElementById('res').addEventListener('click',function(){ioOpen('econ');});   // tap the HUD numbers → full economy breakdown
 
   // ---- budget & policy: the tax lever + tier-unlocked ordinances (the city's standing rules) ----
   var POL={tax:1,cp:false,sm:false,ft:false};
