@@ -45,19 +45,29 @@ Each article is an object:
 ```js
 {
   id:"koa",              // URL slug → #/koa  (keep it unique)
-  folio:"04",            // the position number shown in the contents
+  issue:1,               // which issue this story belongs to (see ISSUES at top of script)
+  folio:"04",            // the position number shown in that issue's contents
   accent:"#b07d3f",      // this story's material tint (hero glow, rules, drop cap, steps)
-  motif:"grain",         // plate art: "scroll" | "wave" | "grain" | "facet"
+  motif:"grain",         // plate art: "scroll" | "wave" | "grain" | "facet" | "strings"
   readMin:5,             // shown as "5 min read"
   kicker:"From the Forest",
-  hero:true,             // OPTIONAL — marks the cover story (set on exactly one article)
+  hero:true,             // OPTIONAL — marks THIS ISSUE's cover story (one per issue)
   title:"Rings from the Canoe Tree",
   dek:"One-line standfirst under the headline.",
   byline:["The Editors","Hilo"],
+  makers:[               // THE POINT — real makers, each linked back to
+    {name:"Pono Woodworks", what:"Koa rings from dead or fallen trees.", url:"https://ponowoodworks.com/"}
+  ],
   spec:{ label:"Materials", rows:[ ["Wood","Koa (Acacia koa)"], ... ] },
   blocks:[ ...the article body, in order... ]
 }
 ```
+
+**Makers are the point of this magazine.** The `makers` array renders a linked "The Makers"
+block at the foot of every story, and every maker across every issue is collected on the
+**`/#/makers` directory** (the "Makers" button in the top bar). Rules: name only *real* makers,
+link a *real, current* homepage, and keep the `what` to one honest line. Verify a URL before
+you ship it — a dead link is the one thing this magazine can't afford.
 
 The `blocks` array is the article body, rendered top to bottom. Block types:
 
@@ -71,16 +81,25 @@ The `blocks` array is the article body, rendered top to bottom. Block types:
 
 Article order on the cover follows the array order.
 
-## Starting a new issue
+## Issues
 
-Each issue is a new set of stories on a new subject (not just jewelry — anything makers build).
-To publish the next issue:
+The magazine holds many issues at once. The `ISSUES` array at the top of the script lists them:
 
-1. Bump `ISSUE = { no, season, theme }` at the top of the script — e.g.
-   `{ no:"Nº 2", season:"Fall 2026", theme:"Coffee" }`. The `theme` shows on the cover
-   ("Issue Nº 2 · Coffee").
-2. Replace the `ARTICLES` array with the new issue's stories (archive the old ones however
-   you like — e.g. keep past issues in their own files later if this grows).
+```js
+var ISSUES = [
+  { n:1, no:"Nº 1", theme:"Hawaiian Jewelry", season:"Summer 2026" },
+  { n:2, no:"Nº 2", theme:"The ʻUkulele",     season:"Fall 2026"   }
+];
+```
+
+The cover opens on the **latest** issue; a tab row lets readers flip to any past issue
+(`/#/issue/1`, `/#/issue/2`, …). To publish the next issue:
+
+1. Add a row to `ISSUES` (e.g. `{ n:3, no:"Nº 3", theme:"Coffee", season:"Winter 2026" }`).
+2. Add that issue's stories to `ARTICLES` with `issue:3` and a `hero:true` cover story.
+   Nothing else moves — old issues stay live and browsable.
+
+Live now: **Issue Nº 1 — Hawaiian Jewelry** (5 stories) · **Issue Nº 2 — The ʻUkulele** (2 stories).
 
 ## Notes
 
