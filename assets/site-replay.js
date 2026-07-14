@@ -342,7 +342,7 @@
     function wireScene(el){
       var m=el.querySelector('[data-morph]'); if(!m)return null;
       var pill=m.classList.contains('rp-pill');
-      var words=pill?['More Decent Gadgets','Mostly Dropped Gizmos','Mainly Defective Gems','Merely Discarded Gambles','Mildly Dubious Gambits']
+      var words=pill?['More Decent Gadgets','Mostly Dropped Gears','Mainly Defective Gems','Merely Discarded Gambles','Mildly Dubious Gambits']
                      :['MANY DOORS GUILD','MASTER DATA GENOME','METROPOLIS DAWN GRID','MOSS DEW GARDEN','MATH DRAWS GRAPHICS'];
       var k=0; function set(){ if(pill)m.firstChild.textContent=words[k]+' '; else m.textContent=words[k]; k=(k+1)%words.length; }
       set(); if(reduce)return null; var iv=setInterval(set,1400); return function(){clearInterval(iv);};
