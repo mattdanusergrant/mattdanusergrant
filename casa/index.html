@@ -170,6 +170,15 @@
   .assist .txt{font-size:14.5px;}
   .assist-note{margin-top:12px;}
 
+  /* House rules */
+  .rules{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:2px 16px; box-shadow:var(--shadow);}
+  .rules .r{display:grid; grid-template-columns:26px 1fr; gap:12px; align-items:start; padding:11px 0;}
+  .rules .r + .r{border-top:1px dashed var(--line);}
+  .rules .rn{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:800; background:var(--line-soft); color:var(--ink); flex:none;}
+  .rules .r.key .rn{background:var(--am); color:#fff;}
+  .rules .rt{font-size:14.5px;}
+  .rules li b, .rules .rt b{font-weight:800;}
+
   /* Quiet times */
   .quiet{background:var(--line-soft); border:1px solid var(--line); border-left:6px solid var(--muted);
     border-radius:14px; padding:2px 16px; box-shadow:var(--shadow);}
@@ -235,6 +244,11 @@
     <div class="stat am"><div class="k" data-t="g1k"></div><div class="v">8:30–2:30</div></div>
     <div class="stat pm"><div class="k" data-t="g2k"></div><div class="v">2:30–6:30</div></div>
   </div>
+
+  <section>
+    <h2 data-t="s_rules">House Rules</h2>
+    <div class="rules" id="rules"></div>
+  </section>
 
   <section>
     <h2 data-t="s_quiet">Quiet Times</h2>
@@ -311,6 +325,7 @@ const T = {
   s_roles:{en:"Roles", es:"Roles"},
   s_own:{en:"Who Organizes What", es:"Quién Organiza Qué"},
   s_loop:{en:"The Shopping Loop", es:"El Circuito de Compras"},
+  s_rules:{en:"House Rules", es:"Reglas de la Casa"},
   s_quiet:{en:"Quiet Times", es:"Horas de Silencio"},
   s_assist:{en:"Assist Areas", es:"Áreas de Apoyo"},
   s_cats:{en:"Cats", es:"Gatos"},
@@ -370,17 +385,21 @@ const ROLES = [
 const LAUNDRY = [
   {label:{en:"Always — every load", es:"Siempre — cada carga"}, items:[
     {en:"<b>ALL dresses MUST hang dry</b> — never put a dress in the dryer", es:"<b>TODOS los vestidos DEBEN secarse colgados</b> — nunca poner un vestido en la secadora"},
-    {en:"Priority order: Kids → Mom → Dad", es:"Orden de prioridad: Niños → Mamá → Papá"},
+    {en:"Priority order: Kids → Towels & Bedding → Mom → Dad", es:"Orden de prioridad: Niños → Toallas y Ropa de Cama → Mamá → Papá"},
   ]},
   {label:{en:"1 · Kids", es:"1 · Niños"}, items:[
     {en:"<b>Washer:</b> warm · normal cycle", es:"<b>Lavadora:</b> tibia · ciclo normal"},
     {en:"<b>Dryer:</b> low heat", es:"<b>Secadora:</b> calor bajo"},
   ]},
-  {label:{en:"2 · Mom", es:"2 · Mamá"}, items:[
+  {label:{en:"2 · Towels & Bedding", es:"2 · Toallas y Ropa de Cama"}, items:[
+    {en:"<b>Washer:</b> hot · normal cycle", es:"<b>Lavadora:</b> caliente · ciclo normal"},
+    {en:"<b>Dryer:</b> normal / high heat", es:"<b>Secadora:</b> calor normal / alto"},
+  ]},
+  {label:{en:"3 · Mom", es:"3 · Mamá"}, items:[
     {en:"<b>Washer:</b> cold · colors / gentle", es:"<b>Lavadora:</b> fría · colores / suave"},
     {en:"<b>Dryer:</b> low heat · hang delicates (and all dresses)", es:"<b>Secadora:</b> calor bajo · colgar los delicados (y todos los vestidos)"},
   ]},
-  {label:{en:"3 · Dad", es:"3 · Papá"}, items:[
+  {label:{en:"4 · Dad", es:"4 · Papá"}, items:[
     {en:"<b>Washer:</b> warm · normal cycle", es:"<b>Lavadora:</b> tibia · ciclo normal"},
     {en:"<b>Dryer:</b> normal heat", es:"<b>Secadora:</b> calor normal"},
   ]},
@@ -401,6 +420,16 @@ const DISHES = [
 const CATS = [
   {sw:"#2b2b2b", name:{en:"Black cat", es:"Gato negro"}, where:{en:"Indoor / outdoor", es:"Adentro y afuera"}, note:{en:"May have fresh wet food whenever he wishes. His leftovers can then be put outside for the grey cat.", es:"Puede comer comida húmeda fresca cuando quiera. Sus sobras luego se pueden poner afuera para el gato gris."}},
   {sw:"#9ca3af", name:{en:"Grey cat", es:"Gato gris"}, where:{en:"Outdoor only", es:"Solo afuera"}, note:{en:"Eats outside — including the black cat's leftovers.", es:"Come afuera — incluidas las sobras del gato negro."}},
+];
+
+const RULES = [
+  {key:true, en:"<b>Fragrance-free household</b> — we have eczema. Use only the unscented products we provide; no scented sprays, candles, plug-ins, perfume, or scented detergent/lotion.", es:"<b>Hogar sin fragancia</b> — tenemos eczema. Usar solo los productos sin aroma que proveemos; nada de aerosoles con aroma, velas, difusores, perfume, ni detergente/loción con aroma."},
+  {en:"<b>Kids first, always</b> — house tasks happen only once the children are safe and settled.", es:"<b>Primero los niños, siempre</b> — las tareas de la casa solo cuando los niños estén seguros y tranquilos."},
+  {en:"<b>Respect the quiet times</b> — work quietly during the 8–9am and 12–3pm windows (below).", es:"<b>Respetar las horas de silencio</b> — trabajar en silencio de 8–9am y 12–3pm (abajo)."},
+  {en:"<b>Follow the labels</b> — put everything back in its labeled spot.", es:"<b>Seguir las etiquetas</b> — regresar todo a su lugar etiquetado."},
+  {en:"<b>Keep the group chat current</b> — flag anything running low; send the end-of-day shortage list.", es:"<b>Mantener el chat al día</b> — avisar lo que se acaba; mandar la lista de faltantes al final del día."},
+  {en:"<b>Safety</b> — stairs gate set when the kids are upstairs; keep exterior doors locked.", es:"<b>Seguridad</b> — la reja de las escaleras puesta cuando los niños están arriba; mantener las puertas cerradas con llave."},
+  {en:"<b>Phones down</b> while actively watching the kids.", es:"<b>Sin teléfono</b> mientras se cuida activamente a los niños."},
 ];
 
 const QUIET = [
@@ -460,6 +489,12 @@ function render(){
     <div class="cat">
       <div class="hd"><span class="sw" style="--c:${c.sw}"></span><span class="cn">${c.name[lang]}</span><span class="cw">${c.where[lang]}</span></div>
       <div class="cnote">${c.note[lang]}</div>
+    </div>`).join("");
+
+  document.getElementById("rules").innerHTML = RULES.map((r,i)=>`
+    <div class="r ${r.key?"key":""}">
+      <div class="rn">${i+1}</div>
+      <div class="rt">${r[lang]}</div>
     </div>`).join("");
 
   document.getElementById("quiet").innerHTML = QUIET.map(q=>`
