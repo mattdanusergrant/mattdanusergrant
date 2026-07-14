@@ -55,6 +55,7 @@
   <span><span class="key">W A S D</span> move</span>
   <span><span class="key">Mouse</span> / <span class="key">◄ ►</span> look</span>
   <span><span class="key">F</span> / <span class="key">Space</span> Fireball</span>
+  <span><span class="key">E</span> Levitate</span>
   <span><span class="key">R</span> reset</span>
 </div>
 <div class="overlay" id="overlay">
@@ -75,43 +76,34 @@
 
 </script>
 <script>
-/* Mundane Dweomer Grind — 3D prototype (N64-Zelda style). Vanilla + Three.js (inlined). */
+/* Mundane Dweomer Grind — 3D prototype (N64-Zelda style). Vanilla + Three.js (inlined).
+   Two-floor tower: Fireball (melt ice / light braziers) + Levitate (crate onto plate). */
 (function(){
 'use strict';
 const T = THREE;
 
-// ---- Renderer / scene / camera (chunky N64 look: low internal res, vertex lighting, fog) ----
+// ---- Renderer / scene / camera ----
 const host = document.getElementById('game');
 const renderer = new T.WebGLRenderer({ antialias:false, powerPreference:'high-performance' });
-renderer.setPixelRatio(1);
-host.appendChild(renderer.domElement);
-
+renderer.setPixelRatio(1); host.appendChild(renderer.domElement);
 const scene = new T.Scene();
 const SKY = 0x120f1e;
 scene.background = new T.Color(SKY);
 scene.fog = new T.Fog(SKY, 18, 46);
-
 const camera = new T.PerspectiveCamera(60, 16/9, 0.1, 200);
-
-// internal render resolution kept modest for the retro softness; CSS upscales
 function resize(){
-  const w = host.clientWidth, h = host.clientHeight;
-  const scale = Math.min(1, 720 / Math.max(w,h));       // cap internal res
+  const w=host.clientWidth, h=host.clientHeight, scale=Math.min(1,720/Math.max(w,h));
   renderer.setSize(Math.round(w*scale), Math.round(h*scale), false);
-  renderer.domElement.style.width = w+'px';
-  renderer.domElement.style.height = h+'px';
-  camera.aspect = w/h; camera.updateProjectionMatrix();
+  renderer.domElement.style.width=w+'px'; renderer.domElement.style.height=h+'px';
+  camera.aspect=w/h; camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
 
-// ---- Lights ----
-const hemi = new T.HemisphereLight(0x8f86c0, 0x161022, 0.85);
-scene.add(hemi);
-const sun = new T.DirectionalLight(0xffe9c0, 0.5);
-sun.position.set(6, 14, 4);
-scene.add(sun);
+// ---- Lights (persistent) ----
+scene.add(new T.HemisphereLight(0x8f86c0, 0x161022, 0.85));
+const sun = new T.DirectionalLight(0xffe9c0, 0.5); sun.position.set(6,14,4); scene.add(sun);
 
-// ---- Materials (Lambert = per-vertex gouraud, the N64 vibe) ----
+// ---- Materials ----
 const M = {
   floor:  new T.MeshLambertMaterial({ vertexColors:true }),
   wall:   new T.MeshLambertMaterial({ color:0x4a4468 }),
@@ -128,141 +120,195 @@ const M = {
   ped:    new T.MeshLambertMaterial({ color:0x3a3450 }),
   fire:   new T.MeshBasicMaterial({ color:0xff9a3d }),
   fireCore:new T.MeshBasicMaterial({ color:0xffd76a }),
+  crate:  new T.MeshLambertMaterial({ color:0xb07a3d }),
+  crate2: new T.MeshLambertMaterial({ color:0x7a4f24 }),
+  plate:  new T.MeshLambertMaterial({ color:0x45415f }),
+  plateOn:new T.MeshLambertMaterial({ color:0x2f7a3a, emissive:0x123f18 }),
+  stairs: new T.MeshLambertMaterial({ color:0x6a63a0, emissive:0x161233 }),
 };
 
-// ================= LEVEL =================
-// Interior roughly x∈[-12,12], z∈[-12,10]. Player starts south (+z). Door at north (-z).
-const solids = [];   // {minX,maxX,minZ,maxZ, kind, mesh, id}
-function addSolid(minX,maxX,minZ,maxZ,kind,mesh,id){ const s={minX,maxX,minZ,maxZ,kind,mesh,id}; solids.push(s); return s; }
+function clamp(v,a,b){ return v<a?a:v>b?b:v; }
 
-// ---- Floor with a tiled vertex-colour grid ----
-function buildFloor(){
-  const nx=26, nz=24, tile=1; const w=nx*tile, d=nz*tile;
-  const geo = new T.PlaneGeometry(w, d, nx, nz);
-  geo.rotateX(-Math.PI/2);
-  const col=[]; const a=new T.Color(0x2a2540), b=new T.Color(0x231f38);
-  const pos=geo.attributes.position;
-  for(let i=0;i<pos.count;i++){
-    const vx=Math.floor((pos.getX(i)+w/2)/tile), vz=Math.floor((pos.getZ(i)+d/2)/tile);
-    const c=((vx+vz)&1)? a:b; col.push(c.r,c.g,c.b);
-  }
-  geo.setAttribute('color', new T.Float32BufferAttribute(col,3));
-  const m=new T.Mesh(geo, M.floor); m.position.set(0,0,-1); scene.add(m);
+// ================= WIZARD (persistent) =================
+const wiz=new T.Group();
+(function(){
+  const robe=new T.Mesh(new T.CylinderGeometry(0.28,0.6,1.3,7), M.robe); robe.position.y=0.65; wiz.add(robe);
+  const trim=new T.Mesh(new T.CylinderGeometry(0.6,0.62,0.16,7), M.robe2); trim.position.y=0.08; wiz.add(trim);
+  const head=new T.Mesh(new T.SphereGeometry(0.26,8,6), M.skin); head.position.y=1.45; wiz.add(head);
+  const hat=new T.Mesh(new T.ConeGeometry(0.42,0.95,7), M.hat); hat.position.y=2.0; wiz.add(hat);
+  const brim=new T.Mesh(new T.CylinderGeometry(0.5,0.5,0.08,7), M.hat); brim.position.y=1.62; wiz.add(brim);
+  const star=new T.Mesh(new T.SphereGeometry(0.05,6,5), M.fireCore); star.position.set(0.1,1.85,0.36); wiz.add(star);
+  const staff=new T.Mesh(new T.CylinderGeometry(0.04,0.04,1.1,5), M.brass); staff.position.set(0.42,0.75,0.1); wiz.add(staff);
+  const orb=new T.Mesh(new T.SphereGeometry(0.12,7,6), M.fireCore); orb.position.set(0.42,1.35,0.1); wiz.add(orb);
+})();
+scene.add(wiz);
+const carrySlot=new T.Group(); carrySlot.position.set(0,2.5,0); wiz.add(carrySlot);
+
+// ================= LEVEL STATE (rebuilt per floor) =================
+let levelGroup=new T.Group(); scene.add(levelGroup);
+let solids=[];            // {minX,maxX,minZ,maxZ,kind,mesh,...}
+let braziers=[], iceBlocks=[], crates=[], plates=[];
+let door=null, goal=null; // goal={pos:Vector3, kind:'exit'|'milk', gated:bool}
+let carrying=null;
+
+function addSolid(minX,maxX,minZ,maxZ,kind,mesh,extra){
+  const s=Object.assign({minX,maxX,minZ,maxZ,kind,mesh},extra||{}); solids.push(s); return s;
 }
-buildFloor();
-
-// ---- Walls (boxes). Helper adds mesh + collider. ----
+function buildFloorPlane(){
+  const nx=26,nz=24,tile=1,w=nx*tile,d=nz*tile;
+  const geo=new T.PlaneGeometry(w,d,nx,nz); geo.rotateX(-Math.PI/2);
+  const col=[],a=new T.Color(0x2a2540),b=new T.Color(0x231f38),pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++){ const vx=Math.floor((pos.getX(i)+w/2)/tile),vz=Math.floor((pos.getZ(i)+d/2)/tile);
+    const c=((vx+vz)&1)?a:b; col.push(c.r,c.g,c.b); }
+  geo.setAttribute('color',new T.Float32BufferAttribute(col,3));
+  const m=new T.Mesh(geo,M.floor); m.position.set(0,0,-1); levelGroup.add(m);
+}
 const WALL_H=3.2;
 function wall(cx,cz,sx,sz){
-  const g=new T.BoxGeometry(sx,WALL_H,sz);
-  const m=new T.Mesh(g,M.wall); m.position.set(cx,WALL_H/2,cz); scene.add(m);
-  // cap
-  const cg=new T.BoxGeometry(sx+0.2,0.35,sz+0.2);
-  const cm=new T.Mesh(cg,M.wallTop); cm.position.set(cx,WALL_H+0.05,cz); scene.add(cm);
-  addSolid(cx-sx/2, cx+sx/2, cz-sz/2, cz+sz/2, 'wall', m);
+  const m=new T.Mesh(new T.BoxGeometry(sx,WALL_H,sz),M.wall); m.position.set(cx,WALL_H/2,cz); levelGroup.add(m);
+  const cm=new T.Mesh(new T.BoxGeometry(sx+0.2,0.35,sz+0.2),M.wallTop); cm.position.set(cx,WALL_H+0.05,cz); levelGroup.add(cm);
+  addSolid(cx-sx/2,cx+sx/2,cz-sz/2,cz+sz/2,'wall',m);
 }
-// outer ring (leave a gap on north wall for the door)
-wall(0, 10.5, 26, 1);      // south
-wall(-12.5, -1, 1, 22);    // west
-wall( 12.5, -1, 1, 22);    // east
-wall(-7.5, -11.5, 11, 1);  // north-left  (gap in middle for door)
-wall( 7.5, -11.5, 11, 1);  // north-right
-// door alcove (beyond north gap): short corridor walls + back wall
-wall(-2.2,-14.5, 1, 6.5);
-wall( 2.2,-14.5, 1, 6.5);
-wall(0,-17.5, 5.4, 1);
-
-// ---- Braziers ----
+function outerRoom(){
+  wall(0,10.5,26,1); wall(-12.5,-1,1,22); wall(12.5,-1,1,22);
+  wall(-7.5,-11.5,11,1); wall(7.5,-11.5,11,1);          // north wall with central door gap
+  wall(-2.2,-14.5,1,6.5); wall(2.2,-14.5,1,6.5); wall(0,-17.5,5.4,1);  // alcove beyond door
+}
 function makeBrazier(x,z,id){
   const grp=new T.Group(); grp.position.set(x,0,z);
-  const stem=new T.Mesh(new T.CylinderGeometry(0.18,0.28,1.2,6), M.brass); stem.position.y=0.6; grp.add(stem);
-  const bowl=new T.Mesh(new T.CylinderGeometry(0.55,0.32,0.4,8), M.brass); bowl.position.y=1.3; grp.add(bowl);
-  const flame=new T.Mesh(new T.ConeGeometry(0.42,1.1,7), M.fire); flame.position.y=1.95; flame.visible=false;
-  const core=new T.Mesh(new T.ConeGeometry(0.2,0.6,6), M.fireCore); core.position.y=1.8; core.visible=false;
+  grp.add(mesh(new T.CylinderGeometry(0.18,0.28,1.2,6),M.brass,0,0.6,0));
+  grp.add(mesh(new T.CylinderGeometry(0.55,0.32,0.4,8),M.brass,0,1.3,0));
+  const flame=mesh(new T.ConeGeometry(0.42,1.1,7),M.fire,0,1.95,0); flame.visible=false;
+  const core=mesh(new T.ConeGeometry(0.2,0.6,6),M.fireCore,0,1.8,0); core.visible=false;
   grp.add(flame); grp.add(core);
-  const light=new T.PointLight(0xffa64d, 0, 14, 2); light.position.set(0,2.1,0); grp.add(light);
-  scene.add(grp);
-  const s=addSolid(x-0.6,x+0.6,z-0.6,z+0.6,'brazier',grp,id);
-  s.lit=false; s.flame=flame; s.core=core; s.light=light;
-  return s;
+  const light=new T.PointLight(0xffa64d,0,14,2); light.position.set(0,2.1,0); grp.add(light);
+  levelGroup.add(grp);
+  const s=addSolid(x-0.6,x+0.6,z-0.6,z+0.6,'brazier',grp,{lit:false,flame,core,light,id}); braziers.push(s); return s;
 }
-const brazierA = makeBrazier( 8.5, -9.0, 'A');   // out in the open (NE) — easy
-const brazierB = makeBrazier(-8.5, -9.0, 'B');   // NW, walled in behind an ice barricade
-
-// ---- Ice blocks (removable, block both walking and fireballs) ----
-const iceBlocks=[];
-const ICE_SPOTS=[[-8.5,-5.8],[-8.5,-7.0]];       // a two-block ice wall in B's line of fire
-function makeIce(x,z){
-  const g=new T.BoxGeometry(1.5,1.9,1.3);
-  const m=new T.Mesh(g,M.ice); m.position.set(x,0.95,z); scene.add(m);
-  const s=addSolid(x-0.75,x+0.75,z-0.65,z+0.65,'ice',m); s.iceMesh=m; iceBlocks.push(s); return s;
+function mesh(geo,mat,x,y,z){ const m=new T.Mesh(geo,mat); m.position.set(x,y,z); return m; }
+function makeIce(x,z,wide){
+  const sx=wide?2.6:1.5;
+  const m=new T.Mesh(new T.BoxGeometry(sx,1.9,1.3),M.ice); m.position.set(x,0.95,z); levelGroup.add(m);
+  const s=addSolid(x-sx/2,x+sx/2,z-0.65,z+0.65,'ice',m,{iceMesh:m}); iceBlocks.push(s); return s;
 }
-ICE_SPOTS.forEach(([x,z])=>makeIce(x,z));
+function makeDoor(x,z){
+  const grp=new T.Group(); grp.position.set(x,0,z);
+  grp.add(mesh(new T.BoxGeometry(4.2,4.2,0.5),M.door,0,2.1,0));
+  const ring=mesh(new T.TorusGeometry(0.7,0.09,6,16),M.rune,0,2.1,0.3); grp.add(ring);
+  levelGroup.add(grp);
+  door=addSolid(x-2.1,x+2.1,z-0.5,z+0.5,'door',grp,{open:false,grp,ring,baseZ:z}); return door;
+}
+function makeMilk(x,z){
+  const grp=new T.Group(); grp.position.set(x,0,z);
+  grp.add(mesh(new T.CylinderGeometry(0.7,0.9,0.8,10),M.ped,0,0.4,0));
+  grp.add(mesh(new T.BoxGeometry(0.8,1.1,0.8),M.milk,0,1.35,0));
+  const roof=mesh(new T.ConeGeometry(0.6,0.4,4),M.milk,0,2.05,0); roof.rotation.y=Math.PI/4; grp.add(roof);
+  const gl=new T.PointLight(0xfff0c0,0.9,8,2); gl.position.set(0,1.6,0); grp.add(gl);
+  levelGroup.add(grp);
+}
+function makeStairs(x,z){ // exit portal to next floor
+  const grp=new T.Group(); grp.position.set(x,0,z);
+  for(let i=0;i<4;i++) grp.add(mesh(new T.BoxGeometry(2.4-i*0.4,0.4,0.7),M.stairs,0,0.2+i*0.4,-i*0.7));
+  const gl=new T.PointLight(0x8f86ff,0.8,7,2); gl.position.set(0,1.6,-1); grp.add(gl);
+  levelGroup.add(grp);
+}
+function makeCrate(x,z){
+  const grp=new T.Group(); grp.position.set(x,0,z);
+  grp.add(mesh(new T.BoxGeometry(1.1,1.1,1.1),M.crate,0,0.55,0));
+  const edge=new T.Mesh(new T.BoxGeometry(1.16,0.12,1.16),M.crate2); edge.position.y=0.55; grp.add(edge);
+  levelGroup.add(grp);
+  const s=addSolid(x-0.6,x+0.6,z-0.6,z+0.6,'crate',grp,{grp}); crates.push(s); return s;
+}
+function makePlate(x,z){
+  const grp=new T.Group(); grp.position.set(x,0,z);
+  const disc=mesh(new T.CylinderGeometry(0.85,0.9,0.16,12),M.plate,0,0.08,0); grp.add(disc);
+  levelGroup.add(grp);
+  const s={x,z,grp,disc,pressed:false}; plates.push(s); return s;
+}
 
-// ---- Door (north gap). Slides down into the floor when both braziers lit. ----
-const doorGrp=new T.Group();
-const doorPanel=new T.Mesh(new T.BoxGeometry(4.2,4.2,0.5), M.door); doorPanel.position.y=2.1; doorGrp.add(doorPanel);
-const runeRing=new T.Mesh(new T.TorusGeometry(0.7,0.09,6,16), M.rune); runeRing.position.set(0,2.1,0.3); doorGrp.add(runeRing);
-doorGrp.position.set(0,0,-11.5); scene.add(doorGrp);
-const door = addSolid(-2.1,2.1,-12,-11,'door',doorGrp); door.open=false; door.grp=doorGrp;
+// ================= FLOORS =================
+const FLOORS = [null,
+  { name:"Floor 1 — The Frozen Turnstile",
+    obj:"Light both braziers to open the runed door.",
+    quip:"Well. I haven't seen you at the summoning obelisk lately. Floor one. Light both braziers — the frozen one's your problem to thaw.",
+    build(){
+      outerRoom();
+      makeBrazier(8.5,-9,'A');
+      makeBrazier(-8.5,-9,'B');
+      makeIce(-8.5,-6.4,true);         // one wide barricade, cleanly gates brazier B
+      makeDoor(0,-11.5);
+      makeStairs(0,-15.6);
+      goal={ pos:new T.Vector3(0,0,-15.6), kind:'exit', gated:true };
+      return new T.Vector3(0,0,6.5);
+    }
+  },
+  { name:"Floor 2 — The Bureaucratic Gate",
+    obj:"Light the brazier AND set a crate on the plate.",
+    quip:"Floor two. The gate wants a lit brazier AND a weighted plate. It will not accept a wizard standing on it — it wants a crate. It has standards.",
+    build(){
+      outerRoom();
+      makeBrazier(8.5,-9,'A');
+      makeCrate(-6.5,1.5);
+      makePlate(-8.5,-8.5);
+      makeDoor(0,-11.5);
+      makeMilk(0,-15.6);
+      goal={ pos:new T.Vector3(0,0,-15.6), kind:'milk', gated:true };
+      return new T.Vector3(0,0,6.5);
+    }
+  },
+];
+let floorNum=1;
 
-// ---- Milk (goal), in the alcove beyond the door ----
-const milkGrp=new T.Group(); milkGrp.position.set(0,0,-15.5);
-const ped=new T.Mesh(new T.CylinderGeometry(0.7,0.9,0.8,10), M.ped); ped.position.y=0.4; milkGrp.add(ped);
-const carton=new T.Mesh(new T.BoxGeometry(0.8,1.1,0.8), M.milk); carton.position.y=1.35; milkGrp.add(carton);
-const roof=new T.Mesh(new T.ConeGeometry(0.6,0.4,4), M.milk); roof.position.y=2.05; roof.rotation.y=Math.PI/4; milkGrp.add(roof);
-const milkGlow=new T.PointLight(0xfff0c0,0.9,8,2); milkGlow.position.set(0,1.6,0); milkGrp.add(milkGlow);
-scene.add(milkGrp);
-const MILK_POS=new T.Vector3(0,0,-15.5);
+function clearLevel(){
+  scene.remove(levelGroup);
+  levelGroup.traverse(o=>{ if(o.geometry) o.geometry.dispose(); });
+  levelGroup=new T.Group(); scene.add(levelGroup);
+  solids=[]; braziers=[]; iceBlocks=[]; crates=[]; plates=[]; door=null; goal=null;
+  if(carrying){ carrySlot.remove(carrying.grp); carrying=null; }
+}
+function loadFloor(n){
+  floorNum=n; clearLevel(); won=false;
+  const F=FLOORS[n]; buildFloorPlane();
+  const start=F.build();
+  player.pos.copy(start); wiz.position.copy(start); heading=Math.PI; camYaw=Math.PI;
+  document.getElementById('floorInfo').textContent=F.name;
+  document.getElementById('objective').textContent=F.obj;
+  say(F.quip);
+  document.getElementById('overlay').classList.remove('show');
+}
 
-// ---- Wizard (low-poly, flat/vertex-lit) ----
-const wiz=new T.Group();
-const robe=new T.Mesh(new T.CylinderGeometry(0.28,0.6,1.3,7), M.robe); robe.position.y=0.65; wiz.add(robe);
-const trim=new T.Mesh(new T.CylinderGeometry(0.6,0.62,0.16,7), M.robe2); trim.position.y=0.08; wiz.add(trim);
-const head=new T.Mesh(new T.SphereGeometry(0.26,8,6), M.skin); head.position.y=1.45; wiz.add(head);
-const hat=new T.Mesh(new T.ConeGeometry(0.42,0.95,7), M.hat); hat.position.y=2.0; wiz.add(hat);
-const brim=new T.Mesh(new T.CylinderGeometry(0.5,0.5,0.08,7), M.hat); brim.position.y=1.62; wiz.add(brim);
-const star=new T.Mesh(new T.SphereGeometry(0.05,6,5), M.fireCore); star.position.set(0.1,1.85,0.36); wiz.add(star);
-// facing nub (staff hand)
-const staff=new T.Mesh(new T.CylinderGeometry(0.04,0.04,1.1,5), M.brass); staff.position.set(0.42,0.75,0.1); wiz.add(staff);
-const orb=new T.Mesh(new T.SphereGeometry(0.12,7,6), M.fireCore); orb.position.set(0.42,1.35,0.1); wiz.add(orb);
-scene.add(wiz);
-
-const START=new T.Vector3(0,0,6.5);
-let heading=Math.PI;                 // wizard visual facing
-const player={ pos:START.clone(), r:0.55 };
+// ================= PLAYER / CAMERA =================
+const player={ pos:new T.Vector3(0,0,6.5), r:0.55 };
+let heading=Math.PI, camYaw=Math.PI, camPitch=0.42, camDist=8.5;
 wiz.position.copy(player.pos);
-
-// ================= CONTROLS / CAMERA =================
-let camYaw=Math.PI, camPitch=0.42, camDist=8.5;
 const keys={};
 window.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
-  keys[k]=true;
+  if(e.repeat) return; keys[k]=true;
   if(k==='f'||k===' ') castFireball();
-  if(k==='r') resetLevel();
+  if(k==='e') levitate();
+  if(k==='r') loadFloor(floorNum);
 });
 window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
-// mouse look via pointer lock
 renderer.domElement.addEventListener('click',()=>{ renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); });
 document.addEventListener('mousemove',e=>{
   if(document.pointerLockElement===renderer.domElement){
-    camYaw   -= e.movementX*0.0026;
-    camPitch = clamp(camPitch - e.movementY*0.0022, 0.08, 1.15);
+    camYaw-=e.movementX*0.0026; camPitch=clamp(camPitch+e.movementY*0.0022,0.08,1.15);
   }
 });
-function clamp(v,a,b){ return v<a?a:v>b?b:v; }
-
 function camForwardXZ(){ return new T.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw)); }
 
 // ================= COLLISION =================
+function isSolid(s){
+  if(s.kind==='door' && s.open) return false;
+  if(s.kind==='crate' && s===carrying) return false;
+  return true;
+}
 function blocked(x,z){
   const r=player.r;
-  for(const s of solids){
-    if(s.kind==='door' && s.open) continue;
-    if(x > s.minX-r && x < s.maxX+r && z > s.minZ-r && z < s.maxZ+r) return true;
-  }
+  for(const s of solids){ if(!isSolid(s)) continue;
+    if(x>s.minX-r && x<s.maxX+r && z>s.minZ-r && z<s.maxZ+r) return true; }
   return false;
 }
 
@@ -271,111 +317,120 @@ const fireballs=[];
 function castFireball(){
   if(won) return;
   const dir=camForwardXZ().normalize();
-  const g=new T.Mesh(new T.SphereGeometry(0.28,8,7), M.fire);
-  const glow=new T.PointLight(0xff8030,1.1,9,2); g.add(glow);
-  const core=new T.Mesh(new T.SphereGeometry(0.14,7,6), M.fireCore); g.add(core);
+  const g=new T.Mesh(new T.SphereGeometry(0.28,8,7),M.fire);
+  g.add(new T.PointLight(0xff8030,1.1,9,2));
+  g.add(new T.Mesh(new T.SphereGeometry(0.14,7,6),M.fireCore));
   const start=player.pos.clone(); start.y=1.3; start.add(dir.clone().multiplyScalar(0.7));
   g.position.copy(start); scene.add(g);
-  fireballs.push({ mesh:g, dir, life:1.6 });
-  say(pick(CAST_LINES));
+  fireballs.push({mesh:g,dir,life:1.6}); say(pick(CAST_LINES));
 }
 function fireballHits(p){
-  for(const s of solids){
-    if(s.kind==='door' && s.open) continue;
-    if(p.x>s.minX && p.x<s.maxX && p.z>s.minZ && p.z<s.maxZ) return s;
-  }
+  for(const s of solids){ if(s.kind==='door'&&s.open) continue; if(s.kind==='crate'&&s===carrying) continue;
+    if(p.x>s.minX&&p.x<s.maxX&&p.z>s.minZ&&p.z<s.maxZ) return s; }
   return null;
 }
+function removeSolid(s){ const i=solids.indexOf(s); if(i>=0) solids.splice(i,1); }
 function updateFireballs(dt){
-  for(let i=fireballs.length-1;i>=0;i--){
-    const fb=fireballs[i]; fb.life-=dt;
-    fb.mesh.position.addScaledVector(fb.dir, 22*dt);
-    const hit=fireballHits(fb.mesh.position);
-    let dead=fb.life<=0;
+  for(let i=fireballs.length-1;i>=0;i--){ const fb=fireballs[i]; fb.life-=dt;
+    fb.mesh.position.addScaledVector(fb.dir,22*dt);
+    const hit=fireballHits(fb.mesh.position); let dead=fb.life<=0;
     if(hit){
-      if(hit.kind==='ice'){ meltIce(hit); dead=true; }
-      else if(hit.kind==='brazier'){ if(!hit.lit) lightBrazier(hit); dead=true; }
-      else dead=true;  // wall / closed door: fizzle
+      if(hit.kind==='ice'){ levelGroup.remove(hit.iceMesh); removeSolid(hit);
+        iceBlocks.splice(iceBlocks.indexOf(hit),1); say("The ice sublimates with an indignant hiss. Somewhere, a puddle forms."); dead=true; }
+      else if(hit.kind==='brazier'){ if(!hit.lit){ hit.lit=true; hit.flame.visible=true; hit.core.visible=true; hit.light.intensity=1.6; checkDoor(); } dead=true; }
+      else dead=true;
     }
     if(dead){ scene.remove(fb.mesh); fireballs.splice(i,1); }
   }
 }
-function removeSolid(s){ const i=solids.indexOf(s); if(i>=0) solids.splice(i,1); }
-function meltIce(s){
-  scene.remove(s.iceMesh); removeSolid(s);
-  const j=iceBlocks.indexOf(s); if(j>=0) iceBlocks.splice(j,1);
-  say("The ice sublimates with an indignant hiss. Somewhere, a puddle forms.");
-}
-function lightBrazier(s){
-  s.lit=true; s.flame.visible=true; s.core.visible=true; s.light.intensity=1.6;
-  checkDoor();
-}
-function checkDoor(){
-  if(brazierA.lit && brazierB.lit && !door.open){
-    door.open=true;
-    say("Both braziers lit. The runed door grinds open, deeply unimpressed by the effort it took you.");
-    document.getElementById('objective').textContent="The door is open. Go get the milk.";
+
+// ================= LEVITATE =================
+function levitate(){
+  if(won) return;
+  if(!carrying){
+    let best=null,bd=2.4;
+    for(const c of crates){ const d=Math.hypot(c.grp.position.x-player.pos.x,c.grp.position.z-player.pos.z); if(d<bd){bd=d;best=c;} }
+    if(best){
+      // lift off any plate it sat on
+      for(const p of plates){ if(p.crate===best){ p.crate=null; p.pressed=false; p.disc.material=M.plate; checkDoor(); } }
+      carrying=best; carrySlot.add(best.grp); best.grp.position.set(0,0,0);
+      say("You hoist the crate with an incantation older than agriculture. It is a crate.");
+    } else say("Nothing within reach to levitate. The dweomer dissipates, unimpressed.");
+  } else {
+    const dir=new T.Vector3(Math.sin(heading),0,Math.cos(heading));
+    const dx=player.pos.x+dir.x*1.5, dz=player.pos.z+dir.z*1.5;
+    const c=carrying;
+    carrySlot.remove(c.grp); levelGroup.add(c.grp); c.grp.position.set(dx,0,dz);
+    c.minX=dx-0.6; c.maxX=dx+0.6; c.minZ=dz-0.6; c.maxZ=dz+0.6; carrying=null;
+    // snap onto a plate if close
+    let onPlate=null;
+    for(const p of plates){ if(Math.hypot(p.x-dx,p.z-dz)<1.1){ onPlate=p; break; } }
+    if(onPlate){ c.grp.position.set(onPlate.x,0.16,onPlate.z);
+      c.minX=onPlate.x-0.6; c.maxX=onPlate.x+0.6; c.minZ=onPlate.z-0.6; c.maxZ=onPlate.z+0.6;
+      onPlate.crate=c; onPlate.pressed=true; onPlate.disc.material=M.plateOn;
+      say("The plate accepts the crate's weight with a satisfying, bureaucratic *chunk*."); checkDoor(); }
+    else say("Crate set down. Majestic.");
   }
 }
 
-// ================= WIN =================
+// ================= DOOR =================
+function checkDoor(){
+  if(!door) return;
+  const allLit = braziers.every(b=>b.lit);
+  const allPlates = plates.every(p=>p.pressed);
+  if(allLit && allPlates && !door.open){
+    door.open=true;
+    say("Requirements met. The runed door grinds open, deeply unimpressed by the effort it took you.");
+    document.getElementById('objective').textContent = goal.kind==='milk' ? "Door's open. Go get the milk." : "Door's open. Take the stairs up.";
+  }
+}
+
+// ================= UPDATE / WIN =================
 let won=false;
 function update(dt){
-  // movement relative to camera
-  let mx=0,mz=0;
-  const f=camForwardXZ(); const rgt=new T.Vector3(f.z,0,-f.x);
-  if(keys['w']||keys['arrowup']&&false){ mx+=f.x; mz+=f.z; }
-  if(keys['w']) { mx+=f.x; mz+=f.z; }
-  if(keys['s']) { mx-=f.x; mz-=f.z; }
-  if(keys['d']) { mx+=rgt.x; mz+=rgt.z; }
-  if(keys['a']) { mx-=rgt.x; mz-=rgt.z; }
-  // arrow keys steer the camera (look) when not mouse-locked
-  if(keys['arrowleft'])  camYaw+=1.6*dt;
-  if(keys['arrowright']) camYaw-=1.6*dt;
-  if(keys['arrowup'])    camPitch=clamp(camPitch-1.2*dt,0.08,1.15);
-  if(keys['arrowdown'])  camPitch=clamp(camPitch+1.2*dt,0.08,1.15);
-
+  let mx=0,mz=0; const f=camForwardXZ(), rgt=new T.Vector3(-f.z,0,f.x);
+  if(keys['w']){ mx+=f.x; mz+=f.z; } if(keys['s']){ mx-=f.x; mz-=f.z; }
+  if(keys['d']){ mx+=rgt.x; mz+=rgt.z; } if(keys['a']){ mx-=rgt.x; mz-=rgt.z; }
+  if(keys['arrowleft']) camYaw+=1.6*dt; if(keys['arrowright']) camYaw-=1.6*dt;
+  if(keys['arrowup']) camPitch=clamp(camPitch+1.2*dt,0.08,1.15); if(keys['arrowdown']) camPitch=clamp(camPitch-1.2*dt,0.08,1.15);
   const len=Math.hypot(mx,mz);
-  if(len>0.001 && !won){
-    mx/=len; mz/=len; const spd=6.2*dt;
+  if(len>0.001 && !won){ mx/=len; mz/=len; const spd=6.2*dt;
     const nx=player.pos.x+mx*spd, nz=player.pos.z+mz*spd;
     if(!blocked(nx,player.pos.z)) player.pos.x=nx;
     if(!blocked(player.pos.x,nz)) player.pos.z=nz;
     heading=Math.atan2(mx,mz);
   }
-  wiz.position.lerp(player.pos, 0.5);
-  // face heading (smooth)
+  wiz.position.lerp(player.pos,0.5);
   let dh=heading-wiz.rotation.y; while(dh>Math.PI)dh-=2*Math.PI; while(dh<-Math.PI)dh+=2*Math.PI;
   wiz.rotation.y+=dh*Math.min(1,12*dt);
-
   updateFireballs(dt);
-
-  // flames flicker
   const t=performance.now()*0.006;
-  for(const b of [brazierA,brazierB]) if(b.lit){ b.flame.scale.y=1+Math.sin(t*3+b.minX)*0.18; b.light.intensity=1.4+Math.sin(t*5)*0.3; }
-  runeRing.rotation.z+=dt*1.2; orb.material=M.fireCore;
-
-  // camera follow
-  const tgt=new T.Vector3(player.pos.x, 1.4, player.pos.z);
-  const off=new T.Vector3(
-    Math.sin(camYaw)*Math.cos(camPitch),
-    Math.sin(camPitch),
-    Math.cos(camYaw)*Math.cos(camPitch)
-  ).multiplyScalar(camDist);
-  camera.position.copy(tgt).add(off);
-  camera.lookAt(tgt);
-
-  // win check
-  if(!won && door.open && player.pos.distanceTo(MILK_POS)<2.0){ winGame(); }
+  for(const b of braziers) if(b.lit){ b.flame.scale.y=1+Math.sin(t*3+b.minX)*0.18; b.light.intensity=1.4+Math.sin(t*5)*0.3; }
+  if(door){ door.ring.rotation.z+=dt*1.2; const ty=door.open?-4.2:0; door.grp.position.y+=(ty-door.grp.position.y)*Math.min(1,6*dt); }
+  // camera
+  const tgt=new T.Vector3(player.pos.x,1.4,player.pos.z);
+  const off=new T.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch)).multiplyScalar(camDist);
+  camera.position.copy(tgt).add(off); camera.lookAt(tgt);
+  // goal
+  if(!won && goal && (!goal.gated || (door&&door.open)) && player.pos.distanceTo(goal.pos)<2.0){
+    if(goal.kind==='exit') advanceFloor(); else winGame();
+  }
+}
+function advanceFloor(){
+  won=true;
+  showModal("▲ Floor Cleared", "The tower lets you up to the next floor with a put-upon sigh.",
+    "Obelisk: \"Adequate. Attendance noted. The previous absences remain, however, un-noted.\"",
+    "Ascend", ()=>loadFloor(floorNum+1));
 }
 function winGame(){
   won=true;
   showModal("🥛 GROCERIES ACQUIRED",
-    "One (1) unit of milk retrieved — now in glorious, chunky, vertex-lit 3D. Three-dimensional effort, two-dimensional payoff.",
-    "Obelisk: \"See you tomorrow. It's bin night, and the recycling gnomes only answer to a Level-4 banishment. Bring the good staff.\"");
+    "One (1) unit of milk retrieved — after two floors, two spells, and a self-reconfiguring arcane tower. Epic effort, dairy payoff.",
+    "Obelisk: \"See you tomorrow. It's bin night, and the recycling gnomes only answer to a Level-4 banishment. Bring the good staff.\"",
+    "Again", ()=>loadFloor(1));
 }
 
-// ================= HUD / helpers =================
+// ================= HUD =================
 const CAST_LINES=[
   "You unleash an eleven-syllable incantation. A small fireball happens.",
   "FLAME OF A THOUSAND SUNS, etc. It's about the size of a grapefruit.",
@@ -383,51 +438,28 @@ const CAST_LINES=[
 ];
 function pick(a){ return a[(Math.random()*a.length)|0]; }
 function say(html){ document.getElementById('obelisk').innerHTML='<b>Obelisk:</b> '+html; }
-function showModal(t,b,q){
+function showModal(t,b,q,btn,cb){
   document.getElementById('mTitle').innerHTML=t; document.getElementById('mBody').innerHTML=b;
-  document.getElementById('mQuip').textContent=q; document.getElementById('overlay').classList.add('show');
-}
-say("Well. I haven't seen you at the summoning obelisk lately. Floor one. Light both braziers — the frozen one's your problem to thaw.");
-
-// ================= RESET =================
-function resetLevel(){
-  // rebuild ice + relight state without full reload
-  won=false; document.getElementById('overlay').classList.remove('show');
-  player.pos.copy(START); wiz.position.copy(START); heading=Math.PI; camYaw=Math.PI;
-  document.getElementById('objective').textContent="Light both braziers to open the runed door.";
-  // douse braziers
-  for(const b of [brazierA,brazierB]){ b.lit=false; b.flame.visible=false; b.core.visible=false; b.light.intensity=0; }
-  door.open=false; doorGrp.position.set(0,0,-11.5);
-  // clear fireballs
-  for(const fb of fireballs) scene.remove(fb.mesh); fireballs.length=0;
-  // restore ice if melted
-  for(const [x,z] of ICE_SPOTS){ if(!iceBlocks.some(s=>Math.abs(s.iceMesh.position.z-z)<0.2)) makeIce(x,z); }
-  say("The tower resets the floor with a put-upon sigh.");
-}
-
-// ---- animate door sliding ----
-function animateDoor(dt){
-  const targetY = door.open ? -4.2 : 0;
-  doorGrp.position.y += (targetY - doorGrp.position.y) * Math.min(1,6*dt);
+  document.getElementById('mQuip').textContent=q;
+  const el=document.getElementById('mBtn'); el.textContent=btn||'Again'; el.onclick=()=>{ document.getElementById('overlay').classList.remove('show'); cb&&cb(); };
+  document.getElementById('overlay').classList.add('show');
 }
 
 // ================= LOOP =================
 let last=performance.now();
-function frame(now){
-  const dt=Math.min(0.05,(now-last)/1000); last=now;
-  update(dt); animateDoor(dt);
-  renderer.render(scene,camera);
-  requestAnimationFrame(frame);
-}
-resize(); requestAnimationFrame(frame);
+function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now; update(dt); renderer.render(scene,camera); requestAnimationFrame(frame); }
+resize(); loadFloor(1); requestAnimationFrame(frame);
 
-// ================= DEBUG API (for headless verification) =================
+// ================= DEBUG API =================
 window.DBG={
-  get:()=>({ px:+player.pos.x.toFixed(2), pz:+player.pos.z.toFixed(2), heading:+heading.toFixed(2),
-    camYaw:+camYaw.toFixed(2), litA:brazierA.lit, litB:brazierB.lit, doorOpen:door.open, won, ice:iceBlocks.length }),
-  setCamYaw:(y)=>{ camYaw=y; },
-  aimAt:(x,z)=>{ camYaw=Math.atan2(-(x-player.pos.x), -(z-player.pos.z)); },
-  reset:resetLevel,
+  get:()=>({ floor:floorNum, px:+player.pos.x.toFixed(2), pz:+player.pos.z.toFixed(2),
+    litAll:braziers.every(b=>b.lit), platesAll:plates.length?plates.every(p=>p.pressed):true,
+    doorOpen:door?door.open:false, carrying:!!carrying, ice:iceBlocks.length, won,
+    modal:document.getElementById('overlay').classList.contains('show') }),
+  aimAt:(x,z)=>{ camYaw=Math.atan2(-(x-player.pos.x),-(z-player.pos.z)); },
+  faceAt:(x,z)=>{ heading=Math.atan2(x-player.pos.x,z-player.pos.z); },
+  levitate, fireball:castFireball, load:loadFloor,
+  clickModal:()=>document.getElementById('mBtn').click(),
 };
 })();
 
