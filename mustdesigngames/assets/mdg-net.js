@@ -1,4 +1,5 @@
-/* mdg-net.js — the shared multiplayer client for Must Design Games ("Master Data Genome").
+/* mdg-net.js — the shared multiplayer client for Must Design Games (the MDG here = Must
+   Design Games, NOT the Master Data Genome control plane/command center — different thing).
    One module every online game imports. It hides the backend behind a small interface:
 
      const net = window.MDGNet;
