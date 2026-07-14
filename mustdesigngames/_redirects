@@ -1,3 +1,4 @@
 /mossdewgarden/*   /mosslings/:splat 301
-/multiplayerdeckgateway/*   /matchdeckgathering/:splat 301
-/matchdeckgateway/*   /matchdeckgathering/:splat 301
+/multiplayerdeckgateway/*   /multiplayerdeckgarage/:splat 301
+/matchdeckgateway/*   /multiplayerdeckgarage/:splat 301
+/matchdeckgathering/*   /multiplayerdeckgarage/:splat 301

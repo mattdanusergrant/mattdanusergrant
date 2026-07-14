@@ -4,15 +4,15 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<title>Match Deck Gathering</title>
+<title>Multiplayer Deck Garage</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <!--
-  MATCH DECK GATHERING (renamed from Match Deck Gateway 2026-07-14; orig. Multiplayer Deck Gateway 2026-07-09)
+  MULTIPLAYER DECK GARAGE (renamed 2026-07-14; earlier Match Deck Gateway / Match Deck Gathering; orig. Multiplayer Deck Gateway 2026-07-09)
   A generic lab for prototyping card games — poker variants AND fully custom decks.
-  Self-contained static build (no build step). Lives at mustdesigngames/matchdeckgathering/.
-  NOTE: the PartyKit room server (party/) is the project 'matchdeckgathering'. It isn't
+  Self-contained static build (no build step). Lives at mustdesigngames/multiplayerdeckgarage/.
+  NOTE: the PartyKit room server (party/) is the project 'multiplayerdeckgarage'. It isn't
   wired in yet — PARTY_HOST below is empty, so online play uses the PeerJS fallback and
   no host is live. On the next `npm run deploy` it publishes under that name; set
   PARTY_HOST to the printed host to route online play through it.
@@ -154,7 +154,7 @@
   <header>
     <button class="back" id="back">‹</button>
     <div>
-      <h1 id="title">Match Deck Gathering</h1>
+      <h1 id="title">Multiplayer Deck Garage</h1>
       <div class="sub" id="sub">Build, playtest &amp; deal card games to friends online.</div>
     </div>
     <div class="suits" aria-hidden="true">♠<span class="r">♥</span><span class="r">♦</span>♣</div>
@@ -295,7 +295,7 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
    Either way: host id = room code; clients connect; host broadcasts state,
    clients send intents.
    ============================================================ */
-/* Deployed PartyKit room-server host, e.g. 'matchdeckgathering.<you>.partykit.dev'
+/* Deployed PartyKit room-server host, e.g. 'multiplayerdeckgarage.<you>.partykit.dev'
    (see party/README.md). Empty ⇒ use the PeerJS peer-to-peer fallback. */
 const PARTY_HOST = '';
 
@@ -415,7 +415,7 @@ function goHome(){
   if(cleanup){ try{cleanup();}catch(e){} cleanup=null; }
   Net.teardown();
   backBtn.style.display='none';
-  titleEl.textContent='Match Deck Gathering';
+  titleEl.textContent='Multiplayer Deck Garage';
   subEl.textContent='Build, playtest & deal card games to friends online.';
   renderHome();
 }

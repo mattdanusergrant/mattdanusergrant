@@ -13,7 +13,7 @@ served at its own sub-path.
 | Apple Tree Lane | [`/apple-tree-lane/`](apple-tree-lane/) |
 | Baduk Blitz | [`/baduk-blitz/`](baduk-blitz/) |
 | Bloom Again | [`/bloom-again/`](bloom-again/) |
-| Match Deck Gathering | [`/matchdeckgathering/`](matchdeckgathering/) |
+| Multiplayer Deck Garage | [`/multiplayerdeckgarage/`](multiplayerdeckgarage/) |
 | Eat, Monkey, Eat | [`/eat-monkey-eat/`](eat-monkey-eat/) |
 | Grand Theft Apples | [`/grand-theft-apples/`](grand-theft-apples/) |
 | Groundwork | [`/groundwork/`](groundwork/) |

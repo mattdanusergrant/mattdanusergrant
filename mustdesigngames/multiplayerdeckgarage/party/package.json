@@ -1,8 +1,8 @@
 {
-  "name": "matchdeckgathering-party",
+  "name": "multiplayerdeckgarage-party",
   "version": "0.1.0",
   "private": true,
-  "description": "Authoritative room server for Match Deck Gathering (PartyKit on Cloudflare).",
+  "description": "Authoritative room server for Multiplayer Deck Garage (PartyKit on Cloudflare).",
   "scripts": {
     "dev": "partykit dev",
     "deploy": "partykit deploy"
