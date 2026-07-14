@@ -8,6 +8,7 @@ to them**. The magazine is deliberately general; each **issue** takes on one wor
 - **Issue Nº 1 — Hawaiian Jewelry:** gold heirloom bracelets, Niʻihau shell lei, black coral,
   koa wood rings, and the sunrise shell.
 - **Issue Nº 2 — The ʻUkulele:** how a Kamaka is made, and Hawaiʻi's four "K" builders.
+- **Issue Nº 3 — The Surfboard:** how a board is shaped & glassed, and the North Shore shapers.
 
 Live: **https://mattdanusergrant.com/makersdeserveglory/**
 
@@ -98,7 +99,8 @@ The cover opens on the **latest** issue; a tab row lets readers flip to any past
 2. Add that issue's stories to `ARTICLES` with `issue:3` and a `hero:true` cover story.
    Nothing else moves — old issues stay live and browsable.
 
-Live now: **Issue Nº 1 — Hawaiian Jewelry** (5 stories) · **Issue Nº 2 — The ʻUkulele** (2 stories).
+Live now: **Issue Nº 1 — Hawaiian Jewelry** (5 stories) · **Issue Nº 2 — The ʻUkulele** (2 stories)
+· **Issue Nº 3 — The Surfboard** (2 stories).
 
 ## Notes
 

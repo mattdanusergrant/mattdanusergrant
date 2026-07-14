@@ -312,7 +312,8 @@ main{max-width:1120px;margin:0 auto;padding:0 clamp(16px,5vw,40px)}
 /* =================== ISSUE DATA =================== */
 var ISSUES = [
   { n:1, no:"Nº 1", theme:"Hawaiian Jewelry", season:"Summer 2026" },
-  { n:2, no:"Nº 2", theme:"The ʻUkulele",     season:"Fall 2026"   }
+  { n:2, no:"Nº 2", theme:"The ʻUkulele",     season:"Fall 2026"   },
+  { n:3, no:"Nº 3", theme:"The Surfboard",    season:"Winter 2026" }
 ];
 var LATEST = ISSUES[ISSUES.length-1].n;
 function issueMeta(n){ for(var i=0;i<ISSUES.length;i++) if(ISSUES[i].n===n) return ISSUES[i]; return ISSUES[0]; }
@@ -567,6 +568,65 @@ var ARTICLES = [
     ["pull","Four small workshops, four tempers, one instrument — this is what ‘Made in Hawaiʻi’ actually means."],
     ["note","One wood, four voices",[["p","All four lean on koa, but each shapes and braces it differently, so a Kamaka, a KoAloha, a Kanileʻa and a Koʻolau of the same size can sound noticeably different in the hand. The wood is Hawaiian; the voice is the maker's."]]]
   ]
+},
+{
+  id:"surfboard", folio:"01", accent:"#2f8f9d", motif:"wave", readMin:6,
+  kicker:"Foam & Glass", hero:true, issue:3,
+  title:"Shaped by Hand, Sealed by Sea",
+  dek:"A surfboard starts as a block of foam and a strip of wood. Here's how a North Shore shaper turns it into something that flies — carved, glassed, and sanded by hand.",
+  byline:["The Editors","North Shore, Oʻahu"],
+  makers:[
+    {name:"Pyzel Surfboards", what:"Jon Pyzel shapes on the North Shore of Oʻahu — including the boards John John Florence rides to world titles.", url:"https://pyzelsurfboards.com/"}
+  ],
+  spec:{ label:"Materials", rows:[
+    ["Core","A polyurethane or EPS foam blank"],
+    ["Backbone","A thin wood ‘stringer’ glued down the center"],
+    ["Skin","Fiberglass cloth + laminating resin"],
+    ["Hardware","Fin boxes and a leash plug"]
+  ]},
+  blocks:[
+    ["p","A surfboard begins as one of the least glamorous objects imaginable: a lightweight block of foam with a thin strip of wood glued down its spine. That strip — the stringer — is the board's backbone; it decides how much the finished board flexes and snaps back. Everything else is a shaper standing over that blank with the sea in mind."],
+    ["p","On the North Shore of Oʻahu, where the waves are the proving ground for the whole surfing world, that shaper might be someone like Jon Pyzel, whose boards carry John John Florence to world titles. But the process — foam, shape, glass, sand — is the same in every shaping bay on earth."],
+    ["h2","Foam becomes a shape"],
+    ["p","The blank is oversized on purpose. The shaper's whole job is subtraction: reading the foam, drawing the outline, and taking away everything that isn't the board."],
+    ["steps",{ label:"How it's made", items:[
+      ["The blank","A foam core with a wood stringer down the middle is cut roughly to length. The stringer tunes the flex; the foam gives it float."],
+      ["Shaping","The outline and curves are cut by hand with a planer and sanding blocks — or roughed out by a CNC machine, then finished by hand. Millimeters here change how the whole board turns."],
+      ["Fins & plugs","Fin boxes and a leash plug are routed into the foam, so there's somewhere to anchor the fins and the surfer."],
+      ["Glassing","Fiberglass cloth is laid over the foam and soaked with laminating resin, squeegeed thin and even — usually one layer on the bottom, two on the deck where the feet land. The resin sets in minutes, so it's a race."],
+      ["Hot coat & sand","A second ‘hot coat’ of resin seals the weave, then the whole board is sanded smooth — the dusty, patient part that decides how it feels underfoot."],
+      ["Fins & finish","The fins are set, a final gloss coat goes on, and the board is watertight, stiff where it needs to be, and ready for water."]
+    ] }],
+    ["pull","The shaper's whole job is subtraction: take away everything that isn't the board."],
+    ["note","Foam has a history too",[["p","For decades nearly every board on earth started with a blank from one California company, Clark Foam — until it abruptly shut its doors in 2005 and sent the whole industry scrambling. Today blanks come from many suppliers, in classic polyurethane and lighter EPS foam, but the shaper's hands still do the part that matters."]]]
+  ]
+},
+{
+  id:"shapers", folio:"02", accent:"#c08a4a", motif:"wave", readMin:5,
+  kicker:"Made in Hawaiʻi", issue:3,
+  title:"The North Shore Shapers",
+  dek:"A few miles of Oʻahu coastline is the most demanding wave lab on earth — and the shapers who work behind it have shaped how the whole world surfs.",
+  byline:["The Editors","Oʻahu"],
+  makers:[
+    {name:"Pyzel Surfboards", what:"Jon Pyzel, Waialua — from a backyard bay in the ’90s to John John Florence's world-title boards.", url:"https://pyzelsurfboards.com/"},
+    {name:"Tokoro Surfboards", what:"Wade Tokoro — one of Hawaiʻi's most respected shapers and surfers.", url:"https://www.tokorosurfboards.com/"},
+    {name:"Aipa Surf Co.", what:"Ben Aipa's shop (est. 1970), now run by his sons Duke & Akila — inventors of the swallowtail and split-tail.", url:"https://www.aipasurf.com/"}
+  ],
+  spec:{ label:"The lineage", rows:[
+    ["Ben Aipa","1970s · invented the swallowtail & split-tail"],
+    ["Gerry Lopez","‘Mr. Pipeline’ · stylist and shaper"],
+    ["Dick Brewer","refined the modern Hawaiian ‘gun’"],
+    ["Working now","Pyzel, Tokoro, Arakawa & more — still here"]
+  ]},
+  blocks:[
+    ["p","If you want to know whether a surfboard works, take it to the North Shore of Oʻahu. For a few miles — Pipeline, Sunset, Waimea — the Pacific throws the heaviest, most perfect waves in the world onto shallow reef, and boards that survive there set the standard everywhere else. So it's no accident that some of history's most important shapers built their names in the bays just behind that beach."],
+    ["h2","The legends"],
+    ["p","Ben Aipa started shaping in 1970 and rewrote what a tail could do, inventing the swallowtail and the split-tail that let surfers turn harder and later; his sons still run the shop. Gerry Lopez — ‘Mr. Pipeline’ — shaped as gracefully as he surfed, and Dick Brewer refined the modern Hawaiian ‘gun,’ the long, clean board built to survive giant waves. Between them they taught much of the world what a performance board should look like."],
+    ["h2","The shapers working now"],
+    ["p","The tradition is very much alive. Jon Pyzel shapes in Waialua, and the boards John John Florence rides to world titles come out of his bay. Wade Tokoro, Eric Arakawa and a handful of others keep the North Shore what it's been for sixty years: the place a board has to prove itself before anyone believes in it."],
+    ["pull","A board that survives the North Shore sets the standard everywhere else."],
+    ["note","Why here",[["p","It isn't just marketing. The North Shore's waves are fast, hollow, and unforgiving, so a flaw a shaper could hide on a gentle beach break shows up here instantly. Shaping within earshot of that surf means constant, brutal feedback — which is exactly why the boards get so good."]]]
+  ]
 }
 ];
 
@@ -609,7 +669,7 @@ function renderCover(issueN){
   var h='';
   h+='<section class="cover-mast">'+
        '<div class="issue">Issue '+esc(meta.no)+' &nbsp;·&nbsp; '+esc(meta.theme)+'</div>'+
-       '<h1>Makers Deserve Glory</h1>'+
+       '<h1>Makers<br>Deserve<br>Glory</h1>'+
        '<div class="tag">How real things are made — and who makes them.</div>'+
        '<div class="shimmer"></div>'+
        '<p class="ethos">A no-ads magazine you <b>read</b> instead of watching: how things are built and how '+
