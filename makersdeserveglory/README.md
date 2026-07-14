@@ -1,28 +1,27 @@
-# Makers Dissect Gadgets
+# Makers Deserve Glory
 
-**A no-ads digital magazine where makers take things apart to show how they're made.** Built
-for a friend who wanted the *How It's Made* idea — the craft, the materials, the steps — but as
-something you **read** instead of watch. The magazine is deliberately general; each **issue**
-takes on one world.
+**A no-ads digital magazine about how real things are made — and the real people who make them.**
+Built for a friend who wanted the *How It's Made* idea as something you **read** instead of watch.
+The twist that became the point: every story surfaces the actual makers and **links straight back
+to them**. The magazine is deliberately general; each **issue** takes on one world.
 
 - **Issue Nº 1 — Hawaiian Jewelry:** gold heirloom bracelets, Niʻihau shell lei, black coral,
   koa wood rings, and the sunrise shell.
+- **Issue Nº 2 — The ʻUkulele:** how a Kamaka is made, and Hawaiʻi's four "K" builders.
 
-Live once merged to `main`: **https://mattdanusergrant.com/makersdissectgadgets/**
+Live: **https://mattdanusergrant.com/makersdeserveglory/**
 
-> Name note: "Makers Dissect Gadgets" is an M·D·G name (like the rest of the family). It's in
-> the claims ledger in `ConductiveOS/06_system/settings.md`. Registering it freed the G-word
-> "Gadgets" from the homepage Tools section, which was renamed **Methodically Devised Gizmos**
-> (trading its former "Gizmos" rotation phrase to "Gears" to keep the no-repeat rule intact).
-> Heads-up: the site's *More Games* button still cycles playful microcopy that includes "More
-> Decent Gadgets" — a rotating word-toy, not a ledger label, so it's left as-is.
+> Name note: "Makers Deserve Glory" (Makers · Deserve · Glory) is an M·D·G name in the claims
+> ledger (`ConductiveOS/06_system/settings.md`). It was called **Makers Dissect Gadgets** until
+> 2026-07-14; the old path 301s to this one via the repo-root `_redirects`. The rename freed the
+> words "Dissect" and "Gadgets" back to the pool.
 
 ## What it is
 
 A single self-contained page — `index.html`, no build step, no dependencies, no tracking,
 no ads. It works on Cloudflare Pages, opens straight off disk (`file://`), and can be saved
 for offline reading. It's a root folder in the `mattdanusergrant` repo, so the apex Pages
-project serves it at `mattdanusergrant.com/makersdissectgadgets/` automatically — no config,
+project serves it at `mattdanusergrant.com/makersdeserveglory/` automatically — no config,
 no separate subdomain or Pages project needed.
 
 - **Reader as an app** — a cover with a contents index, then hash-routed article pages

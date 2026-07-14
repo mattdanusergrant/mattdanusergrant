@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Makers Dissect Gadgets — how things are made</title>
+<title>Makers Deserve Glory — how things are made</title>
 <meta name="description" content="A no-ads digital magazine where makers take things apart to show how they're built and how they work. Issue Nº 1: the jewelry of Hawaiʻi — gold heirloom bracelets, Niʻihau shell lei, black coral, koa wood, and the sunrise shell. Read it instead of watching." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#0d1413" />
 <!-- Link preview -->
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="Makers Dissect Gadgets" />
-<meta property="og:title" content="Makers Dissect Gadgets — how things are made" />
+<meta property="og:site_name" content="Makers Deserve Glory" />
+<meta property="og:title" content="Makers Deserve Glory — how things are made" />
 <meta property="og:description" content="How it's made, no ads: a magazine where makers take things apart. Issue Nº 1 is the jewelry of Hawaiʻi." />
-<meta property="og:url" content="https://mattdanusergrant.com/makersdissectgadgets/" />
+<meta property="og:url" content="https://mattdanusergrant.com/makersdeserveglory/" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Makers Dissect Gadgets" />
+<meta name="twitter:title" content="Makers Deserve Glory" />
 <meta name="twitter:description" content="How it's made, no ads: a magazine where makers take things apart. Issue Nº 1 — the jewelry of Hawaiʻi." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -22,7 +22,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@500;600;700&display=swap" rel="stylesheet" />
 
 <style>
-/* ============ MAKERS DISSECT GADGETS — a jewel-box reader ============ */
+/* ============ MAKERS DESERVE GLORY — a jewel-box reader ============ */
 :root{
   --display:'Fraunces','Hoefler Text','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
   --body:'Newsreader','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
@@ -288,7 +288,7 @@ main{max-width:1120px;margin:0 auto;padding:0 clamp(16px,5vw,40px)}
 <div id="progress"></div>
 
 <div class="topbar">
-  <button class="wordmark" id="home" aria-label="Makers Dissect Gadgets — cover"><span class="dot"></span>Makers&nbsp;Dissect&nbsp;Gadgets</button>
+  <button class="wordmark" id="home" aria-label="Makers Deserve Glory — cover"><span class="dot"></span>Makers&nbsp;Deserve&nbsp;Glory</button>
   <div class="controls">
     <button class="btn" id="makers-btn">Makers</button>
     <button class="btn" id="theme" aria-label="Toggle light and dark">Theme</button>
@@ -299,7 +299,7 @@ main{max-width:1120px;margin:0 auto;padding:0 clamp(16px,5vw,40px)}
 
 <footer class="pagefoot">
   <div class="in">
-    <div class="wm">Makers Dissect <span>Gadgets</span></div>
+    <div class="wm">Makers Deserve <span>Glory</span></div>
     <div class="col">
       <b>How it's made — no ads, ever.</b><br/>
       Every story is about a real maker.<br/>
@@ -609,7 +609,7 @@ function renderCover(issueN){
   var h='';
   h+='<section class="cover-mast">'+
        '<div class="issue">Issue '+esc(meta.no)+' &nbsp;·&nbsp; '+esc(meta.theme)+'</div>'+
-       '<h1>Makers Dissect Gadgets</h1>'+
+       '<h1>Makers Deserve Glory</h1>'+
        '<div class="tag">How real things are made — and who makes them.</div>'+
        '<div class="shimmer"></div>'+
        '<p class="ethos">A no-ads magazine you <b>read</b> instead of watching: how things are built and how '+
@@ -648,7 +648,7 @@ function renderCover(issueN){
   h+='</section>';
   app.innerHTML=h;
   bindGo();
-  document.title="Makers Dissect Gadgets — how things are made";
+  document.title="Makers Deserve Glory — how things are made";
 }
 
 function renderMakersBlock(a){
@@ -684,7 +684,7 @@ function renderMakers(){
     h+='</div>';
   }
   app.innerHTML=h; bindGo(); window.scrollTo(0,0);
-  document.title="The Makers — Makers Dissect Gadgets";
+  document.title="The Makers — Makers Deserve Glory";
 }
 
 function renderArticle(id){
@@ -710,7 +710,7 @@ function renderArticle(id){
     '</article>';
   app.innerHTML=h;
   bindGo();
-  document.title=a.title+" — Makers Dissect Gadgets";
+  document.title=a.title+" — Makers Deserve Glory";
 }
 
 function bindGo(){

@@ -20,3 +20,6 @@
 # Design Lab retired — folded into the homepage (games live on the mustdesigngames subdomain)
 /design-lab.html  /  301
 /design-lab       /  301
+
+# Magazine renamed: Makers Dissect Gadgets -> Makers Deserve Glory
+/makersdissectgadgets/*  /makersdeserveglory/:splat  301
