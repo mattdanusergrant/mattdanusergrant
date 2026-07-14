@@ -208,7 +208,12 @@
 <script>
 /* MDG registry — the recovered Easter egg, now on its own hidden page (/mdg.html).
    Reveals on load; tracks every MDG phrase live on the site and checks a new idea
-   word by word, with a mailto to send fresh three-word coinages in. */
+   word by word, with a mailto to send fresh three-word coinages in.
+
+   Source of truth is now the Marque Directory Grimoire on manydoorsguild.com
+   (D1-backed). The REGISTRY array below is a baked-in fallback: on load we pull
+   the live registry from https://manydoorsguild.com/config/registry and replace it,
+   but if that fetch fails the hardcoded copy keeps the page working. */
 (function(){
   var lab=document.getElementById('mdg-lab'); if(!lab) return;
   var REGISTRY=[
@@ -343,6 +348,22 @@
     ideas.splice(+b.getAttribute('data-i'),1); saveIdeas(); renderList(); check();
   });
   renderList();
+
+  // Single source of truth: the Marque Directory Grimoire on manydoorsguild.com. Pull the
+  // live registry and replace the hardcoded fallback above; on any error/delay we keep the
+  // baked-in list, so this page can never break.
+  fetch('https://manydoorsguild.com/config/registry')
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d || !d.registry || !d.registry.length) return;
+      var mapped=d.registry
+        .filter(function(e){ return e.w && e.w.length===3; })
+        .map(function(e){ return { w:e.w, where:e.where||'' }; });
+      if(!mapped.length) return;
+      REGISTRY.length=0; Array.prototype.push.apply(REGISTRY, mapped);
+      renderList(); check();
+    })
+    .catch(function(){ /* keep the baked-in REGISTRY */ });
 
   function show(animate){
     if(!lab.hidden) return;
