@@ -1,7 +1,7 @@
-# Match Deck Gateway — room server
+# Multiplayer Deck Garage — room server
 
-> Renamed from Multiplayer Deck Gateway (2026-07-09); the PartyKit project is now
-> `matchdeckgateway` (see `partykit.json`). This has no live impact: `PARTY_HOST`
+> Renamed to Multiplayer Deck Garage (2026-07-14; orig. Multiplayer Deck Gateway, 2026-07-09); the PartyKit project is now
+> `multiplayerdeckgarage` (see `partykit.json`). This has no live impact: `PARTY_HOST`
 > in `../index.html` is empty, so online play uses the PeerJS fallback and no
 > room server is deployed yet. On the next `npm run deploy` the server publishes
 > under the new name — wire that host into `PARTY_HOST` (below) to switch online
@@ -24,22 +24,22 @@ deploys separately.
   the latest snapshot** (persisted through hibernation) so late-joiners and
   reconnectors are made whole instantly.
 - **Zero per-game work.** The server never parses gameplay — adding a game to
-  the Gateway needs no server change.
+  the Garage needs no server change.
 
 ## Deploy (one time)
 
 ```bash
-cd matchdeckgateway/party
+cd multiplayerdeckgarage/party
 npm install
 npx partykit login        # opens a browser; authorises against your Cloudflare-backed PartyKit account
-npm run deploy            # → prints your room-server host, e.g. matchdeckgateway.<your-user>.partykit.dev
+npm run deploy            # → prints your room-server host, e.g. multiplayerdeckgarage.<your-user>.partykit.dev
 ```
 
 Then copy that host into the game so online play routes through it:
 
 - Open `../index.html`, find `const PARTY_HOST = ''` near the `NET` block, and
   set it to the printed host (no scheme):
-  `const PARTY_HOST = 'matchdeckgateway.<your-user>.partykit.dev'`.
+  `const PARTY_HOST = 'multiplayerdeckgarage.<your-user>.partykit.dev'`.
 - Commit + push. GitHub Pages redeploys the game; online now uses the backend.
 
 Leaving `PARTY_HOST` empty (or if the server is unreachable) makes online play

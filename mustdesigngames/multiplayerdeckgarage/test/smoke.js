@@ -53,7 +53,7 @@ const mainScript = scripts.find(s=>s.includes('window.__cw'));
 assert(mainScript, 'could not find engine <script> block');
 test('script loads without throwing', ()=>{
   vm.createContext(sandbox);
-  vm.runInContext(mainScript, sandbox, { filename:'matchdeckgateway.js' });
+  vm.runInContext(mainScript, sandbox, { filename:'multiplayerdeckgarage.js' });
   assert(window.__cw, 'window.__cw dev hatch missing');
 });
 const cw = window.__cw || {};

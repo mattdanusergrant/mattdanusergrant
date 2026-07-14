@@ -1,7 +1,7 @@
 import type * as Party from "partykit/server";
 
 /**
- * Multiplayer Deck Gateway — authoritative room server.
+ * Multiplayer Deck Garage — authoritative room server.
  *
  * One PartyKit room per 4-letter game code. The room is the durable, always-on
  * authority for *connectivity and state*: it owns the roster, relays messages,

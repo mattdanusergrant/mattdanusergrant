@@ -5,8 +5,8 @@ A 60-card deck that is three things at once: a **universal randomiser**, a
 pack-in booklet: the deck spec, the functional card back, the ways card
 *orientation* carries information, and five original games.
 
-The deck lives digitally in the **Match Deck Gateway**
-(`/matchdeckgateway/` → *Game Design Deck*, *Elemental Gambit*, *Vault Run*).
+The deck lives digitally in the **Multiplayer Deck Garage**
+(`/multiplayerdeckgarage/` → *Game Design Deck*, *Elemental Gambit*, *Vault Run*).
 Everything below is playable there; the workshop is the deck's digital twin.
 
 ---
