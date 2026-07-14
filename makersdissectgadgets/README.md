@@ -12,7 +12,8 @@ Live once merged to `main`: **https://mattdanusergrant.com/makersdissectgadgets/
 
 > Name note: "Makers Dissect Gadgets" is an M·D·G name (like the rest of the family). It's in
 > the claims ledger in `ConductiveOS/06_system/settings.md`. Registering it freed the G-word
-> "Gadgets" from the homepage Tools section, which was renamed **Methodically Devised Gears**.
+> "Gadgets" from the homepage Tools section, which was renamed **Methodically Devised Gizmos**
+> (trading its former "Gizmos" rotation phrase to "Gears" to keep the no-repeat rule intact).
 > Heads-up: the site's *More Games* button still cycles playful microcopy that includes "More
 > Decent Gadgets" — a rotating word-toy, not a ledger label, so it's left as-is.
 
