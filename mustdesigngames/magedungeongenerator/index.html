@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Wizard Puzzle Generator Generator — Mundane Dweomer Grind</title>
+<title>Mage Dungeon Generator</title>
 <style>
   :root{ --bg:#0f0c18; --panel:#1a1626; --panel2:#211b31; --ink:#ece7ff; --dim:#a79ec9;
     --accent:#c8a24a; --gold:#ffd76a; --line:#332c4d; }
@@ -93,9 +93,9 @@
 <!-- ===================== EDITOR ===================== -->
 <div id="editor">
   <header>
-    <h1><span class="wiz">🧙 Wizard Puzzle Generator Generator</span></h1>
-    <div class="sub">Design wizard puzzle-rooms, chain them into a tower, <b>Play</b> in real 3D, and share the whole thing as a link.
-      Doors open when every <b>🔥 brazier</b> is lit and every <b>⬡ plate</b> is weighted; <b>🔒 locks</b> need the <b>🗝️ key</b>; <b>🔼 stairs</b> lead to the next room. Part of <i>Mundane Dweomer Grind</i>.</div>
+    <h1><span class="wiz">🧙 Mage Dungeon Generator</span></h1>
+    <div class="sub">Design mage-dungeon rooms, chain them into a dungeon, <b>Play</b> in real 3D, and share the whole thing as a link.
+      Doors open when every <b>🔥 brazier</b> is lit and every <b>⬡ plate</b> is weighted; <b>🔒 locks</b> need the <b>🗝️ key</b>; <b>🔼 stairs</b> lead to the next room; grab the <b>💎 treasure</b> to clear it.</div>
   </header>
 
   <div class="bar" id="paletteBar"></div>
@@ -116,7 +116,7 @@
           <button class="btn small" id="libBtn">📚 Library</button>
         </div>
         <div id="msg"></div>
-        <div class="hintline">Each room needs one <b>🧙 Start</b> &amp; a goal (<b>🥛 Milk</b> = win, <b>🔼 Stairs</b> = next room).</div>
+        <div class="hintline">Each room needs one <b>🧙 Start</b> &amp; a goal (<b>💎 Treasure</b> = clear, <b>🔼 Stairs</b> = next room).</div>
       </div>
       <div class="card">
         <h3>Canvas</h3>
@@ -160,7 +160,7 @@
   <div class="foot">
     Left-click / drag to paint · right-click to erase · Fireball melts ice &amp; lights braziers · Levitate carries crates ·
     Summon conjures a block (fills 🕳️ pits, weighs plates) · Scry freezes 👻 hazards.<br>
-    Wizard Puzzle Generator Generator — a level maker for <b>Mundane Dweomer Grind</b>.
+    <b>Mage Dungeon Generator</b> — design, play &amp; share mage dungeons.
   </div>
 </div>
 
@@ -170,8 +170,8 @@
   <button class="btn small" id="backBtn">✎ Back to editor</button>
   <div class="hud" id="ptop">
     <div>
-      <div class="name" id="lvlName">Custom Puzzle</div>
-      <div class="floor" id="floorInfo">Wizard Puzzle</div>
+      <div class="name" id="lvlName">Mage Dungeon</div>
+      <div class="floor" id="floorInfo">Custom Dungeon</div>
     </div>
     <div id="objective">Reach the goal.</div>
   </div>
@@ -220,7 +220,7 @@ const TILES={
   'b':{name:'Brazier',em:'🔥'}, 'c':{name:'Crate',em:'📦'}, 'p':{name:'Plate',em:'⬡'},
   'D':{name:'Door',em:'🚪'}, 'K':{name:'Key',em:'🗝️'}, 'L':{name:'Lock',em:'🔒'},
   'H':{name:'Hazard',em:'👻'}, 'o':{name:'Pit',em:'🕳️'}, '@':{name:'Start',em:'🧙',unique:true},
-  'M':{name:'Milk',em:'🥛',goal:true}, 'X':{name:'Stairs',em:'🔼',goal:true},
+  'M':{name:'Treasure',em:'💎',goal:true}, 'X':{name:'Stairs',em:'🔼',goal:true},
 };
 const PALETTE=['#','.','I','b','c','p','D','K','L','H','o','@','M','X'];
 
@@ -393,7 +393,7 @@ const MAT={
   brass:new T.MeshLambertMaterial({color:0x7a6a3a}), door:new T.MeshLambertMaterial({color:0x6a4a2c,emissive:0x1a0e04}),
   lock:new T.MeshLambertMaterial({color:0x545a6e,emissive:0x14161f}), rune:new T.MeshBasicMaterial({color:0xffcf5a}),
   robe:new T.MeshLambertMaterial({color:0x5b4bd6}), robe2:new T.MeshLambertMaterial({color:0x3d2f9e}), skin:new T.MeshLambertMaterial({color:0xe8c9a0}),
-  hat:new T.MeshLambertMaterial({color:0x2e2286}), milk:new T.MeshLambertMaterial({color:0xf4f0e6,emissive:0x2a2a24}), ped:new T.MeshLambertMaterial({color:0x3a3450}),
+  hat:new T.MeshLambertMaterial({color:0x2e2286}), gem:new T.MeshLambertMaterial({color:0x49e6b0,emissive:0x1f7a5a}), ped:new T.MeshLambertMaterial({color:0x3a3450}),
   fire:new T.MeshBasicMaterial({color:0xff9a3d}), fireCore:new T.MeshBasicMaterial({color:0xffd76a}),
   crate:new T.MeshLambertMaterial({color:0xb07a3d}), crate2:new T.MeshLambertMaterial({color:0x7a4f24}),
   plate:new T.MeshLambertMaterial({color:0x45415f}), plateOn:new T.MeshLambertMaterial({color:0x2f7a3a,emissive:0x123f18}),
@@ -453,9 +453,9 @@ function eKey(x,z){ const g=new T.Group();g.position.set(x,1.1,z); g.add(MM(new 
   const li=new T.PointLight(0xffd76a,0.6,5,2);g.add(li); levelGroup.add(g); keyItems.push({x,z,grp:g}); }
 function eStairs(x,z){ const g=new T.Group();g.position.set(x,0,z); for(let k=0;k<4;k++)g.add(MM(new T.BoxGeometry(2.2-k*0.4,0.4,0.6),MAT.stairs,0,0.2+k*0.4,-k*0.55));
   const gl=new T.PointLight(0x8f86ff,0.8,7,2);gl.position.set(0,1.6,-1);g.add(gl); levelGroup.add(g); goals.push({x,z,kind:'stairs'}); }
-function eMilk(x,z){ const g=new T.Group();g.position.set(x,0,z); g.add(MM(new T.CylinderGeometry(0.7,0.9,0.8,10),MAT.ped,0,0.4,0));
-  g.add(MM(new T.BoxGeometry(0.8,1.1,0.8),MAT.milk,0,1.35,0)); const roof=MM(new T.ConeGeometry(0.6,0.4,4),MAT.milk,0,2.05,0);roof.rotation.y=Math.PI/4;g.add(roof);
-  const gl=new T.PointLight(0xfff0c0,0.9,8,2);gl.position.set(0,1.6,0);g.add(gl); levelGroup.add(g); goals.push({x,z,kind:'milk'}); }
+function eTreasure(x,z){ const g=new T.Group();g.position.set(x,0,z); g.add(MM(new T.CylinderGeometry(0.7,0.9,0.5,10),MAT.ped,0,0.25,0));
+  const gem=MM(new T.OctahedronGeometry(0.6,0),MAT.gem,0,1.35,0); g.add(gem);
+  const gl=new T.PointLight(0xffe089,1.0,8,2);gl.position.set(0,1.4,0);g.add(gl); levelGroup.add(g); goals.push({x,z,kind:'treasure',gem}); }
 function ePit(x,z){ const m=MM(new T.BoxGeometry(UNIT*0.98,1.2,UNIT*0.98),MAT.pit,x,-0.6,z); levelGroup.add(m);
   pitCells.push(addSolid(x-UNIT*0.49,x+UNIT*0.49,z-UNIT*0.49,z+UNIT*0.49,'pit',m,{px:x,pz:z})); }
 function eHazard(x,z){ const g=new T.Group();g.position.set(x,1.1,z); g.add(MM(new T.SphereGeometry(0.45,10,8),MAT.hazard,0,0,0));
@@ -468,7 +468,7 @@ function buildRoom(room){ clearLevel(); gW=room.w; gH=room.h; won=false; floorPl
   for(let i=0;i<gH;i++)for(let j=0;j<gW;j++){const ch=g[i][j]; if(ch==='#'||ch==='.')continue; const {x,z}=cellWorld(j,i);
     if(ch==='I')eIce(x,z);else if(ch==='b')eBrazier(x,z);else if(ch==='c')eCrate(x,z);else if(ch==='p')ePlate(x,z);
     else if(ch==='D')eDoor(x,z);else if(ch==='L')eLock(x,z);else if(ch==='K')eKey(x,z);else if(ch==='H')eHazard(x,z);
-    else if(ch==='o')ePit(x,z);else if(ch==='M')eMilk(x,z);else if(ch==='X')eStairs(x,z);else if(ch==='@')startPos.set(x,0,z);}
+    else if(ch==='o')ePit(x,z);else if(ch==='M')eTreasure(x,z);else if(ch==='X')eStairs(x,z);else if(ch==='@')startPos.set(x,0,z);}
   // hazard patrol bounds (scan open floor along the longer axis)
   for(const hz of hazards){ const c=worldCell(hz.x,hz.z); let axis='x';
     const openH=countOpen(g,c.i,c.j,0,1)+countOpen(g,c.i,c.j,0,-1), openV=countOpen(g,c.i,c.j,1,0)+countOpen(g,c.i,c.j,-1,0);
@@ -531,7 +531,7 @@ function summon(){ if(won)return; const dir=new T.Vector3(Math.sin(heading),0,Ma
   pressPlateAt(x,z,b); say('A block of pure conjuration thunks into being. Utterly mundane. Utterly yours.'); }
 
 // ---- scry (freeze hazards) ----
-function scry(){ if(won)return; if(!hazards.length){ say('You Scry the future. It is mostly errands.'); return; }
+function scry(){ if(won)return; if(!hazards.length){ say('You Scry the future. It is mostly monsters and locked doors.'); return; }
   hazardFreeze=4.5; say('You Scry a few seconds ahead — the haunts stutter, briefly predictable.'); }
 
 // ---- keys / doors / hazards ----
@@ -543,7 +543,7 @@ function updateHazards(dt){ if(hazardFreeze>0)hazardFreeze-=dt;
   for(const hz of hazards){ if(hazardFreeze<=0){ let v=hz.speed*hz.dir*dt;
     if(hz.axis==='x'){ hz.x+=v; if(hz.x<hz.min){hz.x=hz.min;hz.dir=1;} if(hz.x>hz.max){hz.x=hz.max;hz.dir=-1;} }
     else { hz.z+=v; if(hz.z<hz.min){hz.z=hz.min;hz.dir=1;} if(hz.z>hz.max){hz.z=hz.max;hz.dir=-1;} } hz.grp.position.set(hz.x,1.1+Math.sin(performance.now()*0.005)*0.15,hz.z); }
-    if(!won&&Math.hypot(hz.x-player.pos.x,hz.z-player.pos.z)<UNIT*0.5){ player.pos.copy(startPos); wiz.position.copy(startPos); say('A haunt brushes you and you\'re unceremoniously refiled at the entrance. No death — just paperwork.'); } } }
+    if(!won&&Math.hypot(hz.x-player.pos.x,hz.z-player.pos.z)<UNIT*0.5){ player.pos.copy(startPos); wiz.position.copy(startPos); say('A wraith brushes you and you reappear at the entrance. Dungeons are forgiving like that.'); } } }
 
 // ---- win / advance ----
 let currentLevel=null, playIdx=0;
@@ -562,6 +562,7 @@ function update(dt){
   for(const d of doors){d.ring.rotation.z+=dt*1.2;const ty=d.open?-4.2:0;d.grp.position.y+=(ty-d.grp.position.y)*Math.min(1,6*dt);}
   for(const L of locks){const ty=L.open?-4.2:0;L.grp.position.y+=(ty-L.grp.position.y)*Math.min(1,6*dt);}
   for(const k of keyItems){k.grp.rotation.y+=dt*2;k.grp.position.y=1.1+Math.sin(t)*0.12;}
+  for(const gl of goals)if(gl.gem){gl.gem.rotation.y+=dt*1.6;gl.gem.position.y=1.35+Math.sin(t*1.2)*0.12;}
   const tgt=new T.Vector3(player.pos.x,1.4,player.pos.z);
   const off=new T.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch)).multiplyScalar(camDist);
   camera.position.copy(tgt).add(off);camera.lookAt(tgt);
@@ -570,8 +571,8 @@ function update(dt){
 function reachGoal(kind){ if(kind==='stairs'&&playIdx<currentLevel.rooms.length-1){ won=true;
   showModal('▲ Room Cleared','Up the stairs to the next room of the tower.','Obelisk: "Adequate. The tower notes your progress. It notes everything."','Continue',()=>{playIdx++;won=false;buildRoom(currentRoomObj());$('floorInfo').textContent='Room '+(playIdx+1)+' / '+currentLevel.rooms.length;$('overlay').classList.remove('show');},true);
   } else winGame(kind); }
-function winGame(kind){ won=true; showModal('🥛 PUZZLE SOLVED', kind==='milk'?'One (1) unit of milk retrieved. Epic arcane effort, dairy payoff — exactly as designed.':'You reached the top of your tower. The tower is unimpressed but compliant.',
-  'Obelisk: "Adequate. Now design another — the tower gets bored, and so do I."'); }
+function winGame(kind){ won=true; showModal('💎 DUNGEON CLEARED', kind==='treasure'?'The treasure is yours. The dungeon yields it with the weary grace of a machine that has done this many times.':'You reached the top of the dungeon. It is unimpressed but compliant.',
+  'Obelisk: "Adequate. Now conjure another — the dungeon gets bored, and so do I."'); }
 
 const CAST=['You unleash an eleven-syllable incantation. A small fireball happens.','FLAME OF A THOUSAND SUNS, etc. About the size of a grapefruit.','The dweomer ignites. Your landlord would like a word about the scorch marks.'];
 const pick=a=>a[(performance.now()|0)%a.length];
@@ -585,7 +586,7 @@ function roomLabel(){ return currentLevel.rooms.length>1?('Room '+(playIdx+1)+' 
 function playLevel(){ const err=validateAll(); if(err){$('msg').textContent='⚠ '+err;return;}
   currentLevel=levelObj(); playIdx=0; $('editor').style.display='none'; $('play').classList.add('show'); playing=true;
   $('overlay').classList.remove('show'); $('floorInfo').textContent=roomLabel(); $('objective').textContent='Reach the goal — open doors (braziers+plates), grab keys, bridge pits.';
-  say('A puzzle of your own making. Let\'s see if it was fair.'); resizeR(); buildRoom(currentLevel.rooms[0]); }
+  say('A dungeon of your own making. Let\'s see if it was fair.'); resizeR(); buildRoom(currentLevel.rooms[0]); }
 function backToEditor(){ playing=false; if(document.exitPointerLock)document.exitPointerLock(); $('play').classList.remove('show'); $('overlay').classList.remove('show'); $('editor').style.display=''; }
 let last=performance.now();
 function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now; if(playing)update(dt); renderer.render(scene,camera); requestAnimationFrame(frame); }

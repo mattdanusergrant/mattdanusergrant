@@ -2,4 +2,5 @@
 /multiplayerdeckgateway/*   /multiplayerdeckgarage/:splat 301
 /matchdeckgateway/*   /multiplayerdeckgarage/:splat 301
 /matchdeckgathering/*   /multiplayerdeckgarage/:splat 301
-/wizard-errand-tower/*   /mundanedweomergrind/:splat 301
+/wizard-errand-tower/*   /magedungeongenerator/:splat 301
+/mundanedweomergrind/*   /magedungeongenerator/:splat 301
