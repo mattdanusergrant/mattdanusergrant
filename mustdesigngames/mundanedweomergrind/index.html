@@ -3,67 +3,163 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mundane Dweomer Grind — 3D prototype</title>
+<title>Wizard Puzzle Generator Generator — Mundane Dweomer Grind</title>
 <style>
-  :root{ --ink:#ece7ff; --dim:#a79ec9; --accent:#c8a24a; --gold:#ffd76a; }
+  :root{ --bg:#0f0c18; --panel:#1a1626; --panel2:#211b31; --ink:#ece7ff; --dim:#a79ec9;
+    --accent:#c8a24a; --gold:#ffd76a; --line:#332c4d; }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:#0a0810;color:var(--ink);overflow:hidden;
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
     font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
-  #game{position:fixed;inset:0}
-  canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+  button{font-family:inherit;cursor:pointer}
+  .btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font-size:12.5px}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#1a1508;border-color:var(--accent);font-weight:bold}
+  .btn.small{padding:4px 9px;font-size:11.5px}
+
+  /* ---------- EDITOR ---------- */
+  #editor{max-width:1040px;margin:0 auto;padding:16px 16px 48px}
+  header h1{margin:0;font-size:19px;letter-spacing:.3px}
+  header h1 .wiz{color:var(--accent)}
+  header .sub{color:var(--dim);font-size:12px;margin-top:4px;line-height:1.5}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+  .palette{display:flex;flex-wrap:wrap;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+  .swatch{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:7px;padding:5px 9px;font-size:12px;color:var(--ink)}
+  .swatch .em{font-size:15px;line-height:1}
+  .swatch.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .grid-wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+  #grid{display:grid;gap:2px;background:#0c0a14;border:1px solid var(--line);border-radius:8px;padding:6px;user-select:none;touch-action:none}
+  .cell{width:30px;height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+    font-size:16px;line-height:1;background:#241f38;cursor:pointer}
+  .cell.wall{background:#4a4468}
+  .side{flex:1 1 240px;min-width:230px;display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .card h3{margin:0 0 8px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  label{font-size:12px;color:var(--dim)}
+  input[type=number],select,input[type=text]{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:6px;padding:5px 7px;font-family:inherit;font-size:12px}
+  input[type=number]{width:56px}
+  textarea{width:100%;height:64px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:6px;padding:7px;font-family:inherit;font-size:11px;resize:vertical}
+  #msg{font-size:12px;color:var(--gold);min-height:16px}
+  .hintline{font-size:11.5px;color:var(--dim);line-height:1.5}
+  .foot{color:var(--dim);font-size:11px;margin-top:22px;text-align:center;line-height:1.6}
+
+  /* ---------- PLAY (3D) ---------- */
+  #play{position:fixed;inset:0;display:none;background:#0a0810}
+  #play.show{display:block}
+  #game{position:absolute;inset:0}
+  #game canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
   .hud{position:fixed;left:0;right:0;pointer-events:none;z-index:5}
-  #top{top:0;padding:14px 16px;display:flex;justify-content:space-between;gap:12px;
-    background:linear-gradient(#0a0810cc,transparent)}
-  .errand .lab{color:var(--accent);font-size:10px;letter-spacing:2px;text-transform:uppercase}
-  .errand .name{font-size:17px;margin-top:2px;text-shadow:0 2px 6px #000}
-  .errand .floor{color:var(--dim);font-size:11.5px;margin-top:3px}
-  #objective{text-align:right;font-size:12px;color:var(--gold);text-shadow:0 2px 6px #000;max-width:230px}
-  #obelisk{position:fixed;left:50%;transform:translateX(-50%);bottom:64px;max-width:560px;width:calc(100% - 32px);
+  #ptop{top:0;padding:12px 16px;display:flex;justify-content:space-between;gap:12px;background:linear-gradient(#0a0810cc,transparent)}
+  #ptop .name{font-size:16px;text-shadow:0 2px 6px #000}
+  #ptop .floor{color:var(--dim);font-size:11.5px;margin-top:2px}
+  #objective{text-align:right;font-size:12px;color:var(--gold);text-shadow:0 2px 6px #000;max-width:240px}
+  #obelisk{position:fixed;left:50%;transform:translateX(-50%);bottom:60px;max-width:560px;width:calc(100% - 32px);
     background:#1a1626e6;border:1px solid #3a3457;border-left:3px solid var(--accent);border-radius:8px;
     padding:9px 13px;font-size:12.5px;line-height:1.4;z-index:5;text-align:center;text-shadow:0 1px 2px #000}
   #obelisk b{color:var(--accent)}
-  #controls{position:fixed;left:0;right:0;bottom:0;padding:9px 14px;display:flex;gap:14px;justify-content:center;
-    flex-wrap:wrap;background:linear-gradient(transparent,#0a0810cc);font-size:11.5px;color:var(--dim);z-index:5}
+  #pcontrols{position:fixed;left:0;right:0;bottom:0;padding:8px 14px;display:flex;gap:13px;justify-content:center;
+    flex-wrap:wrap;background:linear-gradient(transparent,#0a0810cc);font-size:11px;color:var(--dim);z-index:5}
   .key{display:inline-block;padding:1px 6px;background:#2a2542;border:1px solid #453d66;border-radius:4px;color:var(--gold)}
-  #hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;text-align:center;
-    background:#1a1626d9;border:1px solid #3a3457;border-radius:10px;padding:14px 20px;font-size:13px;cursor:pointer}
-  #hint.hide{display:none}
-  .overlay{position:fixed;inset:0;background:rgba(8,6,14,.9);display:none;align-items:center;justify-content:center;
-    padding:24px;z-index:10}
+  #backBtn{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:7;pointer-events:auto}
+  .overlay{position:fixed;inset:0;background:rgba(8,6,14,.9);display:none;align-items:center;justify-content:center;padding:24px;z-index:10}
   .overlay.show{display:flex}
-  .modal{background:#1a1626;border:1px solid #3a3457;border-radius:14px;max-width:460px;padding:24px;text-align:center}
+  .modal{background:var(--panel);border:1px solid #3a3457;border-radius:14px;max-width:460px;padding:24px;text-align:center}
   .modal h2{margin:0 0 8px;color:var(--gold)}
-  .modal p{font-size:13.5px;line-height:1.5;color:var(--ink)}
+  .modal p{font-size:13.5px;line-height:1.5}
   .modal .quip{color:var(--dim);font-style:italic;margin-top:10px}
-  .btn{margin-top:16px;background:var(--accent);color:#1a1508;border:none;border-radius:8px;padding:9px 18px;
-    font-family:inherit;font-weight:bold;font-size:13px;cursor:pointer}
+  .modal .mbtns{display:flex;gap:10px;justify-content:center;margin-top:16px}
 </style>
 </head>
 <body>
-<div id="game"></div>
-<div class="hud" id="top">
-  <div class="errand">
-    <div class="lab">Today's Errand</div>
-    <div class="name">Get the Groceries</div>
-    <div class="floor" id="floorInfo">Tower Floor 1 — The Frozen Turnstile</div>
+
+<!-- ===================== EDITOR ===================== -->
+<div id="editor">
+  <header>
+    <h1><span class="wiz">🧙 Wizard Puzzle Generator Generator</span></h1>
+    <div class="sub">Design a wizard puzzle-room, then <b>Play</b> it in the real 3D tower and share it as a link.
+      Pick a piece, paint the grid. The runed door opens once <b>every brazier is lit</b> and <b>every plate holds a crate</b>. Part of <i>Mundane Dweomer Grind</i>.</div>
+  </header>
+
+  <div class="bar" id="paletteBar"></div>
+
+  <div class="grid-wrap">
+    <div id="grid"></div>
+    <div class="side">
+      <div class="card">
+        <h3>Test &amp; Share</h3>
+        <div class="row">
+          <button class="btn primary" id="playBtn">▶ Play in 3D</button>
+          <button class="btn" id="shareBtn">🔗 Copy share link</button>
+        </div>
+        <div id="msg"></div>
+        <div class="hintline">Every room needs one <b>🧙 Start</b> and at least one goal (<b>🥛 Milk</b> or <b>🔼 Stairs</b>).</div>
+      </div>
+      <div class="card">
+        <h3>Canvas</h3>
+        <div class="row">
+          <label>W <input type="number" id="wIn" min="4" max="24" value="9"></label>
+          <label>H <input type="number" id="hIn" min="4" max="24" value="8"></label>
+          <button class="btn small" id="resizeBtn">Resize</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn small" id="borderBtn">Wall border</button>
+          <button class="btn small" id="clearBtn">Clear</button>
+          <button class="btn small" id="randomBtn">🎲 Surprise me</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label>Templates <select id="tmplSel"></select></label>
+          <button class="btn small" id="loadTmplBtn">Load</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Import code</h3>
+        <textarea id="codeIn" placeholder="Paste a shared level code here…"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="btn small" id="importBtn">Import</button>
+          <button class="btn small" id="exportBtn">Show code</button>
+        </div>
+      </div>
+    </div>
   </div>
-  <div id="objective">Light both braziers to open the runed door.</div>
+
+  <div class="foot">
+    Left-click / drag to paint · right-click to erase to floor · Fireball melts ice &amp; lights braziers · Levitate carries crates onto plates.<br>
+    Wizard Puzzle Generator Generator — a level maker for <b>Mundane Dweomer Grind</b>.
+  </div>
 </div>
-<div id="obelisk">Loading the obelisk's grievances…</div>
-<div id="hint" onclick="this.classList.add('hide')">Click to grab the camera (mouse to look).<br><span style="color:#a79ec9;font-size:11px">Arrow keys also look. Click to dismiss.</span></div>
-<div id="controls">
-  <span><span class="key">W A S D</span> move</span>
-  <span><span class="key">Mouse</span> / <span class="key">◄ ►</span> look</span>
-  <span><span class="key">F</span> / <span class="key">Space</span> Fireball</span>
-  <span><span class="key">E</span> Levitate</span>
-  <span><span class="key">R</span> reset</span>
-</div>
-<div class="overlay" id="overlay">
-  <div class="modal">
-    <h2 id="mTitle">—</h2>
-    <p id="mBody">—</p>
-    <p class="quip" id="mQuip">—</p>
-    <button class="btn" id="mBtn" onclick="document.getElementById('overlay').classList.remove('show');DBG.reset()">Again</button>
+
+<!-- ===================== PLAY (3D) ===================== -->
+<div id="play">
+  <div id="game"></div>
+  <button class="btn small" id="backBtn">✎ Back to editor</button>
+  <div class="hud" id="ptop">
+    <div>
+      <div class="name" id="lvlName">Custom Puzzle</div>
+      <div class="floor" id="floorInfo">Wizard Puzzle</div>
+    </div>
+    <div id="objective">Reach the goal.</div>
+  </div>
+  <div id="obelisk"></div>
+  <div id="pcontrols">
+    <span><span class="key">W A S D</span> move</span>
+    <span><span class="key">Mouse</span>/<span class="key">◄ ►</span> look</span>
+    <span><span class="key">F</span>/<span class="key">Space</span> Fireball</span>
+    <span><span class="key">E</span> Levitate</span>
+    <span><span class="key">R</span> reset</span>
+  </div>
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2 id="mTitle">—</h2>
+      <p id="mBody">—</p>
+      <p class="quip" id="mQuip">—</p>
+      <div class="mbtns">
+        <button class="btn primary" id="mBtn">Again</button>
+        <button class="btn" id="mEdit">Back to editor</button>
+      </div>
+    </div>
   </div>
 </div>
 <script>
@@ -76,390 +172,431 @@
 
 </script>
 <script>
-/* Mundane Dweomer Grind — 3D prototype (N64-Zelda style). Vanilla + Three.js (inlined).
-   Two-floor tower: Fireball (melt ice / light braziers) + Levitate (crate onto plate). */
+/* Wizard Puzzle Generator Generator — level maker + 3D player for Mundane Dweomer Grind.
+   Vanilla + Three.js (inlined). Author a room on a top-down grid, play it in the N64-style
+   3D engine, share it as a link. */
 (function(){
 'use strict';
 const T = THREE;
+const $ = id => document.getElementById(id);
 
-// ---- Renderer / scene / camera ----
-const host = document.getElementById('game');
-const renderer = new T.WebGLRenderer({ antialias:false, powerPreference:'high-performance' });
-renderer.setPixelRatio(1); host.appendChild(renderer.domElement);
-const scene = new T.Scene();
-const SKY = 0x120f1e;
-scene.background = new T.Color(SKY);
-scene.fog = new T.Fog(SKY, 18, 46);
-const camera = new T.PerspectiveCamera(60, 16/9, 0.1, 200);
-function resize(){
-  const w=host.clientWidth, h=host.clientHeight, scale=Math.min(1,720/Math.max(w,h));
-  renderer.setSize(Math.round(w*scale), Math.round(h*scale), false);
-  renderer.domElement.style.width=w+'px'; renderer.domElement.style.height=h+'px';
-  camera.aspect=w/h; camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize);
-
-// ---- Lights (persistent) ----
-scene.add(new T.HemisphereLight(0x8f86c0, 0x161022, 0.85));
-const sun = new T.DirectionalLight(0xffe9c0, 0.5); sun.position.set(6,14,4); scene.add(sun);
-
-// ---- Materials ----
-const M = {
-  floor:  new T.MeshLambertMaterial({ vertexColors:true }),
-  wall:   new T.MeshLambertMaterial({ color:0x4a4468 }),
-  wallTop:new T.MeshLambertMaterial({ color:0x5a5480 }),
-  ice:    new T.MeshLambertMaterial({ color:0x8fd3ff, transparent:true, opacity:0.72, emissive:0x18384a }),
-  brass:  new T.MeshLambertMaterial({ color:0x7a6a3a }),
-  door:   new T.MeshLambertMaterial({ color:0x6a4a2c, emissive:0x1a0e04 }),
-  rune:   new T.MeshBasicMaterial({ color:0xffcf5a }),
-  robe:   new T.MeshLambertMaterial({ color:0x5b4bd6 }),
-  robe2:  new T.MeshLambertMaterial({ color:0x3d2f9e }),
-  skin:   new T.MeshLambertMaterial({ color:0xe8c9a0 }),
-  hat:    new T.MeshLambertMaterial({ color:0x2e2286 }),
-  milk:   new T.MeshLambertMaterial({ color:0xf4f0e6, emissive:0x2a2a24 }),
-  ped:    new T.MeshLambertMaterial({ color:0x3a3450 }),
-  fire:   new T.MeshBasicMaterial({ color:0xff9a3d }),
-  fireCore:new T.MeshBasicMaterial({ color:0xffd76a }),
-  crate:  new T.MeshLambertMaterial({ color:0xb07a3d }),
-  crate2: new T.MeshLambertMaterial({ color:0x7a4f24 }),
-  plate:  new T.MeshLambertMaterial({ color:0x45415f }),
-  plateOn:new T.MeshLambertMaterial({ color:0x2f7a3a, emissive:0x123f18 }),
-  stairs: new T.MeshLambertMaterial({ color:0x6a63a0, emissive:0x161233 }),
+// ===================== TILE PALETTE =====================
+const TILES = {
+  '.':{ name:'Floor',  em:'',   pal:false },
+  '#':{ name:'Wall',   em:'🧱', wall:true },
+  'I':{ name:'Ice',    em:'🧊' },
+  'b':{ name:'Brazier',em:'🔥' },
+  'c':{ name:'Crate',  em:'📦' },
+  'p':{ name:'Plate',  em:'⬡'  },
+  'D':{ name:'Door',   em:'🚪' },
+  '@':{ name:'Start',  em:'🧙', unique:true },
+  'M':{ name:'Milk',   em:'🥛', goal:true },
+  'X':{ name:'Stairs', em:'🔼', goal:true },
 };
+const PALETTE = ['#','.','I','b','c','p','D','@','M','X'];
 
-function clamp(v,a,b){ return v<a?a:v>b?b:v; }
+// ===================== EDITOR STATE =====================
+let W=9, H=8, grid=[], tool='#';
 
-// ================= WIZARD (persistent) =================
+function blankGrid(w,h){
+  const g=[]; for(let i=0;i<h;i++){ const row=[]; for(let j=0;j<w;j++){
+    row.push((i===0||j===0||i===h-1||j===w-1)?'#':'.'); } g.push(row); } return g;
+}
+function rows(){ return grid.map(r=>r.join('')); }
+
+// ---- palette UI ----
+function buildPalette(){
+  const bar=$('paletteBar'); bar.innerHTML='';
+  const box=document.createElement('div'); box.className='palette';
+  PALETTE.forEach(ch=>{
+    const t=TILES[ch]; const b=document.createElement('button');
+    b.className='swatch'+(ch===tool?' sel':''); b.dataset.ch=ch;
+    b.innerHTML=`<span class="em">${t.em||'·'}</span> ${t.name}`;
+    b.onclick=()=>{ tool=ch; buildPalette(); };
+    box.appendChild(b);
+  });
+  bar.appendChild(box);
+}
+
+// ---- grid UI ----
+let painting=false;
+function buildGridUI(){
+  const el=$('grid'); el.innerHTML='';
+  el.style.gridTemplateColumns=`repeat(${W},30px)`;
+  for(let i=0;i<H;i++) for(let j=0;j<W;j++){
+    const c=document.createElement('div');
+    c.className='cell'; c.dataset.i=i; c.dataset.j=j;
+    paintCellView(c,grid[i][j]);
+    c.addEventListener('mousedown',e=>{ e.preventDefault(); painting=true; setCell(i,j,e.button===2?'.':tool); });
+    c.addEventListener('mouseover',()=>{ if(painting) setCell(i,j,tool); });
+    c.addEventListener('contextmenu',e=>e.preventDefault());
+    el.appendChild(c);
+  }
+}
+function paintCellView(c,ch){
+  const t=TILES[ch]; c.textContent=t.em||''; c.className='cell'+(t.wall?' wall':'');
+}
+function cellEl(i,j){ return $('grid').querySelector(`.cell[data-i="${i}"][data-j="${j}"]`); }
+function setCell(i,j,ch){
+  if(grid[i][j]===ch) return;
+  if(TILES[ch] && TILES[ch].unique){ // only one start — clear the old
+    for(let a=0;a<H;a++)for(let b=0;b<W;b++) if(grid[a][b]===ch){ grid[a][b]='.'; paintCellView(cellEl(a,b),'.'); }
+  }
+  grid[i][j]=ch; paintCellView(cellEl(i,j),ch);
+}
+window.addEventListener('mouseup',()=>painting=false);
+
+// ---- resize / clear / border ----
+function resize(w,h){
+  w=Math.max(4,Math.min(24,w|0)); h=Math.max(4,Math.min(24,h|0));
+  const ng=blankGrid(w,h);
+  for(let i=0;i<Math.min(h,H);i++)for(let j=0;j<Math.min(w,W);j++) ng[i][j]=grid[i][j];
+  // re-seal border
+  for(let j=0;j<w;j++){ ng[0][j]= ng[0][j]==='@'?'@':'#'; ng[h-1][j]='#'; }
+  for(let i=0;i<h;i++){ ng[i][0]='#'; ng[i][w-1]='#'; }
+  W=w; H=h; grid=ng; $('wIn').value=W; $('hIn').value=H; buildGridUI();
+}
+function clearInterior(){ for(let i=1;i<H-1;i++)for(let j=1;j<W-1;j++) grid[i][j]='.'; buildGridUI(); }
+function sealBorder(){ for(let j=0;j<W;j++){ grid[0][j]='#'; grid[H-1][j]='#'; } for(let i=0;i<H;i++){ grid[i][0]='#'; grid[i][W-1]='#'; } buildGridUI(); }
+
+// ---- validation ----
+function validate(){
+  let starts=0, goals=0;
+  for(const r of grid) for(const ch of r){ if(ch==='@')starts++; if(ch==='M'||ch==='X')goals++; }
+  if(starts!==1) return 'Add exactly one 🧙 Start (found '+starts+').';
+  if(goals<1)   return 'Add at least one goal — 🥛 Milk or 🔼 Stairs.';
+  return null;
+}
+
+// ===================== SHARE / IMPORT =====================
+function b64e(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function b64d(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4)s+='='; return decodeURIComponent(escape(atob(s))); }
+function encodeLevel(){ return b64e(JSON.stringify({n:'Custom Puzzle',w:W,h:H,r:rows()})); }
+function loadCode(code){
+  const o=JSON.parse(b64d(code.trim()));
+  if(!o.r||!o.w||!o.h) throw new Error('bad');
+  W=o.w; H=o.h; grid=o.r.map(s=>s.split('')); $('wIn').value=W; $('hIn').value=H; buildGridUI();
+}
+function share(){
+  const err=validate();
+  const code=encodeLevel();
+  const url=location.origin+location.pathname+'#lvl='+code;
+  history.replaceState(null,'','#lvl='+code);
+  const done=(m)=>{ $('msg').textContent=m; };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>done('Share link copied! '+(err?'(⚠ '+err+')':'')),()=>{ $('codeIn').value=url; done('Link ready in the box below.'); });
+  } else { $('codeIn').value=url; done('Link ready in the box below — copy it.'); }
+}
+
+// ===================== TEMPLATES =====================
+const TEMPLATES = {
+  'Frozen Turnstile': ['#########','#@.....b#','#...I...#','#.....b.#','#.......#','##DDDDD##','#...M...#','#########'],
+  'Bureaucratic Gate': ['##########','#@.....b.#','#........#','#..c.....#','#...p....#','##DDDDDD##','#....M...#','##########'],
+  'Ice Maze': ['##########','#@.IIII..#','#.I....I.#','#.I.II.I.#','#.I....I.#','#..IIII..#','#.....M..#','##########'],
+  'Empty room': ['#########','#@......#','#.......#','#.......#','#.......#','#.......#','#......M#','#########'],
+};
+function buildTemplateSelect(){
+  const s=$('tmplSel'); s.innerHTML='';
+  Object.keys(TEMPLATES).forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=k; s.appendChild(o); });
+}
+function loadTemplate(name){
+  const t=TEMPLATES[name]; if(!t) return;
+  H=t.length; W=t[0].length; grid=t.map(s=>s.split('')); $('wIn').value=W; $('hIn').value=H; buildGridUI();
+}
+
+// ---- "surprise me": a bordered room seeded with a plausible little puzzle ----
+function surprise(){
+  const w=W,h=H; grid=blankGrid(w,h);
+  const rnd=(n)=>{ // deterministic-ish scatter without Math.random (blocked): use position hash
+    return ((n*2654435761)>>>0)% 1000 /1000; };
+  let seed=(w*7+h*13);
+  const rr=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+  const rc=()=>[1+((rr()*(h-2))|0),1+((rr()*(w-2))|0)];
+  const place=(ch,n)=>{ for(let k=0;k<n;k++){ const [i,j]=rc(); if(grid[i][j]==='.') grid[i][j]=ch; } };
+  // start top-left interior, goal bottom-right interior behind a door band
+  grid[1][1]='@'; grid[h-2][w-2]='M';
+  for(let j=1;j<w-1;j++) if(rr()<0.5) grid[Math.floor(h/2)][j]='D'; else grid[Math.floor(h/2)][j]='.';
+  place('b',2); place('p',1); place('c',1); place('I',Math.max(2,(w*h/12)|0));
+  // ensure a start and goal survived
+  grid[1][1]='@'; grid[h-2][w-2]='M';
+  buildGridUI(); $('msg').textContent='Surprise room generated — tweak it, then Play.';
+}
+
+// ===================== 3D ENGINE =====================
+const UNIT=2.4, WALL_H=3.2;
+const host=$('game');
+const renderer=new T.WebGLRenderer({ antialias:false });
+renderer.setPixelRatio(1); host.appendChild(renderer.domElement);
+const scene=new T.Scene(); const SKY=0x120f1e;
+scene.background=new T.Color(SKY); scene.fog=new T.Fog(SKY,20,52);
+const camera=new T.PerspectiveCamera(60,16/9,0.1,220);
+function resizeR(){ const w=host.clientWidth||960,h=host.clientHeight||600,sc=Math.min(1,720/Math.max(w,h));
+  renderer.setSize(Math.round(w*sc),Math.round(h*sc),false); renderer.domElement.style.width=w+'px'; renderer.domElement.style.height=h+'px';
+  camera.aspect=w/h; camera.updateProjectionMatrix(); }
+window.addEventListener('resize',resizeR);
+scene.add(new T.HemisphereLight(0x8f86c0,0x161022,0.85));
+const sun=new T.DirectionalLight(0xffe9c0,0.5); sun.position.set(6,14,4); scene.add(sun);
+
+const MAT={
+  floor:new T.MeshLambertMaterial({vertexColors:true}),
+  wall:new T.MeshLambertMaterial({color:0x4a4468}), wallTop:new T.MeshLambertMaterial({color:0x5a5480}),
+  ice:new T.MeshLambertMaterial({color:0x8fd3ff,transparent:true,opacity:0.72,emissive:0x18384a}),
+  brass:new T.MeshLambertMaterial({color:0x7a6a3a}), door:new T.MeshLambertMaterial({color:0x6a4a2c,emissive:0x1a0e04}),
+  rune:new T.MeshBasicMaterial({color:0xffcf5a}), robe:new T.MeshLambertMaterial({color:0x5b4bd6}),
+  robe2:new T.MeshLambertMaterial({color:0x3d2f9e}), skin:new T.MeshLambertMaterial({color:0xe8c9a0}),
+  hat:new T.MeshLambertMaterial({color:0x2e2286}), milk:new T.MeshLambertMaterial({color:0xf4f0e6,emissive:0x2a2a24}),
+  ped:new T.MeshLambertMaterial({color:0x3a3450}), fire:new T.MeshBasicMaterial({color:0xff9a3d}),
+  fireCore:new T.MeshBasicMaterial({color:0xffd76a}), crate:new T.MeshLambertMaterial({color:0xb07a3d}),
+  crate2:new T.MeshLambertMaterial({color:0x7a4f24}), plate:new T.MeshLambertMaterial({color:0x45415f}),
+  plateOn:new T.MeshLambertMaterial({color:0x2f7a3a,emissive:0x123f18}), stairs:new T.MeshLambertMaterial({color:0x6a63a0,emissive:0x161233}),
+};
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const M3=(g,m,x,y,z)=>{ const o=new T.Mesh(g,m); o.position.set(x,y,z); return o; };
+
+// wizard (persistent)
 const wiz=new T.Group();
 (function(){
-  const robe=new T.Mesh(new T.CylinderGeometry(0.28,0.6,1.3,7), M.robe); robe.position.y=0.65; wiz.add(robe);
-  const trim=new T.Mesh(new T.CylinderGeometry(0.6,0.62,0.16,7), M.robe2); trim.position.y=0.08; wiz.add(trim);
-  const head=new T.Mesh(new T.SphereGeometry(0.26,8,6), M.skin); head.position.y=1.45; wiz.add(head);
-  const hat=new T.Mesh(new T.ConeGeometry(0.42,0.95,7), M.hat); hat.position.y=2.0; wiz.add(hat);
-  const brim=new T.Mesh(new T.CylinderGeometry(0.5,0.5,0.08,7), M.hat); brim.position.y=1.62; wiz.add(brim);
-  const star=new T.Mesh(new T.SphereGeometry(0.05,6,5), M.fireCore); star.position.set(0.1,1.85,0.36); wiz.add(star);
-  const staff=new T.Mesh(new T.CylinderGeometry(0.04,0.04,1.1,5), M.brass); staff.position.set(0.42,0.75,0.1); wiz.add(staff);
-  const orb=new T.Mesh(new T.SphereGeometry(0.12,7,6), M.fireCore); orb.position.set(0.42,1.35,0.1); wiz.add(orb);
+  wiz.add(M3(new T.CylinderGeometry(0.28,0.6,1.3,7),MAT.robe,0,0.65,0));
+  wiz.add(M3(new T.CylinderGeometry(0.6,0.62,0.16,7),MAT.robe2,0,0.08,0));
+  wiz.add(M3(new T.SphereGeometry(0.26,8,6),MAT.skin,0,1.45,0));
+  wiz.add(M3(new T.ConeGeometry(0.42,0.95,7),MAT.hat,0,2.0,0));
+  wiz.add(M3(new T.CylinderGeometry(0.5,0.5,0.08,7),MAT.hat,0,1.62,0));
+  wiz.add(M3(new T.CylinderGeometry(0.04,0.04,1.1,5),MAT.brass,0.42,0.75,0.1));
+  wiz.add(M3(new T.SphereGeometry(0.12,7,6),MAT.fireCore,0.42,1.35,0.1));
 })();
 scene.add(wiz);
 const carrySlot=new T.Group(); carrySlot.position.set(0,2.5,0); wiz.add(carrySlot);
 
-// ================= LEVEL STATE (rebuilt per floor) =================
 let levelGroup=new T.Group(); scene.add(levelGroup);
-let solids=[];            // {minX,maxX,minZ,maxZ,kind,mesh,...}
-let braziers=[], iceBlocks=[], crates=[], plates=[];
-let door=null, goal=null; // goal={pos:Vector3, kind:'exit'|'milk', gated:bool}
-let carrying=null;
+let solids=[], braziers=[], iceBlocks=[], crates=[], plates=[], doors=[], goals=[];
+let carrying=null, gW=0, gH=0, startPos=new T.Vector3();
+const player={pos:new T.Vector3(),r:0.55};
+let heading=Math.PI, camYaw=Math.PI, camPitch=0.42, camDist=9.5, won=false, playing=false;
 
-function addSolid(minX,maxX,minZ,maxZ,kind,mesh,extra){
-  const s=Object.assign({minX,maxX,minZ,maxZ,kind,mesh},extra||{}); solids.push(s); return s;
-}
-function buildFloorPlane(){
-  const nx=26,nz=24,tile=1,w=nx*tile,d=nz*tile;
-  const geo=new T.PlaneGeometry(w,d,nx,nz); geo.rotateX(-Math.PI/2);
-  const col=[],a=new T.Color(0x2a2540),b=new T.Color(0x231f38),pos=geo.attributes.position;
-  for(let i=0;i<pos.count;i++){ const vx=Math.floor((pos.getX(i)+w/2)/tile),vz=Math.floor((pos.getZ(i)+d/2)/tile);
-    const c=((vx+vz)&1)?a:b; col.push(c.r,c.g,c.b); }
-  geo.setAttribute('color',new T.Float32BufferAttribute(col,3));
-  const m=new T.Mesh(geo,M.floor); m.position.set(0,0,-1); levelGroup.add(m);
-}
-const WALL_H=3.2;
-function wall(cx,cz,sx,sz){
-  const m=new T.Mesh(new T.BoxGeometry(sx,WALL_H,sz),M.wall); m.position.set(cx,WALL_H/2,cz); levelGroup.add(m);
-  const cm=new T.Mesh(new T.BoxGeometry(sx+0.2,0.35,sz+0.2),M.wallTop); cm.position.set(cx,WALL_H+0.05,cz); levelGroup.add(cm);
-  addSolid(cx-sx/2,cx+sx/2,cz-sz/2,cz+sz/2,'wall',m);
-}
-function outerRoom(){
-  wall(0,10.5,26,1); wall(-12.5,-1,1,22); wall(12.5,-1,1,22);
-  wall(-7.5,-11.5,11,1); wall(7.5,-11.5,11,1);          // north wall with central door gap
-  wall(-2.2,-14.5,1,6.5); wall(2.2,-14.5,1,6.5); wall(0,-17.5,5.4,1);  // alcove beyond door
-}
-function makeBrazier(x,z,id){
-  const grp=new T.Group(); grp.position.set(x,0,z);
-  grp.add(mesh(new T.CylinderGeometry(0.18,0.28,1.2,6),M.brass,0,0.6,0));
-  grp.add(mesh(new T.CylinderGeometry(0.55,0.32,0.4,8),M.brass,0,1.3,0));
-  const flame=mesh(new T.ConeGeometry(0.42,1.1,7),M.fire,0,1.95,0); flame.visible=false;
-  const core=mesh(new T.ConeGeometry(0.2,0.6,6),M.fireCore,0,1.8,0); core.visible=false;
-  grp.add(flame); grp.add(core);
-  const light=new T.PointLight(0xffa64d,0,14,2); light.position.set(0,2.1,0); grp.add(light);
-  levelGroup.add(grp);
-  const s=addSolid(x-0.6,x+0.6,z-0.6,z+0.6,'brazier',grp,{lit:false,flame,core,light,id}); braziers.push(s); return s;
-}
-function mesh(geo,mat,x,y,z){ const m=new T.Mesh(geo,mat); m.position.set(x,y,z); return m; }
-function makeIce(x,z,wide){
-  const sx=wide?2.6:1.5;
-  const m=new T.Mesh(new T.BoxGeometry(sx,1.9,1.3),M.ice); m.position.set(x,0.95,z); levelGroup.add(m);
-  const s=addSolid(x-sx/2,x+sx/2,z-0.65,z+0.65,'ice',m,{iceMesh:m}); iceBlocks.push(s); return s;
-}
-function makeDoor(x,z){
-  const grp=new T.Group(); grp.position.set(x,0,z);
-  grp.add(mesh(new T.BoxGeometry(4.2,4.2,0.5),M.door,0,2.1,0));
-  const ring=mesh(new T.TorusGeometry(0.7,0.09,6,16),M.rune,0,2.1,0.3); grp.add(ring);
-  levelGroup.add(grp);
-  door=addSolid(x-2.1,x+2.1,z-0.5,z+0.5,'door',grp,{open:false,grp,ring,baseZ:z}); return door;
-}
-function makeMilk(x,z){
-  const grp=new T.Group(); grp.position.set(x,0,z);
-  grp.add(mesh(new T.CylinderGeometry(0.7,0.9,0.8,10),M.ped,0,0.4,0));
-  grp.add(mesh(new T.BoxGeometry(0.8,1.1,0.8),M.milk,0,1.35,0));
-  const roof=mesh(new T.ConeGeometry(0.6,0.4,4),M.milk,0,2.05,0); roof.rotation.y=Math.PI/4; grp.add(roof);
-  const gl=new T.PointLight(0xfff0c0,0.9,8,2); gl.position.set(0,1.6,0); grp.add(gl);
-  levelGroup.add(grp);
-}
-function makeStairs(x,z){ // exit portal to next floor
-  const grp=new T.Group(); grp.position.set(x,0,z);
-  for(let i=0;i<4;i++) grp.add(mesh(new T.BoxGeometry(2.4-i*0.4,0.4,0.7),M.stairs,0,0.2+i*0.4,-i*0.7));
-  const gl=new T.PointLight(0x8f86ff,0.8,7,2); gl.position.set(0,1.6,-1); grp.add(gl);
-  levelGroup.add(grp);
-}
-function makeCrate(x,z){
-  const grp=new T.Group(); grp.position.set(x,0,z);
-  grp.add(mesh(new T.BoxGeometry(1.1,1.1,1.1),M.crate,0,0.55,0));
-  const edge=new T.Mesh(new T.BoxGeometry(1.16,0.12,1.16),M.crate2); edge.position.y=0.55; grp.add(edge);
-  levelGroup.add(grp);
-  const s=addSolid(x-0.6,x+0.6,z-0.6,z+0.6,'crate',grp,{grp}); crates.push(s); return s;
-}
-function makePlate(x,z){
-  const grp=new T.Group(); grp.position.set(x,0,z);
-  const disc=mesh(new T.CylinderGeometry(0.85,0.9,0.16,12),M.plate,0,0.08,0); grp.add(disc);
-  levelGroup.add(grp);
-  const s={x,z,grp,disc,pressed:false}; plates.push(s); return s;
-}
-
-// ================= FLOORS =================
-const FLOORS = [null,
-  { name:"Floor 1 — The Frozen Turnstile",
-    obj:"Light both braziers to open the runed door.",
-    quip:"Well. I haven't seen you at the summoning obelisk lately. Floor one. Light both braziers — the frozen one's your problem to thaw.",
-    build(){
-      outerRoom();
-      makeBrazier(8.5,-9,'A');
-      makeBrazier(-8.5,-9,'B');
-      makeIce(-8.5,-6.4,true);         // one wide barricade, cleanly gates brazier B
-      makeDoor(0,-11.5);
-      makeStairs(0,-15.6);
-      goal={ pos:new T.Vector3(0,0,-15.6), kind:'exit', gated:true };
-      return new T.Vector3(0,0,6.5);
-    }
-  },
-  { name:"Floor 2 — The Bureaucratic Gate",
-    obj:"Light the brazier AND set a crate on the plate.",
-    quip:"Floor two. The gate wants a lit brazier AND a weighted plate. It will not accept a wizard standing on it — it wants a crate. It has standards.",
-    build(){
-      outerRoom();
-      makeBrazier(8.5,-9,'A');
-      makeCrate(-6.5,1.5);
-      makePlate(-8.5,-8.5);
-      makeDoor(0,-11.5);
-      makeMilk(0,-15.6);
-      goal={ pos:new T.Vector3(0,0,-15.6), kind:'milk', gated:true };
-      return new T.Vector3(0,0,6.5);
-    }
-  },
-];
-let floorNum=1;
+function addSolid(minX,maxX,minZ,maxZ,kind,mesh,extra){ const s=Object.assign({minX,maxX,minZ,maxZ,kind,mesh},extra||{}); solids.push(s); return s; }
+function cellWorld(j,i){ return { x:(j-(gW-1)/2)*UNIT, z:(i-(gH-1)/2)*UNIT }; }
 
 function clearLevel(){
   scene.remove(levelGroup);
-  levelGroup.traverse(o=>{ if(o.geometry) o.geometry.dispose(); });
   levelGroup=new T.Group(); scene.add(levelGroup);
-  solids=[]; braziers=[]; iceBlocks=[]; crates=[]; plates=[]; door=null; goal=null;
-  if(carrying){ carrySlot.remove(carrying.grp); carrying=null; }
+  solids=[];braziers=[];iceBlocks=[];crates=[];plates=[];doors=[];goals=[];
+  if(carrying){ carrySlot.remove(carrying.grp); } carrying=null;
 }
-function loadFloor(n){
-  floorNum=n; clearLevel(); won=false;
-  const F=FLOORS[n]; buildFloorPlane();
-  const start=F.build();
-  player.pos.copy(start); wiz.position.copy(start); heading=Math.PI; camYaw=Math.PI;
-  document.getElementById('floorInfo').textContent=F.name;
-  document.getElementById('objective').textContent=F.obj;
-  say(F.quip);
-  document.getElementById('overlay').classList.remove('show');
+function buildFloorPlane(){
+  const w=gW*UNIT, d=gH*UNIT, geo=new T.PlaneGeometry(w,d,gW,gH); geo.rotateX(-Math.PI/2);
+  const col=[],a=new T.Color(0x2a2540),b=new T.Color(0x231f38),pos=geo.attributes.position;
+  for(let k=0;k<pos.count;k++){ const vx=Math.floor((pos.getX(k)+w/2)/UNIT),vz=Math.floor((pos.getZ(k)+d/2)/UNIT);
+    const c=((vx+vz)&1)?a:b; col.push(c.r,c.g,c.b); }
+  geo.setAttribute('color',new T.Float32BufferAttribute(col,3));
+  levelGroup.add(new T.Mesh(geo,MAT.floor));
+}
+function wallRun(j0,j1,i){ // cells j0..j1 (inclusive) on row i
+  const a=cellWorld(j0,i), b=cellWorld(j1,i); const cx=(a.x+b.x)/2, cz=a.z, sx=(j1-j0+1)*UNIT;
+  const m=M3(new T.BoxGeometry(sx,WALL_H,UNIT),MAT.wall,cx,WALL_H/2,cz); levelGroup.add(m);
+  levelGroup.add(M3(new T.BoxGeometry(sx+0.2,0.32,UNIT+0.2),MAT.wallTop,cx,WALL_H+0.05,cz));
+  addSolid(cx-sx/2,cx+sx/2,cz-UNIT/2,cz+UNIT/2,'wall',m);
+}
+function brazier(x,z){
+  const g=new T.Group(); g.position.set(x,0,z);
+  g.add(M3(new T.CylinderGeometry(0.18,0.28,1.2,6),MAT.brass,0,0.6,0));
+  g.add(M3(new T.CylinderGeometry(0.55,0.32,0.4,8),MAT.brass,0,1.3,0));
+  const fl=M3(new T.ConeGeometry(0.42,1.1,7),MAT.fire,0,1.95,0); fl.visible=false;
+  const co=M3(new T.ConeGeometry(0.2,0.6,6),MAT.fireCore,0,1.8,0); co.visible=false;
+  const li=new T.PointLight(0xffa64d,0,14,2); li.position.set(0,2.1,0);
+  g.add(fl); g.add(co); g.add(li); levelGroup.add(g);
+  braziers.push(addSolid(x-0.7,x+0.7,z-0.7,z+0.7,'brazier',g,{lit:false,flame:fl,core:co,light:li}));
+}
+function ice(x,z){
+  const m=M3(new T.BoxGeometry(UNIT*0.92,1.9,UNIT*0.92),MAT.ice,x,0.95,z); levelGroup.add(m);
+  iceBlocks.push(addSolid(x-UNIT*0.46,x+UNIT*0.46,z-UNIT*0.46,z+UNIT*0.46,'ice',m,{iceMesh:m}));
+}
+function door(x,z){
+  const g=new T.Group(); g.position.set(x,0,z);
+  g.add(M3(new T.BoxGeometry(UNIT*0.98,4.2,0.5),MAT.door,0,2.1,0));
+  const ring=M3(new T.TorusGeometry(0.7,0.09,6,16),MAT.rune,0,2.1,0.3); g.add(ring);
+  levelGroup.add(g);
+  doors.push(addSolid(x-UNIT*0.5,x+UNIT*0.5,z-UNIT*0.5,z+UNIT*0.5,'door',g,{open:false,grp:g,ring}));
+}
+function crate(x,z){
+  const g=new T.Group(); g.position.set(x,0,z);
+  g.add(M3(new T.BoxGeometry(1.1,1.1,1.1),MAT.crate,0,0.55,0));
+  g.add(M3(new T.BoxGeometry(1.16,0.12,1.16),MAT.crate2,0,0.55,0));
+  levelGroup.add(g);
+  crates.push(addSolid(x-0.6,x+0.6,z-0.6,z+0.6,'crate',g,{grp:g}));
+}
+function plate(x,z){
+  const g=new T.Group(); g.position.set(x,0,z);
+  const disc=M3(new T.CylinderGeometry(0.85,0.9,0.16,12),MAT.plate,0,0.08,0); g.add(disc); levelGroup.add(g);
+  plates.push({x,z,grp:g,disc,pressed:false,crate:null});
+}
+function milk(x,z){
+  const g=new T.Group(); g.position.set(x,0,z);
+  g.add(M3(new T.CylinderGeometry(0.7,0.9,0.8,10),MAT.ped,0,0.4,0));
+  g.add(M3(new T.BoxGeometry(0.8,1.1,0.8),MAT.milk,0,1.35,0));
+  const roof=M3(new T.ConeGeometry(0.6,0.4,4),MAT.milk,0,2.05,0); roof.rotation.y=Math.PI/4; g.add(roof);
+  const gl=new T.PointLight(0xfff0c0,0.9,8,2); gl.position.set(0,1.6,0); g.add(gl); levelGroup.add(g);
+  goals.push({x,z,kind:'milk'});
+}
+function stairs(x,z){
+  const g=new T.Group(); g.position.set(x,0,z);
+  for(let k=0;k<4;k++) g.add(M3(new T.BoxGeometry(2.2-k*0.4,0.4,0.6),MAT.stairs,0,0.2+k*0.4,-k*0.55));
+  const gl=new T.PointLight(0x8f86ff,0.8,7,2); gl.position.set(0,1.6,-1); g.add(gl); levelGroup.add(g);
+  goals.push({x,z,kind:'stairs'});
 }
 
-// ================= PLAYER / CAMERA =================
-const player={ pos:new T.Vector3(0,0,6.5), r:0.55 };
-let heading=Math.PI, camYaw=Math.PI, camPitch=0.42, camDist=8.5;
-wiz.position.copy(player.pos);
+function buildFromLevel(lv){
+  clearLevel(); gW=lv.w; gH=lv.h; won=false; buildFloorPlane();
+  const g=lv.r.map(s=>s.split(''));
+  for(let i=0;i<gH;i++){ let j=0; while(j<gW){
+    if(g[i][j]==='#'){ let k=j; while(k<gW&&g[i][k]==='#')k++; wallRun(j,k-1,i); j=k; } else j++; }}
+  for(let i=0;i<gH;i++)for(let j=0;j<gW;j++){ const ch=g[i][j]; if(ch==='#'||ch==='.')continue;
+    const {x,z}=cellWorld(j,i);
+    if(ch==='I')ice(x,z); else if(ch==='b')brazier(x,z); else if(ch==='c')crate(x,z);
+    else if(ch==='p')plate(x,z); else if(ch==='D')door(x,z); else if(ch==='M')milk(x,z);
+    else if(ch==='X')stairs(x,z); else if(ch==='@'){ startPos.set(x,0,z); }
+  }
+  player.pos.copy(startPos); wiz.position.copy(startPos); heading=Math.PI; camYaw=Math.PI;
+  checkDoors();
+}
+
+// ---- controls ----
 const keys={};
 window.addEventListener('keydown',e=>{
+  if(!playing) return; if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
   const k=e.key.toLowerCase();
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
   if(e.repeat) return; keys[k]=true;
-  if(k==='f'||k===' ') castFireball();
-  if(k==='e') levitate();
-  if(k==='r') loadFloor(floorNum);
+  if(k==='f'||k===' ') castFireball(); if(k==='e') levitate(); if(k==='r') buildFromLevel(currentLevel);
 });
 window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
-renderer.domElement.addEventListener('click',()=>{ renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); });
-document.addEventListener('mousemove',e=>{
-  if(document.pointerLockElement===renderer.domElement){
-    camYaw-=e.movementX*0.0026; camPitch=clamp(camPitch+e.movementY*0.0022,0.08,1.15);
-  }
-});
-function camForwardXZ(){ return new T.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw)); }
+renderer.domElement.addEventListener('click',()=>{ if(playing&&renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); });
+document.addEventListener('mousemove',e=>{ if(document.pointerLockElement===renderer.domElement){
+  camYaw-=e.movementX*0.0026; camPitch=clamp(camPitch+e.movementY*0.0022,0.08,1.15); }});
+const camFwd=()=>new T.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
 
-// ================= COLLISION =================
-function isSolid(s){
-  if(s.kind==='door' && s.open) return false;
-  if(s.kind==='crate' && s===carrying) return false;
-  return true;
-}
-function blocked(x,z){
-  const r=player.r;
-  for(const s of solids){ if(!isSolid(s)) continue;
-    if(x>s.minX-r && x<s.maxX+r && z>s.minZ-r && z<s.maxZ+r) return true; }
-  return false;
-}
+// ---- collision ----
+function isSolid(s){ if(s.kind==='door'&&s.open)return false; if(s.kind==='crate'&&s===carrying)return false; return true; }
+function blocked(x,z){ const r=player.r; for(const s of solids){ if(!isSolid(s))continue;
+  if(x>s.minX-r&&x<s.maxX+r&&z>s.minZ-r&&z<s.maxZ+r) return true; } return false; }
 
-// ================= FIREBALL =================
+// ---- fireball ----
 const fireballs=[];
-function castFireball(){
-  if(won) return;
-  const dir=camForwardXZ().normalize();
-  const g=new T.Mesh(new T.SphereGeometry(0.28,8,7),M.fire);
-  g.add(new T.PointLight(0xff8030,1.1,9,2));
-  g.add(new T.Mesh(new T.SphereGeometry(0.14,7,6),M.fireCore));
-  const start=player.pos.clone(); start.y=1.3; start.add(dir.clone().multiplyScalar(0.7));
-  g.position.copy(start); scene.add(g);
-  fireballs.push({mesh:g,dir,life:1.6}); say(pick(CAST_LINES));
-}
-function fireballHits(p){
-  for(const s of solids){ if(s.kind==='door'&&s.open) continue; if(s.kind==='crate'&&s===carrying) continue;
-    if(p.x>s.minX&&p.x<s.maxX&&p.z>s.minZ&&p.z<s.maxZ) return s; }
-  return null;
-}
-function removeSolid(s){ const i=solids.indexOf(s); if(i>=0) solids.splice(i,1); }
-function updateFireballs(dt){
-  for(let i=fireballs.length-1;i>=0;i--){ const fb=fireballs[i]; fb.life-=dt;
-    fb.mesh.position.addScaledVector(fb.dir,22*dt);
-    const hit=fireballHits(fb.mesh.position); let dead=fb.life<=0;
-    if(hit){
-      if(hit.kind==='ice'){ levelGroup.remove(hit.iceMesh); removeSolid(hit);
-        iceBlocks.splice(iceBlocks.indexOf(hit),1); say("The ice sublimates with an indignant hiss. Somewhere, a puddle forms."); dead=true; }
-      else if(hit.kind==='brazier'){ if(!hit.lit){ hit.lit=true; hit.flame.visible=true; hit.core.visible=true; hit.light.intensity=1.6; checkDoor(); } dead=true; }
-      else dead=true;
-    }
-    if(dead){ scene.remove(fb.mesh); fireballs.splice(i,1); }
-  }
-}
+function castFireball(){ if(won)return; const dir=camFwd().normalize();
+  const g=M3(new T.SphereGeometry(0.28,8,7),MAT.fire,0,0,0);
+  g.add(new T.PointLight(0xff8030,1.1,9,2)); g.add(M3(new T.SphereGeometry(0.14,7,6),MAT.fireCore,0,0,0));
+  const s=player.pos.clone(); s.y=1.3; s.add(dir.clone().multiplyScalar(0.7)); g.position.copy(s); scene.add(g);
+  fireballs.push({mesh:g,dir,life:2.0}); say(pick(CAST_LINES)); }
+function fbHit(p){ for(const s of solids){ if(s.kind==='door'&&s.open)continue; if(s.kind==='crate'&&s===carrying)continue;
+  if(p.x>s.minX&&p.x<s.maxX&&p.z>s.minZ&&p.z<s.maxZ) return s; } return null; }
+function rmSolid(s){ const i=solids.indexOf(s); if(i>=0)solids.splice(i,1); }
+function updateFire(dt){ for(let i=fireballs.length-1;i>=0;i--){ const fb=fireballs[i]; fb.life-=dt;
+  fb.mesh.position.addScaledVector(fb.dir,22*dt); const h=fbHit(fb.mesh.position); let dead=fb.life<=0;
+  if(h){ if(h.kind==='ice'){ levelGroup.remove(h.iceMesh); rmSolid(h); iceBlocks.splice(iceBlocks.indexOf(h),1); say("The ice sublimates with an indignant hiss."); dead=true; }
+    else if(h.kind==='brazier'){ if(!h.lit){ h.lit=true; h.flame.visible=true; h.core.visible=true; h.light.intensity=1.6; checkDoors(); } dead=true; }
+    else dead=true; }
+  if(dead){ scene.remove(fb.mesh); fireballs.splice(i,1); } } }
 
-// ================= LEVITATE =================
-function levitate(){
-  if(won) return;
-  if(!carrying){
-    let best=null,bd=2.4;
-    for(const c of crates){ const d=Math.hypot(c.grp.position.x-player.pos.x,c.grp.position.z-player.pos.z); if(d<bd){bd=d;best=c;} }
-    if(best){
-      // lift off any plate it sat on
-      for(const p of plates){ if(p.crate===best){ p.crate=null; p.pressed=false; p.disc.material=M.plate; checkDoor(); } }
-      carrying=best; carrySlot.add(best.grp); best.grp.position.set(0,0,0);
-      say("You hoist the crate with an incantation older than agriculture. It is a crate.");
-    } else say("Nothing within reach to levitate. The dweomer dissipates, unimpressed.");
-  } else {
-    const dir=new T.Vector3(Math.sin(heading),0,Math.cos(heading));
-    const dx=player.pos.x+dir.x*1.5, dz=player.pos.z+dir.z*1.5;
-    const c=carrying;
+// ---- levitate ----
+function levitate(){ if(won)return;
+  if(!carrying){ let best=null,bd=2.6; for(const c of crates){ const d=Math.hypot(c.grp.position.x-player.pos.x,c.grp.position.z-player.pos.z); if(d<bd){bd=d;best=c;} }
+    if(best){ for(const p of plates){ if(p.crate===best){ p.crate=null;p.pressed=false;p.disc.material=MAT.plate;checkDoors(); } }
+      carrying=best; carrySlot.add(best.grp); best.grp.position.set(0,0,0); say("You hoist the crate with an incantation older than agriculture. It is a crate."); }
+    else say("Nothing within reach to levitate."); }
+  else { const dir=new T.Vector3(Math.sin(heading),0,Math.cos(heading));
+    const dx=player.pos.x+dir.x*1.6, dz=player.pos.z+dir.z*1.6, c=carrying;
     carrySlot.remove(c.grp); levelGroup.add(c.grp); c.grp.position.set(dx,0,dz);
-    c.minX=dx-0.6; c.maxX=dx+0.6; c.minZ=dz-0.6; c.maxZ=dz+0.6; carrying=null;
-    // snap onto a plate if close
-    let onPlate=null;
-    for(const p of plates){ if(Math.hypot(p.x-dx,p.z-dz)<1.1){ onPlate=p; break; } }
-    if(onPlate){ c.grp.position.set(onPlate.x,0.16,onPlate.z);
-      c.minX=onPlate.x-0.6; c.maxX=onPlate.x+0.6; c.minZ=onPlate.z-0.6; c.maxZ=onPlate.z+0.6;
-      onPlate.crate=c; onPlate.pressed=true; onPlate.disc.material=M.plateOn;
-      say("The plate accepts the crate's weight with a satisfying, bureaucratic *chunk*."); checkDoor(); }
-    else say("Crate set down. Majestic.");
-  }
-}
+    c.minX=dx-0.6;c.maxX=dx+0.6;c.minZ=dz-0.6;c.maxZ=dz+0.6; carrying=null;
+    let onp=null; for(const p of plates){ if(Math.hypot(p.x-dx,p.z-dz)<1.2){ onp=p; break; } }
+    if(onp){ c.grp.position.set(onp.x,0.16,onp.z); c.minX=onp.x-0.6;c.maxX=onp.x+0.6;c.minZ=onp.z-0.6;c.maxZ=onp.z+0.6;
+      onp.crate=c; onp.pressed=true; onp.disc.material=MAT.plateOn; say("The plate accepts the crate's weight with a bureaucratic *chunk*."); checkDoors(); }
+    else say("Crate set down. Majestic."); } }
 
-// ================= DOOR =================
-function checkDoor(){
-  if(!door) return;
-  const allLit = braziers.every(b=>b.lit);
-  const allPlates = plates.every(p=>p.pressed);
-  if(allLit && allPlates && !door.open){
-    door.open=true;
-    say("Requirements met. The runed door grinds open, deeply unimpressed by the effort it took you.");
-    document.getElementById('objective').textContent = goal.kind==='milk' ? "Door's open. Go get the milk." : "Door's open. Take the stairs up.";
-  }
+// ---- doors / win ----
+function checkDoors(){ const ok=braziers.every(b=>b.lit)&&plates.every(p=>p.pressed);
+  for(const d of doors){ if(ok&&!d.open){ d.open=true; } }
+  if(ok&&doors.length) $('objective').textContent='The door is open. Reach the goal.';
 }
-
-// ================= UPDATE / WIN =================
-let won=false;
+let last=performance.now();
 function update(dt){
-  let mx=0,mz=0; const f=camForwardXZ(), rgt=new T.Vector3(-f.z,0,f.x);
-  if(keys['w']){ mx+=f.x; mz+=f.z; } if(keys['s']){ mx-=f.x; mz-=f.z; }
-  if(keys['d']){ mx+=rgt.x; mz+=rgt.z; } if(keys['a']){ mx-=rgt.x; mz-=rgt.z; }
-  if(keys['arrowleft']) camYaw+=1.6*dt; if(keys['arrowright']) camYaw-=1.6*dt;
-  if(keys['arrowup']) camPitch=clamp(camPitch+1.2*dt,0.08,1.15); if(keys['arrowdown']) camPitch=clamp(camPitch-1.2*dt,0.08,1.15);
+  let mx=0,mz=0; const f=camFwd(), rg=new T.Vector3(-f.z,0,f.x);
+  if(keys['w']){mx+=f.x;mz+=f.z;} if(keys['s']){mx-=f.x;mz-=f.z;} if(keys['d']){mx+=rg.x;mz+=rg.z;} if(keys['a']){mx-=rg.x;mz-=rg.z;}
+  if(keys['arrowleft'])camYaw+=1.6*dt; if(keys['arrowright'])camYaw-=1.6*dt;
+  if(keys['arrowup'])camPitch=clamp(camPitch+1.2*dt,0.08,1.15); if(keys['arrowdown'])camPitch=clamp(camPitch-1.2*dt,0.08,1.15);
   const len=Math.hypot(mx,mz);
-  if(len>0.001 && !won){ mx/=len; mz/=len; const spd=6.2*dt;
-    const nx=player.pos.x+mx*spd, nz=player.pos.z+mz*spd;
-    if(!blocked(nx,player.pos.z)) player.pos.x=nx;
-    if(!blocked(player.pos.x,nz)) player.pos.z=nz;
-    heading=Math.atan2(mx,mz);
-  }
+  if(len>0.001&&!won){ mx/=len;mz/=len; const sp=6.4*dt, nx=player.pos.x+mx*sp, nz=player.pos.z+mz*sp;
+    if(!blocked(nx,player.pos.z))player.pos.x=nx; if(!blocked(player.pos.x,nz))player.pos.z=nz; heading=Math.atan2(mx,mz); }
   wiz.position.lerp(player.pos,0.5);
-  let dh=heading-wiz.rotation.y; while(dh>Math.PI)dh-=2*Math.PI; while(dh<-Math.PI)dh+=2*Math.PI;
-  wiz.rotation.y+=dh*Math.min(1,12*dt);
-  updateFireballs(dt);
+  let dh=heading-wiz.rotation.y; while(dh>Math.PI)dh-=2*Math.PI; while(dh<-Math.PI)dh+=2*Math.PI; wiz.rotation.y+=dh*Math.min(1,12*dt);
+  updateFire(dt);
   const t=performance.now()*0.006;
   for(const b of braziers) if(b.lit){ b.flame.scale.y=1+Math.sin(t*3+b.minX)*0.18; b.light.intensity=1.4+Math.sin(t*5)*0.3; }
-  if(door){ door.ring.rotation.z+=dt*1.2; const ty=door.open?-4.2:0; door.grp.position.y+=(ty-door.grp.position.y)*Math.min(1,6*dt); }
-  // camera
+  for(const d of doors){ d.ring.rotation.z+=dt*1.2; const ty=d.open?-4.2:0; d.grp.position.y+=(ty-d.grp.position.y)*Math.min(1,6*dt); }
   const tgt=new T.Vector3(player.pos.x,1.4,player.pos.z);
   const off=new T.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch)).multiplyScalar(camDist);
   camera.position.copy(tgt).add(off); camera.lookAt(tgt);
-  // goal
-  if(!won && goal && (!goal.gated || (door&&door.open)) && player.pos.distanceTo(goal.pos)<2.0){
-    if(goal.kind==='exit') advanceFloor(); else winGame();
-  }
+  if(!won){ for(const gl of goals){ if(player.pos.distanceTo(new T.Vector3(gl.x,0,gl.z))<UNIT*0.6){ winGame(gl.kind); break; } } }
 }
-function advanceFloor(){
-  won=true;
-  showModal("▲ Floor Cleared", "The tower lets you up to the next floor with a put-upon sigh.",
-    "Obelisk: \"Adequate. Attendance noted. The previous absences remain, however, un-noted.\"",
-    "Ascend", ()=>loadFloor(floorNum+1));
-}
-function winGame(){
-  won=true;
-  showModal("🥛 GROCERIES ACQUIRED",
-    "One (1) unit of milk retrieved — after two floors, two spells, and a self-reconfiguring arcane tower. Epic effort, dairy payoff.",
-    "Obelisk: \"See you tomorrow. It's bin night, and the recycling gnomes only answer to a Level-4 banishment. Bring the good staff.\"",
-    "Again", ()=>loadFloor(1));
-}
+function winGame(kind){ won=true;
+  showModal("🥛 PUZZLE SOLVED", kind==='milk'
+    ? "One (1) unit of milk retrieved. Epic arcane effort, dairy payoff — exactly as designed."
+    : "You reached the stairs. The tower lets you up, deeply unimpressed by the effort it took.",
+    "Obelisk: \"Adequate. Attendance noted. Do design another — the tower gets bored.\""); }
 
-// ================= HUD =================
-const CAST_LINES=[
-  "You unleash an eleven-syllable incantation. A small fireball happens.",
-  "FLAME OF A THOUSAND SUNS, etc. It's about the size of a grapefruit.",
-  "The dweomer ignites. Your landlord would like a word about the scorch marks.",
-];
-function pick(a){ return a[(Math.random()*a.length)|0]; }
-function say(html){ document.getElementById('obelisk').innerHTML='<b>Obelisk:</b> '+html; }
-function showModal(t,b,q,btn,cb){
-  document.getElementById('mTitle').innerHTML=t; document.getElementById('mBody').innerHTML=b;
-  document.getElementById('mQuip').textContent=q;
-  const el=document.getElementById('mBtn'); el.textContent=btn||'Again'; el.onclick=()=>{ document.getElementById('overlay').classList.remove('show'); cb&&cb(); };
-  document.getElementById('overlay').classList.add('show');
+// ---- HUD ----
+const CAST_LINES=["You unleash an eleven-syllable incantation. A small fireball happens.",
+  "FLAME OF A THOUSAND SUNS, etc. About the size of a grapefruit.",
+  "The dweomer ignites. Your landlord would like a word about the scorch marks."];
+const pick=a=>a[(performance.now()|0)%a.length];
+function say(html){ $('obelisk').innerHTML='<b>Obelisk:</b> '+html; }
+function showModal(t,b,q){ $('mTitle').innerHTML=t; $('mBody').innerHTML=b; $('mQuip').textContent=q; $('overlay').classList.add('show'); }
+
+// ---- mode switch ----
+let currentLevel=null;
+function playLevel(){
+  const err=validate(); if(err){ $('msg').textContent='⚠ '+err; return; }
+  currentLevel={ w:W, h:H, r:rows() };
+  $('editor').style.display='none'; $('play').classList.add('show'); playing=true;
+  $('overlay').classList.remove('show'); $('objective').textContent = 'Reach the goal — open any doors first (light braziers, weigh plates).';
+  say("A puzzle of your own making. Let's see if it was fair.");
+  resizeR(); buildFromLevel(currentLevel);
 }
+function backToEditor(){ playing=false; if(document.exitPointerLock)document.exitPointerLock();
+  $('play').classList.remove('show'); $('overlay').classList.remove('show'); $('editor').style.display=''; }
 
-// ================= LOOP =================
-let last=performance.now();
-function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now; update(dt); renderer.render(scene,camera); requestAnimationFrame(frame); }
-resize(); loadFloor(1); requestAnimationFrame(frame);
+function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now; if(playing) update(dt); renderer.render(scene,camera); requestAnimationFrame(frame); }
 
-// ================= DEBUG API =================
+// ===================== INIT / WIRING =====================
+function init(){
+  buildPalette(); buildTemplateSelect();
+  // load from URL hash, else default template
+  let loaded=false;
+  const m=location.hash.match(/#lvl=([^&]+)/);
+  if(m){ try{ loadCode(m[1]); loaded=true; $('msg').textContent='Loaded a shared puzzle. ▶ Play or edit it.'; }catch(e){} }
+  if(!loaded){ loadTemplate('Frozen Turnstile'); }
+  $('playBtn').onclick=playLevel; $('shareBtn').onclick=share;
+  $('backBtn').onclick=backToEditor; $('mEdit').onclick=backToEditor;
+  $('mBtn').onclick=()=>{ $('overlay').classList.remove('show'); buildFromLevel(currentLevel); };
+  $('resizeBtn').onclick=()=>resize(+$('wIn').value,+$('hIn').value);
+  $('clearBtn').onclick=clearInterior; $('borderBtn').onclick=sealBorder; $('randomBtn').onclick=surprise;
+  $('loadTmplBtn').onclick=()=>loadTemplate($('tmplSel').value);
+  $('importBtn').onclick=()=>{ try{ const v=$('codeIn').value.trim(); const mm=v.match(/#lvl=([^&]+)/); loadCode(mm?mm[1]:v); $('msg').textContent='Imported.'; }catch(e){ $('msg').textContent='⚠ Could not read that code.'; } };
+  $('exportBtn').onclick=()=>{ $('codeIn').value=encodeLevel(); $('msg').textContent='Level code shown below.'; };
+  requestAnimationFrame(frame);
+}
+init();
+
+// debug hook for headless verification
 window.DBG={
-  get:()=>({ floor:floorNum, px:+player.pos.x.toFixed(2), pz:+player.pos.z.toFixed(2),
-    litAll:braziers.every(b=>b.lit), platesAll:plates.length?plates.every(p=>p.pressed):true,
-    doorOpen:door?door.open:false, carrying:!!carrying, ice:iceBlocks.length, won,
-    modal:document.getElementById('overlay').classList.contains('show') }),
+  play:playLevel, back:backToEditor, encode:encodeLevel, loadCode,
+  setGrid:(rowsArr)=>{ H=rowsArr.length; W=rowsArr[0].length; grid=rowsArr.map(s=>s.split('')); $('wIn').value=W;$('hIn').value=H; buildGridUI(); },
+  state:()=>({ playing, won, px:+player.pos.x.toFixed(2), pz:+player.pos.z.toFixed(2),
+    litAll:braziers.every(b=>b.lit), platesAll:plates.every(p=>p.pressed), doorsOpen:doors.every(d=>d.open),
+    goals:goals.length, ice:iceBlocks.length, carrying:!!carrying, modal:$('overlay').classList.contains('show') }),
   aimAt:(x,z)=>{ camYaw=Math.atan2(-(x-player.pos.x),-(z-player.pos.z)); },
   faceAt:(x,z)=>{ heading=Math.atan2(x-player.pos.x,z-player.pos.z); },
-  levitate, fireball:castFireball, load:loadFloor,
-  clickModal:()=>document.getElementById('mBtn').click(),
+  tp:(x,z)=>{ player.pos.set(x,0,z); wiz.position.set(x,0,z); },
+  levitate, fireball:castFireball,
+  cellWorld:(j,i)=>cellWorld(j,i),
 };
 })();
 
