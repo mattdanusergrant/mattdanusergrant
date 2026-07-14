@@ -1,5 +1,5 @@
 {
   "$schema": "https://www.partykit.io/schema.json",
-  "name": "matchdeckgateway",
+  "name": "matchdeckgathering",
   "main": "server.ts"
 }
