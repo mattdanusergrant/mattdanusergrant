@@ -97,20 +97,22 @@ a{color:inherit;text-decoration:none}
   background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:9px 4px;cursor:pointer}
 .rip:hover,.rip:focus-visible{filter:brightness(1.07)}
 @media(max-width:460px){.pblurb{-webkit-line-clamp:3;font-size:11.5px}.pbody{gap:6px}}
-.empty{margin-top:26px;padding:28px;border:1px dashed var(--line2);border-radius:14px;text-align:center;color:var(--muted);font-family:var(--body);font-size:16px}
-
-/* pack tokens */
-.tokenbar{margin-top:26px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.tokens{display:flex;padding-left:9px}
-.token{width:46px;height:46px;border-radius:50%;margin-left:-9px;flex:none;display:flex;align-items:center;justify-content:center;
-  font-size:16px;color:#3a2c10;border:1px solid color-mix(in srgb,#fff 45%,var(--gold));
-  background:radial-gradient(circle at 32% 28%,#ffe9ad,var(--gold) 62%,#8f6c25);box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
-.token.more{font-family:var(--label);font-weight:700;font-size:12px;letter-spacing:.02em}
-.redeem{font-family:var(--label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12.5px;color:var(--bg);
-  background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:13px 22px;cursor:pointer}
-.redeem:hover,.redeem:focus-visible{filter:brightness(1.07)}
-.hint2{margin-top:14px;color:var(--muted);font-family:var(--body);font-size:14.5px}
-.hint2 b{color:var(--ink-soft);font-weight:600}
+/* the pack button — small, floating, unmissable */
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;
+  display:flex;align-items:center;gap:9px;font-family:var(--label);font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-size:12px;
+  color:var(--bg);background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:13px 18px;cursor:pointer;
+  box-shadow:0 16px 36px -12px rgba(0,0,0,.65)}
+.fab .fct{display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 8px;border-radius:999px;
+  background:rgba(0,0,0,.18);font-size:11.5px;letter-spacing:.04em}
+.fab::before{content:"";position:absolute;inset:-6px;border-radius:999px;border:2px solid color-mix(in srgb,var(--gold) 60%,transparent);
+  animation:fabring 2.6s ease-out infinite;pointer-events:none}
+@keyframes fabring{0%{transform:scale(.9);opacity:.9}70%{transform:scale(1.16);opacity:0}100%{transform:scale(1.16);opacity:0}}
+.fab:hover,.fab:focus-visible{filter:brightness(1.06)}
+.fab:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.fab.zero{color:var(--muted);background:var(--bg2);border-color:var(--line2);box-shadow:var(--shadow)}
+.fab.zero::before{animation:none;opacity:0}
+.fab.zero .fct{background:color-mix(in srgb,var(--ink) 10%,transparent)}
+@media(prefers-reduced-motion:reduce){.fab::before{animation:none;opacity:0}}
 
 /* token → booster choice */
 .pk-choice{padding:8px 4px}
@@ -262,12 +264,11 @@ a{color:inherit;text-decoration:none}
 <div class="topbar">
   <button class="wordmark" id="home" aria-label="Micro Discovery Gacha — home"><span class="dot"></span>Micro <span class="full">Discovery Gacha</span></button>
   <div class="controls">
-    <button class="btn tab on" data-view="packs" id="tab-packs">Packs</button>
-    <button class="btn tab" data-view="collection" id="tab-coll">Binder</button>
     <button class="btn" id="theme" aria-label="Toggle light and dark">Theme</button>
   </div>
 </div>
 <main id="view"></main>
+<button class="fab" id="fab" aria-label="Open a pack"></button>
 <button class="close" id="closeov" aria-label="Close">✕</button>
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
@@ -425,6 +426,26 @@ var CARDS = [
   hook:"A Chiang Mai factory where clay goes from wheel to kiln to hand-painted glaze under one roof.",
   facts:["A full-service studio: throwing, molding, glazing, and firing all happen on site.","Stoneware is fired past 1,200 °C, where clay vitrifies — turns glassy and waterproof.","Each glaze color must survive the kiln: many pigments burn away or shift at temperature."],
   back:"Prempracha’s Collection is a full-service ceramic studio and factory in Chiang Mai — clay is thrown or molded, bisque-fired, glazed, and fired again, all under one roof. The hard part of pottery at this scale is that the kiln has the final word: stoneware vitrifies past 1,200 °C, becoming glassy and waterproof, but every glaze color has to survive that heat, and many pigments burn out or shift completely. What looks like painting is really a bet on chemistry — the true color only exists after the fire." },
+{ id:"patapian", cat:"Bamboo craft", where:"Bangkok", accent:"#6b8f5a", motif:"grid", lead:"How it’s made",
+  title:"PATAPiAN", url:"https://www.patapian.com/", link:"Visit PATAPiAN",
+  hook:"Old Thai basket weaves, shrunk to jewelry-fine scale and blown up into lighting.",
+  facts:["Bamboo is split, skinned, and shaved into strips thin enough to bend like ribbon.","Traditional Thai basketry weaves become lighting, tableware, and design objects.","Tight weaves need strips of near-identical width — the sizing is the hidden skill."],
+  back:"Thai basketry starts with a knife, not a loom: bamboo is split along the grain, the glossy skin shaved off, and the culm sliced into strips so thin they bend like ribbon. The weave patterns — hexagonal, twill, coiled — are village knowledge centuries old. PATAPiAN, a Bangkok design studio, takes those same weaves up and down in scale, from jewelry-fine objects to woven lighting, tableware, and furniture, keeping the handwork while redrawing what a ‘basket’ can be." },
+{ id:"siam-bronze", cat:"Bronzeware", where:"Bangkok · since 1954", accent:"#9c6a30", motif:"facet", lead:"How it’s made",
+  title:"Siam Bronze Factory", url:"https://www.siambronzefactory.com/", link:"Visit Siam Bronze",
+  hook:"Cutlery with the heft of a temple bell — solid bronze, cast and polished by hand since 1954.",
+  facts:["Bronze is copper plus tin — harder than either, with a warm weight brass can’t match.","Each piece is cast solid, then ground and hand-polished to a mirror finish.","Siam Bronze has made flatware in Bangkok since 1954."],
+  back:"Bronze is one of humanity’s oldest engineered materials — copper hardened with tin — and Thailand’s bronzeworkers have cast everything from temple bells to Buddha images with it. Siam Bronze Factory has applied that metal to the dinner table since 1954: flatware cast solid, ground true, and hand-polished until it shines. The result has a weight and warmth stamped stainless steel can’t fake, which is why bronze cutlery became one of Bangkok’s signature exports of the mid-century." },
+{ id:"thai-benjarong", cat:"Benjarong", where:"Central Thailand", accent:"#a34f6e", motif:"orbit", lead:"How it’s made",
+  title:"Thai Benjarong", url:"https://www.thaibenjarong.com/", link:"Visit Thai Benjarong",
+  hook:"Five-color porcelain once reserved for the Siamese court — every dot laid by brush, refired again and again.",
+  facts:["‘Benjarong’ comes from Sanskrit for ‘five colors’ — the classic royal palette.","Enamel colors are painted over the glaze and fused in repeated low-temperature firings.","Gold lines are painted last, so they sit raised above the surface."],
+  back:"Benjarong is Thailand’s royal porcelain: the name comes from the Sanskrit for ‘five colors,’ and the ware began centuries ago as court pieces. The technique is over-glaze enameling — mineral colors are painted on top of already-glazed porcelain, then fused in repeated low-temperature firings, one pass per color family, with raised gold lines laid last. A single piece can pass through the kiln many times, and one slip on the final firing can undo weeks of brushwork. Studios like Thai Benjarong keep the pattern language of the old court ware in production today." },
+{ id:"arts-of-the-kingdom", cat:"Royal crafts", where:"Ayutthaya", accent:"#b08d3a", motif:"scroll", lead:"Who makes it",
+  title:"Arts of the Kingdom", url:"https://www.artsofthekingdom.com/", link:"Visit Arts of the Kingdom",
+  hook:"Rural Thais trained into master artisans — nielloware, embroidery, and vine basketry fit for a palace.",
+  facts:["Queen Sirikit founded the SUPPORT Foundation in 1976 to train rural Thais in royal crafts.","Nielloware inlays a black metal alloy into engraved silver and gold.","Yan lipao weaves a jungle vine into baskets fine enough to pass for cloth."],
+  back:"Arts of the Kingdom showcases the Queen Sirikit Institute — the SUPPORT Foundation begun in 1976 to teach Thailand’s farming families the kingdom’s most demanding crafts, so the skills (and the incomes) wouldn’t die out. The repertoire is the old palace arts: nielloware, where a black metal alloy is fused into engraved silver; gold-and-silver brocade embroidery; and yan lipao, a jungle vine woven so finely the baskets read as fabric. Ordinary villagers trained into master artisans — the point was always both the craft and the livelihood." },
 
 /* ---- Time ---- */
 { id:"time-relative", cat:"Time", accent:"#2f8f9d", motif:"pulse",
@@ -663,6 +684,7 @@ var CAT_SET={
   "ʻUkulele":"Makers of Hawaii","Surfboards":"Makers of Hawaii",
   "Thai silk":"Makers of Thailand","Celadon":"Makers of Thailand","Karen weaving":"Makers of Thailand",
   "Natural dye":"Makers of Thailand","Mulberry paper":"Makers of Thailand","Studio ceramics":"Makers of Thailand",
+  "Bamboo craft":"Makers of Thailand","Bronzeware":"Makers of Thailand","Benjarong":"Makers of Thailand","Royal crafts":"Makers of Thailand",
   "Time":"Time","Navigation":"Navigation","Materials":"Materials",
   "Computing":"Signals","Physics":"Signals","Energy":"Signals",
   "Astronomy":"Cosmos","Space":"Cosmos","Life":"Life & Medicine","Medicine":"Life & Medicine",
@@ -712,7 +734,7 @@ function openPack(setName){
 
 /* ===== rendering ===== */
 var view=document.getElementById('view'), overlay=document.getElementById('overlay'), sheet=document.getElementById('sheet'),
-    closeBtn=document.getElementById('closeov'), current='packs', activeSet=SETS[0];
+    closeBtn=document.getElementById('closeov'), activeSet=SETS[0];
 
 function miniHTML(c, o){
   o=o||{};
@@ -734,21 +756,6 @@ function faceHTML(c, foil){
   return '<div class="card'+(foil?' foil':'')+'" tabindex="0" role="button" aria-label="'+c.title+' — tap to flip" style="--accent:'+c.accent+'"><div class="flipper">'+front+back+'</div></div>';
 }
 
-function renderPacks(){
-  var t=S.tokens, totalCards=Object.keys(S.coll).length, i;
-  var h='<div class="view"><div class="vhead">Booster Packs</div>';
-  h+='<div class="vsub">'+t+' Pack Token'+(t===1?'':'s')+' · '+totalCards+' of '+CARDS.length+' cards collected · +1 token every day</div>';
-  var msg=MSG,msgN=MSGN; MSG=null;
-  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b>. Each token opens a booster — we deal you three packs, you pick the one to rip open.</div>';
-  else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — spend '+(msgN>1?'them':'it')+' below.</div>';
-  if(!t){ h+='<div class="empty">No Pack Tokens left. A fresh token arrives tomorrow — meanwhile, open your Binder to admire what you\'ve collected.</div></div>'; view.innerHTML=h; return; }
-  var shown=Math.min(t,7), coins='';
-  for(i=0;i<shown;i++) coins+='<span class="token">✦</span>';
-  if(t>shown) coins+='<span class="token more">+'+(t-shown)+'</span>';
-  h+='<div class="tokenbar"><div class="tokens">'+coins+'</div><button class="redeem" data-redeem>Use a token · open a booster</button></div>';
-  h+='<div class="hint2">A token deals you <b>3 random packs</b> — you choose <b>1</b> to open.</div>';
-  h+='</div>'; view.innerHTML=h;
-}
 /* spending a token = deal 3 random boosters, keep 1 */
 function tokenFlow(){
   if(S.tokens<1) return;
@@ -773,8 +780,12 @@ function tokenFlow(){
 }
 function renderCollection(){
   var h='<div class="view"><div class="vhead">Your Binder</div>';
-  var totalOwned=Object.keys(S.coll).length;
-  h+='<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · tap a card to read it (and flip for the full story)</div>';
+  var totalOwned=Object.keys(S.coll).length, t=S.tokens;
+  h+='<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day) · tap a card to read it</div>';
+  var msg=MSG,msgN=MSGN; MSG=null;
+  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b> — hit the gold <b>✦ Open a pack</b> button to rip your first booster: we deal three packs, you keep one.</div>';
+  else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — the gold button awaits.</div>';
+  else if(msg==="notokens") h+='<div class="banner"><b>No Pack Tokens left.</b> A fresh one arrives tomorrow — meanwhile, browse your binder.</div>';
   var activeSeries=SET_SERIES[activeSet], i, s;
   h+='<div class="seriestabs">';
   for(i=0;i<SERIES.length;i++){ var sr=SERIES[i], srSets=setsOf(sr), srOwned=0;
@@ -798,15 +809,15 @@ function renderCollection(){
   for(i=setCards.length;i<TARGET;i++) h+='<div class="mini locked" aria-hidden="true"><span class="q">+</span></div>';
   h+='</div></div>'; view.innerHTML=h;
 }
-function showView(v){ current=v;
-  document.getElementById('tab-packs').classList.toggle('on',v==='packs');
-  document.getElementById('tab-coll').classList.toggle('on',v==='collection');
-  if(v==='packs') renderPacks(); else renderCollection();
-  window.scrollTo(0,0);
+var fab=document.getElementById('fab');
+function updateFab(){ var t=S.tokens;
+  fab.classList.toggle('zero',t<1);
+  fab.innerHTML='<span class="fct">✦ '+t+'</span><span class="flb">'+(t<1?'+1 tomorrow':'Open a pack')+'</span>';
+  fab.setAttribute('aria-label',t<1?'No Pack Tokens — a new one arrives tomorrow':'Open a pack ('+t+' token'+(t===1?'':'s')+' left)');
 }
 function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); document.body.style.overflow='hidden'; sheet.scrollTop=0; }
 function closeOverlay(){ overlay.classList.remove('on','reveal'); closeBtn.classList.remove('on'); sheet.innerHTML=''; document.body.style.overflow='';
-  if(current==='packs') renderPacks(); else renderCollection(); }
+  renderCollection(); updateFab(); }
 
 /* opening a pack = the 3 full cards in a close row; flick left-right, tap to flip */
 function packFlow(setName){
@@ -831,14 +842,16 @@ function showCardModal(id){ var c=cardById(id); if(!c) return; var foil=S.coll[i
   openOverlay('<div class="cardwrap">'+faceHTML(c,foil)+'</div>'); }
 
 /* ===== events ===== */
-document.getElementById('home').addEventListener('click',function(){ showView('packs'); });
-document.getElementById('tab-packs').addEventListener('click',function(){ showView('packs'); });
-document.getElementById('tab-coll').addEventListener('click',function(){ showView('collection'); });
+document.getElementById('home').addEventListener('click',function(){ renderCollection(); window.scrollTo(0,0); });
+fab.addEventListener('click',function(){
+  if(S.tokens<1){ MSG="notokens"; renderCollection(); window.scrollTo(0,0); return; }
+  tokenFlow();
+});
 closeBtn.addEventListener('click',closeOverlay);
 overlay.addEventListener('click',function(e){ if(e.target===overlay) closeOverlay(); });
 
 view.addEventListener('click',function(e){
-  var rd=e.target.closest('[data-redeem]'); if(rd){ tokenFlow(); return; }
+
   var sr=e.target.closest('[data-series]'); if(sr){ activeSet=setsOf(sr.getAttribute('data-series'))[0]; renderCollection(); return; }
   var st=e.target.closest('[data-set]'); if(st){ activeSet=st.getAttribute('data-set'); renderCollection(); return; }
   var mn=e.target.closest('.mini[data-id]'); if(mn){ showCardModal(mn.getAttribute('data-id')); return; }
@@ -859,7 +872,7 @@ document.getElementById('theme').addEventListener('click',function(){
   try{localStorage.setItem('mdg-mag-theme',nxt);}catch(e){}
 });
 
-load(); initEconomy(); showView('packs');
+load(); initEconomy(); renderCollection(); updateFab();
 
 </script>
 </body>

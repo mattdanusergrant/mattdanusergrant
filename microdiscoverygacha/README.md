@@ -20,9 +20,10 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
 - **New player** starts with **0 packs and 3 Pack Tokens**.
 - **Daily token.** You get **+1 token each day** (up to 7 accrue if you're away). Old saves migrate:
   any unopened packs convert 1:1 into tokens.
-- **Binder.** Your collection, per set, as a grid toward a **20-card target** (`HAWAIʻI · 3 / 20`) —
-  owned cards show their art, unowned show a locked slot, foils get a holo star. Tap a card to read
-  it and flip for the back.
+- **The binder IS the landing page.** There are no separate views: you land on your collection
+  (series tabs → set tabs → the card grid), and a small floating gold **✦ Open a pack** button
+  (bottom-right, with your token count) is always in reach. Owned cards show their art, unowned
+  show a locked slot, foils get a holo star. Tap a card to read it and flip for the back.
 - **Two themes** (dark / light), remembered; otherwise follows the device.
 
 ## Series → Sets
@@ -58,6 +59,6 @@ Rules: accurate facts, a real live `url` for maker cards, keep it bite-sized. If
 `cat`, map it in `CAT_SET` so the card lands in a set. Motifs:
 `scroll · wave · grain · facet · strings · orbit · grid · pulse`.
 
-**Filling every set to 20** (currently: Makers of Hawaii 17, Makers of Thailand 6, Materials 8, Time 7, Signals 7,
-Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 71) is an ongoing
+**Filling every set to 20** (currently: Makers of Hawaii 17, Makers of Thailand 10, Materials 8, Time 7, Signals 7,
+Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 75) is an ongoing
 content effort, done in batches via the `/add-card` skill.
