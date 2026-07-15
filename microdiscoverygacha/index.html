@@ -118,8 +118,15 @@ a{color:inherit;text-decoration:none}
 .pk-choice h2{font-family:var(--display);font-weight:500;font-size:clamp(21px,4vw,29px);letter-spacing:-.01em;margin:8px 0 0;color:var(--ink)}
 .choicegrid{display:grid;grid-template-columns:repeat(3,minmax(96px,190px));gap:clamp(10px,2.4vw,18px);justify-content:center;margin:22px 0 16px}
 
-/* set tabs + binder */
-.settabs{display:flex;gap:8px;overflow-x:auto;padding:14px 0 6px;-webkit-overflow-scrolling:touch}
+/* series tabs > set tabs + binder */
+.seriestabs{display:flex;gap:10px;padding:16px 0 2px;flex-wrap:wrap}
+.seriestab{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-family:var(--label);font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;font-size:12px;color:var(--muted);background:none;border:1px solid var(--line2);border-radius:12px;
+  padding:10px 15px;cursor:pointer;transition:.18s}
+.seriestab .srct{font-weight:600;font-size:9px;letter-spacing:.08em;opacity:.75;text-transform:none}
+.seriestab:hover{color:var(--ink);border-color:var(--gold)}
+.seriestab.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+.settabs{display:flex;gap:8px;overflow-x:auto;padding:12px 0 6px;-webkit-overflow-scrolling:touch}
 .settab{white-space:nowrap;font-family:var(--label);font-weight:600;letter-spacing:.02em;font-size:11.5px;color:var(--muted);
   background:none;border:1px solid var(--line2);border-radius:999px;padding:8px 13px;cursor:pointer;transition:.18s}
 .settab:hover{color:var(--ink)}
@@ -387,6 +394,38 @@ var CARDS = [
   facts:["Aipa started shaping in 1970 and rewrote what a surfboard tail could do.","He invented the double-edged swallowtail (1972) and the split-tail (1974).","The shop is now led by his sons, Duke and Akila."],
   back:"Ben Aipa started shaping in 1970 and rewrote what a surfboard tail could do, inventing the double-edged swallowtail in 1972 and the split-tail in 1974 — designs that let surfers turn harder and later than before. The shop is now run by his sons, Duke and Akila, carrying the family’s ideas forward. Aipa is a reminder that a single shaper’s inventions can change how the whole world surfs." },
 
+/* ---- Makers of Thailand ---- */
+{ id:"jim-thompson", cat:"Thai silk", where:"Bangkok · est. 1951", accent:"#b0563f", motif:"strings", lead:"How it’s made",
+  title:"Jim Thompson", url:"https://www.jimthompson.com/", link:"Visit Jim Thompson",
+  hook:"The house that turned hand-woven Thai silk from a dying village craft into a world-famous fabric.",
+  facts:["Thai silk starts as yellow cocoons — the filament is reeled by hand into lustrous, slightly slubby thread.","The shimmer comes from triangular fibers that catch light like tiny prisms.","Founder Jim Thompson vanished in Malaysia’s Cameron Highlands in 1967 — never found."],
+  back:"Thai silk is reeled from golden-yellow cocoons, and the hand-drawn filament keeps tiny irregularities — slubs — that give the cloth its texture, while the fiber’s triangular cross-section splits light like a prism for that famous shimmer. After WWII, an American ex-architect named Jim Thompson found the craft surviving in a weaving quarter of Bangkok, and built it into a global house without giving up the handwork. He walked into Malaysia’s Cameron Highlands in 1967 and was never seen again; the company, and the silk, carried on." },
+{ id:"siam-celadon", cat:"Celadon", where:"Chiang Mai", accent:"#5f9b7a", motif:"facet", lead:"How it’s made",
+  title:"Siam Celadon", url:"https://www.siamceladon.com/", link:"Visit Siam Celadon",
+  hook:"Jade-green stoneware whose glassy skin cracks on purpose — a web you can hear forming.",
+  facts:["Celadon’s green comes from a wood-ash glaze and a smoky, oxygen-starved kiln — not from pigment.","The crackle happens as glaze and clay shrink at different rates while cooling.","Chiang Mai is Thailand’s celadon capital, heir to old Lanna kingdom kilns."],
+  back:"Celadon is high-fired stoneware with a glaze made largely of wood ash. Fired in a reduction kiln — starved of oxygen — traces of iron in the glaze turn jade green instead of rust brown; no pigment is involved. As the piece cools, glaze and clay shrink at slightly different rates, so the glassy skin crazes into a fine web, sometimes with an audible ping. Northern Thailand inherited the craft from the old Lanna kingdom’s kilns, and Chiang Mai houses like Siam Celadon keep the wood-ash tradition in production today." },
+{ id:"sop-moei-arts", cat:"Karen weaving", where:"Mae Hong Son & Chiang Mai", accent:"#8a5a7d", motif:"grain", lead:"How it’s made",
+  title:"Sop Moei Arts", url:"https://www.sopmoeiarts.com/", link:"Visit Sop Moei Arts",
+  hook:"Karen weavers turning backstrap-loom cloth and basketry into a livelihood for their villages.",
+  facts:["A backstrap loom has no frame — the weaver’s own body keeps the warp under tension.","Patterns are counted from memory, thread by thread, and handed down by teaching.","Sales fund a sustainable income for the Karen weavers and keep the skills alive."],
+  back:"A backstrap loom is barely a machine at all: one end of the warp ties to a post, the other to a strap around the weaver’s lower back, and leaning keeps the threads taut. Everything else — the pattern, the beat, the selvedge — lives in the weaver’s hands and memory. Sop Moei Arts works with Karen weavers in Thailand’s northwest hills, turning that cloth and hand-woven basketry into contemporary textiles and décor, with the stated goal of a sustainable income for the weavers and the survival of the craft itself." },
+{ id:"studio-naenna", cat:"Natural dye", where:"Chiang Mai", accent:"#4a5f9e", motif:"wave", lead:"How it’s made",
+  title:"Studio Naenna", url:"https://www.studio-naenna.com/", link:"Visit Studio Naenna",
+  hook:"Cloth dipped in a living indigo vat comes out green — and turns blue in front of your eyes.",
+  facts:["Indigo isn’t water-soluble: the vat must be fermented so the dye can grip the fiber.","Cloth emerges yellow-green and turns blue as the dye meets oxygen.","Studio Naenna’s dye gardens and Karen weavers work at the foot of Doi Suthep, Chiang Mai."],
+  back:"Real indigo is chemistry you can watch. The pigment won’t dissolve in water, so dyers keep a living, fermented vat that converts it to a soluble form; cloth dipped in comes out yellow-green, then blues before your eyes as air oxidizes the dye back into its insoluble form — now trapped inside the fiber. Deep shades take many dips, not one long soak. At Studio Naenna, in the shade of Chiang Mai’s Doi Suthep mountain, dye gardens and a resident group of Karen weavers keep the whole chain — plant, vat, loom — in one place." },
+{ id:"doi-tung", cat:"Mulberry paper", where:"Chiang Rai · since 1988", accent:"#7d8f4f", motif:"scroll", lead:"How it’s made",
+  title:"DoiTung", url:"https://www.doitung.com/", link:"Visit DoiTung",
+  hook:"A royal project that swapped opium fields for mulberry paper, ceramics, and looms.",
+  facts:["Saa paper is beaten from the inner bark of the paper mulberry tree — no wood pulp involved.","The pulp is floated onto screens and sun-dried into strong, textured sheets.","The DoiTung project began in 1988 to replace opium poppy with sustainable crafts and crops."],
+  back:"Saa paper doesn’t come from a mill: the inner bark of the paper mulberry is soaked, boiled, and beaten to loose fibers, then floated onto screens in a water bath and lifted out as a wet sheet that sun-dries into strong, beautifully textured paper. On Doi Tung mountain in Thailand’s far north, that craft is part of a bigger story — the DoiTung Development Project, begun in 1988 under the Princess Mother to replace opium poppy with legal livelihoods: paper, ceramics, hand-woven textiles, and coffee, made by the mountain’s own communities." },
+{ id:"prempracha", cat:"Studio ceramics", where:"Chiang Mai", accent:"#a2683c", motif:"orbit", lead:"How it’s made",
+  title:"Prempracha’s Collection", url:"https://www.prempracha.com/", link:"Visit Prempracha",
+  hook:"A Chiang Mai factory where clay goes from wheel to kiln to hand-painted glaze under one roof.",
+  facts:["A full-service studio: throwing, molding, glazing, and firing all happen on site.","Stoneware is fired past 1,200 °C, where clay vitrifies — turns glassy and waterproof.","Each glaze color must survive the kiln: many pigments burn away or shift at temperature."],
+  back:"Prempracha’s Collection is a full-service ceramic studio and factory in Chiang Mai — clay is thrown or molded, bisque-fired, glazed, and fired again, all under one roof. The hard part of pottery at this scale is that the kiln has the final word: stoneware vitrifies past 1,200 °C, becoming glassy and waterproof, but every glaze color has to survive that heat, and many pigments burn out or shift completely. What looks like painting is really a bet on chemistry — the true color only exists after the fire." },
+
 /* ---- Time ---- */
 { id:"time-relative", cat:"Time", accent:"#2f8f9d", motif:"pulse",
   title:"Why a Moving Clock Runs Slow", hook:"Time isn’t the same for everyone — it depends on how fast you move and how deep in gravity you sit.",
@@ -597,12 +636,18 @@ var CARDS = [
 
 ];
 
-/* ===== sets ===== */
-var SERIES=["Makers of Hawaii","Time","Navigation","Materials","Signals","Cosmos","Life & Medicine","Earth & Elements","Civilization"];
-var SERIES_COLOR={"Makers of Hawaii":"#c9a24b","Time":"#2f8f9d","Navigation":"#5b8fb0","Materials":"#b07d3f","Signals":"#8f7bc0","Cosmos":"#7b86c9","Life & Medicine":"#7d9b5b","Earth & Elements":"#6f7f86","Civilization":"#b0894a"};
-var SERIES_MOTIF={"Makers of Hawaii":"wave","Time":"scroll","Navigation":"grid","Materials":"grain","Signals":"pulse","Cosmos":"orbit","Life & Medicine":"pulse","Earth & Elements":"facet","Civilization":"strings"};
-var SERIES_BLURB={
+/* ===== series > sets ===== */
+var SERIES=["Makers","Encyclopedia"];
+var SET_SERIES={"Makers of Hawaii":"Makers","Makers of Thailand":"Makers",
+  "Time":"Encyclopedia","Navigation":"Encyclopedia","Materials":"Encyclopedia","Signals":"Encyclopedia",
+  "Cosmos":"Encyclopedia","Life & Medicine":"Encyclopedia","Earth & Elements":"Encyclopedia","Civilization":"Encyclopedia"};
+var SETS=["Makers of Hawaii","Makers of Thailand","Time","Navigation","Materials","Signals","Cosmos","Life & Medicine","Earth & Elements","Civilization"];
+function setsOf(sr){ return SETS.filter(function(s){return SET_SERIES[s]===sr;}); }
+var SET_COLOR={"Makers of Hawaii":"#c9a24b","Makers of Thailand":"#b0563f","Time":"#2f8f9d","Navigation":"#5b8fb0","Materials":"#b07d3f","Signals":"#8f7bc0","Cosmos":"#7b86c9","Life & Medicine":"#7d9b5b","Earth & Elements":"#6f7f86","Civilization":"#b0894a"};
+var SET_MOTIF={"Makers of Hawaii":"wave","Makers of Thailand":"strings","Time":"scroll","Navigation":"grid","Materials":"grain","Signals":"pulse","Cosmos":"orbit","Life & Medicine":"pulse","Earth & Elements":"facet","Civilization":"strings"};
+var SET_BLURB={
   "Makers of Hawaii":"Real island makers — and the crafts they keep alive.",
+  "Makers of Thailand":"Real Thai makers — silk, celadon, and looms in the hills.",
   "Time":"How humans learned to slice a day into perfect pieces.",
   "Navigation":"Finding your way — from stars to satellites.",
   "Materials":"The stuff everything is made of, and why it holds.",
@@ -612,10 +657,12 @@ var SERIES_BLURB={
   "Earth & Elements":"Rock, water, weather — the planet's raw ingredients.",
   "Civilization":"The inventions that let strangers build things together."
 };
-var CAT_SERIES={
+var CAT_SET={
   "Hawaiian gold":"Makers of Hawaii","Hawaiian jewelry":"Makers of Hawaii","Black coral":"Makers of Hawaii","Shell lei":"Makers of Hawaii",
   "Koa wood":"Makers of Hawaii","Koa rings":"Makers of Hawaii","Koa jewelry":"Makers of Hawaii","Sunrise shells":"Makers of Hawaii",
   "ʻUkulele":"Makers of Hawaii","Surfboards":"Makers of Hawaii",
+  "Thai silk":"Makers of Thailand","Celadon":"Makers of Thailand","Karen weaving":"Makers of Thailand",
+  "Natural dye":"Makers of Thailand","Mulberry paper":"Makers of Thailand","Studio ceramics":"Makers of Thailand",
   "Time":"Time","Navigation":"Navigation","Materials":"Materials",
   "Computing":"Signals","Physics":"Signals","Energy":"Signals",
   "Astronomy":"Cosmos","Space":"Cosmos","Life":"Life & Medicine","Medicine":"Life & Medicine",
@@ -624,9 +671,9 @@ var CAT_SERIES={
   "Architecture":"Civilization","Flight":"Civilization","Engineering":"Civilization"
 };
 var TARGET=20, FOIL_P=0.08;
-(function(){ var count={},i; for(i=0;i<CARDS.length;i++){var s=CAT_SERIES[CARDS[i].cat]||"Micro";CARDS[i].series=s;count[s]=(count[s]||0)+1;CARDS[i]._n=count[s];} for(i=0;i<CARDS.length;i++){CARDS[i]._of=count[CARDS[i].series];} })();
+(function(){ var count={},i; for(i=0;i<CARDS.length;i++){var s=CAT_SET[CARDS[i].cat]||"Micro";CARDS[i].set=s;count[s]=(count[s]||0)+1;CARDS[i]._n=count[s];} for(i=0;i<CARDS.length;i++){CARDS[i]._of=count[CARDS[i].set];} })();
 function pad(n){ n=String(n); return n.length<2?'0'+n:n; }
-function cardsOf(s){ return CARDS.filter(function(c){return c.series===s;}); }
+function cardsOf(s){ return CARDS.filter(function(c){return c.set===s;}); }
 function cardById(id){ for(var i=0;i<CARDS.length;i++) if(CARDS[i].id===id) return CARDS[i]; return null; }
 
 /* ===== state / economy ===== */
@@ -665,7 +712,7 @@ function openPack(setName){
 
 /* ===== rendering ===== */
 var view=document.getElementById('view'), overlay=document.getElementById('overlay'), sheet=document.getElementById('sheet'),
-    closeBtn=document.getElementById('closeov'), current='packs', activeSet=SERIES[0];
+    closeBtn=document.getElementById('closeov'), current='packs', activeSet=SETS[0];
 
 function miniHTML(c, o){
   o=o||{};
@@ -673,10 +720,10 @@ function miniHTML(c, o){
   return '<div class="mini'+(o.foil?' foil':'')+'" data-id="'+c.id+'" tabindex="0" role="button" aria-label="'+c.title+'" style="--accent:'+c.accent+'">'+
     (o.isNew?'<span class="newbadge">New</span>':'')+(o.foil?'<span class="ministar">✦</span>':'')+
     '<div class="miniart">'+motif(c.motif,c.accent)+'</div>'+
-    '<div class="mininame">'+c.title+'</div><div class="mininum">'+c.series+' · '+pad(c._n)+'/'+pad(c._of)+'</div></div>';
+    '<div class="mininame">'+c.title+'</div><div class="mininum">'+c.set+' · '+pad(c._n)+'/'+pad(c._of)+'</div></div>';
 }
 function faceHTML(c, foil){
-  var top='<div class="cardtop"><span class="type">'+c.cat+'</span><span class="setmark"><span class="setname">'+c.series+'</span><span class="num">'+pad(c._n)+' / '+pad(c._of)+'</span></span></div>';
+  var top='<div class="cardtop"><span class="type">'+c.cat+'</span><span class="setmark"><span class="setname">'+c.set+'</span><span class="num">'+pad(c._n)+' / '+pad(c._of)+'</span></span></div>';
   var front='<div class="face front">'+top+'<div class="art">'+motif(c.motif,c.accent)+'</div>'+
     '<h2 class="name">'+c.title+'</h2><p class="flavor">'+c.hook+'</p>'+(c.where?'<div class="where">'+c.where+'</div>':'')+
     '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div><span class="foiltag">✦ Foil</span></div></div>';
@@ -705,21 +752,21 @@ function renderPacks(){
 /* spending a token = deal 3 random boosters, keep 1 */
 function tokenFlow(){
   if(S.tokens<1) return;
-  var pool=SERIES.slice(),i,j,tmp;
+  var pool=SETS.slice(),i,j,tmp;
   for(i=pool.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));tmp=pool[i];pool[i]=pool[j];pool[j]=tmp;}
   var offer=pool.slice(0,3);
   var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Three packs — keep one</h2><div class="choicegrid">';
   for(i=0;i<offer.length;i++){ var s=offer[i], owned=ownedInSet(s), foils=foilsInSet(s);
-    h+='<div class="pk-slot"><div class="pack" tabindex="0" role="button" aria-label="'+s+' booster — tap to flip" style="--accent:'+SERIES_COLOR[s]+'"><div class="pflip">'+
+    h+='<div class="pk-slot"><div class="pack" tabindex="0" role="button" aria-label="'+s+' booster — tap to flip" style="--accent:'+SET_COLOR[s]+'"><div class="pflip">'+
        '<div class="pface pfront"><div class="crimp"></div>'+
-         '<div class="part">'+motif(SERIES_MOTIF[s],SERIES_COLOR[s])+'<div class="pname">'+s+'</div><div class="plabel">Booster · 3 cards</div></div>'+
+         '<div class="part">'+motif(SET_MOTIF[s],SET_COLOR[s])+'<div class="pname">'+s+'</div><div class="plabel">Booster · 3 cards</div></div>'+
        '<div class="crimp b"></div></div>'+
        '<div class="pface pback"><div class="crimp"></div>'+
-         '<div class="pbody"><div class="psetname">'+s+'</div><p class="pblurb">'+SERIES_BLURB[s]+'</p>'+
+         '<div class="pbody"><div class="psetname">'+s+'</div><p class="pblurb">'+SET_BLURB[s]+'</p>'+
            '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div></div>'+
        '<div class="crimp b"></div></div>'+
     '</div></div>'+
-    '<button class="rip" data-choose="'+s+'">Rip it open</button></div>';
+    '<button class="rip" data-choose="'+s+'">Rip It</button></div>';
   }
   h+='</div><div class="pr-hint">tap a pack to inspect · costs 1 token · you have '+S.tokens+'</div></div>';
   openOverlay(h);
@@ -728,13 +775,20 @@ function renderCollection(){
   var h='<div class="view"><div class="vhead">Your Binder</div>';
   var totalOwned=Object.keys(S.coll).length;
   h+='<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · tap a card to read it (and flip for the full story)</div>';
-  h+='<div class="settabs">';
-  for(var i=0;i<SERIES.length;i++){ var s=SERIES[i];
-    h+='<button class="settab'+(s===activeSet?' on':'')+'" data-set="'+s+'" style="--sc:'+SERIES_COLOR[s]+'">'+s+' <span style="opacity:.7">'+ownedInSet(s)+'/'+TARGET+'</span></button>';
+  var activeSeries=SET_SERIES[activeSet], i, s;
+  h+='<div class="seriestabs">';
+  for(i=0;i<SERIES.length;i++){ var sr=SERIES[i], srSets=setsOf(sr), srOwned=0;
+    for(var j=0;j<srSets.length;j++) srOwned+=ownedInSet(srSets[j]);
+    h+='<button class="seriestab'+(sr===activeSeries?' on':'')+'" data-series="'+sr+'">'+sr+' Series <span class="srct">'+srSets.length+' set'+(srSets.length===1?'':'s')+' · '+srOwned+' cards</span></button>';
+  }
+  h+='</div><div class="settabs">';
+  var srList=setsOf(activeSeries);
+  for(i=0;i<srList.length;i++){ s=srList[i];
+    h+='<button class="settab'+(s===activeSet?' on':'')+'" data-set="'+s+'" style="--sc:'+SET_COLOR[s]+'">'+s+' <span style="opacity:.7">'+ownedInSet(s)+'/'+TARGET+'</span></button>';
   }
   h+='</div>';
   var setCards=cardsOf(activeSet), owned=ownedInSet(activeSet), foils=foilsInSet(activeSet), pct=Math.round(owned/TARGET*100);
-  h+='<div class="setinfo"><span class="pct">'+owned+' / '+TARGET+'</span><div class="pbar" style="--sc:'+SERIES_COLOR[activeSet]+'"><i style="width:'+pct+'%"></i></div>'+
+  h+='<div class="setinfo"><span class="pct">'+owned+' / '+TARGET+'</span><div class="pbar" style="--sc:'+SET_COLOR[activeSet]+'"><i style="width:'+pct+'%"></i></div>'+
      '<span class="foils">'+foils+' foil'+(foils===1?'':'s')+'</span></div>';
   h+='<div class="binder">';
   for(i=0;i<setCards.length;i++){ var c=setCards[i], rec=S.coll[c.id];
@@ -785,6 +839,7 @@ overlay.addEventListener('click',function(e){ if(e.target===overlay) closeOverla
 
 view.addEventListener('click',function(e){
   var rd=e.target.closest('[data-redeem]'); if(rd){ tokenFlow(); return; }
+  var sr=e.target.closest('[data-series]'); if(sr){ activeSet=setsOf(sr.getAttribute('data-series'))[0]; renderCollection(); return; }
   var st=e.target.closest('[data-set]'); if(st){ activeSet=st.getAttribute('data-set'); renderCollection(); return; }
   var mn=e.target.closest('.mini[data-id]'); if(mn){ showCardModal(mn.getAttribute('data-id')); return; }
 });

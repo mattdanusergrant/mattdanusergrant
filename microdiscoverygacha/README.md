@@ -25,17 +25,17 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
   it and flip for the back.
 - **Two themes** (dark / light), remembered; otherwise follows the device.
 
-## Sets
+## Series → Sets
 
-Every card belongs to a named **Series**, derived from its `cat` via the `CAT_SERIES` map in the
-script. **Target: 20 cards per set** (the binder shows progress toward 20; sets fill over time).
+The collection is organized in two levels: a **Series** groups **Sets**, and every card belongs to
+one set (derived from its `cat` via the `CAT_SET` map in the script). **Target: 20 cards per set**
+(the binder shows progress toward 20; sets fill over time).
 
-`Makers of Hawaii` · `Time` · `Navigation` · `Materials` · `Signals` · `Cosmos` ·
-`Life & Medicine` · `Earth & Elements` · `Civilization`.
-
-> **"Makers of …" is a recurring set type** — a set full of real makers, each linking back to them
-> (Makers of Hawaii is the first; Makers of Japan, Italy, etc. can follow). Maker cards keep their
-> verified **Visit ↗** link on the back.
+- **Makers Series** — sets full of real makers, each card linking back to them with a verified
+  **Visit ↗** button: `Makers of Hawaii` · `Makers of Thailand` (Makers of Japan, Italy, etc. can
+  follow).
+- **Encyclopedia Series** — how-the-world-works concept sets: `Time` · `Navigation` · `Materials` ·
+  `Signals` · `Cosmos` · `Life & Medicine` · `Earth & Elements` · `Civilization`.
 
 ## Growing the collection
 
@@ -55,9 +55,9 @@ set is derived from `cat`. Each card:
 ```
 
 Rules: accurate facts, a real live `url` for maker cards, keep it bite-sized. If you add a new
-`cat`, map it in `CAT_SERIES` so the card lands in a set. Motifs:
+`cat`, map it in `CAT_SET` so the card lands in a set. Motifs:
 `scroll · wave · grain · facet · strings · orbit · grid · pulse`.
 
-**Filling every set to 20** (currently: Makers of Hawaii 17, Materials 8, Time 7, Signals 7,
-Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 65) is an ongoing
+**Filling every set to 20** (currently: Makers of Hawaii 17, Makers of Thailand 6, Materials 8, Time 7, Signals 7,
+Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 71) is an ongoing
 content effort, done in batches via the `/add-card` skill.
