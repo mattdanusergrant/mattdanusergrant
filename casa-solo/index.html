@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Plan — One Nanny</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FBF6EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1E1915" media="(prefers-color-scheme: dark)">
+<meta name="description" content="One-nanny daily household plan — schedule, duties, cats, laundry & dishes.">
+<style>
+  :root{
+    --ground:#FBF6EE; --card:#FFFFFF; --ink:#29221D; --muted:#8A7F76;
+    --line:#EBE1D3; --line-soft:#F3ECDF;
+    --am:#C97518; --am-soft:#FAEAD3; --am-ink:#8A4E10;
+    --pm:#5F4F91; --pm-soft:#ECE7F6; --pm-ink:#453A6C;
+    --good:#3E7C55;
+    --shadow:0 1px 2px rgba(41,34,29,.05), 0 8px 24px rgba(41,34,29,.07);
+    --r:16px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#1E1915; --card:#2A2420; --ink:#F3ECE2; --muted:#A99C8F;
+      --line:#3A322B; --line-soft:#332C26;
+      --am:#E7A24E; --am-soft:#3A2C18; --am-ink:#F0C083;
+      --pm:#A493D6; --pm-soft:#2B2540; --pm-ink:#C9BCEC;
+      --good:#7FB08F;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#FBF6EE; --card:#FFFFFF; --ink:#29221D; --muted:#8A7F76;
+    --line:#EBE1D3; --line-soft:#F3ECDF;
+    --am:#C97518; --am-soft:#FAEAD3; --am-ink:#8A4E10;
+    --pm:#5F4F91; --pm-soft:#ECE7F6; --pm-ink:#453A6C;
+    --good:#3E7C55;
+    --shadow:0 1px 2px rgba(41,34,29,.05), 0 8px 24px rgba(41,34,29,.07);
+  }
+  :root[data-theme="dark"]{
+    --ground:#1E1915; --card:#2A2420; --ink:#F3ECE2; --muted:#A99C8F;
+    --line:#3A322B; --line-soft:#332C26;
+    --am:#E7A24E; --am-soft:#3A2C18; --am-ink:#F0C083;
+    --pm:#A493D6; --pm-soft:#2B2540; --pm-ink:#C9BCEC;
+    --good:#7FB08F;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:20px 16px 56px;}
+
+  /* Header */
+  header{padding:8px 2px 4px;}
+  .eyebrow{
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--muted); font-weight:700; margin:0 0 8px;
+  }
+  h1{
+    font-size:30px; line-height:1.08; letter-spacing:-.02em; font-weight:800;
+    margin:0 0 8px; text-wrap:balance;
+  }
+  .season{
+    display:inline-flex; align-items:center; gap:7px; font-size:13.5px; color:var(--muted);
+    background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:5px 12px; margin-top:2px;
+  }
+  .season .dot{width:8px;height:8px;border-radius:50%;background:var(--am);}
+
+  /* Toggle */
+  .toggle{
+    display:inline-flex; background:var(--card); border:1px solid var(--line);
+    border-radius:999px; padding:4px; margin:18px 0 4px; box-shadow:var(--shadow);
+  }
+  .toggle button{
+    appearance:none; border:0; background:transparent; cursor:pointer;
+    font:inherit; font-weight:700; font-size:14px; color:var(--muted);
+    padding:8px 20px; border-radius:999px; transition:color .15s;
+  }
+  .toggle button[aria-pressed="true"]{background:var(--ink); color:var(--ground);}
+  .toggle button:focus-visible{outline:2px solid var(--am); outline-offset:2px;}
+
+  /* Glance */
+  .glance{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:20px 0 26px;}
+  .stat{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+    padding:14px 12px; box-shadow:var(--shadow);
+  }
+  .stat .k{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700;}
+  .stat .v{font-size:19px; font-weight:800; margin-top:5px; letter-spacing:-.01em;}
+  .stat.am .v{color:var(--am-ink);} .stat.pm .v{color:var(--pm-ink);}
+
+  /* Section */
+  section{margin:0 0 30px;}
+  h2{
+    font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
+    font-weight:700; margin:0 0 14px; padding-left:2px;
+  }
+
+  /* Timeline */
+  .tl{position:relative; padding-left:0;}
+  .row{display:grid; grid-template-columns:60px 1fr; gap:14px; padding:0 0 6px;}
+  .time{
+    font-size:14px; font-weight:800; text-align:right; padding-top:14px; color:var(--ink);
+    letter-spacing:-.01em; white-space:nowrap;
+  }
+  .track{position:relative; padding:0 0 18px 22px;}
+  .track::before{
+    content:""; position:absolute; left:5px; top:16px; bottom:-2px; width:2px;
+    background:var(--line);
+  }
+  .row:last-child .track::before{display:none;}
+  .node{position:absolute; left:0; top:14px; width:12px; height:12px; border-radius:50%;
+    border:2.5px solid var(--card); box-shadow:0 0 0 1.5px currentColor;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; box-shadow:var(--shadow);
+  }
+  .card .who{font-size:11px; letter-spacing:.07em; text-transform:uppercase; font-weight:700; margin:0 0 3px;}
+  .card .txt{font-size:14.5px;}
+  .am-c{color:var(--am);} .pm-c{color:var(--pm);}
+  .row.am .who{color:var(--am-ink);} .row.pm .who{color:var(--pm-ink);}
+  .row.handoff .card{background:var(--line-soft); border-style:dashed; text-align:center;}
+  .row.handoff .who{color:var(--muted);}
+
+  /* Role cards */
+  .roles{display:flex; flex-direction:column; gap:14px;}
+  .role{border-radius:var(--r); padding:16px 16px 14px; box-shadow:var(--shadow); border:1px solid var(--line);}
+  .role.am{background:linear-gradient(180deg,var(--am-soft),var(--card) 60%); border-color:color-mix(in srgb,var(--am) 30%, var(--line));}
+  .role.pm{background:linear-gradient(180deg,var(--pm-soft),var(--card) 60%); border-color:color-mix(in srgb,var(--pm) 30%, var(--line));}
+  .role .top{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:10px;}
+  .role .name{font-size:20px; font-weight:800; letter-spacing:-.01em;}
+  .role.am .name{color:var(--am-ink);} .role.pm .name{color:var(--pm-ink);}
+  .role .hrs{font-size:13px; font-weight:700; color:var(--muted);}
+  .role ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+  .role li{position:relative; padding-left:20px; font-size:14.5px;}
+  .role li::before{content:""; position:absolute; left:2px; top:8px; width:7px; height:7px; border-radius:2px;}
+  .role.am li::before{background:var(--am);} .role.pm li::before{background:var(--pm);}
+  .role li b{font-weight:800;}
+
+  /* Ownership */
+  .own{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .own .o{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px; box-shadow:var(--shadow);}
+  .own .o .lbl{font-size:11px; letter-spacing:.07em; text-transform:uppercase; font-weight:800; margin-bottom:6px;}
+  .own .o.am .lbl{color:var(--am-ink);} .own .o.pm .lbl{color:var(--pm-ink);}
+  .own .o .h{font-size:16px; font-weight:800; margin-bottom:5px;}
+  .own .o .d{font-size:13px; color:var(--muted);}
+  .own-note{grid-column:1/-1; font-size:13px; color:var(--muted); text-align:center; padding:2px 8px 0;}
+
+  /* Loop */
+  .loop{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px; box-shadow:var(--shadow);}
+  .loop .step{display:grid; grid-template-columns:26px 1fr; gap:12px; align-items:start; padding:9px 0;}
+  .loop .step + .step{border-top:1px dashed var(--line);}
+  .loop .n{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:800; color:#fff;}
+  .loop .step.a .n{background:var(--pm);} .loop .step.b .n{background:var(--am);} .loop .step.c .n{background:var(--good);}
+  .loop .st{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--muted);}
+  .loop .sd{font-size:14.5px; margin-top:1px;}
+
+  /* Assist areas */
+  .assist{display:flex; flex-direction:column; gap:10px;}
+  .assist .a{background:var(--card); border:1px solid var(--line); border-left:6px solid var(--mk);
+    border-radius:14px; padding:12px 14px; box-shadow:var(--shadow);}
+  .assist .a.am{--mk:var(--am);} .assist .a.pm{--mk:var(--pm);}
+  .assist .who{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:800; margin-bottom:3px;}
+  .assist .a.am .who{color:var(--am-ink);} .assist .a.pm .who{color:var(--pm-ink);}
+  .assist .txt{font-size:14.5px;}
+  .assist-note{margin-top:12px;}
+
+  /* House rules */
+  .rules{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:2px 16px; box-shadow:var(--shadow);}
+  .rules .r{display:grid; grid-template-columns:26px 1fr; gap:12px; align-items:start; padding:11px 0;}
+  .rules .r + .r{border-top:1px dashed var(--line);}
+  .rules .rn{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:800; background:var(--line-soft); color:var(--ink); flex:none;}
+  .rules .r.key .rn{background:var(--am); color:#fff;}
+  .rules .rt{font-size:14.5px;}
+  .rules li b, .rules .rt b{font-weight:800;}
+
+  /* Quiet times */
+  .quiet{background:var(--line-soft); border:1px solid var(--line); border-left:6px solid var(--muted);
+    border-radius:14px; padding:2px 16px; box-shadow:var(--shadow);}
+  .quiet .q{padding:13px 0;}
+  .quiet .q + .q{border-top:1px dashed var(--line);}
+  .quiet .win{font-size:15.5px; font-weight:800; letter-spacing:-.01em;}
+  .quiet .why{font-size:13px; color:var(--muted); margin:1px 0 5px; font-weight:600;}
+  .quiet .do{font-size:14px;}
+
+  /* Cats */
+  .cats{display:flex; flex-direction:column; gap:12px;}
+  .cat{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow:var(--shadow);}
+  .cat .hd{display:flex; align-items:center; gap:9px; margin-bottom:6px; flex-wrap:wrap;}
+  .cat .sw{width:16px; height:16px; border-radius:50%; background:var(--c); flex:none;
+    box-shadow:0 0 0 1.5px var(--line), inset 0 0 0 1px rgba(255,255,255,.18);}
+  .cat .cn{font-size:17px; font-weight:800; letter-spacing:-.01em;}
+  .cat .cw{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700;
+    color:var(--muted); background:var(--line-soft); padding:3px 9px; border-radius:999px;}
+  .cat .cnote{font-size:14px;}
+  .cats-note{margin-top:12px;}
+
+  /* Detail sections (laundry / dishes) */
+  .det{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:2px 16px; box-shadow:var(--shadow);}
+  .det .dg{padding:12px 0;}
+  .det .dg + .dg{border-top:1px dashed var(--line);}
+  .det .dgl{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:800; color:var(--muted); margin-bottom:7px;}
+  .det ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
+  .det li{position:relative; padding-left:16px; font-size:14px;}
+  .det li::before{content:""; position:absolute; left:2px; top:8px; width:5px; height:5px; border-radius:50%; background:var(--muted);}
+  .det li b{font-weight:800;}
+
+  /* Chat sample */
+  .chat{background:var(--pm-soft); border:1px solid color-mix(in srgb,var(--pm) 25%, var(--line)); border-radius:14px; padding:13px 14px; margin-top:12px;}
+  .chat .cap{font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--pm-ink); margin-bottom:7px;}
+  .chat pre{margin:0; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px; line-height:1.55; white-space:pre-wrap; color:var(--ink);}
+
+  .note{font-size:14px; color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; box-shadow:var(--shadow);}
+  .note b{color:var(--ink); font-weight:700;}
+
+  footer{margin-top:34px; padding-top:18px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted); text-align:center;}
+
+  @media (max-width:380px){
+    .glance{grid-template-columns:1fr 1fr;}
+    .stat.wide{grid-column:1/-1;}
+    h1{font-size:26px;}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow" data-t="eyebrow">Household Guide</p>
+    <h1 data-t="title">Daily Plan — One Nanny</h1>
+    <span class="season"><span class="dot"></span><span data-t="season">Summer · kids home all day</span></span>
+    <div class="toggle" role="group" aria-label="Language">
+      <button type="button" id="btn-en" aria-pressed="true" onclick="setLang('en')">English</button>
+      <button type="button" id="btn-es" aria-pressed="false" onclick="setLang('es')">Español</button>
+    </div>
+  </header>
+
+  <div class="glance">
+    <div class="stat am"><div class="k" data-t="g1k"></div><div class="v">8:30–6:30</div></div>
+    <div class="stat pm"><div class="k" data-t="g2k"></div><div class="v">+30 min</div></div>
+  </div>
+
+  <section>
+    <h2 data-t="s_rules">House Rules</h2>
+    <div class="rules" id="rules"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_quiet">Quiet Times</h2>
+    <div class="quiet" id="quiet"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_day">The Day</h2>
+    <div class="tl" id="timeline"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_roles">Roles</h2>
+    <div class="roles" id="roles"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_loop">The Shopping Loop</h2>
+    <div class="loop" id="loop"></div>
+    <div class="chat">
+      <div class="cap" data-t="chat_cap"></div>
+      <pre data-t="chat_body"></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="s_cats">Cats</h2>
+    <div class="cats" id="cats"></div>
+    <div class="note cats-note" data-t="cats_note"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_laundry">Laundry Details</h2>
+    <div class="det" id="laundry"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_dishes">Dishes Details</h2>
+    <div class="det" id="dishes"></div>
+  </section>
+
+  <section>
+    <h2 data-t="s_labels">Labels</h2>
+    <div class="note" data-t="labels_note"></div>
+  </section>
+
+  <footer data-t="footer"></footer>
+</div>
+
+<script>
+const T = {
+  eyebrow:{en:"Household Guide", es:"Guía de la Casa"},
+  title:{en:"Daily Plan — One Nanny", es:"Plan Diario — Una Niñera"},
+  season:{en:"Summer · kids home all day", es:"Verano · niños en casa todo el día"},
+  g1k:{en:"On-site hours", es:"Horas en sitio"},
+  g2k:{en:"Off-site grocery run", es:"Compra fuera de sitio"},
+  g3k:{en:"Snack times", es:"Meriendas"},
+  s_day:{en:"The Day", es:"El Día"},
+  s_roles:{en:"Roles", es:"Roles"},
+  s_loop:{en:"The Shopping Loop", es:"El Circuito de Compras"},
+  s_rules:{en:"House Rules", es:"Reglas de la Casa"},
+  s_quiet:{en:"Quiet Times", es:"Horas de Silencio"},
+  s_cats:{en:"Cats", es:"Gatos"},
+  s_laundry:{en:"Laundry Details", es:"Detalles de Lavandería"},
+  s_dishes:{en:"Dishes Details", es:"Detalles de Platos"},
+  cats_note:{en:"Feeding the grey cat outside leaves dishes out there. <b>Please</b> bring any empty dishes inside to the sink to soak or wash.", es:"Alimentar al gato gris afuera deja platos sucios ahí. <b>Por favor</b> traer los platos vacíos adentro al fregadero para remojar o lavar."},
+  s_labels:{en:"Labels", es:"Etiquetas"},
+  chat_cap:{en:"Example — end-of-day shortage note", es:"Ejemplo — nota de faltantes al final del día"},
+  chat_body:{en:"Short on — July 13\n• Milk — almost out ⭐\n• Eggs — 3 left\n• Diapers size 4 — last bag ⭐\n• Detergent — 1 wash left", es:"Faltantes — 13 julio\n• Leche — casi vacía ⭐\n• Huevos — quedan 3\n• Pañales talla 4 — última bolsa ⭐\n• Detergente — 1 lavada más"},
+  labels_note:{en:"Every spot in the kitchen and the closets gets an <b>English + Spanish label</b>, so it's always clear where things belong. Labeling is <b>a work in progress</b> — help getting it set up properly is very appreciated!", es:"Cada lugar de la cocina y los clósets lleva una <b>etiqueta en inglés y español</b>, para que siempre esté claro dónde va cada cosa. El etiquetado es <b>un proyecto en progreso</b> — ¡se agradece mucho la ayuda para organizarlo bien!"},
+  footer:{en:"Made for the family · Summer schedule", es:"Hecho para la familia · Horario de verano"},
+};
+
+const N = {en:"Nanny", es:"Niñera"};
+const TIMELINE = [
+  {t:"8:00", who:{en:"Off-site", es:"Fuera de sitio"}, cls:"am", en:"Grocery run on the way in, from last night's list. Off-site — only on days groceries are needed (not every day).", es:"Compra de camino, con la lista de anoche. Fuera de sitio — solo los días que se necesiten compras (no todos los días)."},
+  {t:"8:30", who:{en:"On-site start", es:"Inicio en sitio"}, cls:"am", en:"Official on-site start. Morning ritual: put away the groceries (if any), open all the blinds, then start making breakfast for the children.", es:"Inicio oficial en sitio. Ritual de la mañana: guardar las compras (si hay), abrir las persianas, y empezar a hacer el desayuno de los niños."},
+  {t:"10:00", who:N, cls:"am", en:"Snack #1 for the kids", es:"Merienda #1 para los niños"},
+  {t:"11:30", who:N, cls:"am", en:"Make lunch for the children", es:"Hacer el almuerzo de los niños"},
+  {t:"12:00", who:N, cls:"am", en:"Get the 2-yr-old down for a nap; take the 6-yr-old to color or play outside", es:"Preparar al de 2 años para la siesta; llevar al de 6 a colorear o a jugar afuera"},
+  {t:"12–3", who:{en:"Quiet time", es:"Hora de silencio"}, cls:"pm", en:"Toddler naps — quiet tasks only: laundry, upstairs organization, outside/garage. Keep it quiet until the kids are awake.", es:"El bebé duerme — solo tareas silenciosas: lavandería, organización de arriba, afuera/garaje. En silencio hasta que despierten."},
+  {t:"3:00", who:N, cls:"pm", en:"Snack #2 for the kids (later if the toddler is still asleep)", es:"Merienda #2 (más tarde si el bebé sigue dormido)"},
+  {t:"3:30", who:N, cls:"pm", en:"Take the kids upstairs, set up the stairs gate, then do laundry & organize while they play", es:"Subir a los niños, poner la reja de las escaleras, y hacer la lavandería y organizar mientras juegan"},
+  {t:"6:00", who:N, cls:"pm", en:"After dinner: kitchen cleanup + check what's low → note it for tomorrow's grocery run", es:"Después de la cena: limpiar la cocina + revisar qué falta → anotarlo para las compras de mañana"},
+  {t:"6:30", who:N, cls:"pm", en:"Nanny departs — end of the day", es:"La Niñera se va — fin del día"},
+];
+
+const ROLES = [
+  {name:N, cls:"am", hrs:{en:"On-site 8:30am–6:30pm · full day · EN + ES", es:"En sitio 8:30–6:30 · día completo · EN + ES"}, items:[
+    {en:"<b>Kids first, always.</b> On-site start is 8:30; the 8:00–8:30 grocery run is off-site, only when groceries are needed", es:"<b>Primero los niños, siempre.</b> Inicio en sitio 8:30; la compra de 8:00–8:30 es fuera de sitio, solo cuando se necesita"},
+    {en:"<b>Makes breakfast &amp; lunch</b> for the children every day; snacks at 10:00 and 3:00", es:"<b>Hace el desayuno y el almuerzo</b> de los niños cada día; meriendas a las 10:00 y 3:00"},
+    {en:"<b>Owns the organization</b> of the kitchen and the upstairs closets — where things go & the labels", es:"<b>Dueña de la organización</b> de la cocina y los clósets de arriba — dónde va cada cosa y las etiquetas"},
+    {en:"<b>Laundry</b> (main afternoon focus), <b>dishes</b>, and tidy-up — see the details below", es:"<b>Lavandería</b> (enfoque de la tarde), <b>platos</b> y orden — ver los detalles abajo"},
+    {en:"Shops on the way in from the shortage list; may help with dinner if needed", es:"Compra de camino con la lista de faltantes; puede ayudar con la cena si hace falta"},
+    {en:"Cares for the cats (see below)", es:"Cuida a los gatos (ver abajo)"},
+  ]},
+];
+
+const LAUNDRY = [
+  {label:{en:"Clothes — every load, no exceptions", es:"Ropa — cada carga, sin excepción"}, items:[
+    {en:"<b>Washer: always use Delicates</b>", es:"<b>Lavadora: siempre usar Delicados</b>"},
+    {en:"<b>Dryer: always TIME DRY · 60 min · MEDIUM heat</b> — even medium-high will ruin our clothes", es:"<b>Secadora: siempre TIME DRY · 60 min · calor MEDIO</b> — hasta medio-alto arruina nuestra ropa"},
+    {en:"<b>ALL dresses MUST hang dry</b> — never put a dress in the dryer", es:"<b>TODOS los vestidos DEBEN secarse colgados</b> — nunca poner un vestido en la secadora"},
+  ]},
+  {label:{en:"Towels & Bedding — different settings", es:"Toallas y Ropa de Cama — otros ajustes"}, items:[
+    {en:"<b>Washer:</b> hot · normal cycle", es:"<b>Lavadora:</b> caliente · ciclo normal"},
+    {en:"<b>Dryer:</b> normal / high heat", es:"<b>Secadora:</b> calor normal / alto"},
+  ]},
+  {label:{en:"Wash in priority order", es:"Lavar en orden de prioridad"}, items:[
+    {en:"1) Kids · 2) Towels & Bedding · 3) Mom · 4) Dad", es:"1) Niños · 2) Toallas y Ropa de Cama · 3) Mamá · 4) Papá"},
+  ]},
+];
+
+const DISHES = [
+  {label:{en:"Dishwasher", es:"Lavavajillas"}, items:[
+    {en:"We use the dishwasher for nearly everything — hand-wash only large items that don't fit", es:"Usamos el lavavajillas para casi todo — lavar a mano solo los artículos grandes que no caben"},
+  ]},
+  {label:{en:"Clean / Dirty magnet", es:"Imán Limpio / Sucio"}, items:[
+    {en:"Check the Clean/Dirty magnet before loading or unloading — flip it when you start a wash or empty it", es:"Revisar el imán Limpio/Sucio antes de cargar o vaciar — cambiarlo al iniciar un lavado o al vaciarlo"},
+  ]},
+  {label:{en:"Cat dishes", es:"Platos de los gatos"}, items:[
+    {en:"Bring the empties in from outside; soak in the sink, then wash; keep them separate from the family's dishes", es:"Traer los vacíos de afuera; remojar en el fregadero, luego lavar; mantenerlos separados de los platos de la familia"},
+  ]},
+];
+
+const CATS = [
+  {sw:"#2b2b2b", name:{en:"Black cat", es:"Gato negro"}, where:{en:"Indoor / outdoor", es:"Adentro y afuera"}, note:{en:"May have fresh wet food whenever he wishes. His leftovers can then be put outside for the grey cat.", es:"Puede comer comida húmeda fresca cuando quiera. Sus sobras luego se pueden poner afuera para el gato gris."}},
+  {sw:"#9ca3af", name:{en:"Grey cat", es:"Gato gris"}, where:{en:"Outdoor only", es:"Solo afuera"}, note:{en:"Eats outside — including the black cat's leftovers.", es:"Come afuera — incluidas las sobras del gato negro."}},
+];
+
+const RULES = [
+  {key:true, en:"<b>Fragrance-free household</b> — we have eczema. Use only the unscented products we provide; no scented sprays, candles, plug-ins, perfume, or scented detergent/lotion.", es:"<b>Hogar sin fragancia</b> — tenemos eczema. Usar solo los productos sin aroma que proveemos; nada de aerosoles con aroma, velas, difusores, perfume, ni detergente/loción con aroma."},
+  {en:"<b>Kids first, always</b> — house tasks happen only once the children are safe and settled.", es:"<b>Primero los niños, siempre</b> — las tareas de la casa solo cuando los niños estén seguros y tranquilos."},
+  {en:"<b>Respect the quiet times</b> — work quietly during the 8–9am and 12–3pm windows (below).", es:"<b>Respetar las horas de silencio</b> — trabajar en silencio de 8–9am y 12–3pm (abajo)."},
+  {en:"<b>Follow the labels</b> — put everything back in its labeled spot.", es:"<b>Seguir las etiquetas</b> — regresar todo a su lugar etiquetado."},
+  {en:"<b>Keep the group chat current</b> — flag anything running low; send the end-of-day shortage list.", es:"<b>Mantener el chat al día</b> — avisar lo que se acaba; mandar la lista de faltantes al final del día."},
+  {en:"<b>Safety</b> — stairs gate set when the kids are upstairs; keep exterior doors locked.", es:"<b>Seguridad</b> — la reja de las escaleras puesta cuando los niños están arriba; mantener las puertas cerradas con llave."},
+  {en:"<b>Phones down</b> while actively watching the kids.", es:"<b>Sin teléfono</b> mientras se cuida activamente a los niños."},
+];
+
+const QUIET = [
+  {t:"8:00 – 9:00", why:{en:"Children may still be sleeping", es:"Los niños pueden seguir dormidos"}, dono:{en:"Enter as quietly as possible; only quiet tasks until the children are awake.", es:"Entrar lo más callado posible; solo tareas silenciosas hasta que los niños despierten."}},
+  {t:"12:00 – 3:00", why:{en:"Toddler nap hours", es:"Horas de siesta del bebé"}, dono:{en:"Enter as quietly as possible; only quiet tasks until the children are awake.", es:"Entrar lo más callado posible; solo tareas silenciosas hasta que los niños despierten."}},
+];
+
+const LOOP = [
+  {c:"a", st:{en:"End of day", es:"Fin del día"}, d:{en:"Note what the house is short on (during the after-dinner check)", es:"Anotar lo que falta en la casa (en la revisión después de la cena)"}},
+  {c:"b", st:{en:"Next morning", es:"A la mañana"}, d:{en:"Shop for it on the way in, before arriving", es:"Comprarlo de camino, antes de llegar"}},
+  {c:"c", st:{en:"Then", es:"Después"}, d:{en:"Put everything away in its labeled spot", es:"Guardar todo en su lugar etiquetado"}},
+];
+
+let lang = "en";
+
+function render(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(el=>{
+    const v = T[el.getAttribute("data-t")];
+    if(v) el.innerHTML = v[lang];
+  });
+
+  document.getElementById("timeline").innerHTML = TIMELINE.map(r=>`
+    <div class="row ${r.cls}">
+      <div class="time">${r.t}</div>
+      <div class="track">
+        ${r.cls!=="handoff"?`<span class="node ${r.cls==="am"?"am-c":"pm-c"}"></span>`:""}
+        <div class="card">
+          <div class="who">${r.who[lang]}</div>
+          <div class="txt">${r[lang]}</div>
+        </div>
+      </div>
+    </div>`).join("");
+
+  document.getElementById("roles").innerHTML = ROLES.map(role=>`
+    <div class="role ${role.cls}">
+      <div class="top"><span class="name">${role.name[lang]}</span><span class="hrs">${role.hrs[lang]}</span></div>
+      <ul>${role.items.map(i=>`<li>${i[lang]}</li>`).join("")}</ul>
+    </div>`).join("");
+
+  const renderDetails = (id, data) => {
+    document.getElementById(id).innerHTML = data.map(g=>`
+      <div class="dg">
+        <div class="dgl">${g.label[lang]}</div>
+        <ul>${g.items.map(i=>`<li>${i[lang]}</li>`).join("")}</ul>
+      </div>`).join("");
+  };
+  renderDetails("laundry", LAUNDRY);
+  renderDetails("dishes", DISHES);
+
+  document.getElementById("cats").innerHTML = CATS.map(c=>`
+    <div class="cat">
+      <div class="hd"><span class="sw" style="--c:${c.sw}"></span><span class="cn">${c.name[lang]}</span><span class="cw">${c.where[lang]}</span></div>
+      <div class="cnote">${c.note[lang]}</div>
+    </div>`).join("");
+
+  document.getElementById("rules").innerHTML = RULES.map((r,i)=>`
+    <div class="r ${r.key?"key":""}">
+      <div class="rn">${i+1}</div>
+      <div class="rt">${r[lang]}</div>
+    </div>`).join("");
+
+  document.getElementById("quiet").innerHTML = QUIET.map(q=>`
+    <div class="q">
+      <div class="win">${q.t}</div>
+      <div class="why">${q.why[lang]}</div>
+      <div class="do">${q.dono[lang]}</div>
+    </div>`).join("");
+
+  document.getElementById("loop").innerHTML = LOOP.map((s,i)=>`
+    <div class="step ${s.c}">
+      <div class="n">${i+1}</div>
+      <div><div class="st">${s.st[lang]}</div><div class="sd">${s.d[lang]}</div></div>
+    </div>`).join("");
+}
+
+function setLang(l){
+  lang = l;
+  document.getElementById("btn-en").setAttribute("aria-pressed", l==="en");
+  document.getElementById("btn-es").setAttribute("aria-pressed", l==="es");
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
