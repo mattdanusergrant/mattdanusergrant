@@ -22,4 +22,5 @@
 /design-lab       /  301
 
 # Magazine renamed: Makers Dissect Gadgets -> Makers Deserve Glory
-/makersdissectgadgets/*  /makersdeserveglory/:splat  301
+/makersdissectgadgets/*  /microdiscoveryguide/:splat  301
+/makersdeserveglory/*    /microdiscoveryguide/:splat  301

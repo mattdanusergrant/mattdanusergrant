@@ -1,4 +1,4 @@
-# Makers Deserve Glory
+# Micro Discovery Guide
 
 **A no-ads micro-learning feed about how the world works.** You land on a *random* card, read a
 bite-sized nugget — how something works, how it's made, or who makes it — and scroll for another
@@ -7,13 +7,17 @@ carry a **"connects to →"** thread hinting at how ideas link up.
 
 A **collection that grows over time** — from atomic clocks to koa ʻukulele to Roman concrete.
 
-Live: **https://mattdanusergrant.com/makersdeserveglory/**
+Live: **https://mattdanusergrant.com/microdiscoveryguide/**
+
+> Name: **Micro Discovery Guide** (Micro · Discovery · Guide) is an M·D·G name in the vault ledger.
+> The app was *Makers Dissect Gadgets* → *Makers Deserve Glory* earlier; both old paths 301 here via
+> the repo-root `_redirects`.
 
 ## How it works
 
 A single self-contained page — `index.html`, no build step, no dependencies, no tracking, no
 ads. It's a root folder in the `mattdanusergrant` repo, so the apex Pages project serves it at
-`mattdanusergrant.com/makersdeserveglory/`.
+`mattdanusergrant.com/microdiscoveryguide/`.
 
 - **Random infinite feed.** On load the collection is shuffled (Fisher–Yates); scrolling appends
   the next card from a no-repeat "bag," topping up so you're always ~2 screens ahead. When the bag
