@@ -72,9 +72,13 @@ a{color:inherit;text-decoration:none}
 
 /* the collectible card */
 .card{width:min(92vw,384px);height:min(82svh,650px);perspective:1700px;cursor:pointer;position:relative;
-  animation:rise .5s ease both}
+  animation:rise .5s ease both;touch-action:pan-y;-webkit-tap-highlight-color:transparent;transition:transform .28s ease}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.card{animation:none}}
+@media(hover:hover){.card:hover{transform:translateY(-5px)}}
+/* only the visible face is interactive — stops the hidden back's scroll area from eating touch-scrolls */
+.card:not(.flipped) .back{pointer-events:none}
+.card.flipped .front{pointer-events:none}
 .flipper{position:relative;width:100%;height:100%;transition:transform .62s cubic-bezier(.2,.72,.2,1);transform-style:preserve-3d}
 .card.flipped .flipper{transform:rotateY(180deg)}
 @media(prefers-reduced-motion:reduce){.flipper{transition:none}}
@@ -87,21 +91,33 @@ a{color:inherit;text-decoration:none}
   box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.05)}
 .back{transform:rotateY(180deg)}
 /* foil frame drawn from the card's accent */
+/* foil frame drawn from the accent (dual-tone) */
 .face::before{content:"";position:absolute;inset:0;border-radius:20px;padding:1.3px;pointer-events:none;z-index:3;
-  background:linear-gradient(150deg, color-mix(in srgb,var(--accent) 80%,transparent), transparent 38%,
-    transparent 62%, color-mix(in srgb,var(--accent) 45%,transparent));
+  background:linear-gradient(145deg, color-mix(in srgb,var(--accent) 92%,transparent), color-mix(in srgb,var(--gold) 30%,transparent) 30%,
+    transparent 48%, transparent 56%, color-mix(in srgb,var(--accent) 55%,transparent));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
   mask-composite:exclude}
+/* gloss + a faint inset keyline for a printed-card feel */
+.face::after{content:"";position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:2;
+  background:
+    linear-gradient(122deg, rgba(255,255,255,.075) 0%, rgba(255,255,255,0) 24%),
+    radial-gradient(92% 46% at 16% -6%, rgba(255,255,255,.06), transparent 70%);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%, transparent)}
+@media(hover:hover){.face::after{transition:opacity .3s ease} .card:hover .face::after{opacity:.85}}
 
 .cardtop{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 17px 0;flex:none}
-.type{font-family:var(--label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;
-  color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.type{font-family:var(--label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:10.5px;
+  color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:color-mix(in srgb,var(--accent) 13%, transparent);
+  border:1px solid color-mix(in srgb,var(--accent) 34%, transparent);border-radius:999px;padding:4px 11px}
 .num{font-family:var(--label);font-weight:600;letter-spacing:.08em;font-size:11px;color:var(--muted);
   font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* front */
-.art{margin:13px 17px 0;flex:none;aspect-ratio:16/8;border-radius:11px;overflow:hidden;position:relative;
+.art{margin:13px 17px 0;flex:none;aspect-ratio:16/9;border-radius:11px;overflow:hidden;position:relative;
   border:1px solid var(--line2)}
+.art::after{content:"";position:absolute;inset:0;border-radius:11px;pointer-events:none;
+  box-shadow:inset 0 -34px 44px -32px rgba(0,0,0,.5), inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%, transparent)}
 .motif{position:absolute;inset:0;width:100%;height:100%}
 .front .name{font-family:var(--display);font-weight:500;font-size:clamp(25px,5.6vw,33px);line-height:1.03;
   letter-spacing:-.015em;margin:18px 17px 0;color:var(--ink);text-wrap:balance}
@@ -109,9 +125,11 @@ a{color:inherit;text-decoration:none}
   color:var(--ink-soft);margin:12px 17px 0}
 .front .where{font-family:var(--label);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--muted);margin:12px 17px 0}
-.tap{margin-top:auto;padding:14px 17px 16px;display:flex;align-items:center;gap:.5em;font-family:var(--label);
-  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.cardfoot{margin-top:auto;padding:14px 17px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tap{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);
+  font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
 .tap .ic{font-size:14px;color:var(--accent)}
+.mono{font-family:var(--label);font-weight:700;letter-spacing:.22em;font-size:11px;color:var(--muted);opacity:.7}
 
 /* back */
 .back .body{padding:16px 18px 6px;overflow:auto;flex:1;min-height:0}
@@ -510,7 +528,7 @@ function cardHTML(c){
       '<h2 class="name">'+c.title+'</h2>'+
       '<p class="flavor">'+c.hook+'</p>'+
       (c.where?'<div class="where">'+c.where+'</div>':'')+
-      '<div class="tap"><span class="ic">⤺</span>Tap to flip</div>'+
+      '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div><div class="mono">M·D·G</div></div>'+
     '</div>';
   var points='';
   if(c.facts && c.facts.length){ points='<ul class="points">';
