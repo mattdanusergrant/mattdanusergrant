@@ -92,10 +92,11 @@ a{color:inherit;text-decoration:none}
 .pblurb{margin:0;font-family:var(--body);font-size:12.5px;line-height:1.38;color:var(--ink-soft);
   overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
 .pstats{margin-top:auto;font-family:var(--label);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pk-slot{display:flex;flex-direction:column;gap:10px;min-width:0}
 .rip{width:100%;font-family:var(--label);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:10.5px;color:var(--bg);
   background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:9px 4px;cursor:pointer}
 .rip:hover,.rip:focus-visible{filter:brightness(1.07)}
-@media(max-width:460px){.pblurb{display:none}.pbody{gap:6px;justify-content:flex-end}}
+@media(max-width:460px){.pblurb{-webkit-line-clamp:3;font-size:11.5px}.pbody{gap:6px}}
 .empty{margin-top:26px;padding:28px;border:1px dashed var(--line2);border-radius:14px;text-align:center;color:var(--muted);font-family:var(--body);font-size:16px}
 
 /* pack tokens */
@@ -709,16 +710,16 @@ function tokenFlow(){
   var offer=pool.slice(0,3);
   var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Three packs — keep one</h2><div class="choicegrid">';
   for(i=0;i<offer.length;i++){ var s=offer[i], owned=ownedInSet(s), foils=foilsInSet(s);
-    h+='<div class="pack" tabindex="0" role="button" aria-label="'+s+' booster — tap to flip" style="--accent:'+SERIES_COLOR[s]+'"><div class="pflip">'+
+    h+='<div class="pk-slot"><div class="pack" tabindex="0" role="button" aria-label="'+s+' booster — tap to flip" style="--accent:'+SERIES_COLOR[s]+'"><div class="pflip">'+
        '<div class="pface pfront"><div class="crimp"></div>'+
          '<div class="part">'+motif(SERIES_MOTIF[s],SERIES_COLOR[s])+'<div class="pname">'+s+'</div><div class="plabel">Booster · 3 cards</div></div>'+
        '<div class="crimp b"></div></div>'+
        '<div class="pface pback"><div class="crimp"></div>'+
          '<div class="pbody"><div class="psetname">'+s+'</div><p class="pblurb">'+SERIES_BLURB[s]+'</p>'+
-           '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div>'+
-           '<button class="rip" data-choose="'+s+'">Rip it open</button></div>'+
+           '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div></div>'+
        '<div class="crimp b"></div></div>'+
-    '</div></div>';
+    '</div></div>'+
+    '<button class="rip" data-choose="'+s+'">Rip it open</button></div>';
   }
   h+='</div><div class="pr-hint">tap a pack to inspect · costs 1 token · you have '+S.tokens+'</div></div>';
   openOverlay(h);
