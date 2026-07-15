@@ -110,7 +110,10 @@ a{color:inherit;text-decoration:none}
   color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   background:color-mix(in srgb,var(--accent) 13%, transparent);
   border:1px solid color-mix(in srgb,var(--accent) 34%, transparent);border-radius:999px;padding:4px 11px}
-.num{font-family:var(--label);font-weight:600;letter-spacing:.08em;font-size:11px;color:var(--muted);
+.setmark{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right;flex:none}
+.setname{font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:9.5px;
+  color:var(--accent);white-space:nowrap}
+.num{font-family:var(--label);font-weight:600;letter-spacing:.06em;font-size:11px;color:var(--muted);
   font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* front */
@@ -119,6 +122,25 @@ a{color:inherit;text-decoration:none}
 .art::after{content:"";position:absolute;inset:0;border-radius:11px;pointer-events:none;
   box-shadow:inset 0 -34px 44px -32px rgba(0,0,0,.5), inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%, transparent)}
 .motif{position:absolute;inset:0;width:100%;height:100%}
+
+/* ---- foil tier (purely cosmetic, ~1-in-6 pull) ---- */
+.foiltag{position:absolute;top:8px;left:8px;z-index:3;display:none;align-items:center;gap:.35em;
+  font-family:var(--label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:9px;
+  color:#20160c;padding:3px 8px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(0,0,0,.5);
+  background:linear-gradient(90deg,#ffd76e,#a0f0d0,#9fd0ff,#e6a8ff,#ffd76e);background-size:220% 100%;
+  animation:holoTag 4s linear infinite}
+.card.foil .foiltag{display:inline-flex}
+@keyframes holoTag{to{background-position:220% 0}}
+.card.foil .face::before{background:conic-gradient(from 200deg,#e8869b,#7cc8f5,#93e6a6,#f5d76e,#c79bf0,#e8869b);opacity:.95}
+.card.foil .face::after{
+  background:
+    linear-gradient(122deg, rgba(255,255,255,.11) 0%, transparent 26%),
+    linear-gradient(58deg, rgba(255,120,190,.13), rgba(120,210,255,.13) 25%, rgba(150,255,180,.13) 50%, rgba(255,225,120,.13) 72%, rgba(200,140,255,.13));
+  background-size:auto, 260% 260%;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 14%, transparent);
+  animation:holo 7s linear infinite}
+@keyframes holo{0%{background-position:0 0, 0% 50%}100%{background-position:0 0, 100% 50%}}
+@media(prefers-reduced-motion:reduce){.card.foil .face::after,.foiltag{animation:none}}
 .front .name{font-family:var(--display);font-weight:500;font-size:clamp(25px,5.6vw,33px);line-height:1.03;
   letter-spacing:-.015em;margin:18px 17px 0;color:var(--ink);text-wrap:balance}
 .front .flavor{font-family:var(--display);font-style:italic;font-size:clamp(16px,3vw,18px);line-height:1.36;
@@ -515,16 +537,34 @@ var feed=document.getElementById('feed');
 var bag=[], lastId=null, firstCard=true, TOTAL=CARDS.length;
 function pad(n){ n=String(n); return n.length<2?'0'+n:n; }
 
+/* group cards into named Series (sets) by category, and number each within its set */
+var CAT_SERIES={
+  "Hawaiian gold":"Hawaiʻi","Hawaiian jewelry":"Hawaiʻi","Black coral":"Hawaiʻi","Shell lei":"Hawaiʻi",
+  "Koa wood":"Hawaiʻi","Koa rings":"Hawaiʻi","Koa jewelry":"Hawaiʻi","Sunrise shells":"Hawaiʻi",
+  "ʻUkulele":"Hawaiʻi","Surfboards":"Hawaiʻi",
+  "Time":"Time","Navigation":"Navigation","Materials":"Materials",
+  "Computing":"Signals","Physics":"Signals","Energy":"Signals",
+  "Astronomy":"Cosmos","Space":"Cosmos",
+  "Life":"Life & Medicine","Medicine":"Life & Medicine",
+  "Chemistry":"Earth & Elements","Earth":"Earth & Elements","Climate":"Earth & Elements","Geology":"Earth & Elements",
+  "Human history":"Civilization","Agriculture":"Civilization","Economics":"Civilization","Mathematics":"Civilization",
+  "Architecture":"Civilization","Flight":"Civilization","Engineering":"Civilization"
+};
+(function(){ var count={}, i;
+  for(i=0;i<CARDS.length;i++){ var s=CAT_SERIES[CARDS[i].cat]||"Micro"; CARDS[i].series=s; count[s]=(count[s]||0)+1; CARDS[i]._n=count[s]; }
+  for(i=0;i<CARDS.length;i++){ CARDS[i]._of=count[CARDS[i].series]; }
+})();
+
 function shuffle(arr){ var a=arr.slice(), i, j, t;
   for(i=a.length-1;i>0;i--){ j=Math.floor(Math.random()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function refill(){ bag=shuffle(CARDS); if(bag.length>1 && bag[0].id===lastId){ bag.push(bag.shift()); } }
 function nextCard(){ if(!bag.length) refill(); var c=bag.shift(); lastId=c.id; return c; }
 
 function cardHTML(c){
-  var n=CARDS.indexOf(c)+1;
-  var top='<div class="cardtop"><span class="type">'+c.cat+'</span><span class="num">Nº '+pad(n)+' / '+TOTAL+'</span></div>';
+  var top='<div class="cardtop"><span class="type">'+c.cat+'</span>'+
+    '<span class="setmark"><span class="setname">'+c.series+'</span><span class="num">'+pad(c._n)+' / '+pad(c._of)+'</span></span></div>';
   var front='<div class="face front">'+top+
-      '<div class="art">'+motif(c.motif,c.accent)+'</div>'+
+      '<div class="art">'+motif(c.motif,c.accent)+'<span class="foiltag">✦ Foil</span></div>'+
       '<h2 class="name">'+c.title+'</h2>'+
       '<p class="flavor">'+c.hook+'</p>'+
       (c.where?'<div class="where">'+c.where+'</div>':'')+
@@ -544,7 +584,9 @@ function cardHTML(c){
     '<div class="flipper">'+front+back+'</div></div>'+hint+'</div>';
 }
 function addCard(){ var wrap=document.createElement('div'); wrap.innerHTML=cardHTML(nextCard());
-  feed.appendChild(wrap.firstChild); firstCard=false; }
+  var slot=wrap.firstChild;
+  if(Math.random()<0.16){ var cd=slot.querySelector('.card'); if(cd) cd.classList.add('foil'); } // ~1-in-6 pull is foil
+  feed.appendChild(slot); firstCard=false; }
 function topUp(){ var d=document.documentElement, g=0;
   while(d.scrollHeight-(d.scrollTop+d.clientHeight) < d.clientHeight*2 && g++<8){ addCard(); } }
 function reset(){ feed.innerHTML=''; bag=[]; lastId=null; firstCard=true; addCard(); window.scrollTo(0,0); topUp(); }
