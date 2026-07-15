@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Daily Plan — One Nanny</title>
+<title>Daily Plan · One Nanny</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#FBF6EE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1E1915" media="(prefers-color-scheme: dark)">
-<meta name="description" content="One-nanny daily household plan — schedule, duties, cats, laundry & dishes.">
+<meta name="description" content="One-nanny daily household plan: schedule, duties, cats, laundry & dishes.">
 <style>
   :root{
     --ground:#FBF6EE; --card:#FFFFFF; --ink:#29221D; --muted:#8A7F76;
@@ -232,7 +232,7 @@
 <div class="wrap">
   <header>
     <p class="eyebrow" data-t="eyebrow">Household Guide</p>
-    <h1 data-t="title">Daily Plan — One Nanny</h1>
+    <h1 data-t="title">Daily Plan · One Nanny</h1>
     <span class="season"><span class="dot"></span><span data-t="season">Summer · kids home all day</span></span>
     <div class="toggle" role="group" aria-label="Language">
       <button type="button" id="btn-en" aria-pressed="true" onclick="setLang('en')">English</button>
@@ -301,7 +301,7 @@
 <script>
 const T = {
   eyebrow:{en:"Household Guide", es:"Guía de la Casa"},
-  title:{en:"Daily Plan — One Nanny", es:"Plan Diario — Una Niñera"},
+  title:{en:"Daily Plan · One Nanny", es:"Plan Diario · Una Niñera"},
   season:{en:"Summer · kids home all day", es:"Verano · niños en casa todo el día"},
   g1k:{en:"On-site hours", es:"Horas en sitio"},
   g2k:{en:"Off-site grocery run", es:"Compra fuera de sitio"},
@@ -316,44 +316,44 @@ const T = {
   s_dishes:{en:"Dishes Details", es:"Detalles de Platos"},
   cats_note:{en:"Feeding the grey cat outside leaves dishes out there. <b>Please</b> bring any empty dishes inside to the sink to soak or wash.", es:"Alimentar al gato gris afuera deja platos sucios ahí. <b>Por favor</b> traer los platos vacíos adentro al fregadero para remojar o lavar."},
   s_labels:{en:"Labels", es:"Etiquetas"},
-  chat_cap:{en:"Example — end-of-day shortage note", es:"Ejemplo — nota de faltantes al final del día"},
-  chat_body:{en:"Short on — July 13\n• Milk — almost out ⭐\n• Eggs — 3 left\n• Diapers size 4 — last bag ⭐\n• Detergent — 1 wash left", es:"Faltantes — 13 julio\n• Leche — casi vacía ⭐\n• Huevos — quedan 3\n• Pañales talla 4 — última bolsa ⭐\n• Detergente — 1 lavada más"},
-  labels_note:{en:"Every spot in the kitchen and the closets gets an <b>English + Spanish label</b>, so it's always clear where things belong. Labeling is <b>a work in progress</b> — help getting it set up properly is very appreciated!", es:"Cada lugar de la cocina y los clósets lleva una <b>etiqueta en inglés y español</b>, para que siempre esté claro dónde va cada cosa. El etiquetado es <b>un proyecto en progreso</b> — ¡se agradece mucho la ayuda para organizarlo bien!"},
+  chat_cap:{en:"Example: end-of-day shortage note", es:"Ejemplo: nota de faltantes al final del día"},
+  chat_body:{en:"Short on, July 13\n• Milk: almost out ⭐\n• Eggs: 3 left\n• Diapers size 4: last bag ⭐\n• Detergent: 1 wash left", es:"Faltantes, 13 julio\n• Leche: casi vacía ⭐\n• Huevos: quedan 3\n• Pañales talla 4: última bolsa ⭐\n• Detergente: 1 lavada más"},
+  labels_note:{en:"Every spot in the kitchen and the closets gets an <b>English + Spanish label</b>, so it's always clear where things belong. Labeling is <b>a work in progress</b>. Help getting it set up properly is very appreciated!", es:"Cada lugar de la cocina y los clósets lleva una <b>etiqueta en inglés y español</b>, para que siempre esté claro dónde va cada cosa. El etiquetado es <b>un proyecto en progreso</b>. ¡Se agradece mucho la ayuda para organizarlo bien!"},
   footer:{en:"Made for the family · Summer schedule", es:"Hecho para la familia · Horario de verano"},
 };
 
 const N = {en:"Nanny", es:"Niñera"};
 const TIMELINE = [
-  {t:"8:00", who:{en:"Off-site", es:"Fuera de sitio"}, cls:"am", en:"Grocery run on the way in, from last night's list. Off-site — only on days groceries are needed (not every day).", es:"Compra de camino, con la lista de anoche. Fuera de sitio — solo los días que se necesiten compras (no todos los días)."},
+  {t:"8:00", who:{en:"Off-site", es:"Fuera de sitio"}, cls:"am", en:"Grocery run on the way in, from last night's list. Off-site, only on days groceries are needed (not every day).", es:"Compra de camino, con la lista de anoche. Fuera de sitio, solo los días que se necesiten compras (no todos los días)."},
   {t:"8:30", who:{en:"On-site start", es:"Inicio en sitio"}, cls:"am", en:"Official on-site start. Morning ritual: put away the groceries (if any), open all the blinds, then start making breakfast for the children.", es:"Inicio oficial en sitio. Ritual de la mañana: guardar las compras (si hay), abrir las persianas, y empezar a hacer el desayuno de los niños."},
   {t:"10:00", who:N, cls:"am", en:"Snack #1 for the kids", es:"Merienda #1 para los niños"},
   {t:"11:30", who:N, cls:"am", en:"Make lunch for the children", es:"Hacer el almuerzo de los niños"},
   {t:"12:00", who:N, cls:"am", en:"Get the 2-yr-old down for a nap; take the 6-yr-old to color or play outside", es:"Preparar al de 2 años para la siesta; llevar al de 6 a colorear o a jugar afuera"},
-  {t:"12–3", who:{en:"Quiet time", es:"Hora de silencio"}, cls:"pm", en:"Toddler naps — quiet tasks only: laundry, upstairs organization, outside/garage. Keep it quiet until the kids are awake.", es:"El bebé duerme — solo tareas silenciosas: lavandería, organización de arriba, afuera/garaje. En silencio hasta que despierten."},
+  {t:"12–3", who:{en:"Quiet time", es:"Hora de silencio"}, cls:"pm", en:"Toddler naps. Quiet tasks only: laundry, upstairs organization, outside/garage. Keep it quiet until the kids are awake.", es:"El bebé duerme. Solo tareas silenciosas: lavandería, organización de arriba, afuera/garaje. En silencio hasta que despierten."},
   {t:"3:00", who:N, cls:"pm", en:"Snack #2 for the kids (later if the toddler is still asleep)", es:"Merienda #2 (más tarde si el bebé sigue dormido)"},
   {t:"3:30", who:N, cls:"pm", en:"Take the kids upstairs, set up the stairs gate, then do laundry & organize while they play", es:"Subir a los niños, poner la reja de las escaleras, y hacer la lavandería y organizar mientras juegan"},
   {t:"6:00", who:N, cls:"pm", en:"After dinner: kitchen cleanup + check what's low → note it for tomorrow's grocery run", es:"Después de la cena: limpiar la cocina + revisar qué falta → anotarlo para las compras de mañana"},
-  {t:"6:30", who:N, cls:"pm", en:"Nanny departs — end of the day", es:"La Niñera se va — fin del día"},
+  {t:"6:30", who:N, cls:"pm", en:"Nanny departs, end of the day", es:"La Niñera se va, fin del día"},
 ];
 
 const ROLES = [
   {name:N, cls:"am", hrs:{en:"On-site 8:30am–6:30pm · full day · EN + ES", es:"En sitio 8:30–6:30 · día completo · EN + ES"}, items:[
     {en:"<b>Kids first, always.</b> On-site start is 8:30; the 8:00–8:30 grocery run is off-site, only when groceries are needed", es:"<b>Primero los niños, siempre.</b> Inicio en sitio 8:30; la compra de 8:00–8:30 es fuera de sitio, solo cuando se necesita"},
     {en:"<b>Makes breakfast &amp; lunch</b> for the children every day; snacks at 10:00 and 3:00", es:"<b>Hace el desayuno y el almuerzo</b> de los niños cada día; meriendas a las 10:00 y 3:00"},
-    {en:"<b>Owns the organization</b> of the kitchen and the upstairs closets — where things go & the labels", es:"<b>Dueña de la organización</b> de la cocina y los clósets de arriba — dónde va cada cosa y las etiquetas"},
-    {en:"<b>Laundry</b> (main afternoon focus), <b>dishes</b>, and tidy-up — see the details below", es:"<b>Lavandería</b> (enfoque de la tarde), <b>platos</b> y orden — ver los detalles abajo"},
+    {en:"<b>Owns the organization</b> of the kitchen and the upstairs closets: where things go & the labels", es:"<b>Dueña de la organización</b> de la cocina y los clósets de arriba: dónde va cada cosa y las etiquetas"},
+    {en:"<b>Laundry</b> (main afternoon focus), <b>dishes</b>, and tidy-up; see the details below", es:"<b>Lavandería</b> (enfoque de la tarde), <b>platos</b> y orden; ver los detalles abajo"},
     {en:"Shops on the way in from the shortage list; may help with dinner if needed", es:"Compra de camino con la lista de faltantes; puede ayudar con la cena si hace falta"},
     {en:"Cares for the cats (see below)", es:"Cuida a los gatos (ver abajo)"},
   ]},
 ];
 
 const LAUNDRY = [
-  {label:{en:"Clothes — every load, no exceptions", es:"Ropa — cada carga, sin excepción"}, items:[
+  {label:{en:"Clothes: every load, no exceptions", es:"Ropa: cada carga, sin excepción"}, items:[
     {en:"<b>Washer: always use Delicates</b>", es:"<b>Lavadora: siempre usar Delicados</b>"},
-    {en:"<b>Dryer: always TIME DRY · 60 min · MEDIUM heat</b> — even medium-high will ruin our clothes", es:"<b>Secadora: siempre TIME DRY · 60 min · calor MEDIO</b> — hasta medio-alto arruina nuestra ropa"},
-    {en:"<b>ALL dresses MUST hang dry</b> — never put a dress in the dryer", es:"<b>TODOS los vestidos DEBEN secarse colgados</b> — nunca poner un vestido en la secadora"},
+    {en:"<b>Dryer: always TIME DRY · 60 min · MEDIUM heat</b>; even medium-high will ruin our clothes", es:"<b>Secadora: siempre TIME DRY · 60 min · calor MEDIO</b>; hasta medio-alto arruina nuestra ropa"},
+    {en:"<b>ALL dresses MUST hang dry</b>: never put a dress in the dryer", es:"<b>TODOS los vestidos DEBEN secarse colgados</b>: nunca poner un vestido en la secadora"},
   ]},
-  {label:{en:"Towels & Bedding — different settings", es:"Toallas y Ropa de Cama — otros ajustes"}, items:[
+  {label:{en:"Towels & Bedding: different settings", es:"Toallas y Ropa de Cama: otros ajustes"}, items:[
     {en:"<b>Washer:</b> hot · normal cycle", es:"<b>Lavadora:</b> caliente · ciclo normal"},
     {en:"<b>Dryer:</b> normal / high heat", es:"<b>Secadora:</b> calor normal / alto"},
   ]},
@@ -364,10 +364,10 @@ const LAUNDRY = [
 
 const DISHES = [
   {label:{en:"Dishwasher", es:"Lavavajillas"}, items:[
-    {en:"We use the dishwasher for nearly everything — hand-wash only large items that don't fit", es:"Usamos el lavavajillas para casi todo — lavar a mano solo los artículos grandes que no caben"},
+    {en:"We use the dishwasher for nearly everything; hand-wash only large items that don't fit", es:"Usamos el lavavajillas para casi todo; lavar a mano solo los artículos grandes que no caben"},
   ]},
   {label:{en:"Clean / Dirty magnet", es:"Imán Limpio / Sucio"}, items:[
-    {en:"Check the Clean/Dirty magnet before loading or unloading — flip it when you start a wash or empty it", es:"Revisar el imán Limpio/Sucio antes de cargar o vaciar — cambiarlo al iniciar un lavado o al vaciarlo"},
+    {en:"Check the Clean/Dirty magnet before loading or unloading; flip it when you start a wash or empty it", es:"Revisar el imán Limpio/Sucio antes de cargar o vaciar; cambiarlo al iniciar un lavado o al vaciarlo"},
   ]},
   {label:{en:"Cat dishes", es:"Platos de los gatos"}, items:[
     {en:"Bring the empties in from outside; soak in the sink, then wash; keep them separate from the family's dishes", es:"Traer los vacíos de afuera; remojar en el fregadero, luego lavar; mantenerlos separados de los platos de la familia"},
@@ -376,16 +376,16 @@ const DISHES = [
 
 const CATS = [
   {sw:"#2b2b2b", name:{en:"Black cat", es:"Gato negro"}, where:{en:"Indoor / outdoor", es:"Adentro y afuera"}, note:{en:"May have fresh wet food whenever he wishes. His leftovers can then be put outside for the grey cat.", es:"Puede comer comida húmeda fresca cuando quiera. Sus sobras luego se pueden poner afuera para el gato gris."}},
-  {sw:"#9ca3af", name:{en:"Grey cat", es:"Gato gris"}, where:{en:"Outdoor only", es:"Solo afuera"}, note:{en:"Eats outside — including the black cat's leftovers.", es:"Come afuera — incluidas las sobras del gato negro."}},
+  {sw:"#9ca3af", name:{en:"Grey cat", es:"Gato gris"}, where:{en:"Outdoor only", es:"Solo afuera"}, note:{en:"Eats outside, including the black cat's leftovers.", es:"Come afuera, incluidas las sobras del gato negro."}},
 ];
 
 const RULES = [
-  {key:true, en:"<b>Fragrance-free household</b> — we have eczema. Use only the unscented products we provide; no scented sprays, candles, plug-ins, perfume, or scented detergent/lotion.", es:"<b>Hogar sin fragancia</b> — tenemos eczema. Usar solo los productos sin aroma que proveemos; nada de aerosoles con aroma, velas, difusores, perfume, ni detergente/loción con aroma."},
-  {en:"<b>Kids first, always</b> — house tasks happen only once the children are safe and settled.", es:"<b>Primero los niños, siempre</b> — las tareas de la casa solo cuando los niños estén seguros y tranquilos."},
-  {en:"<b>Respect the quiet times</b> — work quietly during the 8–9am and 12–3pm windows (below).", es:"<b>Respetar las horas de silencio</b> — trabajar en silencio de 8–9am y 12–3pm (abajo)."},
-  {en:"<b>Follow the labels</b> — put everything back in its labeled spot.", es:"<b>Seguir las etiquetas</b> — regresar todo a su lugar etiquetado."},
-  {en:"<b>Keep the group chat current</b> — flag anything running low; send the end-of-day shortage list.", es:"<b>Mantener el chat al día</b> — avisar lo que se acaba; mandar la lista de faltantes al final del día."},
-  {en:"<b>Safety</b> — stairs gate set when the kids are upstairs; keep exterior doors locked.", es:"<b>Seguridad</b> — la reja de las escaleras puesta cuando los niños están arriba; mantener las puertas cerradas con llave."},
+  {key:true, en:"<b>Fragrance-free household</b>: we have eczema. Use only the unscented products we provide; no scented sprays, candles, plug-ins, perfume, or scented detergent/lotion.", es:"<b>Hogar sin fragancia</b>: tenemos eczema. Usar solo los productos sin aroma que proveemos; nada de aerosoles con aroma, velas, difusores, perfume, ni detergente/loción con aroma."},
+  {en:"<b>Kids first, always</b>: house tasks happen only once the children are safe and settled.", es:"<b>Primero los niños, siempre</b>: las tareas de la casa solo cuando los niños estén seguros y tranquilos."},
+  {en:"<b>Respect the quiet times</b>: work quietly during the 8–9am and 12–3pm windows (below).", es:"<b>Respetar las horas de silencio</b>: trabajar en silencio de 8–9am y 12–3pm (abajo)."},
+  {en:"<b>Follow the labels</b>: put everything back in its labeled spot.", es:"<b>Seguir las etiquetas</b>: regresar todo a su lugar etiquetado."},
+  {en:"<b>Keep the group chat current</b>: flag anything running low; send the end-of-day shortage list.", es:"<b>Mantener el chat al día</b>: avisar lo que se acaba; mandar la lista de faltantes al final del día."},
+  {en:"<b>Safety</b>: stairs gate set when the kids are upstairs; keep exterior doors locked.", es:"<b>Seguridad</b>: la reja de las escaleras puesta cuando los niños están arriba; mantener las puertas cerradas con llave."},
   {en:"<b>Phones down</b> while actively watching the kids.", es:"<b>Sin teléfono</b> mientras se cuida activamente a los niños."},
 ];
 
