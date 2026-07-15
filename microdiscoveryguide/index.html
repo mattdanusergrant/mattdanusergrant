@@ -79,6 +79,25 @@ a{color:inherit;text-decoration:none}
 .packtile .pcount{position:relative;z-index:1;font-family:var(--label);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.9);margin-top:5px;text-shadow:0 1px 6px rgba(0,0,0,.5)}
 .empty{margin-top:26px;padding:28px;border:1px dashed var(--line2);border-radius:14px;text-align:center;color:var(--muted);font-family:var(--body);font-size:16px}
 
+/* pack tokens */
+.tokenbar{margin-top:26px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.tokens{display:flex;padding-left:9px}
+.token{width:46px;height:46px;border-radius:50%;margin-left:-9px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:#3a2c10;border:1px solid color-mix(in srgb,#fff 45%,var(--gold));
+  background:radial-gradient(circle at 32% 28%,#ffe9ad,var(--gold) 62%,#8f6c25);box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
+.token.more{font-family:var(--label);font-weight:700;font-size:12px;letter-spacing:.02em}
+.redeem{font-family:var(--label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12.5px;color:var(--bg);
+  background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:13px 22px;cursor:pointer}
+.redeem:hover,.redeem:focus-visible{filter:brightness(1.07)}
+.hint2{margin-top:14px;color:var(--muted);font-family:var(--body);font-size:14.5px}
+.hint2 b{color:var(--ink-soft);font-weight:600}
+
+/* token → booster choice */
+.pk-choice{padding:8px 4px}
+.pk-choice .kicker{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:10.5px;color:var(--gold)}
+.pk-choice h2{font-family:var(--display);font-weight:500;font-size:clamp(21px,4vw,29px);letter-spacing:-.01em;margin:8px 0 0;color:var(--ink)}
+.choicegrid{display:grid;grid-template-columns:repeat(3,minmax(96px,170px));gap:14px;justify-content:center;margin:22px 0 16px}
+
 /* set tabs + binder */
 .settabs{display:flex;gap:8px;overflow-x:auto;padding:14px 0 6px;-webkit-overflow-scrolling:touch}
 .settab{white-space:nowrap;font-family:var(--label);font-weight:600;letter-spacing:.02em;font-size:11.5px;color:var(--muted);
@@ -183,8 +202,8 @@ a{color:inherit;text-decoration:none}
 .art{margin:13px 17px 0;flex:none;aspect-ratio:16/9;border-radius:11px;overflow:hidden;position:relative;border:1px solid var(--line2)}
 .art::after{content:"";position:absolute;inset:0;border-radius:11px;pointer-events:none;box-shadow:inset 0 -34px 44px -32px rgba(0,0,0,.5),inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
 .motif{position:absolute;inset:0;width:100%;height:100%}
-.foiltag{position:absolute;top:8px;left:8px;z-index:3;display:none;align-items:center;gap:.35em;font-family:var(--label);font-weight:700;
-  letter-spacing:.1em;text-transform:uppercase;font-size:9px;color:#20160c;padding:3px 8px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(0,0,0,.5);
+.foiltag{display:none;align-items:center;gap:.35em;font-family:var(--label);font-weight:700;flex:none;
+  letter-spacing:.1em;text-transform:uppercase;font-size:9px;color:#20160c;padding:3px 9px;border-radius:999px;
   background:linear-gradient(90deg,#ffd76e,#a0f0d0,#9fd0ff,#e6a8ff,#ffd76e);background-size:220% 100%;animation:holoTag 4s linear infinite}
 .card.foil .foiltag{display:inline-flex}
 .card.foil .face::before{background:conic-gradient(from 200deg,#e8869b,#7cc8f5,#93e6a6,#f5d76e,#c79bf0,#e8869b);opacity:.95}
@@ -196,7 +215,6 @@ a{color:inherit;text-decoration:none}
 .cardfoot{margin-top:auto;padding:14px 17px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .tap{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
 .tap .ic{font-size:14px;color:var(--accent)}
-.mono{font-family:var(--label);font-weight:700;letter-spacing:.22em;font-size:11px;color:var(--muted);opacity:.7}
 .back .body{padding:16px 18px 6px;overflow:auto;flex:1;min-height:0}
 .back .name{font-family:var(--display);font-weight:500;font-size:clamp(19px,4.2vw,24px);line-height:1.06;letter-spacing:-.01em;margin:0 0 12px;color:var(--ink)}
 .prose{font-family:var(--body);font-size:15.5px;line-height:1.55;color:var(--ink-soft);margin:0}
@@ -581,16 +599,18 @@ function cardById(id){ for(var i=0;i<CARDS.length;i++) if(CARDS[i].id===id) retu
 
 /* ===== state / economy ===== */
 var SKEY='mdg-collection-v1', S, MSG=null, MSGN=0;
-function load(){ try{S=JSON.parse(localStorage.getItem(SKEY));}catch(e){S=null;} if(!S)S={}; if(!S.coll)S.coll={}; if(!S.packs)S.packs=[]; }
+function load(){ try{S=JSON.parse(localStorage.getItem(SKEY));}catch(e){S=null;} if(!S)S={}; if(!S.coll)S.coll={};
+  if(typeof S.tokens!=='number') S.tokens=Array.isArray(S.packs)?S.packs.length:0; /* migrate: old unopened packs become tokens */
+  delete S.packs; }
 function save(){ try{localStorage.setItem(SKEY,JSON.stringify(S));}catch(e){} }
 function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function daysBetween(a,b){ var pa=a.split('-'),pb=b.split('-'); return Math.round((new Date(+pb[0],+pb[1]-1,+pb[2])-new Date(+pa[0],+pa[1]-1,+pa[2]))/86400000); }
 function initEconomy(){
   var today=ymd(new Date());
-  if(!S.started){ S.started=true; S.packs=SERIES.slice(); S.lastDaily=today; MSG="welcome"; save(); return; }
+  if(!S.started){ S.started=true; S.tokens=3; S.lastDaily=today; MSG="welcome"; save(); return; }
   if(S.lastDaily!==today){
-    var missed=Math.max(0,daysBetween(S.lastDaily,today)), grant=Math.min(missed,7), i;
-    for(i=0;i<grant;i++) S.packs.push(SERIES[Math.floor(Math.random()*SERIES.length)]);
+    var missed=Math.max(0,daysBetween(S.lastDaily,today)), grant=Math.min(missed,7);
+    S.tokens+=grant;
     S.lastDaily=today; if(grant>0){MSG="daily";MSGN=grant;} save();
   }
 }
@@ -608,7 +628,6 @@ function openPack(setName){
     var newFoil=false; if(foil&&!S.coll[c.id].foil){S.coll[c.id].foil=true;newFoil=true;}
     return {c:c,foil:foil,isNew:isNew,newFoil:newFoil};
   });
-  var idx=S.packs.indexOf(setName); if(idx>=0) S.packs.splice(idx,1);
   save(); return res;
 }
 
@@ -626,9 +645,9 @@ function miniHTML(c, o){
 }
 function faceHTML(c, foil){
   var top='<div class="cardtop"><span class="type">'+c.cat+'</span><span class="setmark"><span class="setname">'+c.series+'</span><span class="num">'+pad(c._n)+' / '+pad(c._of)+'</span></span></div>';
-  var front='<div class="face front">'+top+'<div class="art">'+motif(c.motif,c.accent)+'<span class="foiltag">✦ Foil</span></div>'+
+  var front='<div class="face front">'+top+'<div class="art">'+motif(c.motif,c.accent)+'</div>'+
     '<h2 class="name">'+c.title+'</h2><p class="flavor">'+c.hook+'</p>'+(c.where?'<div class="where">'+c.where+'</div>':'')+
-    '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div><div class="mono">M·D·G</div></div></div>';
+    '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div><span class="foiltag">✦ Foil</span></div></div>';
   var points=''; if(c.facts&&c.facts.length){ points='<ul class="points">'; for(var i=0;i<c.facts.length;i++) points+='<li><span>'+c.facts[i]+'</span></li>'; points+='</ul>'; }
   var connects=c.connects?'<div class="connects"><b>Connects to</b>'+c.connects+'</div>':'';
   var visit=c.url?'<div class="visit"><a href="'+c.url+'" target="_blank" rel="noopener noreferrer">'+(c.link||('Visit '+c.title))+' ↗</a></div>':'';
@@ -637,22 +656,33 @@ function faceHTML(c, foil){
 }
 
 function renderPacks(){
-  var packs=S.packs, counts={}, i;
-  for(i=0;i<packs.length;i++) counts[packs[i]]=(counts[packs[i]]||0)+1;
-  var order=SERIES.filter(function(s){return counts[s];});
+  var t=S.tokens, totalCards=Object.keys(S.coll).length, i;
   var h='<div class="view"><div class="vhead">Booster Packs</div>';
-  var totalCards=Object.keys(S.coll).length;
-  h+='<div class="vsub">'+packs.length+' pack'+(packs.length===1?'':'s')+' to open · '+totalCards+' of '+CARDS.length+' cards collected · a new pack every day</div>';
+  h+='<div class="vsub">'+t+' Pack Token'+(t===1?'':'s')+' · '+totalCards+' of '+CARDS.length+' cards collected · +1 token every day</div>';
   var msg=MSG,msgN=MSGN; MSG=null;
-  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> We\'ve stocked your bag with one booster from every set — tap a pack to rip it open.</div>';
-  else if(msg==="daily") h+='<div class="banner"><b>Daily booster'+(msgN>1?'s':'')+' added!</b> '+msgN+' new pack'+(msgN>1?'s':'')+' waiting below.</div>';
-  if(!packs.length){ h+='<div class="empty">No packs right now. Come back tomorrow for your daily booster — or open your Binder to admire what you\'ve collected.</div></div>'; view.innerHTML=h; return; }
-  h+='<div class="packgrid">';
-  for(i=0;i<order.length;i++){ var s=order[i];
-    h+='<button class="packtile" data-open="'+s+'" style="--pc:'+SERIES_COLOR[s]+'"><span class="plogo">M·D·G</span>'+
-       '<span class="pset">'+s+'</span><span class="pcount">Booster'+(counts[s]>1?' · ×'+counts[s]:'')+'</span></button>';
+  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b>. Each token opens a booster — we deal you three packs, you pick the one to rip open.</div>';
+  else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — spend '+(msgN>1?'them':'it')+' below.</div>';
+  if(!t){ h+='<div class="empty">No Pack Tokens left. A fresh token arrives tomorrow — meanwhile, open your Binder to admire what you\'ve collected.</div></div>'; view.innerHTML=h; return; }
+  var shown=Math.min(t,7), coins='';
+  for(i=0;i<shown;i++) coins+='<span class="token">✦</span>';
+  if(t>shown) coins+='<span class="token more">+'+(t-shown)+'</span>';
+  h+='<div class="tokenbar"><div class="tokens">'+coins+'</div><button class="redeem" data-redeem>Use a token · open a booster</button></div>';
+  h+='<div class="hint2">A token deals you <b>3 random packs</b> — you choose <b>1</b> to open.</div>';
+  h+='</div>'; view.innerHTML=h;
+}
+/* spending a token = deal 3 random boosters, keep 1 */
+function tokenFlow(){
+  if(S.tokens<1) return;
+  var pool=SERIES.slice(),i,j,tmp;
+  for(i=pool.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));tmp=pool[i];pool[i]=pool[j];pool[j]=tmp;}
+  var offer=pool.slice(0,3);
+  var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Three packs — keep one</h2><div class="choicegrid">';
+  for(i=0;i<offer.length;i++){ var s=offer[i];
+    h+='<button class="packtile" data-choose="'+s+'" style="--pc:'+SERIES_COLOR[s]+'"><span class="plogo">M·D·G</span>'+
+       '<span class="pset">'+s+'</span><span class="pcount">Booster</span></button>';
   }
-  h+='</div></div>'; view.innerHTML=h;
+  h+='</div><div class="pr-hint">costs 1 token · you have '+S.tokens+'</div></div>';
+  openOverlay(h);
 }
 function renderCollection(){
   var h='<div class="view"><div class="vhead">Your Binder</div>';
@@ -714,12 +744,14 @@ closeBtn.addEventListener('click',closeOverlay);
 overlay.addEventListener('click',function(e){ if(e.target===overlay) closeOverlay(); });
 
 view.addEventListener('click',function(e){
-  var pk=e.target.closest('[data-open]'); if(pk){ packFlow(pk.getAttribute('data-open')); return; }
+  var rd=e.target.closest('[data-redeem]'); if(rd){ tokenFlow(); return; }
   var st=e.target.closest('[data-set]'); if(st){ activeSet=st.getAttribute('data-set'); renderCollection(); return; }
   var mn=e.target.closest('.mini[data-id]'); if(mn){ showCardModal(mn.getAttribute('data-id')); return; }
 });
 view.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ var mn=e.target.closest('.mini[data-id]'); if(mn){ e.preventDefault(); showCardModal(mn.getAttribute('data-id')); } } });
-sheet.addEventListener('click',function(e){ if(e.target.closest('a')) return; var card=e.target.closest('.card'); if(card) card.classList.toggle('flipped'); });
+sheet.addEventListener('click',function(e){ if(e.target.closest('a')) return;
+  var ch=e.target.closest('[data-choose]'); if(ch){ S.tokens=Math.max(0,S.tokens-1); save(); packFlow(ch.getAttribute('data-choose')); return; }
+  var card=e.target.closest('.card'); if(card) card.classList.toggle('flipped'); });
 
 var root=document.documentElement;
 try{var saved=localStorage.getItem('mdg-mag-theme'); if(saved)root.setAttribute('data-theme',saved);}catch(e){}

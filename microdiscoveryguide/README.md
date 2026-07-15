@@ -1,6 +1,6 @@
 # Micro Discovery Guide
 
-**A no-ads collectible card game about how the world works.** Open a **booster pack** every day,
+**A no-ads collectible card game about how the world works.** Spend a **Pack Token** every day,
 pull knowledge cards from sets like **Makers of Hawaii**, **Time**, and **Cosmos**, chase rare
 **foils**, and fill your **binder**. Each card teaches one thing — how it works, how it's made, or
 who makes it — and flips over for the full story (maker cards link straight back to the maker).
@@ -12,10 +12,14 @@ Live: **https://mattdanusergrant.com/microdiscoveryguide/**
 A single self-contained page — `index.html`, no build step, no backend, no ads. Progress is saved
 in the browser (`localStorage`, key `mdg-collection-v1`).
 
-- **Booster packs.** A pack contains **3 random cards from one set**, and each slot has a low
-  (~1-in-12) chance to be **foil** — so an all-foil pack is possible but insanely rare.
-- **New player** starts with **one pack from every set** (9 packs) to open.
-- **Daily pack.** You get **+1 pack each day** (a random set; up to 7 accrue if you're away).
+- **Pack Tokens.** Packs aren't owned directly — you hold **tokens**. Spending a token deals you
+  **3 random packs (distinct sets)** and you **pick 1** to rip open.
+- **Booster packs.** A pack contains **3 random cards from its set**, and each slot has a low
+  (~1-in-12) chance to be **foil** — so an all-foil pack is possible but insanely rare. Foil cards
+  wear a holo **✦ Foil** pill in the card's bottom-right corner.
+- **New player** starts with **0 packs and 3 Pack Tokens**.
+- **Daily token.** You get **+1 token each day** (up to 7 accrue if you're away). Old saves migrate:
+  any unopened packs convert 1:1 into tokens.
 - **Binder.** Your collection, per set, as a grid toward a **20-card target** (`HAWAIʻI · 3 / 20`) —
   owned cards show their art, unowned show a locked slot, foils get a holo star. Tap a card to read
   it and flip for the back.
