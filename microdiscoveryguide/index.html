@@ -126,34 +126,35 @@ a{color:inherit;text-decoration:none}
   background:var(--bg2);color:var(--ink);font-size:16px;cursor:pointer;display:none}
 .overlay.on ~ .close,.close.on{display:block}
 .sheet{max-width:760px;width:100%;max-height:92vh;overflow:auto;text-align:center}
-.reveal-h{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:12px;color:var(--gold);margin-bottom:2px}
-.reveal-s{font-family:var(--display);font-weight:500;font-size:clamp(22px,4vw,30px);color:var(--ink);margin:0 0 18px}
-.reveal{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:0 auto 22px;max-width:520px}
-.reveal .mini{width:min(40vw,150px);animation:pop .5s cubic-bezier(.2,.85,.25,1) both;cursor:default}
-.reveal .mini:hover{transform:none}
-.reveal .mini:nth-child(2){animation-delay:.14s}.reveal .mini:nth-child(3){animation-delay:.28s}
-@keyframes pop{from{opacity:0;transform:translateY(18px) scale(.9)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.reveal .mini{animation:none}}
 .done{margin-top:6px;font-family:var(--label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:var(--bg);
   background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:12px 26px;cursor:pointer}
 .done:hover{filter:brightness(1.07)}
 .cardwrap{display:flex;justify-content:center}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
-/* pack reveal — a micro scroll through the 3 full cards */
+/* pack reveal — the 3 cards in a close snap row (left-to-right), flick between them */
 .overlay.reveal{align-items:stretch;padding:0}
-.overlay.reveal .sheet{max-width:none;width:100%;max-height:none;height:100dvh;overflow-y:auto;scroll-snap-type:y proximity}
-.pr-top{position:sticky;top:0;z-index:5;padding:13px 16px;background:linear-gradient(var(--bg),color-mix(in srgb,var(--bg) 55%,transparent));backdrop-filter:blur(6px);
+.overlay.reveal .sheet{max-width:none;width:100%;max-height:none;height:100dvh;overflow:hidden;display:flex;flex-direction:column;text-align:center}
+.pr-top{flex:none;padding:13px 16px 8px;
   font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:10.5px;color:var(--gold)}
-.pr-slot{min-height:calc(100dvh - 44px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;scroll-snap-align:center;padding:14px 16px 20px}
-.pr-slot .card{animation:rise .5s ease both}
+.pr-row{--prw:min(78vw,330px);flex:1;min-height:0;display:flex;align-items:center;gap:16px;
+  overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
+  padding:6px calc(50% - var(--prw)/2);scrollbar-width:none}
+.pr-row::-webkit-scrollbar{display:none}
+.pr-slot{flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;scroll-snap-align:center}
+.pr-slot .card{width:var(--prw);height:min(66dvh,560px);touch-action:pan-x pan-y;animation:rise .5s ease both}
+.pr-slot:nth-child(2) .card{animation-delay:.12s}.pr-slot:nth-child(3) .card{animation-delay:.24s}
 @media(prefers-reduced-motion:reduce){.pr-slot .card{animation:none}}
+@media(min-width:1140px){.pr-row{--prw:330px;justify-content:center;overflow-x:visible;padding:6px 24px}}
 .pr-badge{font-family:var(--label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:10px;color:var(--bg);background:var(--gold);border-radius:999px;padding:5px 13px}
 .pr-badge.foil{color:#20160c;background:linear-gradient(90deg,#ffd76e,#a0f0d0,#9fd0ff,#e6a8ff,#ffd76e);background-size:220% 100%;animation:holoTag 4s linear infinite}
 .pr-badge.dup{background:var(--line2);color:var(--ink-soft)}
 .pr-hint{font-family:var(--label);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.pr-hint .arr{display:inline-block;animation:bob 1.8s ease-in-out infinite}
-.pr-end{gap:18px}
+.pr-hint .arr{display:inline-block;animation:bobx 1.8s ease-in-out infinite}
+@keyframes bobx{0%,100%{transform:translateX(-3px)}50%{transform:translateX(3px)}}
+@media(min-width:1140px){.pr-hint .arr{animation:none}}
+.pr-bottom{flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 16px calc(14px + env(safe-area-inset-bottom,0px))}
+.pr-bottom .done{margin-top:0}
 
 /* ======= the collectible card (front/back flip) ======= */
 .card{width:min(90vw,360px);height:min(80svh,620px);perspective:1700px;cursor:pointer;position:relative;
@@ -683,19 +684,21 @@ function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); c
 function closeOverlay(){ overlay.classList.remove('on','reveal'); closeBtn.classList.remove('on'); sheet.innerHTML=''; document.body.style.overflow='';
   if(current==='packs') renderPacks(); else renderCollection(); }
 
-/* opening a pack = a micro scroll through the 3 full cards (tap to flip each) */
+/* opening a pack = the 3 full cards in a close row; flick left-right, tap to flip */
 function packFlow(setName){
   var res=openPack(setName), anyFoil=res.some(function(r){return r.foil;});
-  var h='<div class="pr-top">'+setName+' Booster'+(anyFoil?' · ✦ foil pull!':'')+' &nbsp;·&nbsp; tap to flip · scroll ↓</div>';
-  res.forEach(function(r,i){
+  var h='<div class="pr-top">'+setName+' Booster'+(anyFoil?' · ✦ foil pull!':'')+'</div>';
+  h+='<div class="pr-row">';
+  res.forEach(function(r){
     var badge = r.newFoil?'<span class="pr-badge foil">✦ New foil</span>'
               : r.foil?'<span class="pr-badge foil">✦ Foil</span>'
               : r.isNew?'<span class="pr-badge">New card</span>'
               : '<span class="pr-badge dup">Duplicate</span>';
-    var hint = i<res.length-1?'<div class="pr-hint">Scroll <span class="arr">↓</span></div>':'';
-    h+='<div class="pr-slot">'+badge+faceHTML(r.c,r.foil)+hint+'</div>';
+    h+='<div class="pr-slot">'+badge+faceHTML(r.c,r.foil)+'</div>';
   });
-  h+='<div class="pr-slot pr-end"><div class="pr-hint">'+res.length+' cards added to your binder</div><button class="done" id="revealdone">Done</button></div>';
+  h+='</div>';
+  h+='<div class="pr-bottom"><div class="pr-hint">tap to flip &nbsp;<span class="arr">↔</span>&nbsp; '+res.length+' cards added to your binder</div>'
+    +'<button class="done" id="revealdone">Done</button></div>';
   overlay.classList.add('reveal');
   openOverlay(h);
   document.getElementById('revealdone').addEventListener('click',closeOverlay);
