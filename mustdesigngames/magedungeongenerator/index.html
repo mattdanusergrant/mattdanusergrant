@@ -95,7 +95,8 @@
   <header>
     <h1><span class="wiz">🧙 Mage Dungeon Generator</span></h1>
     <div class="sub">Design mage-dungeon rooms, chain them into a dungeon, <b>Play</b> in real 3D, and share the whole thing as a link.
-      Doors open when every <b>🔥 brazier</b> is lit and every <b>⬡ plate</b> is weighted; <b>🔒 locks</b> need the <b>🗝️ key</b>; <b>🔼 stairs</b> lead to the next room; grab the <b>💎 treasure</b> to clear it.</div>
+      Doors open when every <b>🔥 brazier</b> is lit and every <b>⬡ plate</b> is weighted; <b>🔒 locks</b> need the <b>🗝️ key</b>; <b>🔼 stairs</b> lead to the next room; grab the <b>💎 treasure</b> to clear it.
+      Build in 3D: <b>🟫🟧🟨 ledges</b> rise 1–3 steps — the mage <b>jumps</b> one step at a time, so stack them into staircases, ramparts and plateaus.</div>
   </header>
 
   <div class="bar" id="paletteBar"></div>
@@ -159,7 +160,7 @@
 
   <div class="foot">
     Left-click / drag to paint · right-click to erase · Fireball melts ice &amp; lights braziers · Levitate carries crates ·
-    Summon conjures a block (fills 🕳️ pits, weighs plates) · Scry freezes 👻 hazards.<br>
+    Summon conjures a block (fills 🕳️ pits, weighs plates) · Scry freezes 👻 hazards · 🟫🟧🟨 ledges rise 1–3 steps (jump climbs one step).<br>
     <b>Mage Dungeon Generator</b> — design, play &amp; share mage dungeons.
   </div>
 </div>
@@ -178,7 +179,10 @@
   <div id="obelisk"></div>
   <div id="pcontrols">
     <span><span class="key">W A S D</span> move</span>
+    <span><span class="key">Space</span> jump</span>
+    <span><span class="key">Shift</span> run</span>
     <span><span class="key">Mouse</span>/<span class="key">◄ ►</span> look</span>
+    <span><span class="key">Wheel</span> zoom</span>
     <span><span class="key">F</span> Fireball</span>
     <span><span class="key">E</span> Levitate</span>
     <span><span class="key">Q</span> Summon</span>
@@ -208,31 +212,30 @@
 </script>
 <script>
 /* Mage Dungeon Generator — multi-room mage-dungeon maker + N64-style 3D player.
-   Pieces: wall, ice, brazier, crate, plate, door, key, lock, hazard, pit, start, milk, stairs.
-   Spells: Fireball, Levitate, Summon, Scry. Multi-room towers, share links, library, solvability check. */
+   v0.6: textured graphics, jump + vertical physics, ledge heights (1-3 steps), smoother controls. */
 (function(){
 'use strict';
 const T=THREE, $=id=>document.getElementById(id);
 
 // ===================== TILES =====================
 const TILES={
-  '.':{name:'Floor',em:''}, '#':{name:'Wall',em:'🧱',wall:true}, 'I':{name:'Ice',em:'🧊'},
-  'b':{name:'Brazier',em:'🔥'}, 'c':{name:'Crate',em:'📦'}, 'p':{name:'Plate',em:'⬡'},
+  '.':{name:'Floor',em:''}, '#':{name:'Wall',em:'🧱',wall:true},
+  '1':{name:'Ledge ▂',em:'🟫'}, '2':{name:'Ledge ▅',em:'🟧'}, '3':{name:'Ledge █',em:'🟨'},
+  'I':{name:'Ice',em:'🧊'}, 'b':{name:'Brazier',em:'🔥'}, 'c':{name:'Crate',em:'📦'}, 'p':{name:'Plate',em:'⬡'},
   'D':{name:'Door',em:'🚪'}, 'K':{name:'Key',em:'🗝️'}, 'L':{name:'Lock',em:'🔒'},
   'H':{name:'Hazard',em:'👻'}, 'o':{name:'Pit',em:'🕳️'}, '@':{name:'Start',em:'🧙',unique:true},
   'M':{name:'Treasure',em:'💎',goal:true}, 'X':{name:'Stairs',em:'🔼',goal:true},
 };
-const PALETTE=['#','.','I','b','c','p','D','K','L','H','o','@','M','X'];
+const PALETTE=['#','.','1','2','3','I','b','c','p','D','K','L','H','o','@','M','X'];
+const STEP=1.1, LEDGE_H={'1':STEP,'2':STEP*2,'3':STEP*3};
 
-// ===================== EDITOR STATE (multi-room) =====================
+// ===================== EDITOR STATE =====================
 let rooms=[], roomIdx=0, tool='#';
-let W=9,H=8,grid=[];   // grid aliases rooms[roomIdx]
-
+let W=9,H=8,grid=[];
 function blank(w,h){ const g=[]; for(let i=0;i<h;i++){const r=[];for(let j=0;j<w;j++)r.push((i===0||j===0||i===h-1||j===w-1)?'#':'.');g.push(r);} return g; }
 function syncFromRoom(){ grid=rooms[roomIdx]; H=grid.length; W=grid[0].length; $('wIn').value=W; $('hIn').value=H; }
 function roomRows(g){ return g.map(r=>r.join('')); }
 
-// ---- palette ----
 function buildPalette(){ const bar=$('paletteBar'); bar.innerHTML='';
   const box=document.createElement('div'); box.className='palette';
   PALETTE.forEach(ch=>{ const t=TILES[ch]; const b=document.createElement('button');
@@ -240,7 +243,6 @@ function buildPalette(){ const bar=$('paletteBar'); bar.innerHTML='';
     b.onclick=()=>{tool=ch;buildPalette();}; box.appendChild(b); });
   bar.appendChild(box);
 }
-// ---- room tabs ----
 function buildTabs(){ const el=$('roomTabs'); el.innerHTML='';
   const lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent='Rooms'; el.appendChild(lbl);
   rooms.forEach((r,k)=>{ const b=document.createElement('button'); b.className='btn small tab'+(k===roomIdx?' sel':'');
@@ -251,10 +253,12 @@ function buildTabs(){ const el=$('roomTabs'); el.innerHTML='';
   const add=document.createElement('button'); add.className='btn small'; add.textContent='＋ room';
   add.onclick=()=>{ rooms.push(blank(9,8)); roomIdx=rooms.length-1; syncFromRoom(); buildTabs(); buildGridUI(); };
   el.appendChild(add);
+  const dup=document.createElement('button'); dup.className='btn small'; dup.textContent='⧉ duplicate';
+  dup.onclick=()=>{ rooms.splice(roomIdx+1,0,grid.map(r=>r.slice())); roomIdx++; syncFromRoom(); buildTabs(); buildGridUI(); };
+  el.appendChild(dup);
   const hint=document.createElement('span'); hint.className='lbl'; hint.style.marginLeft='6px';
-  hint.textContent='(🔼 stairs → next room · 🥛 milk = win)'; el.appendChild(hint);
+  hint.textContent='(🔼 stairs → next room · 💎 treasure = clear)'; el.appendChild(hint);
 }
-// ---- grid ----
 let painting=false;
 function buildGridUI(){ const el=$('grid'); el.innerHTML=''; el.style.gridTemplateColumns=`repeat(${W},30px)`;
   for(let i=0;i<H;i++)for(let j=0;j<W;j++){ const c=document.createElement('div'); c.className='cell'; c.dataset.i=i; c.dataset.j=j;
@@ -283,7 +287,7 @@ function encodeLevel(){ return b64e(JSON.stringify({v:2,rooms:rooms.map(g=>({w:g
 function levelObj(){ return {rooms:rooms.map(g=>({w:g[0].length,h:g.length,r:roomRows(g)}))}; }
 function loadCode(code){ code=code.trim(); const m=code.match(/#lvl=([^&]+)/); if(m)code=m[1];
   const o=JSON.parse(b64d(code));
-  const rs = o.rooms ? o.rooms : (o.r?[{w:o.w,h:o.h,r:o.r}]:null); if(!rs) throw new Error('bad');
+  const rs=o.rooms?o.rooms:(o.r?[{w:o.w,h:o.h,r:o.r}]:null); if(!rs)throw new Error('bad');
   rooms=rs.map(rm=>rm.r.map(s=>s.split(''))); roomIdx=0; syncFromRoom(); buildTabs(); buildGridUI(); }
 function share(){ const err=validateAll(); const code=encodeLevel();
   const url=location.origin+location.pathname+'#lvl='+code; history.replaceState(null,'','#lvl='+code);
@@ -291,55 +295,55 @@ function share(){ const err=validateAll(); const code=encodeLevel();
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(()=>done('Share link copied!'+(err?' (⚠ '+err+')':'')),()=>{$('codeIn').value=url;done('Link ready in the box.');});
   else { $('codeIn').value=url; done('Link ready in the box — copy it.'); } }
 
-// ===================== VALIDATION + SOLVABILITY =====================
+// ===================== VALIDATION / CHECK =====================
 function validateRoom(g){ let s=0,go=0; for(const r of g)for(const ch of r){if(ch==='@')s++;if(ch==='M'||ch==='X')go++;}
-  if(s!==1)return 'needs exactly one 🧙 Start'; if(go<1)return 'needs a goal (🥛/🔼)'; return null; }
+  if(s!==1)return 'needs exactly one 🧙 Start'; if(go<1)return 'needs a goal (💎/🔼)'; return null; }
 function validateAll(){ for(let k=0;k<rooms.length;k++){const e=validateRoom(rooms[k]); if(e)return 'Room '+(k+1)+' '+e;} return null; }
-
-// heuristic: high-confidence structural checks (avoids false "unsolvable")
 function checkRoom(g){
-  const h=g.length,w=g[0].length; let start=null,goals=[],brz=0,plt=0,keys=0,locks=0,doors=0,pits=0;
+  const h=g.length,w=g[0].length; let start=null,goals=[],brz=0,plt=0,keys=0,locks=0,doors=0;
   for(let i=0;i<h;i++)for(let j=0;j<w;j++){const ch=g[i][j];
     if(ch==='@')start=[i,j]; else if(ch==='M'||ch==='X')goals.push([i,j]);
     else if(ch==='b')brz++; else if(ch==='p')plt++; else if(ch==='K')keys++;
-    else if(ch==='L')locks++; else if(ch==='D')doors++; else if(ch==='o')pits++; }
+    else if(ch==='L')locks++; else if(ch==='D')doors++; }
   if(!start)return{ok:false,why:'no 🧙 Start'}; if(!goals.length)return{ok:false,why:'no goal'};
-  // optimistic flood: block only walls and braziers (obstacles); everything else is openable/removable
+  // optimistic flood; ledges are traversable via jumps, so only walls/braziers block
   const seen=Array.from({length:h},()=>Array(w).fill(false)); const st=[start]; seen[start[0]][start[1]]=true;
   const pass=(i,j)=>{const ch=g[i][j]; return ch!=='#'&&ch!=='b';};
   while(st.length){const [i,j]=st.pop(); for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){const ni=i+di,nj=j+dj;
     if(ni<0||nj<0||ni>=h||nj>=w||seen[ni][nj])continue; if(pass(ni,nj)){seen[ni][nj]=true;st.push([ni,nj]);}}}
-  const reached=goals.some(([i,j])=>seen[i][j]);
-  if(!reached)return{ok:false,why:'the goal is walled off from the start'};
+  if(!goals.some(([i,j])=>seen[i][j]))return{ok:false,why:'the goal is walled off from the start'};
   const warn=[];
   if(doors&&!brz&&!plt)warn.push('a 🚪 door can never open (no braziers or plates)');
   if(locks&&!keys)warn.push('a 🔒 lock has no 🗝️ key');
   if(keys&&!locks)warn.push('a 🗝️ key opens nothing');
+  // height sanity: a 3-ledge with no 1/2 neighbours anywhere suggests an unclimbable wall (jump = 1 step)
+  let has3=false,has12=false; for(const r of g)for(const ch of r){if(ch==='3')has3=true;if(ch==='1'||ch==='2')has12=true;}
+  if(has3&&!has12)warn.push('🟨 3-high ledges exist but no 🟫/🟧 steps — the mage jumps only 1 step at a time');
   return{ok:true,warn};
 }
 function checkAll(){ for(let k=0;k<rooms.length;k++){const r=checkRoom(rooms[k]);
   if(!r.ok)return{ok:false,msg:'✗ Room '+(k+1)+': '+r.why}; if(r.warn&&r.warn.length)return{ok:true,msg:'✓ Room '+(k+1)+' reachable — ⚠ '+r.warn.join('; ')}; }
   return{ok:true,msg:'✓ Looks solvable — every room\'s goal is reachable. (Heuristic: play-test to be sure.)'}; }
 
-// ===================== LIBRARY (localStorage + featured) =====================
+// ===================== LIBRARY =====================
 const LKEY='wpgg_lib', UKEY='wpgg_up';
 function lib(){ try{return JSON.parse(localStorage.getItem(LKEY)||'[]');}catch(e){return[];} }
 function saveLib(a){ try{localStorage.setItem(LKEY,JSON.stringify(a));}catch(e){} }
 function ups(){ try{return JSON.parse(localStorage.getItem(UKEY)||'{}');}catch(e){return{};} }
 function saveUps(u){ try{localStorage.setItem(UKEY,JSON.stringify(u));}catch(e){} }
-function saveCurrent(){ const err=validateAll(); const name=prompt('Name this puzzle:', 'My Wizard Puzzle'); if(!name)return;
-  const a=lib(); a.unshift({name,code:encodeLevel(),rooms:rooms.length,t:name}); saveLib(a);
+function saveCurrent(){ const err=validateAll(); const name=prompt('Name this dungeon:', 'My Mage Dungeon'); if(!name)return;
+  const a=lib(); a.unshift({name,code:encodeLevel(),rooms:rooms.length}); saveLib(a);
   $('msg').textContent='Saved "'+name+'" to your library.'+(err?' (⚠ '+err+')':''); }
 const FEATURED=[
   {name:'The Frozen Turnstile',code:''},{name:'The Bureaucratic Gate',code:''},
-  {name:'Keys to the Kingdom',code:''},{name:'Two-Room Climb',code:''},
+  {name:'Keys to the Kingdom',code:''},{name:'Cliffside Climb',code:''},{name:'Two-Room Delve',code:''},
 ];
 let libView='mine';
 function openLib(v){ libView=v||libView; $('libPanel').classList.add('show');
   $('libMineTab').classList.toggle('sel',libView==='mine'); $('libFeatTab').classList.toggle('sel',libView==='feat');
   const list=$('lvlList'); list.innerHTML='';
-  const items = libView==='mine' ? lib().map((x,i)=>({...x,idx:i,mine:true})) : FEATURED.map((x,i)=>({...x,idx:i,mine:false}));
-  if(!items.length){ list.innerHTML='<div class="hintline">Nothing here yet — design a puzzle and hit 💾 Save to library.</div>'; return; }
+  const items=libView==='mine'?lib().map((x,i)=>({...x,idx:i,mine:true})):FEATURED.map((x,i)=>({...x,idx:i,mine:false}));
+  if(!items.length){ list.innerHTML='<div class="hintline">Nothing here yet — design a dungeon and hit 💾 Save to library.</div>'; return; }
   const u=ups();
   items.forEach(it=>{ const card=document.createElement('div'); card.className='lvl-card';
     const key=(it.mine?'m':'f')+it.idx; const liked=!!u[key];
@@ -362,6 +366,7 @@ const TEMPLATES={
   'Frozen Turnstile':['#########','#@.....b#','#...I...#','#.....b.#','#.......#','##DDDDD##','#...M...#','#########'],
   'Bureaucratic Gate':['##########','#@.....b.#','#........#','#..c.....#','#...p....#','##DDDDDD##','#....M...#','##########'],
   'Locked & Keyed':['##########','#@...K...#','#........#','#.####.###','#.#....#.#','#.L....L.#','#....M...#','##########'],
+  'Cliffside Climb':['##########','#@.......#','#..22222.#','#..2...2.#','#..2.M.2.#','#..2...2.#','#..12221.#','##########'],
   'Pit & Summon':['##########','#@.......#','#..oooo..#','#..oooo..#','#..oooo..#','#........#','#....M...#','##########'],
   'Haunted Hall':['###########','#@........#','#.........#','#...H..H..#','#.........#','#....M....#','###########'],
   'Empty room':['#########','#@......#','#.......#','#.......#','#.......#','#.......#','#......M#','#########'],
@@ -372,65 +377,103 @@ function surprise(){ const w=W,h=H; let g=blank(w,h); let seed=(w*7+h*13+rooms.l
   const rr=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
   const cell=()=>[1+((rr()*(h-2))|0),1+((rr()*(w-2))|0)];
   const put=(ch,n)=>{for(let k=0;k<n;k++){const[i,j]=cell();if(g[i][j]==='.')g[i][j]=ch;}};
-  put('b',2);put('p',1);put('c',1);put('I',Math.max(2,(w*h/14)|0));put('H',1);put('o',2);
+  put('b',2);put('p',1);put('c',1);put('I',Math.max(2,(w*h/14)|0));put('H',1);put('o',2);put('1',3);put('2',2);
   g[1][1]='@'; g[h-2][w-2]='M'; rooms[roomIdx]=g; syncFromRoom(); buildGridUI(); $('msg').textContent='Surprise room — tweak, Check, then Play.'; }
 
+// ===================== TEXTURES (procedural, N64-chunky) =====================
+function makeTex(px,draw){ const cv=document.createElement('canvas'); cv.width=cv.height=px; const c=cv.getContext('2d');
+  draw(c,px); const tx=new T.CanvasTexture(cv); tx.magFilter=T.NearestFilter; tx.minFilter=T.NearestFilter;
+  tx.wrapS=tx.wrapT=T.RepeatWrapping; return tx; }
+function speckle(c,px,n,cols){ for(let k=0;k<n;k++){ const x=(k*37)%px,y=(k*91)%px; c.fillStyle=cols[k%cols.length]; c.fillRect(x,y,2,2); } }
+const TEX={
+  wall: makeTex(64,(c,p)=>{ c.fillStyle='#4a4468'; c.fillRect(0,0,p,p);
+    c.fillStyle='#3c3758'; for(let y=0;y<p;y+=16){ c.fillRect(0,y,p,2); const off=((y/16)%2)*16;
+      for(let x=off;x<p;x+=32) c.fillRect(x,y,2,16); }
+    c.fillStyle='#565180'; for(let y=2;y<p;y+=16) c.fillRect(0,y,p,1); speckle(c,p,40,['#514b78','#443f66']); }),
+  floor: makeTex(64,(c,p)=>{ c.fillStyle='#2a2540'; c.fillRect(0,0,p,p);
+    c.fillStyle='#231f38'; c.fillRect(0,0,p/2,p/2); c.fillRect(p/2,p/2,p/2,p/2);
+    c.strokeStyle='#1c1930'; c.lineWidth=2; c.strokeRect(0,0,p/2,p/2); c.strokeRect(p/2,p/2,p/2,p/2);
+    c.strokeRect(p/2,0,p/2,p/2); c.strokeRect(0,p/2,p/2,p/2); speckle(c,p,50,['#332d4e','#241f3a','#3a3458']); }),
+  ledge: makeTex(64,(c,p)=>{ c.fillStyle='#57506e'; c.fillRect(0,0,p,p);
+    c.fillStyle='#494263'; for(let y=0;y<p;y+=12){ c.fillRect(0,y,p,3); }
+    c.fillStyle='#665e85'; for(let y=3;y<p;y+=12) c.fillRect(0,y,p,1); speckle(c,p,36,['#5e5680','#453e60']); }),
+  ledgeTop: makeTex(64,(c,p)=>{ c.fillStyle='#5d5680'; c.fillRect(0,0,p,p);
+    c.strokeStyle='#4a4468'; c.lineWidth=2; c.strokeRect(1,1,p-2,p-2);
+    c.strokeStyle='#6e669a'; c.strokeRect(4,4,p-8,p-8); speckle(c,p,30,['#665e8c','#514a72']); }),
+};
+function texClone(tx,rx,ry){ const t=tx.clone(); t.needsUpdate=true; t.repeat.set(rx,ry); return t; }
+
 // ===================== 3D ENGINE =====================
-const UNIT=2.4,WALL_H=3.2;
+const UNIT=2.4, WALL_H=3.2;
 const host=$('game');
 const renderer=new T.WebGLRenderer({antialias:false}); renderer.setPixelRatio(1); host.appendChild(renderer.domElement);
-const scene=new T.Scene(); const SKY=0x120f1e; scene.background=new T.Color(SKY); scene.fog=new T.Fog(SKY,22,56);
+const scene=new T.Scene(); const SKY=0x120f1e; scene.background=new T.Color(SKY); scene.fog=new T.Fog(SKY,22,58);
 const camera=new T.PerspectiveCamera(60,16/9,0.1,240);
-function resizeR(){ const w=host.clientWidth||960,h=host.clientHeight||600,sc=Math.min(1,720/Math.max(w,h));
+function resizeR(){ const w=host.clientWidth||960,h=host.clientHeight||600,sc=Math.min(1,860/Math.max(w,h));
   renderer.setSize(Math.round(w*sc),Math.round(h*sc),false); renderer.domElement.style.width=w+'px'; renderer.domElement.style.height=h+'px';
   camera.aspect=w/h; camera.updateProjectionMatrix(); }
 window.addEventListener('resize',resizeR);
-scene.add(new T.HemisphereLight(0x8f86c0,0x161022,0.85));
-const sun=new T.DirectionalLight(0xffe9c0,0.5); sun.position.set(6,14,4); scene.add(sun);
+scene.add(new T.HemisphereLight(0x9088c4,0x181226,0.95));
+const sun=new T.DirectionalLight(0xffe9c0,0.55); sun.position.set(6,14,4); scene.add(sun);
 const MAT={
-  floor:new T.MeshLambertMaterial({vertexColors:true}), wall:new T.MeshLambertMaterial({color:0x4a4468}), wallTop:new T.MeshLambertMaterial({color:0x5a5480}),
+  wall:new T.MeshLambertMaterial({map:TEX.wall}), wallTop:new T.MeshLambertMaterial({color:0x5a5480}),
+  floor:new T.MeshLambertMaterial({map:TEX.floor}),
+  ledge:new T.MeshLambertMaterial({map:TEX.ledge}), ledgeTop:new T.MeshLambertMaterial({map:TEX.ledgeTop}),
   ice:new T.MeshLambertMaterial({color:0x8fd3ff,transparent:true,opacity:0.72,emissive:0x18384a}),
   brass:new T.MeshLambertMaterial({color:0x7a6a3a}), door:new T.MeshLambertMaterial({color:0x6a4a2c,emissive:0x1a0e04}),
   lock:new T.MeshLambertMaterial({color:0x545a6e,emissive:0x14161f}), rune:new T.MeshBasicMaterial({color:0xffcf5a}),
   robe:new T.MeshLambertMaterial({color:0x5b4bd6}), robe2:new T.MeshLambertMaterial({color:0x3d2f9e}), skin:new T.MeshLambertMaterial({color:0xe8c9a0}),
   hat:new T.MeshLambertMaterial({color:0x2e2286}), gem:new T.MeshLambertMaterial({color:0x49e6b0,emissive:0x1f7a5a}), ped:new T.MeshLambertMaterial({color:0x3a3450}),
   fire:new T.MeshBasicMaterial({color:0xff9a3d}), fireCore:new T.MeshBasicMaterial({color:0xffd76a}),
+  flash:new T.MeshBasicMaterial({color:0xffc060,transparent:true,opacity:0.8}),
   crate:new T.MeshLambertMaterial({color:0xb07a3d}), crate2:new T.MeshLambertMaterial({color:0x7a4f24}),
   plate:new T.MeshLambertMaterial({color:0x45415f}), plateOn:new T.MeshLambertMaterial({color:0x2f7a3a,emissive:0x123f18}),
   stairs:new T.MeshLambertMaterial({color:0x6a63a0,emissive:0x161233}), key:new T.MeshBasicMaterial({color:0xffd76a}),
   block:new T.MeshLambertMaterial({color:0x7d6bff,emissive:0x241b55,transparent:true,opacity:0.9}),
   pit:new T.MeshLambertMaterial({color:0x090711}), hazard:new T.MeshLambertMaterial({color:0xbfeaff,emissive:0x2a5a6a,transparent:true,opacity:0.85}),
+  shadow:new T.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.32}),
 };
 const clamp=(v,a,b)=>v<a?a:v>b?b:v; const MM=(g,m,x,y,z)=>{const o=new T.Mesh(g,m);o.position.set(x,y,z);return o;};
 
+// ---- wizard (persistent) + blob shadow + staff light ----
 const wiz=new T.Group();
 (function(){ wiz.add(MM(new T.CylinderGeometry(0.28,0.6,1.3,7),MAT.robe,0,0.65,0)); wiz.add(MM(new T.CylinderGeometry(0.6,0.62,0.16,7),MAT.robe2,0,0.08,0));
   wiz.add(MM(new T.SphereGeometry(0.26,8,6),MAT.skin,0,1.45,0)); wiz.add(MM(new T.ConeGeometry(0.42,0.95,7),MAT.hat,0,2.0,0));
   wiz.add(MM(new T.CylinderGeometry(0.5,0.5,0.08,7),MAT.hat,0,1.62,0)); wiz.add(MM(new T.CylinderGeometry(0.04,0.04,1.1,5),MAT.brass,0.42,0.75,0.1));
-  wiz.add(MM(new T.SphereGeometry(0.12,7,6),MAT.fireCore,0.42,1.35,0.1)); })();
-scene.add(wiz); const carrySlot=new T.Group(); carrySlot.position.set(0,2.5,0); wiz.add(carrySlot);
+  const orb=MM(new T.SphereGeometry(0.12,7,6),MAT.fireCore,0.42,1.35,0.1); wiz.add(orb);
+  const staffLight=new T.PointLight(0xffd090,0.55,7,2); staffLight.position.set(0.42,1.4,0.1); wiz.add(staffLight); })();
+scene.add(wiz);
+const carrySlot=new T.Group(); carrySlot.position.set(0,2.5,0); wiz.add(carrySlot);
+const shadowBlob=new T.Mesh(new T.CircleGeometry(0.55,12),MAT.shadow); shadowBlob.rotation.x=-Math.PI/2; scene.add(shadowBlob);
 
 let levelGroup=new T.Group(); scene.add(levelGroup);
-let solids=[],braziers=[],iceBlocks=[],crates=[],plates=[],doors=[],locks=[],keyItems=[],hazards=[],goals=[],pitCells=[];
-let carrying=null,gW=0,gH=0,startPos=new T.Vector3(),hasKey=false,hazardFreeze=0;
-const player={pos:new T.Vector3(),r:0.55};
-let heading=Math.PI,camYaw=Math.PI,camPitch=0.42,camDist=10,won=false,playing=false;
+let solids=[],braziers=[],iceBlocks=[],crates=[],plates=[],doors=[],locks=[],keyItems=[],hazards=[],goals=[],pitCells=[],impacts=[];
+let carrying=null,gW=0,gH=0,gGrid=null,startPos=new T.Vector3(),hasKey=false,hazardFreeze=0;
+const player={pos:new T.Vector3(),r:0.55,py:0,vy:0,onGround:true};
+const vel=new T.Vector3();
+let heading=Math.PI,camYaw=Math.PI,camPitch=0.42,camDist=10,won=false,playing=false,jumpQueued=false;
 
 function addSolid(minX,maxX,minZ,maxZ,kind,mesh,ex){ const s=Object.assign({minX,maxX,minZ,maxZ,kind,mesh},ex||{}); solids.push(s); return s; }
 function cellWorld(j,i){ return {x:(j-(gW-1)/2)*UNIT,z:(i-(gH-1)/2)*UNIT}; }
 function worldCell(x,z){ return {j:Math.round(x/UNIT+(gW-1)/2), i:Math.round(z/UNIT+(gH-1)/2)}; }
+function groundHeight(x,z){ if(!gGrid)return 0; const c=worldCell(x,z); if(c.i<0||c.j<0||c.i>=gH||c.j>=gW)return 0;
+  return LEDGE_H[gGrid[c.i][c.j]]||0; }
 
 function clearLevel(){ scene.remove(levelGroup); levelGroup=new T.Group(); scene.add(levelGroup);
-  solids=[];braziers=[];iceBlocks=[];crates=[];plates=[];doors=[];locks=[];keyItems=[];hazards=[];goals=[];pitCells=[];
+  solids=[];braziers=[];iceBlocks=[];crates=[];plates=[];doors=[];locks=[];keyItems=[];hazards=[];goals=[];pitCells=[];impacts=[];
   if(carrying)carrySlot.remove(carrying.grp); carrying=null; hasKey=false; hazardFreeze=0; }
-function floorPlane(){ const w=gW*UNIT,d=gH*UNIT,geo=new T.PlaneGeometry(w,d,gW,gH); geo.rotateX(-Math.PI/2);
-  const col=[],a=new T.Color(0x2a2540),b=new T.Color(0x231f38),pos=geo.attributes.position;
-  for(let k=0;k<pos.count;k++){const vx=Math.floor((pos.getX(k)+w/2)/UNIT),vz=Math.floor((pos.getZ(k)+d/2)/UNIT);const c=((vx+vz)&1)?a:b;col.push(c.r,c.g,c.b);}
-  geo.setAttribute('color',new T.Float32BufferAttribute(col,3)); levelGroup.add(new T.Mesh(geo,MAT.floor)); }
+function floorPlane(){ const w=gW*UNIT,d=gH*UNIT,geo=new T.PlaneGeometry(w,d); geo.rotateX(-Math.PI/2);
+  const m=new T.Mesh(geo,new T.MeshLambertMaterial({map:texClone(TEX.floor,gW,gH)})); levelGroup.add(m); }
 function wallRun(j0,j1,i){ const a=cellWorld(j0,i),b=cellWorld(j1,i),cx=(a.x+b.x)/2,cz=a.z,sx=(j1-j0+1)*UNIT;
-  levelGroup.add(MM(new T.BoxGeometry(sx,WALL_H,UNIT),MAT.wall,cx,WALL_H/2,cz));
+  const mat=new T.MeshLambertMaterial({map:texClone(TEX.wall,(j1-j0+1),WALL_H/UNIT)});
+  levelGroup.add(MM(new T.BoxGeometry(sx,WALL_H,UNIT),mat,cx,WALL_H/2,cz));
   levelGroup.add(MM(new T.BoxGeometry(sx+0.2,0.32,UNIT+0.2),MAT.wallTop,cx,WALL_H+0.05,cz));
   addSolid(cx-sx/2,cx+sx/2,cz-UNIT/2,cz+UNIT/2,'wall'); }
+function ledgeRun(j0,j1,i,hLvl){ const a=cellWorld(j0,i),b=cellWorld(j1,i),cx=(a.x+b.x)/2,cz=a.z,sx=(j1-j0+1)*UNIT,hh=LEDGE_H[hLvl];
+  const side=new T.MeshLambertMaterial({map:texClone(TEX.ledge,(j1-j0+1),hh/UNIT*2)});
+  const top=new T.MeshLambertMaterial({map:texClone(TEX.ledgeTop,(j1-j0+1),1)});
+  const mats=[side,side,top,side,side,side];
+  levelGroup.add(MM(new T.BoxGeometry(sx,hh,UNIT),mats,cx,hh/2,cz)); }
 function eBrazier(x,z){ const g=new T.Group();g.position.set(x,0,z);
   g.add(MM(new T.CylinderGeometry(0.18,0.28,1.2,6),MAT.brass,0,0.6,0)); g.add(MM(new T.CylinderGeometry(0.55,0.32,0.4,8),MAT.brass,0,1.3,0));
   const fl=MM(new T.ConeGeometry(0.42,1.1,7),MAT.fire,0,1.95,0);fl.visible=false; const co=MM(new T.ConeGeometry(0.2,0.6,6),MAT.fireCore,0,1.8,0);co.visible=false;
@@ -450,7 +493,7 @@ function ePlate(x,z){ const g=new T.Group();g.position.set(x,0,z); const disc=MM
   plates.push({x,z,grp:g,disc,pressed:false,crate:null}); }
 function eKey(x,z){ const g=new T.Group();g.position.set(x,1.1,z); g.add(MM(new T.TorusGeometry(0.22,0.07,6,12),MAT.key,0,0,0));
   g.add(MM(new T.BoxGeometry(0.1,0.5,0.1),MAT.key,0,-0.35,0)); g.add(MM(new T.BoxGeometry(0.22,0.1,0.1),MAT.key,0.12,-0.5,0));
-  const li=new T.PointLight(0xffd76a,0.6,5,2);g.add(li); levelGroup.add(g); keyItems.push({x,z,grp:g}); }
+  g.add(new T.PointLight(0xffd76a,0.6,5,2)); levelGroup.add(g); keyItems.push({x,z,grp:g}); }
 function eStairs(x,z){ const g=new T.Group();g.position.set(x,0,z); for(let k=0;k<4;k++)g.add(MM(new T.BoxGeometry(2.2-k*0.4,0.4,0.6),MAT.stairs,0,0.2+k*0.4,-k*0.55));
   const gl=new T.PointLight(0x8f86ff,0.8,7,2);gl.position.set(0,1.6,-1);g.add(gl); levelGroup.add(g); goals.push({x,z,kind:'stairs'}); }
 function eTreasure(x,z){ const g=new T.Group();g.position.set(x,0,z); g.add(MM(new T.CylinderGeometry(0.7,0.9,0.5,10),MAT.ped,0,0.25,0));
@@ -459,54 +502,65 @@ function eTreasure(x,z){ const g=new T.Group();g.position.set(x,0,z); g.add(MM(n
 function ePit(x,z){ const m=MM(new T.BoxGeometry(UNIT*0.98,1.2,UNIT*0.98),MAT.pit,x,-0.6,z); levelGroup.add(m);
   pitCells.push(addSolid(x-UNIT*0.49,x+UNIT*0.49,z-UNIT*0.49,z+UNIT*0.49,'pit',m,{px:x,pz:z})); }
 function eHazard(x,z){ const g=new T.Group();g.position.set(x,1.1,z); g.add(MM(new T.SphereGeometry(0.45,10,8),MAT.hazard,0,0,0));
-  g.add(MM(new T.ConeGeometry(0.45,0.6,10),MAT.hazard,0,-0.5,0)); const li=new T.PointLight(0x9fe0ff,0.7,6,2);g.add(li); levelGroup.add(g);
+  g.add(MM(new T.ConeGeometry(0.45,0.6,10),MAT.hazard,0,-0.5,0)); g.add(new T.PointLight(0x9fe0ff,0.7,6,2)); levelGroup.add(g);
   hazards.push({grp:g,x,z,ox:x,oz:z}); }
 
-function buildRoom(room){ clearLevel(); gW=room.w; gH=room.h; won=false; floorPlane();
-  const g=room.r.map(s=>s.split(''));
-  for(let i=0;i<gH;i++){let j=0;while(j<gW){if(g[i][j]==='#'){let k=j;while(k<gW&&g[i][k]==='#')k++;wallRun(j,k-1,i);j=k;}else j++;}}
-  for(let i=0;i<gH;i++)for(let j=0;j<gW;j++){const ch=g[i][j]; if(ch==='#'||ch==='.')continue; const {x,z}=cellWorld(j,i);
+function buildRoom(room){ clearLevel(); gW=room.w; gH=room.h; won=false;
+  const g=room.r.map(s=>s.split('')); gGrid=g; floorPlane();
+  for(let i=0;i<gH;i++){let j=0;while(j<gW){ const ch=g[i][j];
+    if(ch==='#'){ let k=j; while(k<gW&&g[i][k]==='#')k++; wallRun(j,k-1,i); j=k; }
+    else if(ch==='1'||ch==='2'||ch==='3'){ let k=j; while(k<gW&&g[i][k]===ch)k++; ledgeRun(j,k-1,i,ch); j=k; }
+    else j++; }}
+  for(let i=0;i<gH;i++)for(let j=0;j<gW;j++){const ch=g[i][j]; if('#.123'.includes(ch))continue; const {x,z}=cellWorld(j,i);
     if(ch==='I')eIce(x,z);else if(ch==='b')eBrazier(x,z);else if(ch==='c')eCrate(x,z);else if(ch==='p')ePlate(x,z);
     else if(ch==='D')eDoor(x,z);else if(ch==='L')eLock(x,z);else if(ch==='K')eKey(x,z);else if(ch==='H')eHazard(x,z);
     else if(ch==='o')ePit(x,z);else if(ch==='M')eTreasure(x,z);else if(ch==='X')eStairs(x,z);else if(ch==='@')startPos.set(x,0,z);}
-  // hazard patrol bounds (scan open floor along the longer axis)
-  for(const hz of hazards){ const c=worldCell(hz.x,hz.z); let axis='x';
+  for(const hz of hazards){ const c=worldCell(hz.x,hz.z);
     const openH=countOpen(g,c.i,c.j,0,1)+countOpen(g,c.i,c.j,0,-1), openV=countOpen(g,c.i,c.j,1,0)+countOpen(g,c.i,c.j,-1,0);
-    axis=openH>=openV?'x':'z'; hz.axis=axis; hz.dir=1; hz.speed=2.6;
-    if(axis==='x'){ hz.min=cellWorld(c.j-countOpen(g,c.i,c.j,0,-1),c.i).x; hz.max=cellWorld(c.j+countOpen(g,c.i,c.j,0,1),c.i).x; }
+    hz.axis=openH>=openV?'x':'z'; hz.dir=1; hz.speed=2.6;
+    if(hz.axis==='x'){ hz.min=cellWorld(c.j-countOpen(g,c.i,c.j,0,-1),c.i).x; hz.max=cellWorld(c.j+countOpen(g,c.i,c.j,0,1),c.i).x; }
     else { hz.min=cellWorld(c.j,c.i-countOpen(g,c.i,c.j,-1,0)).z; hz.max=cellWorld(c.j,c.i+countOpen(g,c.i,c.j,1,0)).z; } }
-  player.pos.copy(startPos); wiz.position.copy(startPos); heading=Math.PI; camYaw=Math.PI; }
-function countOpen(g,i,j,di,dj){ let n=0,ci=i+di,cj=j+dj; while(ci>=0&&cj>=0&&ci<g.length&&cj<g[0].length){const ch=g[ci][cj]; if(ch==='#'||ch==='b'||ch==='o')break; n++; ci+=di;cj+=dj;} return n; }
+  player.pos.copy(startPos); player.py=groundHeight(startPos.x,startPos.z); player.vy=0; player.onGround=true; vel.set(0,0,0);
+  wiz.position.set(startPos.x,player.py,startPos.z); heading=Math.PI; camYaw=Math.PI; }
+function countOpen(g,i,j,di,dj){ let n=0,ci=i+di,cj=j+dj; while(ci>=0&&cj>=0&&ci<g.length&&cj<g[0].length){const ch=g[ci][cj]; if(ch==='#'||ch==='b'||ch==='o'||ch==='1'||ch==='2'||ch==='3')break; n++; ci+=di;cj+=dj;} return n; }
 
 // ---- controls ----
 const keys={};
 window.addEventListener('keydown',e=>{ if(!playing)return; if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
   const k=e.key.toLowerCase(); if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault(); if(e.repeat)return; keys[k]=true;
-  if(k==='f'||k===' ')castFireball(); if(k==='e')levitate(); if(k==='q')summon(); if(k==='c')scry(); if(k==='r')buildRoom(currentRoomObj()); });
+  if(k===' ')jumpQueued=true; if(k==='f')castFireball(); if(k==='e')levitate(); if(k==='q')summon(); if(k==='c')scry(); if(k==='r')buildRoom(currentRoomObj()); });
 window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 renderer.domElement.addEventListener('click',()=>{if(playing&&renderer.domElement.requestPointerLock)renderer.domElement.requestPointerLock();});
 document.addEventListener('mousemove',e=>{if(document.pointerLockElement===renderer.domElement){camYaw-=e.movementX*0.0026;camPitch=clamp(camPitch+e.movementY*0.0022,0.08,1.15);}});
+window.addEventListener('wheel',e=>{ if(playing) camDist=clamp(camDist+e.deltaY*0.008,6,15); },{passive:true});
 const camFwd=()=>new T.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
 
 function isSolid(s){ if((s.kind==='door'||s.kind==='lock')&&s.open)return false; if(s.kind==='crate'&&s===carrying)return false; return true; }
 function blocked(x,z){ const r=player.r; for(const s of solids){if(!isSolid(s))continue; if(x>s.minX-r&&x<s.maxX+r&&z>s.minZ-r&&z<s.maxZ+r)return true;} return false; }
+function terrainBlocked(x,z){ return groundHeight(x,z) > player.py+0.35; }
 
 // ---- fireball ----
 const fireballs=[];
 function castFireball(){ if(won)return; const dir=camFwd().normalize(); const g=MM(new T.SphereGeometry(0.28,8,7),MAT.fire,0,0,0);
   g.add(new T.PointLight(0xff8030,1.1,9,2)); g.add(MM(new T.SphereGeometry(0.14,7,6),MAT.fireCore,0,0,0));
-  const s=player.pos.clone();s.y=1.3;s.add(dir.clone().multiplyScalar(0.7));g.position.copy(s);scene.add(g);
+  const s=player.pos.clone(); s.y=player.py+1.3; s.add(dir.clone().multiplyScalar(0.7)); g.position.copy(s); scene.add(g);
   fireballs.push({mesh:g,dir,life:2.0}); say(pick(CAST)); }
 function fbHit(p){ for(const s of solids){ if((s.kind==='door'||s.kind==='lock')&&s.open)continue; if(s.kind==='crate'&&s===carrying)continue;
   if(p.x>s.minX&&p.x<s.maxX&&p.z>s.minZ&&p.z<s.maxZ)return s;} return null; }
 function rmSolid(s){const i=solids.indexOf(s);if(i>=0)solids.splice(i,1);}
+function impactFlash(p){ const m=MM(new T.SphereGeometry(0.35,8,6),MAT.flash.clone(),p.x,p.y,p.z); scene.add(m); impacts.push({mesh:m,life:0.22}); }
 function updateFire(dt){ for(let i=fireballs.length-1;i>=0;i--){const fb=fireballs[i];fb.life-=dt; fb.mesh.position.addScaledVector(fb.dir,22*dt);
-  const h=fbHit(fb.mesh.position);let dead=fb.life<=0;
-  if(h){ if(h.kind==='ice'){levelGroup.remove(h.iceMesh);rmSolid(h);iceBlocks.splice(iceBlocks.indexOf(h),1);say('The ice sublimates with an indignant hiss.');dead=true;}
-    else if(h.kind==='brazier'){if(!h.lit){h.lit=true;h.flame.visible=true;h.core.visible=true;h.light.intensity=1.6;checkDoors();}dead=true;}
-    else dead=true; } if(dead){scene.remove(fb.mesh);fireballs.splice(i,1);} } }
+  const p=fb.mesh.position; let dead=fb.life<=0;
+  if(groundHeight(p.x,p.z)>p.y){ impactFlash(p); dead=true; }                 // smacks into a ledge face
+  const h=dead?null:fbHit(p);
+  if(h){ if(h.kind==='ice'){levelGroup.remove(h.iceMesh);rmSolid(h);iceBlocks.splice(iceBlocks.indexOf(h),1);say('The ice sublimates with an indignant hiss.');}
+    else if(h.kind==='brazier'){if(!h.lit){h.lit=true;h.flame.visible=true;h.core.visible=true;h.light.intensity=1.6;checkDoors();}}
+    impactFlash(p); dead=true; }
+  if(dead){scene.remove(fb.mesh);fireballs.splice(i,1);} }
+  for(let i=impacts.length-1;i>=0;i--){const im=impacts[i];im.life-=dt; im.mesh.scale.multiplyScalar(1+dt*10); im.mesh.material.opacity=Math.max(0,im.life/0.22*0.8);
+    if(im.life<=0){scene.remove(im.mesh);impacts.splice(i,1);} } }
 
-// ---- levitate ----
+// ---- levitate / summon / scry ----
 function levitate(){ if(won)return;
   if(!carrying){ let best=null,bd=2.6; for(const c of crates){const d=Math.hypot(c.grp.position.x-player.pos.x,c.grp.position.z-player.pos.z);if(d<bd){bd=d;best=c;}}
     if(best){ for(const p of plates)if(p.crate===best){p.crate=null;p.pressed=false;p.disc.material=MAT.plate;checkDoors();}
@@ -514,25 +568,22 @@ function levitate(){ if(won)return;
     else say('Nothing within reach to levitate.'); }
   else dropCarried(); }
 function dropCarried(){ const dir=new T.Vector3(Math.sin(heading),0,Math.cos(heading)); const dx=player.pos.x+dir.x*1.6,dz=player.pos.z+dir.z*1.6,c=carrying;
-  carrySlot.remove(c.grp);levelGroup.add(c.grp);c.grp.position.set(dx,0,dz); c.minX=dx-0.6;c.maxX=dx+0.6;c.minZ=dz-0.6;c.maxZ=dz+0.6;carrying=null;
+  carrySlot.remove(c.grp);levelGroup.add(c.grp);c.grp.position.set(dx,groundHeight(dx,dz),dz); c.minX=dx-0.6;c.maxX=dx+0.6;c.minZ=dz-0.6;c.maxZ=dz+0.6;carrying=null;
   pressPlateAt(dx,dz,c)||say('Crate set down. Majestic.'); }
 function pressPlateAt(x,z,c){ for(const p of plates){ if(Math.hypot(p.x-x,p.z-z)<1.2){ c.grp.position.set(p.x,0.16,p.z); c.minX=p.x-0.6;c.maxX=p.x+0.6;c.minZ=p.z-0.6;c.maxZ=p.z+0.6;
   p.crate=c;p.pressed=true;p.disc.material=MAT.plateOn;say('The plate accepts the weight with a bureaucratic *chunk*.');checkDoors();return true;} } return false; }
-
-// ---- summon (conjure a block; fills pits, weighs plates) ----
 function summon(){ if(won)return; const dir=new T.Vector3(Math.sin(heading),0,Math.cos(heading));
   const wx=player.pos.x+dir.x*UNIT, wz=player.pos.z+dir.z*UNIT; const c=worldCell(wx,wz); const {x,z}=cellWorld(c.j,c.i);
   const pit=pitCells.find(p=>Math.abs(p.px-x)<0.1&&Math.abs(p.pz-z)<0.1);
   if(pit){ levelGroup.remove(pit.mesh); rmSolid(pit); pitCells.splice(pitCells.indexOf(pit),1);
     levelGroup.add(MM(new T.BoxGeometry(UNIT*0.98,0.2,UNIT*0.98),MAT.block,x,0.1,z)); say('You conjure a slab of solidified dweomer into the pit. It holds. Probably.'); return; }
+  if(LEDGE_H[gGrid[c.i]&&gGrid[c.i][c.j]]){ say('The ledge is already occupied by being a ledge.'); return; }
   if(solids.some(s=>isSolid(s)&&x>s.minX&&x<s.maxX&&z>s.minZ&&z<s.maxZ)){ say('Something is already there. The block declines to co-exist.'); return; }
   const g=new T.Group();g.position.set(x,0,z); g.add(MM(new T.BoxGeometry(1.15,1.15,1.15),MAT.block,0,0.58,0)); levelGroup.add(g);
-  const b=addSolid(x-0.6,x+0.6,z-0.6,z+0.6,'block',g,{grp:g}); crates.push(b);   // acts like a crate for plates/levitate
+  const b=addSolid(x-0.6,x+0.6,z-0.6,z+0.6,'block',g,{grp:g}); crates.push(b);
   pressPlateAt(x,z,b); say('A block of pure conjuration thunks into being. Utterly mundane. Utterly yours.'); }
-
-// ---- scry (freeze hazards) ----
 function scry(){ if(won)return; if(!hazards.length){ say('You Scry the future. It is mostly monsters and locked doors.'); return; }
-  hazardFreeze=4.5; say('You Scry a few seconds ahead — the haunts stutter, briefly predictable.'); }
+  hazardFreeze=4.5; say('You Scry a few seconds ahead — the wraiths stutter, briefly predictable.'); }
 
 // ---- keys / doors / hazards ----
 function checkDoors(){ const ok=braziers.every(b=>b.lit)&&plates.every(p=>p.pressed);
@@ -543,33 +594,52 @@ function updateHazards(dt){ if(hazardFreeze>0)hazardFreeze-=dt;
   for(const hz of hazards){ if(hazardFreeze<=0){ let v=hz.speed*hz.dir*dt;
     if(hz.axis==='x'){ hz.x+=v; if(hz.x<hz.min){hz.x=hz.min;hz.dir=1;} if(hz.x>hz.max){hz.x=hz.max;hz.dir=-1;} }
     else { hz.z+=v; if(hz.z<hz.min){hz.z=hz.min;hz.dir=1;} if(hz.z>hz.max){hz.z=hz.max;hz.dir=-1;} } hz.grp.position.set(hz.x,1.1+Math.sin(performance.now()*0.005)*0.15,hz.z); }
-    if(!won&&Math.hypot(hz.x-player.pos.x,hz.z-player.pos.z)<UNIT*0.5){ player.pos.copy(startPos); wiz.position.copy(startPos); say('A wraith brushes you and you reappear at the entrance. Dungeons are forgiving like that.'); } } }
+    if(!won&&player.py<0.6&&Math.hypot(hz.x-player.pos.x,hz.z-player.pos.z)<UNIT*0.5){ player.pos.copy(startPos); player.py=groundHeight(startPos.x,startPos.z); player.vy=0;
+      wiz.position.set(startPos.x,player.py,startPos.z); say('A wraith brushes you and you reappear at the entrance. Dungeons are forgiving like that.'); } } }
 
-// ---- win / advance ----
+// ---- update loop ----
 let currentLevel=null, playIdx=0;
 function currentRoomObj(){ return currentLevel.rooms[playIdx]; }
 function update(dt){
+  // desired move dir (camera-relative), with acceleration for feel
   let mx=0,mz=0; const f=camFwd(),rg=new T.Vector3(-f.z,0,f.x);
   if(keys['w']){mx+=f.x;mz+=f.z;} if(keys['s']){mx-=f.x;mz-=f.z;} if(keys['d']){mx+=rg.x;mz+=rg.z;} if(keys['a']){mx-=rg.x;mz-=rg.z;}
   if(keys['arrowleft'])camYaw+=1.6*dt; if(keys['arrowright'])camYaw-=1.6*dt;
   if(keys['arrowup'])camPitch=clamp(camPitch+1.2*dt,0.08,1.15); if(keys['arrowdown'])camPitch=clamp(camPitch-1.2*dt,0.08,1.15);
-  const len=Math.hypot(mx,mz);
-  if(len>0.001&&!won){mx/=len;mz/=len;const sp=6.4*dt,nx=player.pos.x+mx*sp,nz=player.pos.z+mz*sp;
-    if(!blocked(nx,player.pos.z))player.pos.x=nx; if(!blocked(player.pos.x,nz))player.pos.z=nz; heading=Math.atan2(mx,mz);}
-  wiz.position.lerp(player.pos,0.5); let dh=heading-wiz.rotation.y;while(dh>Math.PI)dh-=2*Math.PI;while(dh<-Math.PI)dh+=2*Math.PI;wiz.rotation.y+=dh*Math.min(1,12*dt);
+  const len=Math.hypot(mx,mz); const speed=(keys['shift']?9.0:6.4);
+  if(len>0.001&&!won){ mx/=len; mz/=len; heading=Math.atan2(mx,mz); }
+  const ax=(len>0.001&&!won)?mx*speed:0, az=(len>0.001&&!won)?mz*speed:0;
+  const accel=(player.onGround?18:8);
+  vel.x+=(ax-vel.x)*Math.min(1,accel*dt); vel.z+=(az-vel.z)*Math.min(1,accel*dt);
+  const nx=player.pos.x+vel.x*dt, nz=player.pos.z+vel.z*dt;
+  if(!blocked(nx,player.pos.z)&&!terrainBlocked(nx,player.pos.z))player.pos.x=nx; else vel.x=0;
+  if(!blocked(player.pos.x,nz)&&!terrainBlocked(player.pos.x,nz))player.pos.z=nz; else vel.z=0;
+  // vertical physics
+  const gh=groundHeight(player.pos.x,player.pos.z);
+  player.onGround = player.py<=gh+0.02 && player.vy<=0;
+  if(player.onGround){ player.py=gh; player.vy=0;
+    if((jumpQueued||keys[' '])&&!won){ player.vy=7.2; player.onGround=false; jumpQueued=false; } }
+  else { player.vy-=20*dt; player.py+=player.vy*dt; if(player.py<gh){ player.py=gh; player.vy=0; player.onGround=true; } }
+  jumpQueued=false;
+  // wizard visuals: position, facing, run bob, blob shadow
+  wiz.position.x+=(player.pos.x-wiz.position.x)*0.5; wiz.position.z+=(player.pos.z-wiz.position.z)*0.5;
+  wiz.position.y=player.py+(player.onGround&&Math.hypot(vel.x,vel.z)>1?Math.abs(Math.sin(performance.now()*0.012))*0.08:0);
+  let dh=heading-wiz.rotation.y;while(dh>Math.PI)dh-=2*Math.PI;while(dh<-Math.PI)dh+=2*Math.PI;wiz.rotation.y+=dh*Math.min(1,12*dt);
+  shadowBlob.position.set(player.pos.x,gh+0.02,player.pos.z);
+  const air=clamp(1-(player.py-gh)*0.25,0.4,1); shadowBlob.scale.set(air,air,air);
   updateFire(dt); collectKeys(); updateHazards(dt);
   const t=performance.now()*0.006; for(const b of braziers)if(b.lit){b.flame.scale.y=1+Math.sin(t*3+b.minX)*0.18;b.light.intensity=1.4+Math.sin(t*5)*0.3;}
   for(const d of doors){d.ring.rotation.z+=dt*1.2;const ty=d.open?-4.2:0;d.grp.position.y+=(ty-d.grp.position.y)*Math.min(1,6*dt);}
   for(const L of locks){const ty=L.open?-4.2:0;L.grp.position.y+=(ty-L.grp.position.y)*Math.min(1,6*dt);}
   for(const k of keyItems){k.grp.rotation.y+=dt*2;k.grp.position.y=1.1+Math.sin(t)*0.12;}
   for(const gl of goals)if(gl.gem){gl.gem.rotation.y+=dt*1.6;gl.gem.position.y=1.35+Math.sin(t*1.2)*0.12;}
-  const tgt=new T.Vector3(player.pos.x,1.4,player.pos.z);
+  const tgt=new T.Vector3(player.pos.x,player.py+1.4,player.pos.z);
   const off=new T.Vector3(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch)).multiplyScalar(camDist);
   camera.position.copy(tgt).add(off);camera.lookAt(tgt);
-  if(!won)for(const gl of goals){if(player.pos.distanceTo(new T.Vector3(gl.x,0,gl.z))<UNIT*0.6){reachGoal(gl.kind);break;}}
+  if(!won)for(const gl of goals){if(player.pos.distanceTo(new T.Vector3(gl.x,0,gl.z))<UNIT*0.6&&Math.abs(player.py-groundHeight(gl.x,gl.z))<1.2){reachGoal(gl.kind);break;}}
 }
 function reachGoal(kind){ if(kind==='stairs'&&playIdx<currentLevel.rooms.length-1){ won=true;
-  showModal('▲ Room Cleared','Up the stairs to the next room of the tower.','Obelisk: "Adequate. The tower notes your progress. It notes everything."','Continue',()=>{playIdx++;won=false;buildRoom(currentRoomObj());$('floorInfo').textContent='Room '+(playIdx+1)+' / '+currentLevel.rooms.length;$('overlay').classList.remove('show');},true);
+  showModal('▲ Room Cleared','Up the stairs to the next room of the dungeon.','Obelisk: "Adequate. The dungeon notes your progress. It notes everything."','Continue',()=>{playIdx++;won=false;buildRoom(currentRoomObj());$('floorInfo').textContent='Room '+(playIdx+1)+' / '+currentLevel.rooms.length;$('overlay').classList.remove('show');});
   } else winGame(kind); }
 function winGame(kind){ won=true; showModal('💎 DUNGEON CLEARED', kind==='treasure'?'The treasure is yours. The dungeon yields it with the weary grace of a machine that has done this many times.':'You reached the top of the dungeon. It is unimpressed but compliant.',
   'Obelisk: "Adequate. Now conjure another — the dungeon gets bored, and so do I."'); }
@@ -580,12 +650,11 @@ function say(html){$('obelisk').innerHTML='<b>Obelisk:</b> '+html;}
 function showModal(t,b,q,btn,cb){ $('mTitle').innerHTML=t;$('mBody').innerHTML=b;$('mQuip').textContent=q;
   const el=$('mBtn');el.textContent=btn||'Again';el.onclick=cb||(()=>{$('overlay').classList.remove('show');playIdx=0;buildRoom(currentLevel.rooms[0]);$('floorInfo').textContent=roomLabel();});
   $('overlay').classList.add('show'); }
-function roomLabel(){ return currentLevel.rooms.length>1?('Room '+(playIdx+1)+' / '+currentLevel.rooms.length):'Wizard Puzzle'; }
+function roomLabel(){ return currentLevel.rooms.length>1?('Room '+(playIdx+1)+' / '+currentLevel.rooms.length):'Custom Dungeon'; }
 
-// ---- mode switch ----
 function playLevel(){ const err=validateAll(); if(err){$('msg').textContent='⚠ '+err;return;}
   currentLevel=levelObj(); playIdx=0; $('editor').style.display='none'; $('play').classList.add('show'); playing=true;
-  $('overlay').classList.remove('show'); $('floorInfo').textContent=roomLabel(); $('objective').textContent='Reach the goal — open doors (braziers+plates), grab keys, bridge pits.';
+  $('overlay').classList.remove('show'); $('floorInfo').textContent=roomLabel(); $('objective').textContent='Reach the goal — open doors, grab keys, bridge pits, climb ledges.';
   say('A dungeon of your own making. Let\'s see if it was fair.'); resizeR(); buildRoom(currentLevel.rooms[0]); }
 function backToEditor(){ playing=false; if(document.exitPointerLock)document.exitPointerLock(); $('play').classList.remove('show'); $('overlay').classList.remove('show'); $('editor').style.display=''; }
 let last=performance.now();
@@ -594,14 +663,13 @@ function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now; if(playi
 // ===================== INIT =====================
 function init(){ buildPalette(); buildTmplSel();
   const m=location.hash.match(/#lvl=([^&]+)/); let loaded=false;
-  if(m){ try{loadCode(m[1]);loaded=true;$('msg').textContent='Loaded a shared puzzle. ▶ Play or edit it.';}catch(e){} }
-  if(!loaded){ loadTemplate('Frozen Turnstile'); }
-  // seed featured codes from templates (single-room) + a 2-room demo
+  if(m){ try{loadCode(m[1]);loaded=true;$('msg').textContent='Loaded a shared dungeon. ▶ Play or edit it.';}catch(e){} }
+  if(!loaded){ loadTemplate('Cliffside Climb'); }
   FEATURED[0].code=b64e(JSON.stringify({v:2,rooms:[{w:9,h:8,r:TEMPLATES['Frozen Turnstile']}]})); FEATURED[0].rooms=1;
   FEATURED[1].code=b64e(JSON.stringify({v:2,rooms:[{w:10,h:8,r:TEMPLATES['Bureaucratic Gate']}]})); FEATURED[1].rooms=1;
   FEATURED[2].code=b64e(JSON.stringify({v:2,rooms:[{w:10,h:8,r:TEMPLATES['Locked & Keyed']}]})); FEATURED[2].rooms=1;
-  FEATURED[3].code=b64e(JSON.stringify({v:2,rooms:[{w:9,h:8,r:TEMPLATES['Frozen Turnstile']},{w:10,h:8,r:TEMPLATES['Bureaucratic Gate']}]})); FEATURED[3].rooms=2;
-  // rewrite the frozen/gate single-room templates to end on stairs for the 2-room demo? keep milk; fine.
+  FEATURED[3].code=b64e(JSON.stringify({v:2,rooms:[{w:10,h:8,r:TEMPLATES['Cliffside Climb']}]})); FEATURED[3].rooms=1;
+  FEATURED[4].code=b64e(JSON.stringify({v:2,rooms:[{w:9,h:8,r:TEMPLATES['Frozen Turnstile']},{w:10,h:8,r:TEMPLATES['Bureaucratic Gate']}]})); FEATURED[4].rooms=2;
   $('playBtn').onclick=playLevel; $('shareBtn').onclick=share; $('checkBtn').onclick=()=>{const r=checkAll();$('msg').textContent=r.msg;};
   $('saveBtn').onclick=saveCurrent; $('libBtn').onclick=()=>openLib('mine');
   $('libMineTab').onclick=()=>openLib('mine'); $('libFeatTab').onclick=()=>openLib('feat'); $('libClose').onclick=()=>$('libPanel').classList.remove('show');
@@ -609,21 +677,23 @@ function init(){ buildPalette(); buildTmplSel();
   $('resizeBtn').onclick=()=>resize(+$('wIn').value,+$('hIn').value); $('clearBtn').onclick=clearInterior; $('borderBtn').onclick=sealBorder; $('randomBtn').onclick=surprise;
   $('loadTmplBtn').onclick=()=>loadTemplate($('tmplSel').value);
   $('importBtn').onclick=()=>{try{loadCode($('codeIn').value);$('msg').textContent='Imported.';}catch(e){$('msg').textContent='⚠ Could not read that code.';}};
-  $('exportBtn').onclick=()=>{$('codeIn').value=encodeLevel();$('msg').textContent='Level code shown below.';};
+  $('exportBtn').onclick=()=>{$('codeIn').value=encodeLevel();$('msg').textContent='Dungeon code shown below.';};
   buildTabs(); requestAnimationFrame(frame);
 }
 init();
 
 window.DBG={ play:playLevel, back:backToEditor, encode:encodeLevel, loadCode, check:checkAll,
   setLevel:(obj)=>{ rooms=obj.rooms.map(rm=>rm.r.map(s=>s.split(''))); roomIdx=0; syncFromRoom(); buildTabs(); buildGridUI(); },
-  addRoom:(rowsArr)=>{ rooms.push(rowsArr.map(s=>s.split(''))); roomIdx=rooms.length-1; syncFromRoom(); buildTabs(); buildGridUI(); },
   roomCount:()=>rooms.length,
-  state:()=>({playing,won,playIdx,rooms:currentLevel?currentLevel.rooms.length:0,px:+player.pos.x.toFixed(2),pz:+player.pos.z.toFixed(2),
+  state:()=>({playing,won,playIdx,px:+player.pos.x.toFixed(2),pz:+player.pos.z.toFixed(2),py:+player.py.toFixed(2),onGround:player.onGround,
+    groundH:+groundHeight(player.pos.x,player.pos.z).toFixed(2),
     litAll:braziers.every(b=>b.lit),platesAll:plates.every(p=>p.pressed),doorsOpen:doors.every(d=>d.open),locksOpen:locks.every(l=>l.open),
-    hasKey,keys:keyItems.length,pits:pitCells.length,hazards:hazards.length,frozen:+hazardFreeze.toFixed(1),goals:goals.length,carrying:!!carrying,modal:$('overlay').classList.contains('show')}),
+    hasKey,keysLeft:keyItems.length,pits:pitCells.length,hazards:hazards.length,frozen:+hazardFreeze.toFixed(1),goals:goals.length,carrying:!!carrying,
+    modal:$('overlay').classList.contains('show')}),
   aimAt:(x,z)=>{camYaw=Math.atan2(-(x-player.pos.x),-(z-player.pos.z));}, faceAt:(x,z)=>{heading=Math.atan2(x-player.pos.x,z-player.pos.z);},
-  tp:(x,z)=>{player.pos.set(x,0,z);wiz.position.set(x,0,z);}, cellWorld:(j,i)=>cellWorld(j,i),
-  fireball:castFireball, levitate, summon, scry, lib, saveCurrentSilent:(name)=>{const a=lib();a.unshift({name,code:encodeLevel(),rooms:rooms.length});saveLib(a);return a.length;},
+  tp:(x,z)=>{player.pos.set(x,0,z);player.py=groundHeight(x,z);player.vy=0;wiz.position.set(x,player.py,z);},
+  cellWorld:(j,i)=>cellWorld(j,i), fireball:castFireball, levitate, summon, scry,
+  saveCurrentSilent:(name)=>{const a=lib();a.unshift({name,code:encodeLevel(),rooms:rooms.length});saveLib(a);return a.length;},
 };
 })();
 
