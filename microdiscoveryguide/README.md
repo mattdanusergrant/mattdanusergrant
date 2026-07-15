@@ -1,84 +1,59 @@
 # Micro Discovery Guide
 
-**A no-ads micro-learning feed about how the world works.** You land on a *random* card, read a
-bite-sized nugget — how something works, how it's made, or who makes it — and scroll for another
-random card. Endless. Cards about real makers link **straight back to the maker**, and most cards
-carry a **"connects to →"** thread hinting at how ideas link up.
-
-A **collection that grows over time** — from atomic clocks to koa ʻukulele to Roman concrete.
+**A no-ads collectible card game about how the world works.** Open a **booster pack** every day,
+pull knowledge cards from sets like **Makers of Hawaii**, **Time**, and **Cosmos**, chase rare
+**foils**, and fill your **binder**. Each card teaches one thing — how it works, how it's made, or
+who makes it — and flips over for the full story (maker cards link straight back to the maker).
 
 Live: **https://mattdanusergrant.com/microdiscoveryguide/**
 
-> Name: **Micro Discovery Guide** (Micro · Discovery · Guide) is an M·D·G name in the vault ledger.
-> The app was *Makers Dissect Gadgets* → *Makers Deserve Glory* earlier; both old paths 301 here via
-> the repo-root `_redirects`.
+## The game loop
 
-## How it works
+A single self-contained page — `index.html`, no build step, no backend, no ads. Progress is saved
+in the browser (`localStorage`, key `mdg-collection-v1`).
 
-A single self-contained page — `index.html`, no build step, no dependencies, no tracking, no
-ads. It's a root folder in the `mattdanusergrant` repo, so the apex Pages project serves it at
-`mattdanusergrant.com/microdiscoveryguide/`.
+- **Booster packs.** A pack contains **3 random cards from one set**, and each slot has a low
+  (~1-in-12) chance to be **foil** — so an all-foil pack is possible but insanely rare.
+- **New player** starts with **one pack from every set** (9 packs) to open.
+- **Daily pack.** You get **+1 pack each day** (a random set; up to 7 accrue if you're away).
+- **Binder.** Your collection, per set, as a grid toward a **20-card target** (`HAWAIʻI · 3 / 20`) —
+  owned cards show their art, unowned show a locked slot, foils get a holo star. Tap a card to read
+  it and flip for the back.
+- **Two themes** (dark / light), remembered; otherwise follows the device.
 
-- **Random infinite feed.** On load the collection is shuffled (Fisher–Yates); scrolling appends
-  the next card from a no-repeat "bag," topping up so you're always ~2 screens ahead. When the bag
-  empties it reshuffles. **Shuffle** restarts with a fresh order.
-- **Each card is a collectible you flip.** Tap (or Enter/Space) to flip the card in 3-D. The
-  **front** is the card face — category, collection number (`Nº 03 / 65`), generative art, title,
-  and a one-line flavor hook. The **back** holds the real story: a paragraph of prose (`back`), the
-  key points (`facts`), the **connects-to** thread, and — for makers — a **Visit ↗** link.
-- **Sets.** Every card belongs to a named **Series** (Hawaiʻi, Time, Navigation, Materials,
-  Signals, Cosmos, Life & Medicine, Earth & Elements, Civilization) and shows a per-set collector
-  number (`HAWAIʻI · 03 / 17`). The set is derived from the card's `cat` via the `CAT_SERIES` map in
-  the script — **add a new category to that map** so new cards land in a set.
-- **Foil tier (cosmetic).** When a card is dealt it has ~a 1-in-6 chance to come up **foil** — a
-  holographic rainbow frame, a shifting sheen, and a "✦ Foil" chip. Same card, random pull, re-rolled
-  on Shuffle. Reduced-motion disables the shimmer.
-- **Random infinite deck.** The order is shuffled; scrolling deals the next card.
-- **Two themes** (dark "jewel box" / light "cool shell"), remembered; otherwise follows the device.
-- **No images** — each plate is a generative CSS-gradient + inline-SVG motif
-  (`scroll · wave · grain · facet · strings · orbit · grid · pulse`) tinted per card.
+## Sets
+
+Every card belongs to a named **Series**, derived from its `cat` via the `CAT_SERIES` map in the
+script. **Target: 20 cards per set** (the binder shows progress toward 20; sets fill over time).
+
+`Makers of Hawaii` · `Time` · `Navigation` · `Materials` · `Signals` · `Cosmos` ·
+`Life & Medicine` · `Earth & Elements` · `Civilization`.
+
+> **"Makers of …" is a recurring set type** — a set full of real makers, each linking back to them
+> (Makers of Hawaii is the first; Makers of Japan, Italy, etc. can follow). Maker cards keep their
+> verified **Visit ↗** link on the back.
 
 ## Growing the collection
 
-Everything is the `CARDS` array near the bottom of `index.html`. Add a card = add one object.
+Cards live in the `CARDS` array near the bottom of `index.html`. Add a card = add one object; its
+set is derived from `cat`. Each card:
 
-**A "how it works" card** (a concept — no link required):
-```js
-{
-  id:"atomic-clocks",           // unique slug
-  cat:"Time",                   // category (shown in the eyebrow)
-  where:"1700s",                // OPTIONAL era/place
-  accent:"#2f8f9d",             // tint
-  motif:"pulse",                // scroll|wave|grain|facet|strings|orbit|grid|pulse
-  title:"Atomic Clocks",        // FRONT: the headline (the concept)
-  hook:"The most precise machines ever built keep time by counting an atom's buzz.", // FRONT: flavor line
-  back:"An atomic clock keeps time with the rock-steady rhythm of an atom … (2–4 sentence chunk).", // BACK: the story
-  facts:[ "…", "…", "…" ],      // BACK: 3–4 bite-sized key points
-  connects:"Atomic clocks → GPS → the internet"   // BACK: OPTIONAL "→" thread
-}
-```
-
-**A "how it's made" / maker card** adds a verified link back (shown on the back):
 ```js
 {
   id:"kamaka", cat:"ʻUkulele", where:"Honolulu · since 1916", accent:"#b5732f", motif:"strings",
-  title:"Kamaka Hawaii", lead:"How it’s made",
-  url:"https://kamakahawaii.com/", link:"Visit Kamaka",   // url = the link back; must be real & live
-  hook:"…", back:"… the maker's story …", facts:[ "…", "…", "…" ]
+  title:"Kamaka Hawaii",
+  hook:"one flavor line (front)",
+  back:"a real 2–4 sentence paragraph (the back — REQUIRED)",
+  facts:[ "…", "…", "…" ],           // key points (back)
+  connects:"A → B → C",              // OPTIONAL thread (back)
+  url:"https://kamakahawaii.com/", link:"Visit Kamaka"   // maker cards only; must be real & live
 }
 ```
 
-Every card needs a **`back`** — the "nice chunk of text" the flip reveals (a real 2–4 sentence
-paragraph, not just the facts restated).
+Rules: accurate facts, a real live `url` for maker cards, keep it bite-sized. If you add a new
+`cat`, map it in `CAT_SERIES` so the card lands in a set. Motifs:
+`scroll · wave · grain · facet · strings · orbit · grid · pulse`.
 
-Rules:
-- **Facts must be accurate.** These are real science/history/craft. Hedge origin stories the way the
-  tradition tells them; when unsure of a specific, cut it.
-- **`url` (maker cards) must be a real, live, official link** to that maker — verify a 2xx that's
-  actually theirs before adding. Concept cards usually carry no link (the card is the learning).
-- **Keep it bite-sized** — 3–4 short facts. It's micro-learning, not an essay.
-- For culturally protected crafts (e.g. Niʻihau), credit the community, not just a shop.
-
-The **`/add-card` skill** (`ConductiveOS/.claude/skills/add-card/`) automates this: research a
-concept or a maker, verify any link, write the card, check it renders, and open a PR. Candidate
-topics/makers to add next live in the editorial plan's queue.
+**Filling every set to 20** (currently: Makers of Hawaii 17, Materials 8, Time 7, Signals 7,
+Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 65) is an ongoing
+content effort, done in batches via the `/add-card` skill.

@@ -3,25 +3,23 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Micro Discovery Guide — how the world works, one card at a time</title>
-<meta name="description" content="A no-ads deck of collectible knowledge cards. Land on a random card, tap to flip it for the full story, and scroll for another — from atomic clocks to koa ukuleles to Roman concrete." />
+<title>Micro Discovery Guide — collect how the world works</title>
+<meta name="description" content="A no-ads collectible card game about how the world works. Open a booster pack every day, pull cards from sets like Makers of Hawaii, Time, and Cosmos, chase foils, and fill your binder." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#0d1413" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Micro Discovery Guide" />
-<meta property="og:title" content="Micro Discovery Guide — how the world works, one card at a time" />
-<meta property="og:description" content="A no-ads deck of collectible knowledge cards. Tap to flip for the full story; scroll for a random card." />
+<meta property="og:title" content="Micro Discovery Guide — collect how the world works" />
+<meta property="og:description" content="Open a booster pack every day, pull knowledge cards, chase foils, and fill your binder." />
 <meta property="og:url" content="https://mattdanusergrant.com/microdiscoveryguide/" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Micro Discovery Guide" />
-<meta name="twitter:description" content="A no-ads deck of collectible knowledge cards — tap to flip, scroll for another." />
-
+<meta name="twitter:description" content="A no-ads collectible card game about how the world works." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@500;600;700&display=swap" rel="stylesheet" />
-
 <style>
-/* ============ MICRO DISCOVERY GUIDE — a deck of collectible knowledge cards ============ */
+
 :root{
   --display:'Fraunces','Hoefler Text','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
   --body:'Newsreader','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
@@ -31,173 +29,188 @@
   --shadow:0 30px 70px -32px rgba(0,0,0,.85); --accent:#c9a24b;
 }
 :root[data-theme="dark"]{ --bg:#0d1413; --bg2:#131c1b; --plate:#16211f; --ink:#f3ede1; --ink-soft:#d8d2c5;
-  --muted:#93a09c; --line:#243230; --line2:#33453f; --gold:#c9a24b; --gold-soft:#e3c987;
-  --shadow:0 30px 70px -32px rgba(0,0,0,.85); }
-@media(prefers-color-scheme:light){
-  :root{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f7f4ec; --ink:#182421; --ink-soft:#3a4744;
-    --muted:#6f7a72; --line:#d8d3c4; --line2:#c6c0ae; --gold:#9c7a2b; --gold-soft:#b89440;
-    --shadow:0 26px 56px -30px rgba(40,44,40,.4); }
-}
+  --muted:#93a09c; --line:#243230; --line2:#33453f; --gold:#c9a24b; --gold-soft:#e3c987; --shadow:0 30px 70px -32px rgba(0,0,0,.85); }
+@media(prefers-color-scheme:light){ :root{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f7f4ec; --ink:#182421; --ink-soft:#3a4744;
+    --muted:#6f7a72; --line:#d8d3c4; --line2:#c6c0ae; --gold:#9c7a2b; --gold-soft:#b89440; --shadow:0 26px 56px -30px rgba(40,44,40,.4); } }
 :root[data-theme="light"]{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f7f4ec; --ink:#182421; --ink-soft:#3a4744;
-  --muted:#6f7a72; --line:#d8d3c4; --line2:#c6c0ae; --gold:#9c7a2b; --gold-soft:#b89440;
-  --shadow:0 26px 56px -30px rgba(40,44,40,.4); }
-
+  --muted:#6f7a72; --line:#d8d3c4; --line2:#c6c0ae; --gold:#9c7a2b; --gold-soft:#b89440; --shadow:0 26px 56px -30px rgba(40,44,40,.4); }
 *,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{margin:0;background:
-  radial-gradient(140% 100% at 50% 0%, color-mix(in srgb,var(--gold) 6%, transparent), transparent 55%),
-  var(--bg);
-  color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-optical-sizing:auto}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+body{margin:0;background:radial-gradient(140% 100% at 50% 0%, color-mix(in srgb,var(--gold) 6%, transparent), transparent 55%),var(--bg);
+  color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-optical-sizing:auto;min-height:100vh}
 a{color:inherit;text-decoration:none}
 ::selection{background:var(--gold);color:#0d1413}
 
 .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:12px clamp(14px,4vw,32px);background:color-mix(in srgb,var(--bg) 84%,transparent);
-  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.wordmark{display:flex;align-items:center;gap:.55em;background:none;border:0;cursor:pointer;
-  font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;
-  font-size:clamp(10.5px,2.4vw,12.5px);color:var(--ink);white-space:nowrap}
+  padding:11px clamp(12px,4vw,32px);background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.wordmark{display:flex;align-items:center;gap:.55em;background:none;border:0;cursor:pointer;font-family:var(--label);font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;font-size:clamp(10px,2.3vw,12px);color:var(--ink);white-space:nowrap}
 .wordmark .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
-.controls{display:flex;gap:8px}
-.btn{font-family:var(--label);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:11.5px;
-  color:var(--muted);background:none;border:1px solid var(--line2);border-radius:999px;padding:7px 13px;cursor:pointer;
-  transition:color .2s,border-color .2s}
+.controls{display:flex;gap:7px}
+.btn{font-family:var(--label);font-weight:600;letter-spacing:.05em;text-transform:uppercase;font-size:11px;color:var(--muted);
+  background:none;border:1px solid var(--line2);border-radius:999px;padding:7px 12px;cursor:pointer;transition:color .2s,border-color .2s;white-space:nowrap}
 .btn:hover,.btn:focus-visible{color:var(--ink);border-color:var(--gold)}
 .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-@media(max-width:430px){ .btn{padding:6px 10px;letter-spacing:.03em} .wordmark{letter-spacing:.05em} }
+.btn.tab.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+.btn .cnt{display:inline-block;min-width:16px;padding:0 4px;margin-left:5px;border-radius:999px;background:color-mix(in srgb,var(--ink) 16%,transparent);
+  font-size:10px;line-height:15px;text-align:center;vertical-align:1px}
+.btn.tab.on .cnt{background:rgba(0,0,0,.22)}
+@media(max-width:440px){.btn{padding:6px 9px;letter-spacing:.02em}.wordmark span.full{display:none}}
 
-#feed{display:flex;flex-direction:column}
-.slot{min-height:calc(100svh - 54px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:26px 16px}
+.view{max-width:1040px;margin:0 auto;padding:22px clamp(14px,4vw,28px) 70px}
+.vhead{font-family:var(--display);font-weight:500;font-size:clamp(27px,5.5vw,40px);letter-spacing:-.01em;margin:6px 0 0;text-wrap:balance}
+.vsub{color:var(--muted);font-family:var(--label);font-size:12.5px;letter-spacing:.02em;margin-top:8px;line-height:1.6}
+.banner{margin:18px 0 4px;padding:14px 16px;border-radius:12px;border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
+  background:color-mix(in srgb,var(--gold) 12%,transparent);font-family:var(--body);font-size:15.5px;color:var(--ink-soft)}
+.banner b{color:var(--ink);font-weight:600}
 
-/* the collectible card */
-.card{width:min(92vw,384px);height:min(82svh,650px);perspective:1700px;cursor:pointer;position:relative;
-  animation:rise .5s ease both;touch-action:pan-y;-webkit-tap-highlight-color:transparent;transition:transform .28s ease}
-@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.card{animation:none}}
-@media(hover:hover){.card:hover{transform:translateY(-5px)}}
-/* only the visible face is interactive — stops the hidden back's scroll area from eating touch-scrolls */
-.card:not(.flipped) .back{pointer-events:none}
-.card.flipped .front{pointer-events:none}
+/* pack tiles */
+.packgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;margin-top:22px}
+.packtile{position:relative;aspect-ratio:3/4;border-radius:15px;cursor:pointer;overflow:hidden;border:1px solid var(--line2);
+  box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:flex-end;padding:15px;transition:transform .16s;
+  background:linear-gradient(162deg, color-mix(in srgb,var(--pc) 42%, var(--bg2)), var(--bg2))}
+.packtile:hover{transform:translateY(-5px)}
+.packtile:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.packtile::before{content:"";position:absolute;top:0;left:0;right:0;height:38%;opacity:.92;
+  background:linear-gradient(115deg, color-mix(in srgb,var(--pc) 88%,transparent), color-mix(in srgb,#ffffff 26%,transparent) 42%, color-mix(in srgb,var(--pc) 72%,transparent))}
+.packtile::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(65% 30% at 50% 14%, rgba(255,255,255,.20), transparent 60%)}
+.packtile .plogo{position:absolute;top:13px;left:15px;z-index:1;font-family:var(--label);font-weight:700;letter-spacing:.2em;font-size:10px;color:rgba(20,16,10,.6)}
+.packtile .pset{position:relative;z-index:1;font-family:var(--display);font-weight:600;font-size:19px;color:#fff;line-height:1.04;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.packtile .pcount{position:relative;z-index:1;font-family:var(--label);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.9);margin-top:5px;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.empty{margin-top:26px;padding:28px;border:1px dashed var(--line2);border-radius:14px;text-align:center;color:var(--muted);font-family:var(--body);font-size:16px}
+
+/* set tabs + binder */
+.settabs{display:flex;gap:8px;overflow-x:auto;padding:14px 0 6px;-webkit-overflow-scrolling:touch}
+.settab{white-space:nowrap;font-family:var(--label);font-weight:600;letter-spacing:.02em;font-size:11.5px;color:var(--muted);
+  background:none;border:1px solid var(--line2);border-radius:999px;padding:8px 13px;cursor:pointer;transition:.18s}
+.settab:hover{color:var(--ink)}
+.settab.on{color:var(--bg);background:var(--sc,var(--gold));border-color:var(--sc,var(--gold))}
+.setinfo{margin-top:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.setinfo .pct{font-family:var(--display);font-size:22px;color:var(--ink)}
+.setinfo .foils{font-family:var(--label);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pbar{flex:1;min-width:140px;height:7px;border-radius:999px;background:var(--line);overflow:hidden}
+.pbar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--sc,var(--gold)),var(--gold-soft))}
+.binder{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:12px;margin-top:18px}
+
+/* mini card */
+.mini{position:relative;aspect-ratio:3/4;border-radius:12px;overflow:hidden;border:1px solid var(--line2);cursor:pointer;
+  background:linear-gradient(165deg,var(--plate),var(--bg2));box-shadow:0 14px 30px -22px rgba(0,0,0,.8);--accent:var(--gold);
+  display:flex;flex-direction:column;transition:transform .15s}
+.mini:hover{transform:translateY(-3px)}
+.mini:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.miniart{flex:none;aspect-ratio:16/9;position:relative;border-bottom:1px solid var(--line)}
+.mininame{flex:1;min-height:0;font-family:var(--display);font-weight:500;font-size:14px;line-height:1.12;color:var(--ink);
+  padding:8px 9px 0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.mininum{flex:none;font-family:var(--label);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:5px 9px 8px}
+.mini .ministar{position:absolute;top:6px;right:7px;z-index:2;font-size:12px;color:#20160c;background:linear-gradient(90deg,#ffd76e,#a0f0d0,#9fd0ff,#e6a8ff,#ffd76e);
+  background-size:220% 100%;border-radius:999px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;animation:holoTag 4s linear infinite}
+.mini .newbadge{position:absolute;top:6px;left:6px;z-index:2;font-family:var(--label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  font-size:8.5px;color:var(--bg);background:var(--gold);border-radius:999px;padding:2px 7px}
+.mini.locked{cursor:default;border-style:dashed;align-items:center;justify-content:center;background:var(--bg2)}
+.mini.locked .q{font-family:var(--display);font-size:30px;color:var(--line2)}
+.mini.foil::before{content:"";position:absolute;inset:0;border-radius:12px;padding:1.3px;pointer-events:none;z-index:3;
+  background:conic-gradient(from 200deg,#e8869b,#7cc8f5,#93e6a6,#f5d76e,#c79bf0,#e8869b);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.mini.foil .miniart::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(58deg,rgba(255,120,190,.16),rgba(120,210,255,.16) 40%,rgba(150,255,180,.16) 70%,rgba(255,225,120,.16));
+  background-size:260% 260%;animation:holo 7s linear infinite}
+@keyframes holoTag{to{background-position:220% 0}}
+@keyframes holo{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@media(prefers-reduced-motion:reduce){.ministar,.mini.foil .miniart::after,.card.foil .face::after,.foiltag{animation:none}}
+
+/* overlay (pack reveal + card modal) */
+.overlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:22px;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(9px)}
+.overlay.on{display:flex}
+.close{position:fixed;top:14px;right:16px;z-index:101;width:38px;height:38px;border-radius:999px;border:1px solid var(--line2);
+  background:var(--bg2);color:var(--ink);font-size:16px;cursor:pointer;display:none}
+.overlay.on ~ .close,.close.on{display:block}
+.sheet{max-width:760px;width:100%;max-height:92vh;overflow:auto;text-align:center}
+.reveal-h{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:12px;color:var(--gold);margin-bottom:2px}
+.reveal-s{font-family:var(--display);font-weight:500;font-size:clamp(22px,4vw,30px);color:var(--ink);margin:0 0 18px}
+.reveal{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:0 auto 22px;max-width:520px}
+.reveal .mini{width:min(40vw,150px);animation:pop .5s cubic-bezier(.2,.85,.25,1) both;cursor:default}
+.reveal .mini:hover{transform:none}
+.reveal .mini:nth-child(2){animation-delay:.14s}.reveal .mini:nth-child(3){animation-delay:.28s}
+@keyframes pop{from{opacity:0;transform:translateY(18px) scale(.9)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.reveal .mini{animation:none}}
+.done{margin-top:6px;font-family:var(--label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:var(--bg);
+  background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:12px 26px;cursor:pointer}
+.done:hover{filter:brightness(1.07)}
+.cardwrap{display:flex;justify-content:center}
+
+/* ======= the collectible card (front/back flip) ======= */
+.card{width:min(90vw,360px);height:min(80svh,620px);perspective:1700px;cursor:pointer;position:relative;
+  touch-action:pan-y;-webkit-tap-highlight-color:transparent}
 .flipper{position:relative;width:100%;height:100%;transition:transform .62s cubic-bezier(.2,.72,.2,1);transform-style:preserve-3d}
 .card.flipped .flipper{transform:rotateY(180deg)}
 @media(prefers-reduced-motion:reduce){.flipper{transition:none}}
-.card:focus-visible{outline:none}
-.card:focus-visible .face{outline:2px solid var(--gold);outline-offset:3px}
-
-.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  border-radius:20px;overflow:hidden;display:flex;flex-direction:column;
-  background:linear-gradient(168deg, var(--plate), var(--bg2));border:1px solid var(--line2);
-  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.05)}
+.card:not(.flipped) .back{pointer-events:none}.card.flipped .front{pointer-events:none}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:20px;overflow:hidden;
+  display:flex;flex-direction:column;background:linear-gradient(168deg,var(--plate),var(--bg2));border:1px solid var(--line2);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.05)}
 .back{transform:rotateY(180deg)}
-/* foil frame drawn from the card's accent */
-/* foil frame drawn from the accent (dual-tone) */
 .face::before{content:"";position:absolute;inset:0;border-radius:20px;padding:1.3px;pointer-events:none;z-index:3;
-  background:linear-gradient(145deg, color-mix(in srgb,var(--accent) 92%,transparent), color-mix(in srgb,var(--gold) 30%,transparent) 30%,
-    transparent 48%, transparent 56%, color-mix(in srgb,var(--accent) 55%,transparent));
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
-  mask-composite:exclude}
-/* gloss + a faint inset keyline for a printed-card feel */
+  background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 92%,transparent),color-mix(in srgb,var(--gold) 30%,transparent) 30%,transparent 48%,transparent 56%,color-mix(in srgb,var(--accent) 55%,transparent));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 .face::after{content:"";position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:2;
-  background:
-    linear-gradient(122deg, rgba(255,255,255,.075) 0%, rgba(255,255,255,0) 24%),
-    radial-gradient(92% 46% at 16% -6%, rgba(255,255,255,.06), transparent 70%);
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%, transparent)}
-@media(hover:hover){.face::after{transition:opacity .3s ease} .card:hover .face::after{opacity:.85}}
-
+  background:linear-gradient(122deg,rgba(255,255,255,.075) 0%,rgba(255,255,255,0) 24%),radial-gradient(92% 46% at 16% -6%,rgba(255,255,255,.06),transparent 70%);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
 .cardtop{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 17px 0;flex:none}
-.type{font-family:var(--label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:10.5px;
-  color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  background:color-mix(in srgb,var(--accent) 13%, transparent);
-  border:1px solid color-mix(in srgb,var(--accent) 34%, transparent);border-radius:999px;padding:4px 11px}
+.type{font-family:var(--label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:10.5px;color:var(--accent);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:color-mix(in srgb,var(--accent) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--accent) 34%,transparent);border-radius:999px;padding:4px 11px}
 .setmark{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right;flex:none}
-.setname{font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:9.5px;
-  color:var(--accent);white-space:nowrap}
-.num{font-family:var(--label);font-weight:600;letter-spacing:.06em;font-size:11px;color:var(--muted);
-  font-variant-numeric:tabular-nums;white-space:nowrap}
-
-/* front */
-.art{margin:13px 17px 0;flex:none;aspect-ratio:16/9;border-radius:11px;overflow:hidden;position:relative;
-  border:1px solid var(--line2)}
-.art::after{content:"";position:absolute;inset:0;border-radius:11px;pointer-events:none;
-  box-shadow:inset 0 -34px 44px -32px rgba(0,0,0,.5), inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%, transparent)}
+.setname{font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:9.5px;color:var(--accent);white-space:nowrap}
+.num{font-family:var(--label);font-weight:600;letter-spacing:.06em;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.art{margin:13px 17px 0;flex:none;aspect-ratio:16/9;border-radius:11px;overflow:hidden;position:relative;border:1px solid var(--line2)}
+.art::after{content:"";position:absolute;inset:0;border-radius:11px;pointer-events:none;box-shadow:inset 0 -34px 44px -32px rgba(0,0,0,.5),inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
 .motif{position:absolute;inset:0;width:100%;height:100%}
-
-/* ---- foil tier (purely cosmetic, ~1-in-6 pull) ---- */
-.foiltag{position:absolute;top:8px;left:8px;z-index:3;display:none;align-items:center;gap:.35em;
-  font-family:var(--label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:9px;
-  color:#20160c;padding:3px 8px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(0,0,0,.5);
-  background:linear-gradient(90deg,#ffd76e,#a0f0d0,#9fd0ff,#e6a8ff,#ffd76e);background-size:220% 100%;
-  animation:holoTag 4s linear infinite}
+.foiltag{position:absolute;top:8px;left:8px;z-index:3;display:none;align-items:center;gap:.35em;font-family:var(--label);font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;font-size:9px;color:#20160c;padding:3px 8px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(0,0,0,.5);
+  background:linear-gradient(90deg,#ffd76e,#a0f0d0,#9fd0ff,#e6a8ff,#ffd76e);background-size:220% 100%;animation:holoTag 4s linear infinite}
 .card.foil .foiltag{display:inline-flex}
-@keyframes holoTag{to{background-position:220% 0}}
 .card.foil .face::before{background:conic-gradient(from 200deg,#e8869b,#7cc8f5,#93e6a6,#f5d76e,#c79bf0,#e8869b);opacity:.95}
-.card.foil .face::after{
-  background:
-    linear-gradient(122deg, rgba(255,255,255,.11) 0%, transparent 26%),
-    linear-gradient(58deg, rgba(255,120,190,.13), rgba(120,210,255,.13) 25%, rgba(150,255,180,.13) 50%, rgba(255,225,120,.13) 72%, rgba(200,140,255,.13));
-  background-size:auto, 260% 260%;
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 14%, transparent);
-  animation:holo 7s linear infinite}
-@keyframes holo{0%{background-position:0 0, 0% 50%}100%{background-position:0 0, 100% 50%}}
-@media(prefers-reduced-motion:reduce){.card.foil .face::after,.foiltag{animation:none}}
-.front .name{font-family:var(--display);font-weight:500;font-size:clamp(25px,5.6vw,33px);line-height:1.03;
-  letter-spacing:-.015em;margin:18px 17px 0;color:var(--ink);text-wrap:balance}
-.front .flavor{font-family:var(--display);font-style:italic;font-size:clamp(16px,3vw,18px);line-height:1.36;
-  color:var(--ink-soft);margin:12px 17px 0}
-.front .where{font-family:var(--label);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--muted);margin:12px 17px 0}
+.card.foil .face::after{background:linear-gradient(122deg,rgba(255,255,255,.11) 0%,transparent 26%),linear-gradient(58deg,rgba(255,120,190,.13),rgba(120,210,255,.13) 25%,rgba(150,255,180,.13) 50%,rgba(255,225,120,.13) 72%,rgba(200,140,255,.13));
+  background-size:auto,260% 260%;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 14%,transparent);animation:holo 7s linear infinite}
+.front .name{font-family:var(--display);font-weight:500;font-size:clamp(24px,5.4vw,31px);line-height:1.03;letter-spacing:-.015em;margin:18px 17px 0;color:var(--ink);text-wrap:balance}
+.front .flavor{font-family:var(--display);font-style:italic;font-size:clamp(15px,3vw,17px);line-height:1.36;color:var(--ink-soft);margin:12px 17px 0}
+.front .where{font-family:var(--label);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 17px 0}
 .cardfoot{margin-top:auto;padding:14px 17px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.tap{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);
-  font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.tap{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
 .tap .ic{font-size:14px;color:var(--accent)}
 .mono{font-family:var(--label);font-weight:700;letter-spacing:.22em;font-size:11px;color:var(--muted);opacity:.7}
-
-/* back */
 .back .body{padding:16px 18px 6px;overflow:auto;flex:1;min-height:0}
-.back .name{font-family:var(--display);font-weight:500;font-size:clamp(20px,4.4vw,25px);line-height:1.06;
-  letter-spacing:-.01em;margin:0 0 12px;color:var(--ink)}
-.prose{font-family:var(--body);font-size:16px;line-height:1.55;color:var(--ink-soft);margin:0}
+.back .name{font-family:var(--display);font-weight:500;font-size:clamp(19px,4.2vw,24px);line-height:1.06;letter-spacing:-.01em;margin:0 0 12px;color:var(--ink)}
+.prose{font-family:var(--body);font-size:15.5px;line-height:1.55;color:var(--ink-soft);margin:0}
 .points{margin:16px 0 0;padding:0;border-top:1px solid var(--line)}
-.points li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:start;
-  padding:9px 0;border-bottom:1px solid var(--line)}
+.points li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line)}
 .points li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:9px}
-.points li span{font-size:14.5px;line-height:1.45;color:var(--muted)}
-.connects{margin:15px 0 0;font-family:var(--label);font-size:12px;letter-spacing:.01em;color:var(--ink-soft);
-  border-top:1px dashed var(--line2);padding-top:12px}
+.points li span{font-size:14px;line-height:1.45;color:var(--muted)}
+.connects{margin:15px 0 0;font-family:var(--label);font-size:12px;letter-spacing:.01em;color:var(--ink-soft);border-top:1px dashed var(--line2);padding-top:12px}
 .connects b{text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--accent);margin-right:9px;font-size:10px}
 .visit{padding:10px 18px 16px;flex:none}
-.visit a{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-weight:700;letter-spacing:.03em;
-  font-size:12.5px;text-transform:uppercase;color:var(--bg);background:var(--accent);border:1px solid var(--accent);
-  border-radius:999px;padding:10px 17px;transition:filter .15s,transform .12s}
-.visit a:hover,.visit a:focus-visible{filter:brightness(1.08);transform:translateY(-1px);outline:none}
-.visit a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.visit a{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-weight:700;letter-spacing:.03em;font-size:12.5px;text-transform:uppercase;
+  color:var(--bg);background:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:10px 17px}
+.visit a:hover{filter:brightness(1.08)}
 
-.next-hint{margin:6px 0 2px;text-align:center;font-family:var(--label);font-size:11px;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--muted)}
-.next-hint .arr{display:block;font-size:15px;margin-top:6px;animation:bob 1.8s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
-@media(prefers-reduced-motion:reduce){.next-hint .arr{animation:none}}
-#sentinel{height:1px}
-.foot{padding:30px 20px 60px;text-align:center;color:var(--muted);font-family:var(--label);font-size:11.5px;
-  letter-spacing:.08em}
-.foot b{color:var(--ink-soft);font-weight:600}
 </style>
 </head>
 <body>
 <div class="topbar">
-  <button class="wordmark" id="home" aria-label="Micro Discovery Guide — start over"><span class="dot"></span>Micro&nbsp;Discovery&nbsp;Guide</button>
+  <button class="wordmark" id="home" aria-label="Micro Discovery Guide — home"><span class="dot"></span>Micro <span class="full">Discovery Guide</span></button>
   <div class="controls">
-    <button class="btn" id="shuffle">Shuffle</button>
+    <button class="btn tab on" data-view="packs" id="tab-packs">Packs</button>
+    <button class="btn tab" data-view="collection" id="tab-coll">Binder</button>
     <button class="btn" id="theme" aria-label="Toggle light and dark">Theme</button>
   </div>
 </div>
-
-<main id="feed"></main>
-<div id="sentinel"></div>
-<footer class="foot"><b>Tap a card to flip it.</b> A deck of how the world works — no ads. Keep scrolling for another.</footer>
+<main id="view"></main>
+<button class="close" id="closeov" aria-label="Close">✕</button>
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
 <script>
+
 function motif(kind, a){
   var svg, i;
   if(kind==="scroll"){
@@ -226,13 +239,10 @@ function motif(kind, a){
     svg='<polygon points="180,30 300,120 240,220 120,220 60,120" fill="none" stroke="'+a+'" stroke-width="1.3" opacity=".9"/>'+
         '<path d="M60 120 L180 120 L300 120 M180 30 L180 120 M120 220 L180 120 L240 220" stroke="'+a+'" stroke-width="1" opacity=".55" fill="none"/>';
   }
-  var grad='radial-gradient(120% 170% at 82% -10%, color-mix(in srgb,'+a+' 34%, transparent), transparent 62%),'+
-           'linear-gradient(160deg, var(--plate), var(--bg2))';
-  return '<div class="motif" style="background:'+grad+'"></div>'+
-         '<svg class="motif" viewBox="0 0 360 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'+svg+'</svg>';
+  var grad='radial-gradient(120% 170% at 82% -10%, color-mix(in srgb,'+a+' 34%, transparent), transparent 62%),linear-gradient(160deg, var(--plate), var(--bg2))';
+  return '<div class="motif" style="background:'+grad+'"></div><svg class="motif" viewBox="0 0 360 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'+svg+'</svg>';
 }
 
-/* =================== THE DECK — each card flips: front = the face, back = the story =================== */
 var CARDS = [
 
 /* ---- How it's made — real makers, linked back to them ---- */
@@ -532,82 +542,157 @@ var CARDS = [
 
 ];
 
-/* =================== THE FEED — random, infinite, each card flips =================== */
-var feed=document.getElementById('feed');
-var bag=[], lastId=null, firstCard=true, TOTAL=CARDS.length;
-function pad(n){ n=String(n); return n.length<2?'0'+n:n; }
-
-/* group cards into named Series (sets) by category, and number each within its set */
+/* ===== sets ===== */
+var SERIES=["Makers of Hawaii","Time","Navigation","Materials","Signals","Cosmos","Life & Medicine","Earth & Elements","Civilization"];
+var SERIES_COLOR={"Makers of Hawaii":"#c9a24b","Time":"#2f8f9d","Navigation":"#5b8fb0","Materials":"#b07d3f","Signals":"#8f7bc0","Cosmos":"#7b86c9","Life & Medicine":"#7d9b5b","Earth & Elements":"#6f7f86","Civilization":"#b0894a"};
 var CAT_SERIES={
-  "Hawaiian gold":"Hawaiʻi","Hawaiian jewelry":"Hawaiʻi","Black coral":"Hawaiʻi","Shell lei":"Hawaiʻi",
-  "Koa wood":"Hawaiʻi","Koa rings":"Hawaiʻi","Koa jewelry":"Hawaiʻi","Sunrise shells":"Hawaiʻi",
-  "ʻUkulele":"Hawaiʻi","Surfboards":"Hawaiʻi",
+  "Hawaiian gold":"Makers of Hawaii","Hawaiian jewelry":"Makers of Hawaii","Black coral":"Makers of Hawaii","Shell lei":"Makers of Hawaii",
+  "Koa wood":"Makers of Hawaii","Koa rings":"Makers of Hawaii","Koa jewelry":"Makers of Hawaii","Sunrise shells":"Makers of Hawaii",
+  "ʻUkulele":"Makers of Hawaii","Surfboards":"Makers of Hawaii",
   "Time":"Time","Navigation":"Navigation","Materials":"Materials",
   "Computing":"Signals","Physics":"Signals","Energy":"Signals",
-  "Astronomy":"Cosmos","Space":"Cosmos",
-  "Life":"Life & Medicine","Medicine":"Life & Medicine",
+  "Astronomy":"Cosmos","Space":"Cosmos","Life":"Life & Medicine","Medicine":"Life & Medicine",
   "Chemistry":"Earth & Elements","Earth":"Earth & Elements","Climate":"Earth & Elements","Geology":"Earth & Elements",
   "Human history":"Civilization","Agriculture":"Civilization","Economics":"Civilization","Mathematics":"Civilization",
   "Architecture":"Civilization","Flight":"Civilization","Engineering":"Civilization"
 };
-(function(){ var count={}, i;
-  for(i=0;i<CARDS.length;i++){ var s=CAT_SERIES[CARDS[i].cat]||"Micro"; CARDS[i].series=s; count[s]=(count[s]||0)+1; CARDS[i]._n=count[s]; }
-  for(i=0;i<CARDS.length;i++){ CARDS[i]._of=count[CARDS[i].series]; }
-})();
+var TARGET=20, FOIL_P=0.08;
+(function(){ var count={},i; for(i=0;i<CARDS.length;i++){var s=CAT_SERIES[CARDS[i].cat]||"Micro";CARDS[i].series=s;count[s]=(count[s]||0)+1;CARDS[i]._n=count[s];} for(i=0;i<CARDS.length;i++){CARDS[i]._of=count[CARDS[i].series];} })();
+function pad(n){ n=String(n); return n.length<2?'0'+n:n; }
+function cardsOf(s){ return CARDS.filter(function(c){return c.series===s;}); }
+function cardById(id){ for(var i=0;i<CARDS.length;i++) if(CARDS[i].id===id) return CARDS[i]; return null; }
 
-function shuffle(arr){ var a=arr.slice(), i, j, t;
-  for(i=a.length-1;i>0;i--){ j=Math.floor(Math.random()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
-function refill(){ bag=shuffle(CARDS); if(bag.length>1 && bag[0].id===lastId){ bag.push(bag.shift()); } }
-function nextCard(){ if(!bag.length) refill(); var c=bag.shift(); lastId=c.id; return c; }
+/* ===== state / economy ===== */
+var SKEY='mdg-collection-v1', S, MSG=null, MSGN=0;
+function load(){ try{S=JSON.parse(localStorage.getItem(SKEY));}catch(e){S=null;} if(!S)S={}; if(!S.coll)S.coll={}; if(!S.packs)S.packs=[]; }
+function save(){ try{localStorage.setItem(SKEY,JSON.stringify(S));}catch(e){} }
+function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function daysBetween(a,b){ var pa=a.split('-'),pb=b.split('-'); return Math.round((new Date(+pb[0],+pb[1]-1,+pb[2])-new Date(+pa[0],+pa[1]-1,+pa[2]))/86400000); }
+function initEconomy(){
+  var today=ymd(new Date());
+  if(!S.started){ S.started=true; S.packs=SERIES.slice(); S.lastDaily=today; MSG="welcome"; save(); return; }
+  if(S.lastDaily!==today){
+    var missed=Math.max(0,daysBetween(S.lastDaily,today)), grant=Math.min(missed,7), i;
+    for(i=0;i<grant;i++) S.packs.push(SERIES[Math.floor(Math.random()*SERIES.length)]);
+    S.lastDaily=today; if(grant>0){MSG="daily";MSGN=grant;} save();
+  }
+}
+function ownedInSet(s){ return cardsOf(s).filter(function(c){return S.coll[c.id];}).length; }
+function foilsInSet(s){ return cardsOf(s).filter(function(c){return S.coll[c.id]&&S.coll[c.id].foil;}).length; }
 
-function cardHTML(c){
-  var top='<div class="cardtop"><span class="type">'+c.cat+'</span>'+
-    '<span class="setmark"><span class="setname">'+c.series+'</span><span class="num">'+pad(c._n)+' / '+pad(c._of)+'</span></span></div>';
-  var front='<div class="face front">'+top+
-      '<div class="art">'+motif(c.motif,c.accent)+'<span class="foiltag">✦ Foil</span></div>'+
-      '<h2 class="name">'+c.title+'</h2>'+
-      '<p class="flavor">'+c.hook+'</p>'+
-      (c.where?'<div class="where">'+c.where+'</div>':'')+
-      '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div><div class="mono">M·D·G</div></div>'+
-    '</div>';
-  var points='';
-  if(c.facts && c.facts.length){ points='<ul class="points">';
-    for(var i=0;i<c.facts.length;i++) points+='<li><span>'+c.facts[i]+'</span></li>'; points+='</ul>'; }
+function openPack(setName){
+  var pool=cardsOf(setName).slice(),i,j,t;
+  for(i=pool.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=pool[i];pool[i]=pool[j];pool[j]=t;}
+  var picks=pool.slice(0,Math.min(3,pool.length));
+  var res=picks.map(function(c){
+    var foil=Math.random()<FOIL_P, had=S.coll[c.id], isNew=!had;
+    if(!had) S.coll[c.id]={n:0,foil:false};
+    S.coll[c.id].n++;
+    var newFoil=false; if(foil&&!S.coll[c.id].foil){S.coll[c.id].foil=true;newFoil=true;}
+    return {c:c,foil:foil,isNew:isNew,newFoil:newFoil};
+  });
+  var idx=S.packs.indexOf(setName); if(idx>=0) S.packs.splice(idx,1);
+  save(); return res;
+}
+
+/* ===== rendering ===== */
+var view=document.getElementById('view'), overlay=document.getElementById('overlay'), sheet=document.getElementById('sheet'),
+    closeBtn=document.getElementById('closeov'), current='packs', activeSet=SERIES[0];
+
+function miniHTML(c, o){
+  o=o||{};
+  if(o.locked) return '<div class="mini locked" aria-hidden="true"><span class="q">?</span></div>';
+  return '<div class="mini'+(o.foil?' foil':'')+'" data-id="'+c.id+'" tabindex="0" role="button" aria-label="'+c.title+'" style="--accent:'+c.accent+'">'+
+    (o.isNew?'<span class="newbadge">New</span>':'')+(o.foil?'<span class="ministar">✦</span>':'')+
+    '<div class="miniart">'+motif(c.motif,c.accent)+'</div>'+
+    '<div class="mininame">'+c.title+'</div><div class="mininum">'+c.series+' · '+pad(c._n)+'/'+pad(c._of)+'</div></div>';
+}
+function faceHTML(c, foil){
+  var top='<div class="cardtop"><span class="type">'+c.cat+'</span><span class="setmark"><span class="setname">'+c.series+'</span><span class="num">'+pad(c._n)+' / '+pad(c._of)+'</span></span></div>';
+  var front='<div class="face front">'+top+'<div class="art">'+motif(c.motif,c.accent)+'<span class="foiltag">✦ Foil</span></div>'+
+    '<h2 class="name">'+c.title+'</h2><p class="flavor">'+c.hook+'</p>'+(c.where?'<div class="where">'+c.where+'</div>':'')+
+    '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div><div class="mono">M·D·G</div></div></div>';
+  var points=''; if(c.facts&&c.facts.length){ points='<ul class="points">'; for(var i=0;i<c.facts.length;i++) points+='<li><span>'+c.facts[i]+'</span></li>'; points+='</ul>'; }
   var connects=c.connects?'<div class="connects"><b>Connects to</b>'+c.connects+'</div>':'';
   var visit=c.url?'<div class="visit"><a href="'+c.url+'" target="_blank" rel="noopener noreferrer">'+(c.link||('Visit '+c.title))+' ↗</a></div>':'';
-  var back='<div class="face back">'+top+
-      '<div class="body"><h3 class="name">'+c.title+'</h3><p class="prose">'+c.back+'</p>'+points+connects+'</div>'+
-      visit+
-    '</div>';
-  var hint=firstCard?'<div class="next-hint">Scroll for another<span class="arr">↓</span></div>':'';
-  return '<div class="slot"><div class="card" tabindex="0" role="button" aria-label="'+c.title+' — tap to flip">'+
-    '<div class="flipper">'+front+back+'</div></div>'+hint+'</div>';
+  var back='<div class="face back">'+top+'<div class="body"><h3 class="name">'+c.title+'</h3><p class="prose">'+c.back+'</p>'+points+connects+'</div>'+visit+'</div>';
+  return '<div class="card'+(foil?' foil':'')+'" tabindex="0" role="button" aria-label="'+c.title+' — tap to flip" style="--accent:'+c.accent+'"><div class="flipper">'+front+back+'</div></div>';
 }
-function addCard(){ var wrap=document.createElement('div'); wrap.innerHTML=cardHTML(nextCard());
-  var slot=wrap.firstChild;
-  if(Math.random()<0.16){ var cd=slot.querySelector('.card'); if(cd) cd.classList.add('foil'); } // ~1-in-6 pull is foil
-  feed.appendChild(slot); firstCard=false; }
-function topUp(){ var d=document.documentElement, g=0;
-  while(d.scrollHeight-(d.scrollTop+d.clientHeight) < d.clientHeight*2 && g++<8){ addCard(); } }
-function reset(){ feed.innerHTML=''; bag=[]; lastId=null; firstCard=true; addCard(); window.scrollTo(0,0); topUp(); }
 
-var io=new IntersectionObserver(function(e){ if(e[0].isIntersecting) topUp(); },{rootMargin:'1200px 0px'});
-io.observe(document.getElementById('sentinel'));
-var ticking=false;
-window.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ topUp(); ticking=false; }); } },{passive:true});
-window.addEventListener('resize',topUp);
+function renderPacks(){
+  var packs=S.packs, counts={}, i;
+  for(i=0;i<packs.length;i++) counts[packs[i]]=(counts[packs[i]]||0)+1;
+  var order=SERIES.filter(function(s){return counts[s];});
+  var h='<div class="view"><div class="vhead">Booster Packs</div>';
+  var totalCards=Object.keys(S.coll).length;
+  h+='<div class="vsub">'+packs.length+' pack'+(packs.length===1?'':'s')+' to open · '+totalCards+' of '+CARDS.length+' cards collected · a new pack every day</div>';
+  var msg=MSG,msgN=MSGN; MSG=null;
+  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> We\'ve stocked your bag with one booster from every set — tap a pack to rip it open.</div>';
+  else if(msg==="daily") h+='<div class="banner"><b>Daily booster'+(msgN>1?'s':'')+' added!</b> '+msgN+' new pack'+(msgN>1?'s':'')+' waiting below.</div>';
+  if(!packs.length){ h+='<div class="empty">No packs right now. Come back tomorrow for your daily booster — or open your Binder to admire what you\'ve collected.</div></div>'; view.innerHTML=h; return; }
+  h+='<div class="packgrid">';
+  for(i=0;i<order.length;i++){ var s=order[i];
+    h+='<button class="packtile" data-open="'+s+'" style="--pc:'+SERIES_COLOR[s]+'"><span class="plogo">M·D·G</span>'+
+       '<span class="pset">'+s+'</span><span class="pcount">Booster'+(counts[s]>1?' · ×'+counts[s]:'')+'</span></button>';
+  }
+  h+='</div></div>'; view.innerHTML=h;
+}
+function renderCollection(){
+  var h='<div class="view"><div class="vhead">Your Binder</div>';
+  var totalOwned=Object.keys(S.coll).length;
+  h+='<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · tap a card to read it (and flip for the full story)</div>';
+  h+='<div class="settabs">';
+  for(var i=0;i<SERIES.length;i++){ var s=SERIES[i];
+    h+='<button class="settab'+(s===activeSet?' on':'')+'" data-set="'+s+'" style="--sc:'+SERIES_COLOR[s]+'">'+s+' <span style="opacity:.7">'+ownedInSet(s)+'/'+TARGET+'</span></button>';
+  }
+  h+='</div>';
+  var setCards=cardsOf(activeSet), owned=ownedInSet(activeSet), foils=foilsInSet(activeSet), pct=Math.round(owned/TARGET*100);
+  h+='<div class="setinfo"><span class="pct">'+owned+' / '+TARGET+'</span><div class="pbar" style="--sc:'+SERIES_COLOR[activeSet]+'"><i style="width:'+pct+'%"></i></div>'+
+     '<span class="foils">'+foils+' foil'+(foils===1?'':'s')+'</span></div>';
+  h+='<div class="binder">';
+  for(i=0;i<setCards.length;i++){ var c=setCards[i], rec=S.coll[c.id];
+    if(rec) h+=miniHTML(c,{foil:rec.foil});
+    else h+=miniHTML(c,{locked:true});
+  }
+  for(i=setCards.length;i<TARGET;i++) h+='<div class="mini locked" aria-hidden="true"><span class="q">+</span></div>';
+  h+='</div></div>'; view.innerHTML=h;
+}
+function showView(v){ current=v;
+  document.getElementById('tab-packs').classList.toggle('on',v==='packs');
+  document.getElementById('tab-coll').classList.toggle('on',v==='collection');
+  if(v==='packs') renderPacks(); else renderCollection();
+  window.scrollTo(0,0);
+}
+function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); }
+function closeOverlay(){ overlay.classList.remove('on'); closeBtn.classList.remove('on'); sheet.innerHTML='';
+  if(current==='packs') renderPacks(); else renderCollection(); }
 
-/* flip on tap/click (but not when tapping a link); keyboard too */
-feed.addEventListener('click',function(e){
-  if(e.target.closest('a')) return;
-  var card=e.target.closest('.card'); if(card) card.classList.toggle('flipped');
+function packFlow(setName){
+  var res=openPack(setName);
+  var anyFoil=res.some(function(r){return r.foil;});
+  var h='<div class="reveal-h">'+setName+' Booster</div><div class="reveal-s">'+(anyFoil?'✦ A foil! Nice pull.':'You pulled…')+'</div><div class="reveal">';
+  res.forEach(function(r){ h+=miniHTML(r.c,{foil:r.foil,isNew:r.isNew}); });
+  h+='</div><button class="done" id="revealdone">Add to binder</button>';
+  openOverlay(h);
+  document.getElementById('revealdone').addEventListener('click',closeOverlay);
+}
+function showCardModal(id){ var c=cardById(id); if(!c) return; var foil=S.coll[id]&&S.coll[id].foil;
+  openOverlay('<div class="cardwrap">'+faceHTML(c,foil)+'</div>'); }
+
+/* ===== events ===== */
+document.getElementById('home').addEventListener('click',function(){ showView('packs'); });
+document.getElementById('tab-packs').addEventListener('click',function(){ showView('packs'); });
+document.getElementById('tab-coll').addEventListener('click',function(){ showView('collection'); });
+closeBtn.addEventListener('click',closeOverlay);
+overlay.addEventListener('click',function(e){ if(e.target===overlay) closeOverlay(); });
+
+view.addEventListener('click',function(e){
+  var pk=e.target.closest('[data-open]'); if(pk){ packFlow(pk.getAttribute('data-open')); return; }
+  var st=e.target.closest('[data-set]'); if(st){ activeSet=st.getAttribute('data-set'); renderCollection(); return; }
+  var mn=e.target.closest('.mini[data-id]'); if(mn){ showCardModal(mn.getAttribute('data-id')); return; }
 });
-feed.addEventListener('keydown',function(e){
-  if(e.key==='Enter'||e.key===' '){ var card=e.target.closest('.card'); if(card){ e.preventDefault(); card.classList.toggle('flipped'); } }
-});
-
-document.getElementById('home').addEventListener('click',reset);
-document.getElementById('shuffle').addEventListener('click',reset);
+view.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ var mn=e.target.closest('.mini[data-id]'); if(mn){ e.preventDefault(); showCardModal(mn.getAttribute('data-id')); } } });
+sheet.addEventListener('click',function(e){ if(e.target.closest('a')) return; var card=e.target.closest('.card'); if(card) card.classList.toggle('flipped'); });
 
 var root=document.documentElement;
 try{var saved=localStorage.getItem('mdg-mag-theme'); if(saved)root.setAttribute('data-theme',saved);}catch(e){}
@@ -617,7 +702,8 @@ document.getElementById('theme').addEventListener('click',function(){
   try{localStorage.setItem('mdg-mag-theme',nxt);}catch(e){}
 });
 
-reset();
+load(); initEconomy(); showView('packs');
+
 </script>
 </body>
 </html>
