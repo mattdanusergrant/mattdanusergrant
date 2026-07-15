@@ -3,826 +3,283 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Makers Deserve Glory — how things are made</title>
-<meta name="description" content="A no-ads digital magazine where makers take things apart to show how they're built and how they work. Issue Nº 1: the jewelry of Hawaiʻi — gold heirloom bracelets, Niʻihau shell lei, black coral, koa wood, and the sunrise shell. Read it instead of watching." />
+<title>Makers Deserve Glory — one maker at a time</title>
+<meta name="description" content="A no-ads micro-learning feed of real makers and how they make things. Land on a random maker, scroll for another. Every card links straight back to the maker." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#0d1413" />
-<!-- Link preview -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Makers Deserve Glory" />
-<meta property="og:title" content="Makers Deserve Glory — how things are made" />
-<meta property="og:description" content="How it's made, no ads: a magazine where makers take things apart. Issue Nº 1 is the jewelry of Hawaiʻi." />
+<meta property="og:title" content="Makers Deserve Glory — one maker at a time" />
+<meta property="og:description" content="A no-ads micro-learning feed of real makers and how they make things. Scroll for a random maker; every card links back to them." />
 <meta property="og:url" content="https://mattdanusergrant.com/makersdeserveglory/" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Makers Deserve Glory" />
-<meta name="twitter:description" content="How it's made, no ads: a magazine where makers take things apart. Issue Nº 1 — the jewelry of Hawaiʻi." />
+<meta name="twitter:description" content="A no-ads micro-learning feed of real makers and how they make things." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@500;600;700&display=swap" rel="stylesheet" />
 
 <style>
-/* ============ MAKERS DESERVE GLORY — a jewel-box reader ============ */
+/* ============ MAKERS DESERVE GLORY — a micro-learning maker feed ============ */
 :root{
   --display:'Fraunces','Hoefler Text','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
   --body:'Newsreader','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
   --label:'Archivo','Helvetica Neue',system-ui,-apple-system,sans-serif;
 
-  /* deep-water jewel box (default / dark) */
-  --bg:#0d1413;
-  --bg2:#131c1b;
-  --plate:#16211f;
-  --ink:#f3ede1;
-  --ink-soft:#d8d2c5;
-  --muted:#93a09c;
-  --line:#243230;
-  --line2:#33453f;
-  --gold:#c9a24b;
-  --gold-soft:#e3c987;
+  --bg:#0d1413; --bg2:#131c1b; --plate:#16211f; --ink:#f3ede1; --ink-soft:#d8d2c5;
+  --muted:#93a09c; --line:#243230; --line2:#33453f; --gold:#c9a24b; --gold-soft:#e3c987;
   --shadow:0 24px 60px -30px rgba(0,0,0,.8);
-  /* per-article accent — overwritten inline */
-  --accent:#c9a24b;
-  --accent-soft:#e3c987;
+  --accent:#c9a24b; --accent-soft:#e3c987;
 }
 :root[data-theme="dark"]{
   --bg:#0d1413; --bg2:#131c1b; --plate:#16211f; --ink:#f3ede1; --ink-soft:#d8d2c5;
   --muted:#93a09c; --line:#243230; --line2:#33453f; --gold:#c9a24b; --gold-soft:#e3c987;
   --shadow:0 24px 60px -30px rgba(0,0,0,.8);
 }
-/* cool shell (light) — deliberately cooler than the cream cliché */
 @media(prefers-color-scheme:light){
-  :root{
-    --bg:#eae7de; --bg2:#f2efe7; --plate:#f4f1ea; --ink:#182421; --ink-soft:#3a4744;
+  :root{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f4f1ea; --ink:#182421; --ink-soft:#3a4744;
     --muted:#6f7a72; --line:#d8d3c4; --line2:#c6c0ae; --gold:#9c7a2b; --gold-soft:#b89440;
-    --shadow:0 22px 48px -30px rgba(40,44,40,.35);
-  }
+    --shadow:0 22px 48px -30px rgba(40,44,40,.35); }
 }
-:root[data-theme="light"]{
-  --bg:#eae7de; --bg2:#f2efe7; --plate:#f4f1ea; --ink:#182421; --ink-soft:#3a4744;
+:root[data-theme="light"]{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f4f1ea; --ink:#182421; --ink-soft:#3a4744;
   --muted:#6f7a72; --line:#d8d3c4; --line2:#c6c0ae; --gold:#9c7a2b; --gold-soft:#b89440;
-  --shadow:0 22px 48px -30px rgba(40,44,40,.35);
-}
+  --shadow:0 22px 48px -30px rgba(40,44,40,.35); }
 
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{
-  margin:0;background:var(--bg);color:var(--ink);
-  font-family:var(--body);font-size:19px;line-height:1.65;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-  font-optical-sizing:auto;
-}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:19px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-optical-sizing:auto}
 a{color:inherit;text-decoration:none}
-img{max-width:100%}
 ::selection{background:var(--gold);color:#0d1413}
 
-/* ---- reading progress ---- */
-#progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
-  background:linear-gradient(90deg,var(--gold-soft),var(--gold));transition:width .12s linear}
-
-/* ---- top bar ---- */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
-  gap:14px;padding:12px clamp(16px,5vw,40px);
-  background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--line)}
-.topbar .wordmark{font-family:var(--label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-  font-size:clamp(10.5px,2.4vw,12.5px);color:var(--ink);display:flex;align-items:center;gap:.55em;cursor:pointer;
-  background:none;border:0;white-space:nowrap}
-.topbar .wordmark .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
-.topbar .controls{display:flex;align-items:center;gap:8px}
-.btn{font-family:var(--label);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:11.5px;
+/* top bar */
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:12px clamp(14px,4vw,32px);background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.wordmark{display:flex;align-items:center;gap:.55em;background:none;border:0;cursor:pointer;
+  font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  font-size:clamp(10.5px,2.4vw,12.5px);color:var(--ink);white-space:nowrap}
+.wordmark .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
+.controls{display:flex;gap:8px}
+.btn{font-family:var(--label);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:11.5px;
   color:var(--muted);background:none;border:1px solid var(--line2);border-radius:999px;padding:7px 13px;cursor:pointer;
   transition:color .2s,border-color .2s}
 .btn:hover,.btn:focus-visible{color:var(--ink);border-color:var(--gold)}
 .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-@media(max-width:470px){
-  .topbar{padding-left:12px;padding-right:12px;gap:8px}
-  .topbar .wordmark{letter-spacing:.05em}
-  .topbar .controls{gap:6px}
-  .btn{padding:6px 9px;letter-spacing:.05em}
-}
+@media(max-width:430px){ .btn{padding:6px 10px;letter-spacing:.03em} .wordmark{letter-spacing:.05em} }
 
-/* ---- shell ---- */
-main{max-width:1120px;margin:0 auto;padding:0 clamp(16px,5vw,40px)}
-.kicker{font-family:var(--label);font-weight:700;letter-spacing:.22em;text-transform:uppercase;
-  font-size:12px;color:var(--accent);display:inline-flex;align-items:center;gap:.7em}
+/* the feed */
+#feed{display:flex;flex-direction:column}
+.card{min-height:calc(100svh - 54px);display:flex;flex-direction:column;justify-content:center;
+  padding:clamp(30px,6vw,64px) clamp(18px,5vw,32px);border-bottom:1px solid var(--line);position:relative}
+.card .inner{max-width:640px;margin:0 auto;width:100%;animation:rise .5s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.card .inner{animation:none}}
+
+.kicker{font-family:var(--label);font-weight:700;letter-spacing:.2em;text-transform:uppercase;font-size:12px;
+  color:var(--accent);display:inline-flex;align-items:center;gap:.7em;margin-bottom:16px}
 .kicker::before{content:"";width:22px;height:1px;background:var(--accent);display:inline-block}
+.card h2{font-family:var(--display);font-weight:500;font-size:clamp(38px,8vw,66px);line-height:1;
+  letter-spacing:-.02em;margin:0;text-wrap:balance}
+.card .hook{font-family:var(--display);font-style:italic;color:var(--ink-soft);font-size:clamp(20px,3.4vw,25px);
+  line-height:1.35;margin:16px 0 0;text-wrap:pretty}
 
-/* ============ COVER ============ */
-.cover-mast{padding:clamp(36px,7vw,72px) 0 clamp(22px,4vw,34px);text-align:center;
-  border-bottom:1px solid var(--line);position:relative;overflow:hidden}
-.cover-mast .issue{font-family:var(--label);font-weight:600;letter-spacing:.34em;text-transform:uppercase;
-  font-size:12px;color:var(--muted);margin-bottom:20px}
-.cover-mast h1{font-family:var(--display);font-weight:600;font-optical-sizing:auto;
-  font-size:clamp(40px,9.4vw,104px);line-height:.96;letter-spacing:-.02em;margin:0 auto;max-width:11ch;
-  text-wrap:balance;
-  background:linear-gradient(180deg,var(--ink),color-mix(in srgb,var(--ink) 72%,var(--gold)));
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-.cover-mast .tag{font-family:var(--display);font-style:italic;font-size:clamp(17px,3.2vw,22px);
-  color:var(--ink-soft);margin-top:18px}
-.shimmer{height:1px;width:min(560px,80%);margin:26px auto 0;position:relative;
-  background:linear-gradient(90deg,transparent,var(--line2),transparent)}
-.shimmer::after{content:"";position:absolute;top:0;left:0;height:100%;width:120px;
-  background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:sweep 5.5s ease-in-out infinite}
-@keyframes sweep{0%{transform:translateX(-60px);opacity:0}
-  15%{opacity:1}50%{transform:translateX(min(440px,70vw));opacity:1}65%,100%{opacity:0}}
-@media(prefers-reduced-motion:reduce){.shimmer::after{animation:none;opacity:.6}}
-.ethos{max-width:640px;margin:22px auto 0;color:var(--muted);font-size:16px;line-height:1.7}
-.ethos b{color:var(--ink-soft);font-weight:500;font-style:italic;font-family:var(--display)}
-
-/* hero feature */
-.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(20px,4vw,52px);align-items:center;
-  padding:clamp(32px,6vw,64px) 0;border-bottom:1px solid var(--line)}
-@media(max-width:760px){.hero{grid-template-columns:1fr;gap:22px}}
-.hero .plate{aspect-ratio:4/3;border-radius:4px;border:1px solid var(--line2);position:relative;overflow:hidden;
-  box-shadow:var(--shadow);order:2}
-@media(max-width:760px){.hero .plate{order:-1;aspect-ratio:16/10}}
-.hero-txt{order:1}
-.hero-txt h2{font-family:var(--display);font-weight:500;font-size:clamp(34px,5.6vw,60px);line-height:1.02;
-  letter-spacing:-.015em;margin:16px 0 0;text-wrap:balance}
-.hero-txt .dek{font-family:var(--display);font-style:italic;color:var(--ink-soft);font-size:clamp(18px,2.6vw,22px);
-  line-height:1.4;margin:16px 0 0}
-.hero-txt .go{margin-top:24px;display:inline-flex;align-items:center;gap:.6em;font-family:var(--label);
-  font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12.5px;color:var(--ink);
-  border-bottom:2px solid var(--gold);padding-bottom:4px}
-.hero-txt .meta{margin-top:14px;font-family:var(--label);font-size:11.5px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--muted)}
-
-/* contents index */
-.contents{padding:clamp(30px,5vw,52px) 0 clamp(48px,8vw,90px)}
-.contents .h{font-family:var(--label);font-weight:700;letter-spacing:.28em;text-transform:uppercase;
-  font-size:12.5px;color:var(--muted);margin:0 0 6px}
-.contents .h-rule{height:1px;background:var(--line);margin:0 0 6px}
-.entry{display:grid;grid-template-columns:auto 1fr auto;gap:clamp(14px,3vw,30px);align-items:baseline;
-  padding:22px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:background .2s}
-.entry:hover{background:color-mix(in srgb,var(--gold) 6%,transparent)}
-.entry .folio{font-family:var(--display);font-size:clamp(20px,3vw,26px);color:var(--accent);
-  font-variant-numeric:tabular-nums;min-width:1.6em}
-.entry .body .kicker{font-size:11px;margin-bottom:9px}
-.entry .body h3{font-family:var(--display);font-weight:500;font-size:clamp(24px,3.6vw,34px);line-height:1.06;
-  letter-spacing:-.01em;margin:0;text-wrap:balance}
-.entry:hover .body h3{color:var(--gold-soft)}
-.entry .body .dek{font-family:var(--display);font-style:italic;color:var(--muted);font-size:16.5px;
-  line-height:1.4;margin:8px 0 0;max-width:52ch}
-.entry .rt{font-family:var(--label);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--muted);white-space:nowrap;text-align:right}
-.entry .rt b{display:block;font-family:var(--display);font-style:normal;font-size:22px;color:var(--ink-soft);letter-spacing:0}
-
-/* ============ ARTICLE ============ */
-.article{max-width:720px;margin:0 auto;padding:clamp(26px,5vw,52px) 0 40px;animation:rise .5s ease both}
-@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.article{animation:none}}
-.article .band{height:6px;border-radius:3px;margin-bottom:26px;
-  background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 30%,var(--gold-soft)))}
-.article h1{font-family:var(--display);font-weight:500;font-size:clamp(38px,7vw,70px);line-height:1.0;
-  letter-spacing:-.02em;margin:14px 0 0;text-wrap:balance}
-.article .dek{font-family:var(--display);font-style:italic;color:var(--ink-soft);
-  font-size:clamp(20px,3.2vw,25px);line-height:1.4;margin:20px 0 0;text-wrap:pretty}
-.article .byline{font-family:var(--label);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--muted);margin:24px 0 0;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
-.article .byline .sep{width:4px;height:4px;border-radius:50%;background:var(--accent)}
-.article .platewide{aspect-ratio:16/8;border-radius:4px;border:1px solid var(--line2);overflow:hidden;
-  margin:30px 0 8px;position:relative;box-shadow:var(--shadow)}
-
-.prose{margin-top:26px}
-.prose p{margin:0 0 22px}
-.prose p a{border-bottom:1px solid var(--line2)}
-.prose > p:first-of-type::first-letter{font-family:var(--display);font-weight:600;float:left;
-  font-size:4.3em;line-height:.78;padding:.02em .12em 0 0;color:var(--accent)}
-.prose h2{font-family:var(--display);font-weight:500;font-size:clamp(24px,3.6vw,31px);line-height:1.15;
-  letter-spacing:-.01em;margin:44px 0 4px;text-wrap:balance}
-.prose h2 + p{margin-top:12px}
-
-.pull{font-family:var(--display);font-style:italic;font-weight:400;font-size:clamp(24px,4.2vw,33px);
-  line-height:1.24;color:var(--ink);margin:38px 0;padding:6px 0 6px 26px;border-left:3px solid var(--accent);
-  text-wrap:balance}
-
-.note{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:20px 22px;margin:34px 0;
-  font-size:17px;line-height:1.6}
-.note .lab{font-family:var(--label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-  font-size:11px;color:var(--accent);margin-bottom:8px;display:block}
-.note p{margin:0}
-
-/* material spec list */
-.spec{border-top:1px solid var(--line2);margin:34px 0}
-.spec .lab{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-  font-size:11px;color:var(--muted);padding:12px 0 4px}
-.spec dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:0}
-.spec dt{font-family:var(--label);font-weight:600;font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;
-  color:var(--ink-soft);padding:12px 20px 12px 0;border-bottom:1px solid var(--line);white-space:nowrap}
-.spec dd{margin:0;padding:12px 0;border-bottom:1px solid var(--line);color:var(--muted);font-size:16.5px}
-
-/* the how-it's-made sequence (numbering is real here) */
-.steps{margin:34px 0;counter-reset:step}
-.steps .lab{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-  font-size:11px;color:var(--accent);margin-bottom:6px}
-.step{display:grid;grid-template-columns:auto 1fr;gap:20px;padding:22px 0;border-top:1px solid var(--line);
-  counter-increment:step}
-.step::before{content:counter(step,decimal-leading-zero);font-family:var(--display);font-size:26px;
-  color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
-.step h4{font-family:var(--display);font-weight:500;font-size:21px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
-.step p{margin:0;font-size:17px;line-height:1.6;color:var(--ink-soft)}
-
-/* footer nav */
-.artnav{border-top:1px solid var(--line);margin-top:48px;padding:30px 0 0;display:flex;justify-content:space-between;
-  gap:16px;flex-wrap:wrap}
-.artnav a{font-family:var(--label);letter-spacing:.06em;text-transform:uppercase;font-size:12px;font-weight:600;
-  color:var(--muted);display:flex;flex-direction:column;gap:4px;max-width:46%}
-.artnav a:hover{color:var(--ink)}
-.artnav a .t{font-family:var(--display);text-transform:none;letter-spacing:0;font-size:19px;color:var(--ink-soft);
-  font-weight:500}
-.artnav a.next{text-align:right;align-items:flex-end;margin-left:auto}
-
-/* the makers — the point of the magazine */
-.makers{margin:44px 0 8px;border-top:2px solid var(--accent);padding-top:22px}
-.makers-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 14px;margin-bottom:16px}
-.makers-h .lab{font-family:var(--label);font-weight:700;letter-spacing:.18em;text-transform:uppercase;
-  font-size:12px;color:var(--accent)}
-.makers-h .sub{font-family:var(--display);font-style:italic;color:var(--muted);font-size:16px}
-.maker{display:block;border:1px solid var(--line2);border-radius:8px;padding:15px 17px;margin-bottom:10px;
-  background:var(--bg2);transition:border-color .2s,transform .12s,background .2s}
-.maker:hover,.maker:focus-visible{border-color:var(--accent);transform:translateY(-1px);outline:none}
-.maker:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.mk-name{display:block;font-family:var(--display);font-weight:500;font-size:19px;color:var(--ink);letter-spacing:-.01em}
-.maker:hover .mk-name{color:var(--gold-soft)}
-.mk-arr{font-size:14px;color:var(--accent);vertical-align:1px}
-.mk-what{display:block;font-size:15.5px;line-height:1.5;color:var(--muted);margin-top:3px}
-
-/* issue tabs on the cover */
-.issue-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
-.itab{font-family:var(--label);font-weight:600;letter-spacing:.03em;font-size:12.5px;color:var(--muted);
-  background:none;border:1px solid var(--line2);border-radius:999px;padding:8px 15px;cursor:pointer;
-  transition:color .2s,border-color .2s,background .2s}
-.itab:hover{color:var(--ink);border-color:var(--gold)}
-.itab.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
-
-/* makers directory */
-.makers-dir{max-width:760px;margin:0 auto;padding:clamp(26px,5vw,52px) 0 40px;animation:rise .5s ease both}
-.makers-dir h1{font-family:var(--display);font-weight:500;font-size:clamp(38px,7vw,64px);line-height:1;
-  letter-spacing:-.02em;margin:14px 0 0}
-.makers-dir .dek{font-family:var(--display);font-style:italic;color:var(--ink-soft);
-  font-size:clamp(19px,3vw,23px);line-height:1.4;margin:18px 0 8px}
-.dir-issue{margin-top:38px}
-.dir-issue .h{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-  font-size:12px;color:var(--muted);margin:0 0 6px}
-.dir-issue .h-rule{height:1px;background:var(--line);margin:0 0 12px}
-.dir-story{margin:0 0 22px}
-.dir-title{font-family:var(--display);font-weight:500;font-size:20px;color:var(--ink-soft);letter-spacing:-.01em;
-  background:none;border:0;padding:0 0 8px;cursor:pointer;text-align:left}
-.dir-title:hover{color:var(--gold-soft)}
-
-/* page footer */
-.pagefoot{border-top:1px solid var(--line);margin-top:60px}
-.pagefoot .in{max-width:1120px;margin:0 auto;padding:40px clamp(16px,5vw,40px) 60px;
-  display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-end}
-.pagefoot .wm{font-family:var(--display);font-size:34px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
-.pagefoot .wm span{color:var(--gold)}
-.pagefoot .col{font-family:var(--label);font-size:12px;letter-spacing:.04em;color:var(--muted);line-height:1.9;text-align:right}
-.pagefoot .col b{color:var(--ink-soft);font-weight:600}
-
-/* motif svgs fill their plate */
+.plate{aspect-ratio:16/5;border-radius:5px;border:1px solid var(--line2);overflow:hidden;position:relative;
+  box-shadow:var(--shadow);margin:26px 0}
 .motif{position:absolute;inset:0;width:100%;height:100%}
+
+.how{margin:6px 0 0;counter-reset:step;border-top:1px solid var(--line)}
+.how .lab{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:11px;
+  color:var(--accent);padding:14px 0 2px;display:block}
+.how li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;
+  padding:12px 0;border-bottom:1px solid var(--line);counter-increment:step}
+.how ul{margin:0;padding:0}
+.how li::before{content:counter(step);font-family:var(--display);font-size:17px;color:var(--accent);
+  line-height:1.4;font-variant-numeric:tabular-nums;min-width:1.1em}
+.how li span{font-size:16.5px;line-height:1.5;color:var(--ink-soft)}
+
+.visit{margin-top:26px;display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.visit a{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-weight:700;
+  letter-spacing:.03em;font-size:13px;text-transform:uppercase;color:var(--bg);background:var(--accent);
+  border:1px solid var(--accent);border-radius:999px;padding:11px 20px;transition:filter .15s,transform .12s}
+.visit a:hover,.visit a:focus-visible{filter:brightness(1.08);transform:translateY(-1px);outline:none}
+.visit a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.visit .where{font-family:var(--label);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+.next-hint{position:absolute;left:0;right:0;bottom:20px;text-align:center;font-family:var(--label);
+  font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);pointer-events:none}
+.next-hint .arr{display:block;font-size:15px;margin-top:6px;animation:bob 1.8s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+@media(prefers-reduced-motion:reduce){.next-hint .arr{animation:none}}
+
+#sentinel{height:1px}
+.foot{padding:34px 20px 60px;text-align:center;color:var(--muted);font-family:var(--label);font-size:11.5px;
+  letter-spacing:.08em;border-top:1px solid var(--line)}
+.foot b{color:var(--ink-soft);font-weight:600}
 </style>
 </head>
 <body>
-<div id="progress"></div>
-
 <div class="topbar">
-  <button class="wordmark" id="home" aria-label="Makers Deserve Glory — cover"><span class="dot"></span>Makers&nbsp;Deserve&nbsp;Glory</button>
+  <button class="wordmark" id="home" aria-label="Makers Deserve Glory — start over"><span class="dot"></span>Makers&nbsp;Deserve&nbsp;Glory</button>
   <div class="controls">
-    <button class="btn" id="makers-btn">Makers</button>
+    <button class="btn" id="shuffle">Shuffle</button>
     <button class="btn" id="theme" aria-label="Toggle light and dark">Theme</button>
   </div>
 </div>
 
-<main id="app"><!-- rendered --></main>
-
-<footer class="pagefoot">
-  <div class="in">
-    <div class="wm">Makers Deserve <span>Glory</span></div>
-    <div class="col">
-      <b>How it's made — no ads, ever.</b><br/>
-      Every story is about a real maker.<br/>
-      We link you straight back to them.
-    </div>
-  </div>
-</footer>
+<main id="feed"></main>
+<div id="sentinel"></div>
+<footer class="foot"><b>Makers deserve glory.</b> No ads — just real makers, and how they make things. Keep scrolling.</footer>
 
 <script>
-/* =================== ISSUE DATA =================== */
-var ISSUES = [
-  { n:1, no:"Nº 1", theme:"Hawaiian Jewelry", season:"Summer 2026" },
-  { n:2, no:"Nº 2", theme:"The ʻUkulele",     season:"Fall 2026"   },
-  { n:3, no:"Nº 3", theme:"The Surfboard",    season:"Winter 2026" }
-];
-var LATEST = ISSUES[ISSUES.length-1].n;
-function issueMeta(n){ for(var i=0;i<ISSUES.length;i++) if(ISSUES[i].n===n) return ISSUES[i]; return ISSUES[0]; }
-function articlesInIssue(n){ return ARTICLES.filter(function(a){ return a.issue===n; }); }
-
 /* motif: layered gradient + inline SVG line-art, tinted by accent. No external images. */
-function motif(kind, accent){
-  var a = accent, svg;
+function motif(kind, a){
+  var svg;
   if(kind==="scroll"){
-    svg = '<path d="M20 130 C 60 60, 120 60, 150 120 S 250 180, 290 110" fill="none" stroke="'+a+'" stroke-width="1.4" opacity=".9"/>'+
-          '<path d="M40 150 C 90 100, 150 100, 190 150 S 300 200, 340 140" fill="none" stroke="'+a+'" stroke-width="1" opacity=".5"/>'+
-          '<circle cx="150" cy="120" r="3" fill="'+a+'"/><circle cx="290" cy="110" r="2.5" fill="'+a+'"/>';
+    svg='<path d="M20 130 C 60 60, 120 60, 150 120 S 250 180, 290 110" fill="none" stroke="'+a+'" stroke-width="1.4" opacity=".9"/>'+
+        '<path d="M40 150 C 90 100, 150 100, 190 150 S 300 200, 340 140" fill="none" stroke="'+a+'" stroke-width="1" opacity=".5"/>'+
+        '<circle cx="150" cy="120" r="3" fill="'+a+'"/><circle cx="290" cy="110" r="2.5" fill="'+a+'"/>';
   } else if(kind==="wave"){
     svg=''; for(var i=0;i<5;i++){var y=48+i*28;svg+='<path d="M0 '+y+' Q 90 '+(y-22)+' 180 '+y+' T 360 '+y+'" fill="none" stroke="'+a+'" stroke-width="1.2" opacity="'+(0.85-i*0.13)+'"/>';}
   } else if(kind==="grain"){
     svg=''; for(var j=0;j<7;j++){var x=30+j*45;svg+='<path d="M'+x+' 10 C '+(x+26)+' 70, '+(x-20)+' 150, '+(x+14)+' 230" fill="none" stroke="'+a+'" stroke-width="'+(0.8+j%2*0.7)+'" opacity="'+(0.35+j%3*0.18)+'"/>';}
   } else if(kind==="strings"){
-    svg=''; for(var s=0;s<4;s++){var x=120+s*40;svg+='<path d="M'+x+' 18 L'+x+' 224" stroke="'+a+'" stroke-width="1.2" opacity="'+(0.85-s*0.13)+'"/>';}
+    svg=''; for(var s=0;s<4;s++){var x2=120+s*40;svg+='<path d="M'+x2+' 18 L'+x2+' 224" stroke="'+a+'" stroke-width="1.2" opacity="'+(0.85-s*0.13)+'"/>';}
     svg+='<circle cx="180" cy="150" r="36" fill="none" stroke="'+a+'" stroke-width="1.3" opacity=".7"/>';
-  } else { /* facet — gem */
+  } else {
     svg='<polygon points="180,30 300,120 240,220 120,220 60,120" fill="none" stroke="'+a+'" stroke-width="1.3" opacity=".9"/>'+
         '<path d="M60 120 L180 120 L300 120 M180 30 L180 120 M120 220 L180 120 L240 220" stroke="'+a+'" stroke-width="1" opacity=".55" fill="none"/>';
   }
-  var grad = 'radial-gradient(120% 140% at 78% 8%, color-mix(in srgb,'+a+' 30%, transparent), transparent 60%),'+
-             'linear-gradient(160deg, var(--plate), var(--bg2))';
+  var grad='radial-gradient(120% 160% at 80% 0%, color-mix(in srgb,'+a+' 32%, transparent), transparent 62%),'+
+           'linear-gradient(160deg, var(--plate), var(--bg2))';
   return '<div class="motif" style="background:'+grad+'"></div>'+
          '<svg class="motif" viewBox="0 0 360 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'+svg+'</svg>';
 }
 
-/* =================== ARTICLES =================== */
-var ARTICLES = [
-{
-  id:"heirloom", folio:"01", accent:"#c9a24b", motif:"scroll", readMin:7,
-  kicker:"Gold & Fire", hero:true,
-  title:"The Black-Letter Bracelet",
-  dek:"How a plain band of gold becomes a Hawaiian heirloom — cut by hand, engraved with scrollwork, and filled with black fire.",
-  byline:["The Editors","Honolulu"], issue:1,
-  makers:[
-    {name:"Philip Rickard", what:"Spent six years researching the heirloom bracelet's origin — and wrote the book on it.", url:"https://www.philiprickard.com/"},
-    {name:"Nā Hoku", what:"A Honolulu family hand-engraving Hawaiian heirloom jewelry since 1924.", url:"https://www.nahoku.com/"}
-  ],
-  spec:{ label:"Materials", rows:[
-    ["Metal","14k or 18k yellow gold sheet"],
-    ["Blackening","Vitreous enamel or black rhodium in the engraving"],
-    ["Tools","Gravers, a jeweler's saw, a wrist mandrel"],
-    ["Time","Two to five days of hand-engraving"]
-  ]},
-  blocks:[
-    ["p","As the story is told, it began with a gift. In the 1880s Queen Kapiʻolani and Princess Liliʻuokalani travelled to England for Queen Victoria's Golden Jubilee, and came home carrying a very Victorian idea: a gold bangle, its owner's name set in black Old-English letters. In mourning-obsessed Britain the black-and-gold look meant remembrance. In the Hawaiian Kingdom it became something warmer — a band you give to a daughter, a wife, a friend, with her name on it, meant to be worn for a lifetime and then handed down."],
-    ["p","That handing-down is the whole point. \"Hawaiian heirloom jewelry\" isn't a style so much as a promise, and every step of the making is built to survive a hundred years of wrists."],
-    ["h2","From flat sheet to a wrist"],
-    ["p","It starts as nothing romantic at all: a flat strip of gold rolled to an even thickness. The maker saws the band to length, files the ends true, and bends it around a tapered steel wrist mandrel until it takes the soft oval of a real arm — not a circle, because arms aren't round."],
-    ["steps",{ label:"How it's made", items:[
-      ["The blank","Sheet gold is rolled to a couple of millimetres and cut to the wearer's wrist. Heavier gold means a bracelet that keeps its shape for generations, so heirloom bands are noticeably thicker than fashion ones."],
-      ["Shaping","The strip is annealed — heated soft — then formed over a mandrel into a wrist oval. Getting the ends to meet cleanly is what separates a hinged, clasped heirloom from a cheap open cuff."],
-      ["The layout","The design is drawn or transferred onto the surface: a scrolling border, maile leaves or plumeria, and the name that will run down the center in Old-English script. Nothing is stamped; the layout is the map the engraver will cut by hand."],
-      ["Hand-engraving","With a sharpened graver pushed by the heel of the palm, the maker cuts every line into the metal. Flowers and leaves are carved so they appear raised against a cut-away background — a technique called relief — which is why good heirloom work has real depth you can feel."],
-      ["The black fire","The recessed letters and background are filled with black: either powdered glass enamel fused in a kiln, or black rhodium plating, then polished flush. The black survives only down in the cuts, so the name reads sharp against bright gold."],
-      ["Finishing","The whole piece is polished, a clasp and safety chain fitted, and — the quiet final step — the name and often a date are set for good. From here it is nobody's inventory; it's somebody's."]
-    ] }],
-    ["pull","The black isn't paint. It's the shadow the engraver left in the metal, and light can't wash it out."],
-    ["p","Because it's all cut by hand, no two heirloom bracelets are identical, even from the same shop. The width of a maile leaf, the curl of a scroll, the exact weight of the letters — those are the maker's fingerprints, and they're a large part of why a serious heirloom bracelet is priced like an investment rather than an accessory."],
-    ["note","Heirloom, literally",[["p","The tradition treats these as objects to inherit, not to replace. Many families add a name for each generation, or re-engrave a bracelet when it passes hands. If you're buying one, weight and hand-engraving — not flash — are what you're paying for, and what will still matter in fifty years."]]]
-  ]
-},
-{
-  id:"niihau", folio:"02", accent:"#d8a7a0", motif:"wave", readMin:6,
-  kicker:"The Forbidden Isle",
-  title:"The Island That Strings the Sea",
-  dek:"On Niʻihau, a single necklace can take a year and outprice a car. Here's why the world's rarest lei is built from shells smaller than a grain of rice.",
-  byline:["The Editors","Niʻihau & Kauaʻi"], issue:1,
-  makers:[
-    {name:"Niʻihau Heritage Cultural Foundation", what:"Community keepers of the shell-lei tradition and its history.", url:"https://niihauheritage.org/"},
-    {name:"Janelle Kienow · Kauai Curators", what:"A lei maker and longtime advocate for protecting the Niʻihau name.", url:"https://www.kauaicurators.com/about/janelle-kienow/"}
-  ],
-  spec:{ label:"Materials", rows:[
-    ["Shells","Kahelelani, momi, and laiki — tiny sea snails"],
-    ["Source","Beaches of Niʻihau, seasonally, after winter surf"],
-    ["Fastening","Silk or nylon thread; cowrie or gold clasp"],
-    ["Time","Weeks to over a year for a full multi-strand lei"]
-  ]},
-  blocks:[
-    ["p","Niʻihau is the small private island off Kauaʻi that outsiders almost never set foot on — no hotels, no stores, a few dozen residents, Hawaiian spoken as the first language. It's also the only place on earth where certain minuscule shells wash ashore in the numbers, and the quality, that a lei-maker needs. That combination — rare material, closed island, unbroken skill — is why a genuine Niʻihau shell lei is regarded less like jewelry and more like a museum object."],
-    ["p","The shells themselves are the size of confetti. The most prized, kahelelani, are the polished caps of a tiny sea snail, and it can take thousands of them to finish one strand."],
-    ["h2","Sorted grain by grain"],
-    ["p","There is no machine anywhere in this. Everything that makes a Niʻihau lei valuable happens between a person's fingers and a good light."],
-    ["steps",{ label:"How it's made", items:[
-      ["The gather","After heavy winter surf, families walk the beaches collecting shells by the handful from the drift line. Good years and good beaches are known and quietly guarded; a poor season means fewer, lesser shells to work with."],
-      ["The sort","Shells are washed and then sorted — by size, by color, by shape — into painstaking grades. A matched strand might require picking through tens of thousands to find enough that agree. This sorting, more than anything, is where the months go."],
-      ["The pierce","Each shell is pierced by hand with a fine needle, a step where a careless press shatters the shell and wastes the search that found it. The hole has to sit just right or the shell won't lie correctly against its neighbors."],
-      ["The pattern","Strung on thread in traditional patterns — poepoe (a rounded rope), pikake (clustered like the flower), kui (a single line) — often with tiny, deliberate knots that hold each shell facing the light."],
-      ["The finish","Strands are joined and closed with a clasp, historically a cowrie shell, today sometimes gold. A true Niʻihau lei is Niʻihau shells, strung by Niʻihau hands — a distinction now protected by Hawaiʻi law, so the name can't be borrowed."]
-    ] }],
-    ["pull","A full lei can hold ten thousand shells, and someone turned every one of them toward the light by hand."],
-    ["p","Color drives the price. Plain white shells are common; deep reds, golds, and rare blues are not, and a lei that holds a consistent rare color across thousands of matched shells represents a genuinely improbable amount of searching. That's the real cost — not the material, which the sea gives for free, but the human hours of finding, matching, and stringing it."],
-    ["note","Buying real",[["p","Because the name carries a legal weight in Hawaiʻi, a genuine Niʻihau lei comes with provenance. If a \"Niʻihau\" lei is cheap, it isn't one. The value is in the sorting and the source, both of which are almost impossible to fake at scale."]]]
-  ]
-},
-{
-  id:"blackcoral", folio:"03", accent:"#6f7f86", motif:"facet", readMin:6,
-  kicker:"The State Gem",
-  title:"Gold's Rival from the Deep",
-  dek:"Hawaiʻi's official gem grows like a tree, hundreds of feet down, and turns from living gold-and-white to polished jet. How black coral becomes jewelry — and why it's cut by hand, by divers.",
-  byline:["The Editors","Maui Channel"], issue:1,
-  makers:[
-    {name:"Maui Divers Jewelry", what:"Found Hawaiʻi's black coral in 1958 and pioneered sustainable harvesting with the University of Hawaiʻi.", url:"https://www.mauidivers.com/"}
-  ],
-  spec:{ label:"Materials", rows:[
-    ["What it is","The skeleton of a deep-water coral (Antipatharia)"],
-    ["Status","Hawaiʻi state gem since 1987; harvest is regulated"],
-    ["Depth","Mature colonies live roughly 150–250+ feet down"],
-    ["Finish","Cuts and polishes to a hard, glassy black"]
-  ]},
-  blocks:[
-    ["p","Most gems are dug. This one is grown, underwater, and it takes decades. Black coral isn't a rock and it isn't the reef coral you snorkel over — it's a deep-water animal that builds a hard, tree-like skeleton, branching in the dark far below where sunlight reaches. Hawaiʻi liked it enough to name it the official state gem in 1987, and Lahaina on Maui built a reputation as its capital."],
-    ["p","Alive, a colony is furred with pale polyps over a core that is already the deep brown-black the jewelry is named for. Strip the living tissue away and you're left with a material that behaves, on a bench, a little like a very hard wood or horn — which is exactly why it can be carved."],
-    ["h2","From a slow-grown tree to a stone"],
-    ["steps",{ label:"How it's made", items:[
-      ["The dive","Licensed divers descend well past recreational depths to reach colonies old enough to harvest, taking mature branches selectively. The depth and the rules are the point: this is not something you scoop by the bucket."],
-      ["Cleaning","The living tissue is removed down to the hard black skeleton. What's left is dense, workable, and already colored through — no dye needed."],
-      ["Shaping","Because it cuts cleanly, black coral is sawn, filed, and carved into beads, cabochons, links, and figurative pieces. Skilled carvers exploit the natural branch shapes rather than fighting them."],
-      ["The polish","Progressively finer sanding and buffing bring up a deep, glassy sheen — the transformation from dull driftwood-black to the liquid jet that makes it read as a gem."],
-      ["Setting","Finished pieces are frequently mounted in gold, whose warmth plays against the black. The contrast is the whole aesthetic: warm metal, cold deep-sea black."]
-    ] }],
-    ["pull","It grows a human lifetime's worth of years to make an inch of jewelry, which is the argument for buying it carefully."],
-    ["note","Grown slowly, so take it slowly",[["p","Black coral is long-lived and slow-growing, which is why its harvest is regulated and why responsible buyers stick to licensed Hawaiian sources and legally documented material. A gem measured in decades of growth deserves that much homework."]]]
-  ]
-},
-{
-  id:"koa", folio:"04", accent:"#b07d3f", motif:"grain", readMin:5,
-  kicker:"From the Forest",
-  title:"Rings from the Canoe Tree",
-  dek:"Koa built voyaging canoes and royal bowls. Now it circles fingers. How a plank of Hawaiʻi's most storied hardwood becomes a ring that seems to move when it turns.",
-  byline:["The Editors","Hilo"], issue:1,
-  makers:[
-    {name:"Martin & MacArthur", what:"Hawaiʻi koa makers who openly document how koa jewelry is made.", url:"https://www.martinandmacarthur.com/"},
-    {name:"Pono Woodworks", what:"Koa rings made only from dead or fallen Big-Island trees.", url:"https://ponowoodworks.com/"},
-    {name:"Nakoa", what:"Hand-carved koa jewelry, forty-plus years of it.", url:"https://nakoajewelry.com/"}
-  ],
-  spec:{ label:"Materials", rows:[
-    ["Wood","Koa (Acacia koa) — endemic to Hawaiʻi"],
-    ["Prized grain","\"Curly\" figure that shimmers as it tilts"],
-    ["Reinforcement","Resin stabilizing; often a metal or comfort liner"],
-    ["Finish","Cured resin or oil, sanded to a gloss"]
-  ]},
-  blocks:[
-    ["p","Koa is the wood Hawaiians reached for when it mattered — the great voyaging canoes, the calabashes of chiefs, later the guitars and ukuleles with that honeyed glow. It grows only here, high on the volcanic slopes, and the most beautiful boards have a rippled \"curly\" grain that seems to shift and pool as the light moves across it. Put that grain on a finger and you get a ring that quietly does something no metal can."],
-    ["h2","Why the grain moves"],
-    ["p","That shimmer isn't a finish or a trick of stain. In curly koa the wood fibers grow in tight waves, so each ripple catches light at a slightly different angle. Rotate the ring and the bright and dark bands trade places — an effect called chatoyance, the same \"cat's-eye\" roll you see in a tiger's-eye stone."],
-    ["steps",{ label:"How it's made", items:[
-      ["The billet","A maker selects a piece of figured koa — ideally salvaged or sustainably milled — and dries it fully, since a ring made from wet wood will crack as it shrinks."],
-      ["Stabilizing","Rings take abuse fingers don't spare, so the wood is often infused with resin under pressure. That fills the grain, hardens the piece, and lets it shrug off a splash it otherwise couldn't."],
-      ["Forming","The ring is turned on a lathe from a solid blank, or built by bending thin koa around a core and laminating it — the bent method shows off long, unbroken grain lines."],
-      ["The core & inlay","Many koa rings ride on a comfort liner of metal or a second wood for strength, and some are grooved for an inlay of crushed shell, turquoise, or a thin metal band."],
-      ["Finishing","Fine sanding and a hard clear finish — or a hand-rubbed oil — seal the wood and pull the curl forward, so the grain reads deep rather than flat."]
-    ] }],
-    ["pull","Tilt it toward a window and the grain rolls like surf — the wood is still doing what light does on water."],
-    ["note","It's wood, so love it like wood",[["p","Even stabilized, a koa ring isn't a steel one: keep it off long soaks, harsh chemicals, and the bottom of a gym bag, and a wipe of oil now and then keeps it glowing. Look for makers using salvaged or responsibly sourced koa — the tree is slow-growing and worth protecting."]]]
-  ]
-},
-{
-  id:"sunrise", folio:"05", accent:"#e0955a", motif:"facet", readMin:5,
-  kicker:"Beachcombed Gold",
-  title:"Chasing the Sunrise Shell",
-  dek:"Divers and dawn walkers hunt a thumbnail-sized scallop that blushes from pink to gold. Once reserved for aliʻi, it's Hawaiʻi's most coveted find — here's how it goes from the surf to a setting.",
-  byline:["The Editors","Oʻahu North Shore"], issue:1,
-  makers:[
-    {name:"Flotsam & Co.", what:"Free-dives 100 ft+ for sunrise shells; made the first 24kt-gold-dipped ones.", url:"https://www.flotsamand.co/sunrise-shells"},
-    {name:"MonicaByTheShore", what:"North-Shore sunrise-shell jewelry, made one piece at a time in Haleʻiwa.", url:"http://www.monicabytheshore.com/"}
-  ],
-  spec:{ label:"Materials", rows:[
-    ["Shell","A small Pecten scallop with pink-to-gold rays"],
-    ["Where","Buried in sand channels; tossed up after big surf"],
-    ["Best grades","Deep even color, symmetry, no chips; matched pairs"],
-    ["Setting","Gold bezel with a protective backing"]
-  ]},
-  blocks:[
-    ["p","The sunrise shell is a scallop no bigger than a thumbnail, and it is the trophy of Hawaiian beachcombing. Its fan of ribs runs from soft pink through orange to a deep gold, like the sky it's named for, and no two are quite alike. Tradition holds that the finest were once reserved for aliʻi — the chiefs — which only sharpens the modern hunt for them."],
-    ["p","What makes them so sought-after is that you can't really farm or order them. A good sunrise shell is found, and finding one is mostly patience, timing, and knowing where the sand moves."],
-    ["h2","Found, not bought"],
-    ["steps",{ label:"How it's made", items:[
-      ["The hunt","Serious hunters free-dive the sand channels where the living scallops bury themselves, fanning the sand by hand; casual ones walk the beaches at dawn after a big swell, when surf tears shells loose and throws them up."],
-      ["The clean","Sand and marine growth are removed gently. The color lives in a thin layer, so the cardinal rule is never to bleach or over-scrub — that's how a rare shell becomes a plain one."],
-      ["The grade","Shells are judged on color saturation, symmetry, and freedom from chips. The rarest run deep and even to the edge; for earrings, a maker hunts two shells that mirror each other, which is far harder than finding one."],
-      ["The set","Because the shell is thin and fragile, it's usually bezel-set in gold with a solid backing that cradles and protects it, sometimes stabilized with a clear resin so an heirloom-quality find can actually be worn."]
-    ] }],
-    ["pull","You don't really buy a good sunrise shell. You find it — or you know someone who dives."],
-    ["note","Handle the color with care",[["p","The pink-to-gold is delicate and can fade with harsh cleaning or long sun. That fragility is exactly why the good ones are set in protective gold bezels rather than drilled and strung — the setting is doing a real structural job, not just a decorative one."]]]
-  ]
-},
-{
-  id:"ukulele", folio:"01", accent:"#b5732f", motif:"strings", readMin:7,
-  kicker:"Four Strings", hero:true, issue:2,
-  title:"The Little Voice of Koa",
-  dek:"How a Honolulu family turns a curly plank of koa into an ʻukulele — air-dried for six years, bent over heat, and passed through twenty pairs of hands.",
-  byline:["The Editors","Honolulu"],
-  makers:[
-    {name:"Kamaka Hawaii", what:"Hand-building ʻukulele in Honolulu since 1916 — now the fourth generation of the family. Free factory tours.", url:"https://kamakahawaii.com/"}
-  ],
-  spec:{ label:"Materials", rows:[
-    ["Woods","Koa top, back & sides; mahogany neck; rosewood fretboard"],
-    ["Drying","Koa air-dried 5–6 years — never kiln-dried"],
-    ["Signature","The 1928 ‘pineapple’ body; each ʻukulele signed inside"],
-    ["Hands","20+ craftsmen touch every instrument"]
-  ]},
-  blocks:[
-    ["p","The ʻukulele is a Portuguese immigrant that became Hawaiian. In the 1880s, laborers from Madeira stepped off the boat carrying a little four-string called the machete; within a generation Hawaiians had made it their own, renamed it ʻukulele — often translated ‘jumping flea,’ for the way the fingers move — and by 1916 a young Oʻahu craftsman named Samuel Kamaka was building them in his Honolulu garage. That garage grew into Kamaka Hawaii, now run by the fourth generation of the family, and its ʻukulele are still made much the way Samuel made them: slowly, by hand, out of koa."],
-    ["p","The magic and the difficulty are the same thing — koa. It's a gorgeous, temperamental Hawaiian hardwood, and coaxing music out of it is a patience contest that starts years before anyone picks up a tool."],
-    ["h2","Why it takes six years before the first cut"],
-    ["p","Most factories kiln-dry their wood in weeks. Kamaka won't. Their koa is stacked and air-dried in the Honolulu shop for five or six years, so it moves and settles on island time and won't warp once it's an instrument. Only the best boards survive the wait; the rest are quietly set aside and never become ʻukulele."],
-    ["steps",{ label:"How it's made", items:[
-      ["The wait","Curly koa is cut into thin sets and air-dried in the shop for five to six years. Kiln-drying would be faster; slow drying is why a Kamaka stays stable for decades."],
-      ["Bending the sides","The thin side pieces are wetted and pressed against heated metal, then clamped into wooden molds until they hold the ʻukulele's waist. The wood is being persuaded, not forced."],
-      ["The soundboard","The koa top is thinned and braced underneath with delicate, tapered struts. Exactly how those braces are carved decides how the top vibrates — this is where the instrument's voice is really tuned."],
-      ["Neck & frets","A mahogany neck is shaped and a rosewood fretboard is fretted by hand, the metal fretwire seated one piece at a time, with the headstock grain matched to the body so the whole thing reads as one tree."],
-      ["Closing the box","Top, back, and sides are joined into a hollow body and the neck is set. From here it's sanded and polished many times over, and the curl in the koa finally rises up out of the grain."],
-      ["The last ear","Every finished ʻukulele is played and inspected before it can carry the name — a final human check no machine can sign off on."]
-    ] }],
-    ["pull","Twenty pairs of hands touch a single ʻukulele before it's allowed to make a sound in public."],
-    ["p","Samuel Kamaka's most famous idea is still in the catalog: the ‘pineapple’ ʻukulele, an oval body he patented in 1928 because it was simpler to build and sang with a rounder, warmer tone. It's a good emblem for the whole craft — a practical shortcut that happened to sound better."],
-    ["note","Go stand inside it",[["p","Kamaka Hawaii runs free tours of its Honolulu factory, where you can watch the whole process from raw koa to a finished, signed instrument. It's the rare ‘how it's made’ you can walk through in person."]]]
-  ]
-},
-{
-  id:"fourks", folio:"02", accent:"#9a7b3f", motif:"wave", readMin:5,
-  kicker:"Made in Hawaiʻi", issue:2,
-  title:"The Four K's",
-  dek:"Almost every serious Hawaiian ʻukulele comes from one of four family workshops on Oʻahu whose names start with K. Here's who they are — and how they differ.",
-  byline:["The Editors","Oʻahu"],
-  makers:[
-    {name:"Kamaka Hawaii", what:"Est. 1916 · the original K; patented the pineapple ʻukulele.", url:"https://kamakahawaii.com/"},
-    {name:"KoAloha Ukulele", what:"Est. mid-1990s · Alvin ‘Pops’ Okami; koa + aloha, and a bright, bold tone.", url:"https://www.koaloha.com/"},
-    {name:"Kanileʻa ʻUkulele", what:"Est. 1998 · Joe & Kristen Souza; plants a koa tree for every ʻukulele built.", url:"https://kanileaukulele.com/"},
-    {name:"Koʻolau", what:"The fourth K; builds with a wide range of tonewoods beyond koa.", url:"https://www.koolauukulele.com/"}
-  ],
-  spec:{ label:"The four houses", rows:[
-    ["Kamaka","1916 · the original; the pineapple shape"],
-    ["KoAloha","mid-1990s · Alvin ‘Pops’ Okami; bold tone"],
-    ["Kanileʻa","1998 · Joe & Kristen Souza; a tree per uke"],
-    ["Koʻolau","the fourth K; a wide range of tonewoods"]
-  ]},
-  blocks:[
-    ["p","Ask a player where a great Hawaiian ʻukulele comes from and you'll hear four names, all starting with K, all family-run, all on Oʻahu. Together they're simply ‘the four K's,’ and between them they define what a Made-in-Hawaiʻi ʻukulele is."],
-    ["h2","Kamaka — the elder"],
-    ["p","Founded in 1916, Kamaka is the oldest and most storied of the four. It patented the round ‘pineapple’ ʻukulele in 1928 and is now run by the fourth generation, still air-drying its koa for years and building each instrument by hand."],
-    ["h2","KoAloha — the loud one"],
-    ["p","Started in the mid-1990s by inventor-musician Alvin ‘Pops’ Okami, who'd run a plastics factory before turning to instruments. The name fuses koa and aloha, and a distinctive internal bracing gives KoAloha its bright, projecting voice."],
-    ["h2","Kanileʻa — the conservationist"],
-    ["p","Founded in 1998 by Joe and Kristen Souza, Kanileʻa builds high-end instruments with a stated environmental streak: the company plants a koa tree for every ʻukulele it makes, trying to give back the forest it draws from."],
-    ["h2","Koʻolau — the tinkerer"],
-    ["p","The fourth K reaches beyond koa, building with a wider range of tonewoods — spruce, redwood, rosewood, tropical ash — and leaning into custom, made-to-order instruments."],
-    ["pull","Four small workshops, four tempers, one instrument — this is what ‘Made in Hawaiʻi’ actually means."],
-    ["note","One wood, four voices",[["p","All four lean on koa, but each shapes and braces it differently, so a Kamaka, a KoAloha, a Kanileʻa and a Koʻolau of the same size can sound noticeably different in the hand. The wood is Hawaiian; the voice is the maker's."]]]
-  ]
-},
-{
-  id:"surfboard", folio:"01", accent:"#2f8f9d", motif:"wave", readMin:6,
-  kicker:"Foam & Glass", hero:true, issue:3,
-  title:"Shaped by Hand, Sealed by Sea",
-  dek:"A surfboard starts as a block of foam and a strip of wood. Here's how a North Shore shaper turns it into something that flies — carved, glassed, and sanded by hand.",
-  byline:["The Editors","North Shore, Oʻahu"],
-  makers:[
-    {name:"Pyzel Surfboards", what:"Jon Pyzel shapes on the North Shore of Oʻahu — including the boards John John Florence rides to world titles.", url:"https://pyzelsurfboards.com/"}
-  ],
-  spec:{ label:"Materials", rows:[
-    ["Core","A polyurethane or EPS foam blank"],
-    ["Backbone","A thin wood ‘stringer’ glued down the center"],
-    ["Skin","Fiberglass cloth + laminating resin"],
-    ["Hardware","Fin boxes and a leash plug"]
-  ]},
-  blocks:[
-    ["p","A surfboard begins as one of the least glamorous objects imaginable: a lightweight block of foam with a thin strip of wood glued down its spine. That strip — the stringer — is the board's backbone; it decides how much the finished board flexes and snaps back. Everything else is a shaper standing over that blank with the sea in mind."],
-    ["p","On the North Shore of Oʻahu, where the waves are the proving ground for the whole surfing world, that shaper might be someone like Jon Pyzel, whose boards carry John John Florence to world titles. But the process — foam, shape, glass, sand — is the same in every shaping bay on earth."],
-    ["h2","Foam becomes a shape"],
-    ["p","The blank is oversized on purpose. The shaper's whole job is subtraction: reading the foam, drawing the outline, and taking away everything that isn't the board."],
-    ["steps",{ label:"How it's made", items:[
-      ["The blank","A foam core with a wood stringer down the middle is cut roughly to length. The stringer tunes the flex; the foam gives it float."],
-      ["Shaping","The outline and curves are cut by hand with a planer and sanding blocks — or roughed out by a CNC machine, then finished by hand. Millimeters here change how the whole board turns."],
-      ["Fins & plugs","Fin boxes and a leash plug are routed into the foam, so there's somewhere to anchor the fins and the surfer."],
-      ["Glassing","Fiberglass cloth is laid over the foam and soaked with laminating resin, squeegeed thin and even — usually one layer on the bottom, two on the deck where the feet land. The resin sets in minutes, so it's a race."],
-      ["Hot coat & sand","A second ‘hot coat’ of resin seals the weave, then the whole board is sanded smooth — the dusty, patient part that decides how it feels underfoot."],
-      ["Fins & finish","The fins are set, a final gloss coat goes on, and the board is watertight, stiff where it needs to be, and ready for water."]
-    ] }],
-    ["pull","The shaper's whole job is subtraction: take away everything that isn't the board."],
-    ["note","Foam has a history too",[["p","For decades nearly every board on earth started with a blank from one California company, Clark Foam — until it abruptly shut its doors in 2005 and sent the whole industry scrambling. Today blanks come from many suppliers, in classic polyurethane and lighter EPS foam, but the shaper's hands still do the part that matters."]]]
-  ]
-},
-{
-  id:"shapers", folio:"02", accent:"#c08a4a", motif:"wave", readMin:5,
-  kicker:"Made in Hawaiʻi", issue:3,
-  title:"The North Shore Shapers",
-  dek:"A few miles of Oʻahu coastline is the most demanding wave lab on earth — and the shapers who work behind it have shaped how the whole world surfs.",
-  byline:["The Editors","Oʻahu"],
-  makers:[
-    {name:"Pyzel Surfboards", what:"Jon Pyzel, Waialua — from a backyard bay in the ’90s to John John Florence's world-title boards.", url:"https://pyzelsurfboards.com/"},
-    {name:"Tokoro Surfboards", what:"Wade Tokoro — one of Hawaiʻi's most respected shapers and surfers.", url:"https://www.tokorosurfboards.com/"},
-    {name:"Aipa Surf Co.", what:"Ben Aipa's shop (est. 1970), now run by his sons Duke & Akila — inventors of the swallowtail and split-tail.", url:"https://www.aipasurf.com/"}
-  ],
-  spec:{ label:"The lineage", rows:[
-    ["Ben Aipa","1970s · invented the swallowtail & split-tail"],
-    ["Gerry Lopez","‘Mr. Pipeline’ · stylist and shaper"],
-    ["Dick Brewer","refined the modern Hawaiian ‘gun’"],
-    ["Working now","Pyzel, Tokoro, Arakawa & more — still here"]
-  ]},
-  blocks:[
-    ["p","If you want to know whether a surfboard works, take it to the North Shore of Oʻahu. For a few miles — Pipeline, Sunset, Waimea — the Pacific throws the heaviest, most perfect waves in the world onto shallow reef, and boards that survive there set the standard everywhere else. So it's no accident that some of history's most important shapers built their names in the bays just behind that beach."],
-    ["h2","The legends"],
-    ["p","Ben Aipa started shaping in 1970 and rewrote what a tail could do, inventing the swallowtail and the split-tail that let surfers turn harder and later; his sons still run the shop. Gerry Lopez — ‘Mr. Pipeline’ — shaped as gracefully as he surfed, and Dick Brewer refined the modern Hawaiian ‘gun,’ the long, clean board built to survive giant waves. Between them they taught much of the world what a performance board should look like."],
-    ["h2","The shapers working now"],
-    ["p","The tradition is very much alive. Jon Pyzel shapes in Waialua, and the boards John John Florence rides to world titles come out of his bay. Wade Tokoro, Eric Arakawa and a handful of others keep the North Shore what it's been for sixty years: the place a board has to prove itself before anyone believes in it."],
-    ["pull","A board that survives the North Shore sets the standard everywhere else."],
-    ["note","Why here",[["p","It isn't just marketing. The North Shore's waves are fast, hollow, and unforgiving, so a flaw a shaper could hide on a gentle beach break shows up here instantly. Shaping within earshot of that surf means constant, brutal feedback — which is exactly why the boards get so good."]]]
-  ]
-}
+/* =================== THE COLLECTION — one real maker per card =================== */
+/* Each grows the collection. Fields: maker, kicker (craft), where, url (link back),
+   accent, motif, hook (one line), how[] (bite-sized "how it's made"). */
+var MAKERS = [
+  { id:"philip-rickard", maker:"Philip Rickard", kicker:"Hawaiian heirloom gold", where:"Honolulu", url:"https://www.philiprickard.com/", accent:"#c9a24b", motif:"scroll",
+    hook:"The jeweler who traced the Hawaiian heirloom bracelet back to a Victorian gift — and still makes them by hand.",
+    how:["A band of gold is cut, formed to the wrist, and hand-engraved with scrolls, maile leaves, and a name.","The engraved letters are filled with black enamel and polished flush, so the name reads sharp against bright gold.","Rickard spent six years researching the craft's 1880s origin and wrote the book on it."] },
+  { id:"na-hoku", maker:"Nā Hoku", kicker:"Hawaiian heirloom jewelry", where:"Honolulu · since 1924", url:"https://www.nahoku.com/", accent:"#c9a24b", motif:"scroll",
+    hook:"A Honolulu family that has hand-engraved Hawaiian heirloom jewelry for a hundred years.",
+    how:["Every heirloom piece is engraved by hand — so no two are ever identical.","Flowers are carved in relief, standing up from a cut-away background.","The black in the lettering is enamel sunk into the metal, never paint."] },
+  { id:"maui-divers", maker:"Maui Divers Jewelry", kicker:"Hawaiian black coral", where:"Lahaina, Maui · est. 1958", url:"https://www.mauidivers.com/", accent:"#6f7f86", motif:"facet",
+    hook:"They found Hawaiʻi's black coral in 1958 — then figured out how to harvest it without wrecking the reef.",
+    how:["Licensed divers selectively cut mature black-coral colonies over 150 feet down.","The living tissue is stripped to a hard black skeleton that polishes up like glass.","They pioneered sustainable harvesting with the University of Hawaiʻi; black coral is the state gem."] },
+  { id:"niihau-heritage", maker:"Niʻihau Heritage Cultural Foundation", kicker:"Niʻihau shell lei", where:"Niʻihau & Kauaʻi", url:"https://niihauheritage.org/", accent:"#d8a7a0", motif:"wave",
+    hook:"Keepers of the world's rarest lei — necklaces sewn from shells smaller than a grain of rice.",
+    how:["Tiny kahelelani shells wash up on Niʻihau after winter storms and are sorted by size and color by hand.","Each shell is pierced with a fine needle and strung in traditional patterns.","One lei can hold ten thousand shells and take a year — the name is protected by Hawaiʻi law."] },
+  { id:"kauai-curators", maker:"Janelle Kienow", kicker:"Niʻihau shell lei · Kauai Curators", where:"Kauaʻi", url:"https://www.kauaicurators.com/about/janelle-kienow/", accent:"#d8a7a0", motif:"wave",
+    hook:"Fifteen-plus years sorting and stringing Niʻihau shells — and defending the craft's name.",
+    how:["Shells are graded by color: plain white is common; deep reds and blues are rare and costly.","Each shell is hand-pierced and knotted so it faces the light.","She advocates for protecting the 'Niʻihau' name from cheaper imitations."] },
+  { id:"martin-macarthur", maker:"Martin & MacArthur", kicker:"Koa wood", where:"Hawaiʻi", url:"https://www.martinandmacarthur.com/", accent:"#b07d3f", motif:"grain",
+    hook:"Hawaiʻi koa makers who will openly show you how a koa ring is made.",
+    how:["Curly koa is chosen for grain that shimmers as it turns — an effect called chatoyance.","Rings are turned or bent-laminated, stabilized with resin, and finished to a deep gloss.","That shimmer is the wood catching light at different angles, not a stain."] },
+  { id:"pono-woodworks", maker:"Pono Woodworks", kicker:"Koa rings", where:"Big Island", url:"https://ponowoodworks.com/", accent:"#b07d3f", motif:"grain",
+    hook:"Koa rings made only from trees that were already dead or fallen.",
+    how:["No living koa is cut — the wood is salvaged or fallen.","It's resin-stabilized under pressure so a ring can take daily wear.","A metal or second-wood liner adds strength inside the band."] },
+  { id:"nakoa", maker:"Nakoa", kicker:"Koa jewelry", where:"Hawaiʻi", url:"https://nakoajewelry.com/", accent:"#b07d3f", motif:"grain",
+    hook:"Forty-plus years hand-carving jewelry from Hawaiʻi's canoe wood.",
+    how:["Koa built voyaging canoes and royal bowls long before it circled fingers.","Pieces are carved and sanded by hand to pull the curl forward.","Koa isn't indestructible — an occasional wipe of oil keeps it glowing."] },
+  { id:"flotsam", maker:"Flotsam & Co.", kicker:"Sunrise shells", where:"North Shore, Oʻahu", url:"https://www.flotsamand.co/sunrise-shells", accent:"#e0955a", motif:"facet",
+    hook:"They free-dive a hundred feet for a thumbnail-sized shell that blushes pink to gold.",
+    how:["Sunrise shells bury in deep sand channels; divers fan the sand by hand to find them.","The color lives in a thin layer, so they're never bleached or over-scrubbed.","The fragile shells are bezel-set in gold so they can actually be worn."] },
+  { id:"monica-shore", maker:"MonicaByTheShore", kicker:"Sunrise shell jewelry", where:"Haleʻiwa, Oʻahu", url:"http://www.monicabytheshore.com/", accent:"#e0955a", motif:"facet",
+    hook:"North-Shore sunrise-shell jewelry, made one shell at a time.",
+    how:["Once reserved for aliʻi, sunrise shells are Hawaiʻi's most coveted beach find.","Shells are graded on color, symmetry and no chips; matched pairs for earrings are hardest.","Each is set in gold to protect the thin, fragile shell."] },
+  { id:"kamaka", maker:"Kamaka Hawaii", kicker:"ʻUkulele", where:"Honolulu · since 1916", url:"https://kamakahawaii.com/", accent:"#b5732f", motif:"strings",
+    hook:"Four generations building ʻukulele by hand — and they still air-dry their koa for six years.",
+    how:["Koa is air-dried five to six years so it won't warp — never kiln-dried.","Sides are wetted and bent over heat; the top is braced to tune its voice.","Twenty-plus hands touch each one, and the president plays every uke before it ships."] },
+  { id:"koaloha", maker:"KoAloha", kicker:"ʻUkulele", where:"Oʻahu", url:"https://www.koaloha.com/", accent:"#b5732f", motif:"strings",
+    hook:"Founded by an inventor who ran a plastics factory before he made 'koa + aloha.'",
+    how:["Alvin 'Pops' Okami started KoAloha in the mid-1990s.","A distinctive internal bracing gives it a bright, projecting tone.","Still made by the Okami family and their team on Oʻahu."] },
+  { id:"kanilea", maker:"Kanileʻa ʻUkulele", kicker:"ʻUkulele", where:"Oʻahu · since 1998", url:"https://kanileaukulele.com/", accent:"#7d9b5b", motif:"strings",
+    hook:"They plant a koa tree for every single ʻukulele they build.",
+    how:["Founded in 1998 by Joe and Kristen Souza.","High-end instruments made with a stated environmental streak.","One uke, one tree — trying to give back the forest they draw from."] },
+  { id:"koolau", maker:"Koʻolau", kicker:"ʻUkulele & guitars", where:"Oʻahu", url:"https://www.koolauukulele.com/", accent:"#b5732f", motif:"strings",
+    hook:"The fourth Hawaiian 'K' — building with far more than koa.",
+    how:["Uses spruce, redwood, rosewood, tropical ash and more.","Leans into custom, made-to-order instruments.","Has focused on manufacturing fine Hawaiian ukes for decades."] },
+  { id:"pyzel", maker:"Pyzel Surfboards", kicker:"Surfboards", where:"Waialua, North Shore", url:"https://pyzelsurfboards.com/", accent:"#2f8f9d", motif:"wave",
+    hook:"The North Shore shaper behind the boards John John Florence rides to world titles.",
+    how:["Jon Pyzel started in a backyard shaping bay in the mid-'90s.","A board is carved from a foam blank with a wood stringer, then glassed in fiberglass and resin.","The boards get tested on the heaviest waves on earth, minutes from the bay."] },
+  { id:"tokoro", maker:"Tokoro Surfboards", kicker:"Surfboards", where:"Oʻahu", url:"https://www.tokorosurfboards.com/", accent:"#2f8f9d", motif:"wave",
+    hook:"One of Hawaiʻi's most respected shapers — and surfers.",
+    how:["Wade Tokoro shapes on Oʻahu.","Shaping is subtraction: cut the outline and curves, millimeters at a time.","Then glassed, hot-coated, sanded, and finned by hand."] },
+  { id:"aipa", maker:"Aipa Surf Co.", kicker:"Surfboards", where:"Oʻahu · since 1970", url:"https://www.aipasurf.com/", accent:"#c86b57", motif:"wave",
+    hook:"Ben Aipa invented the swallowtail — and his sons still run the shop.",
+    how:["Aipa started shaping in 1970 and rewrote what a surfboard tail could do.","He invented the double-edged swallowtail (1972) and the split-tail (1974).","The shop is now led by his sons, Duke and Akila."] }
 ];
 
-/* =================== RENDER =================== */
-var app = document.getElementById('app');
-function byId(id){for(var i=0;i<ARTICLES.length;i++)if(ARTICLES[i].id===id)return {a:ARTICLES[i],i:i};return null;}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+/* =================== THE FEED — random, infinite =================== */
+var feed=document.getElementById('feed');
+var bag=[], lastId=null, firstCard=true;
 
-function renderBlocks(blocks){
-  var out='';
-  for(var i=0;i<blocks.length;i++){
-    var b=blocks[i], t=b[0];
-    if(t==="p") out+='<p>'+b[1]+'</p>';
-    else if(t==="h2") out+='<h2>'+esc(b[1])+'</h2>';
-    else if(t==="pull") out+='<blockquote class="pull">'+esc(b[1])+'</blockquote>';
-    else if(t==="steps"){
-      var s=b[1]; out+='<div class="steps"><div class="lab">'+esc(s.label)+'</div>';
-      for(var j=0;j<s.items.length;j++) out+='<div class="step"><div><h4>'+esc(s.items[j][0])+'</h4><p>'+s.items[j][1]+'</p></div></div>';
-      out+='</div>';
-    } else if(t==="note"){
-      out+='<aside class="note"><span class="lab">'+esc(b[1])+'</span>';
-      for(var k=0;k<b[2].length;k++) out+='<p>'+b[2][k][1]+'</p>';
-      out+='</aside>';
-    }
-  }
-  return out;
+function shuffle(arr){ // Fisher–Yates
+  var a=arr.slice(), i, j, t;
+  for(i=a.length-1;i>0;i--){ j=Math.floor(Math.random()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
 }
-function renderSpec(spec){
-  if(!spec) return '';
-  var out='<div class="spec"><div class="lab">'+esc(spec.label)+'</div><dl>';
-  for(var i=0;i<spec.rows.length;i++) out+='<dt>'+esc(spec.rows[i][0])+'</dt><dd>'+spec.rows[i][1]+'</dd>';
-  return out+'</dl></div>';
+function refill(){
+  bag=shuffle(MAKERS);
+  if(bag.length>1 && bag[0].id===lastId){ bag.push(bag.shift()); } // avoid an immediate repeat
+}
+function nextMaker(){
+  if(!bag.length) refill();
+  var m=bag.shift(); lastId=m.id; return m;
 }
 
-function renderCover(issueN){
-  issueN = issueN || LATEST;
-  var meta = issueMeta(issueN);
-  var list = articlesInIssue(issueN);
-  var hero = list.filter(function(a){return a.hero;})[0] || list[0];
-  var h='';
-  h+='<section class="cover-mast">'+
-       '<div class="issue">Issue '+esc(meta.no)+' &nbsp;·&nbsp; '+esc(meta.theme)+'</div>'+
-       '<h1>Makers<br>Deserve<br>Glory</h1>'+
-       '<div class="tag">How real things are made — and who makes them.</div>'+
-       '<div class="shimmer"></div>'+
-       '<p class="ethos">A no-ads magazine you <b>read</b> instead of watching: how things are built and how '+
-         'they work — and <b>the real people who make them</b>. Every story links you straight back to the makers. '+
-         'Each issue digs into one world.</p>'+
-     '</section>';
-  // hero
-  h+='<section class="hero" data-go="'+hero.id+'" style="--accent:'+hero.accent+'">'+
-       '<div class="hero-txt">'+
-         '<span class="kicker">Cover Story · '+esc(hero.kicker)+'</span>'+
-         '<h2>'+esc(hero.title)+'</h2>'+
-         '<p class="dek">'+esc(hero.dek)+'</p>'+
-         '<span class="go">Read the story →</span>'+
-         '<div class="meta">'+hero.readMin+' min read · Issue '+esc(meta.no)+'</div>'+
-       '</div>'+
-       '<div class="plate">'+motif(hero.motif,hero.accent)+'</div>'+
-     '</section>';
-  // contents (with issue switcher)
-  h+='<section class="contents">';
-  if(ISSUES.length>1){
-    h+='<div class="issue-tabs">';
-    for(var t=ISSUES.length-1;t>=0;t--){ var im=ISSUES[t];
-      h+='<button class="itab'+(im.n===issueN?' on':'')+'" data-issue="'+im.n+'">'+esc(im.no)+' · '+esc(im.theme)+'</button>';
-    }
-    h+='</div>';
-  }
-  h+='<div class="h">In this issue — '+esc(meta.theme)+'</div><div class="h-rule"></div>';
-  for(var i=0;i<list.length;i++){var a=list[i];
-    h+='<div class="entry" data-go="'+a.id+'" style="--accent:'+a.accent+'">'+
-         '<div class="folio">'+esc(a.folio)+'</div>'+
-         '<div class="body"><span class="kicker">'+esc(a.kicker)+'</span>'+
-           '<h3>'+esc(a.title)+'</h3><p class="dek">'+esc(a.dek)+'</p></div>'+
-         '<div class="rt"><b>'+a.readMin+'</b>min read</div>'+
-       '</div>';
-  }
-  h+='</section>';
-  app.innerHTML=h;
-  bindGo();
-  document.title="Makers Deserve Glory — how things are made";
+function cardHTML(m){
+  var how='<div class="how"><span class="lab">How it’s made</span><ul>';
+  for(var i=0;i<m.how.length;i++) how+='<li><span>'+m.how[i]+'</span></li>';
+  how+='</ul></div>';
+  var hint=firstCard?'<div class="next-hint">Scroll for another maker<span class="arr">↓</span></div>':'';
+  return '<article class="card" style="--accent:'+m.accent+'"><div class="inner">'+
+    '<span class="kicker">'+m.kicker+' · '+m.where+'</span>'+
+    '<h2>'+m.maker+'</h2>'+
+    '<p class="hook">'+m.hook+'</p>'+
+    '<div class="plate">'+motif(m.motif,m.accent)+'</div>'+
+    how+
+    '<div class="visit"><a href="'+m.url+'" target="_blank" rel="noopener noreferrer">Visit '+m.maker+' ↗</a>'+
+      '<span class="where">the maker, in their own words</span></div>'+
+    '</div>'+hint+'</article>';
 }
-
-function renderMakersBlock(a){
-  if(!a.makers || !a.makers.length) return '';
-  var out='<section class="makers"><div class="makers-h"><span class="lab">The Makers</span>'+
-          '<span class="sub">Real people made this — go see for yourself.</span></div>';
-  for(var i=0;i<a.makers.length;i++){var m=a.makers[i];
-    out+='<a class="maker" href="'+m.url+'" target="_blank" rel="noopener noreferrer">'+
-           '<span class="mk-name">'+esc(m.name)+' <span class="mk-arr">↗</span></span>'+
-           '<span class="mk-what">'+esc(m.what)+'</span>'+
-         '</a>';
-  }
-  return out+'</section>';
+function addCard(){
+  var wrap=document.createElement('div');
+  wrap.innerHTML=cardHTML(nextMaker());
+  feed.appendChild(wrap.firstChild);
+  firstCard=false;
 }
-
-function renderMakers(){
-  var h='<div class="makers-dir">'+
-    '<span class="kicker">The Directory</span>'+
-    '<h1>The Makers</h1>'+
-    '<p class="dek">Every story here is about someone real. This is everyone we&rsquo;ve featured — and a way back to each of them.</p>';
-  for(var s=0;s<ISSUES.length;s++){ var im=ISSUES[s]; var list=articlesInIssue(im.n);
-    if(!list.length) continue;
-    h+='<div class="dir-issue"><div class="h">Issue '+esc(im.no)+' · '+esc(im.theme)+'</div><div class="h-rule"></div>';
-    for(var i=0;i<list.length;i++){ var a=list[i]; if(!a.makers||!a.makers.length) continue;
-      h+='<div class="dir-story"><button class="dir-title" data-go="'+a.id+'">'+esc(a.title)+' →</button>';
-      for(var j=0;j<a.makers.length;j++){var m=a.makers[j];
-        h+='<a class="maker" href="'+m.url+'" target="_blank" rel="noopener noreferrer">'+
-             '<span class="mk-name">'+esc(m.name)+' <span class="mk-arr">↗</span></span>'+
-             '<span class="mk-what">'+esc(m.what)+'</span></a>';
-      }
-      h+='</div>';
-    }
-    h+='</div>';
-  }
-  app.innerHTML=h; bindGo(); window.scrollTo(0,0);
-  document.title="The Makers — Makers Deserve Glory";
-}
-
-function renderArticle(id){
-  var f=byId(id); if(!f){renderCover();return;}
-  var a=f.a;
-  var sib=articlesInIssue(a.issue), si=sib.indexOf(a);
-  var prev=sib[si-1], next=sib[si+1];
-  var backCover='issue/'+a.issue;
-  var h='<article class="article" style="--accent:'+a.accent+'">'+
-    '<div class="band"></div>'+
-    '<span class="kicker">'+esc(a.folio)+' · '+esc(a.kicker)+'</span>'+
-    '<h1>'+esc(a.title)+'</h1>'+
-    '<p class="dek">'+esc(a.dek)+'</p>'+
-    '<div class="byline"><span>By '+esc(a.byline[0])+'</span><span class="sep"></span><span>'+esc(a.byline[1])+'</span>'+
-      '<span class="sep"></span><span>'+a.readMin+' min read</span></div>'+
-    '<div class="platewide">'+motif(a.motif,a.accent)+'</div>'+
-    '<div class="prose">'+renderBlocks(a.blocks)+renderSpec(a.spec)+'</div>'+
-    renderMakersBlock(a)+
-    '<nav class="artnav">'+
-      (prev?'<a data-go="'+prev.id+'"><span>← Previous</span><span class="t">'+esc(prev.title)+'</span></a>':'<a data-go="'+backCover+'"><span>← Contents</span><span class="t">Issue '+esc(issueMeta(a.issue).no)+'</span></a>')+
-      (next?'<a class="next" data-go="'+next.id+'"><span>Next →</span><span class="t">'+esc(next.title)+'</span></a>':'<a class="next" data-go="'+backCover+'"><span>Contents →</span><span class="t">Issue '+esc(issueMeta(a.issue).no)+'</span></a>')+
-    '</nav>'+
-    '</article>';
-  app.innerHTML=h;
-  bindGo();
-  document.title=a.title+" — Makers Deserve Glory";
-}
-
-function bindGo(){
-  app.querySelectorAll('[data-go]').forEach(function(el){
-    el.style.cursor='pointer';
-    el.addEventListener('click',function(){
-      var t=el.getAttribute('data-go');
-      location.hash = (t==='__cover')?'' : '/'+t;
-    });
-  });
-  app.querySelectorAll('[data-issue]').forEach(function(el){
-    el.addEventListener('click',function(){ location.hash='/issue/'+el.getAttribute('data-issue'); });
-  });
-}
-
-/* router */
-function route(){
-  var hash=location.hash.replace(/^#\/?/,'');
+function reset(){
+  feed.innerHTML=''; bag=[]; lastId=null; firstCard=true;
+  addCard(); addCard(); // seed a couple so there's always something below
   window.scrollTo(0,0);
-  if(hash==='makers') renderMakers();
-  else if(hash.indexOf('issue/')===0) renderCover(parseInt(hash.split('/')[1],10)||LATEST);
-  else if(hash && byId(hash)) renderArticle(hash);
-  else renderCover();
-  updateProgress();
 }
-window.addEventListener('hashchange',route);
+
+/* infinite scroll — keep a few cards ahead of the viewport */
+var io=new IntersectionObserver(function(entries){
+  if(entries[0].isIntersecting){ addCard(); addCard(); }
+},{rootMargin:'800px 0px'});
+io.observe(document.getElementById('sentinel'));
 
 /* controls */
-document.getElementById('home').addEventListener('click',function(){location.hash='';});
-document.getElementById('makers-btn').addEventListener('click',function(){location.hash='/makers';});
+document.getElementById('home').addEventListener('click',reset);
+document.getElementById('shuffle').addEventListener('click',reset);
 
-/* theme toggle (persisted) */
 var root=document.documentElement;
 try{var saved=localStorage.getItem('mdg-mag-theme'); if(saved)root.setAttribute('data-theme',saved);}catch(e){}
 document.getElementById('theme').addEventListener('click',function(){
-  var cur=root.getAttribute('data-theme');
-  if(!cur){cur=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
+  var cur=root.getAttribute('data-theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
   var nxt=cur==='dark'?'light':'dark';
   root.setAttribute('data-theme',nxt);
   try{localStorage.setItem('mdg-mag-theme',nxt);}catch(e){}
 });
 
-/* reading progress */
-var prog=document.getElementById('progress');
-function updateProgress(){
-  var h=document.documentElement, max=h.scrollHeight-h.clientHeight;
-  prog.style.width=(max>0?(h.scrollTop/max*100):0)+'%';
-}
-window.addEventListener('scroll',updateProgress,{passive:true});
-window.addEventListener('resize',updateProgress);
-
-route();
+reset();
 </script>
 </body>
 </html>
