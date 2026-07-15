@@ -26,6 +26,13 @@ ads. It's a root folder in the `mattdanusergrant` repo, so the apex Pages projec
   **front** is the card face — category, collection number (`Nº 03 / 65`), generative art, title,
   and a one-line flavor hook. The **back** holds the real story: a paragraph of prose (`back`), the
   key points (`facts`), the **connects-to** thread, and — for makers — a **Visit ↗** link.
+- **Sets.** Every card belongs to a named **Series** (Hawaiʻi, Time, Navigation, Materials,
+  Signals, Cosmos, Life & Medicine, Earth & Elements, Civilization) and shows a per-set collector
+  number (`HAWAIʻI · 03 / 17`). The set is derived from the card's `cat` via the `CAT_SERIES` map in
+  the script — **add a new category to that map** so new cards land in a set.
+- **Foil tier (cosmetic).** When a card is dealt it has ~a 1-in-6 chance to come up **foil** — a
+  holographic rainbow frame, a shifting sheen, and a "✦ Foil" chip. Same card, random pull, re-rolled
+  on Shuffle. Reduced-motion disables the shimmer.
 - **Random infinite deck.** The order is shuffled; scrolling deals the next card.
 - **Two themes** (dark "jewel box" / light "cool shell"), remembered; otherwise follows the device.
 - **No images** — each plate is a generative CSS-gradient + inline-SVG motif
