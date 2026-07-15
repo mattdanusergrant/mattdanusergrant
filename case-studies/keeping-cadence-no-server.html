@@ -165,7 +165,7 @@
   <header class="head">
     <p class="eyebrow">Case Study · Engineering</p>
     <h1>A multi-tenant SaaS <em>with no server.</em></h1>
-    <p class="lede">Keeping Cadence is a live, multi-tenant team-scheduling app. It has real accounts, cross-device sync, teams and invites, and a plan-vs-actual-hours permission model &mdash; and it runs at <strong>$0/month</strong> with <strong>no application server at all</strong>. The whole backend is Postgres row-level security and RPC functions on Neon, plus one 57-line edge worker. Here is how that holds together, and the two bugs that cost the most to find.</p>
+    <p class="lede">Keeping Cadence is a live, multi-tenant team-scheduling app. It has real accounts, cross-device sync, teams and invites, and a plan-vs-actual-hours permission model &mdash; useful not just for planning a week, but for turning the finished week into an hours report. It runs at <strong>$0/month</strong> with <strong>no application server at all</strong>. The whole backend is Postgres row-level security and RPC functions on Neon, plus one 57-line edge worker. Here is how that holds together, and the two bugs that cost the most to find.</p>
   </header>
 
   <dl class="meta">
@@ -268,7 +268,7 @@
 
     <section>
       <h2>Hardening it like a product</h2>
-      <p>A live app with cloud sync deserves more than a happy path, so I went back and closed the gaps a reviewer would ask about:</p>
+      <p>A live app with cloud sync deserves more than a happy path, especially once a real user started using the same plan-vs-actual view as an end-of-week hours report. I went back and closed the gaps a reviewer would ask about:</p>
       <ul>
         <li><strong>Tests &amp; CI on a build-stepless app.</strong> A dependency-free harness loads the single inline <code>&lt;script&gt;</code> in a Node <code>vm</code> behind a DOM stub and asserts the load-bearing pure logic (time math, data migration, the share-link round-trip). GitHub Actions runs it on every push.</li>
         <li><strong>Honest sync state.</strong> The client no longer swallows save failures; a persisted dirty-set tracks unsynced edits, the indicator shows synced / offline / failed with a retry, and a pull can&rsquo;t clobber an edit that hasn&rsquo;t landed yet.</li>
@@ -283,7 +283,7 @@
         <li><strong>Postgres authorization engineering</strong> &mdash; RLS policies, <code>SECURITY INVOKER</code>/<code>DEFINER</code> privilege separation, an unexposed private schema, and column-level grants: real multi-tenant access control written in SQL, not bought from a framework.</li>
         <li><strong>Web-auth internals</strong> &mdash; HttpOnly cookie semantics, <code>SameSite</code>/<code>Partitioned</code>, Safari ITP and iOS WebKit persistence rules, and JWT minting with refresh-on-401.</li>
         <li><strong>Edge/infra composition</strong> &mdash; a Cloudflare Worker reverse proxy with surgical header rewriting, host-based rewrites, and custom DNS across providers, deliberately kept to $0/month.</li>
-        <li><strong>Product judgment</strong> &mdash; knowing which corners to leave (email verification off for a private beta) and which to harden (never silently lose a user&rsquo;s saved hours).</li>
+        <li><strong>Product judgment</strong> &mdash; noticing when an unintended use case is valuable (weekly hours reporting), knowing which corners to leave (email verification off for a private beta), and which to harden (never silently lose a user&rsquo;s saved hours).</li>
       </ul>
       <p>The one place this design would ever add a server is a Stripe webhook receiver &mdash; the single seam where money, not data, has to cross. That&rsquo;s a deliberate line, documented, not an accident.</p>
     </section>

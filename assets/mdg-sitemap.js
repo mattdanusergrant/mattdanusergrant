@@ -19,7 +19,7 @@
     ]},
     { label:'Projects', url:'/#projects-h', children:[
       { label:'Invisible Ink', url:'https://itsinvisible.ink', blank:true },
-      { label:'Keeping Cadence', url:'https://mattdanusergrant.github.io/keeping-cadence/', blank:true },
+      { label:'Keeping Cadence', url:'https://www.keepingcadence.com/', blank:true },
       { label:'Dank Omphalos', url:'https://dankomphalos.com/', blank:true }
     ]},
     { label:'Case Studies', url:'/#case-studies', children:[
