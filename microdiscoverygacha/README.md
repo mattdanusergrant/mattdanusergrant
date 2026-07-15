@@ -1,11 +1,11 @@
-# Micro Discovery Guide
+# Micro Discovery Gacha
 
 **A no-ads collectible card game about how the world works.** Spend a **Pack Token** every day,
 pull knowledge cards from sets like **Makers of Hawaii**, **Time**, and **Cosmos**, chase rare
 **foils**, and fill your **binder**. Each card teaches one thing — how it works, how it's made, or
 who makes it — and flips over for the full story (maker cards link straight back to the maker).
 
-Live: **https://mattdanusergrant.com/microdiscoveryguide/**
+Live: **https://mattdanusergrant.com/microdiscoverygacha/**
 
 ## The game loop
 

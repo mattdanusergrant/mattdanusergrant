@@ -21,6 +21,7 @@
 /design-lab.html  /  301
 /design-lab       /  301
 
-# Magazine renamed: Makers Dissect Gadgets -> Makers Deserve Glory
-/makersdissectgadgets/*  /microdiscoveryguide/:splat  301
-/makersdeserveglory/*    /microdiscoveryguide/:splat  301
+# Card game renamed: Makers Dissect Gadgets -> Makers Deserve Glory -> Micro Discovery Guide -> Micro Discovery Gacha
+/makersdissectgadgets/*  /microdiscoverygacha/:splat  301
+/makersdeserveglory/*    /microdiscoverygacha/:splat  301
+/microdiscoveryguide/*   /microdiscoverygacha/:splat  301
