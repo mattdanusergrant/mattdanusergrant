@@ -22,8 +22,11 @@ ads. It's a root folder in the `mattdanusergrant` repo, so the apex Pages projec
 - **Random infinite feed.** On load the collection is shuffled (Fisher–Yates); scrolling appends
   the next card from a no-repeat "bag," topping up so you're always ~2 screens ahead. When the bag
   empties it reshuffles. **Shuffle** restarts with a fresh order.
-- **One idea per card** — an eyebrow (category · place/era), the title, a hook, a generative motif,
-  a short list of facts, an optional **connects-to** thread, and — for makers — a **Visit ↗** link.
+- **Each card is a collectible you flip.** Tap (or Enter/Space) to flip the card in 3-D. The
+  **front** is the card face — category, collection number (`Nº 03 / 65`), generative art, title,
+  and a one-line flavor hook. The **back** holds the real story: a paragraph of prose (`back`), the
+  key points (`facts`), the **connects-to** thread, and — for makers — a **Visit ↗** link.
+- **Random infinite deck.** The order is shuffled; scrolling deals the next card.
 - **Two themes** (dark "jewel box" / light "cool shell"), remembered; otherwise follows the device.
 - **No images** — each plate is a generative CSS-gradient + inline-SVG motif
   (`scroll · wave · grain · facet · strings · orbit · grid · pulse`) tinted per card.
@@ -40,22 +43,26 @@ Everything is the `CARDS` array near the bottom of `index.html`. Add a card = ad
   where:"1700s",                // OPTIONAL era/place
   accent:"#2f8f9d",             // tint
   motif:"pulse",                // scroll|wave|grain|facet|strings|orbit|grid|pulse
-  title:"Atomic Clocks",        // the headline (the concept)
-  hook:"The most precise machines ever built keep time by counting an atom's buzz.",
-  facts:[ "…", "…", "…" ],      // 3–4 bite-sized lines (this is the learning)
-  connects:"Atomic clocks → GPS → the internet"   // OPTIONAL "→" thread
+  title:"Atomic Clocks",        // FRONT: the headline (the concept)
+  hook:"The most precise machines ever built keep time by counting an atom's buzz.", // FRONT: flavor line
+  back:"An atomic clock keeps time with the rock-steady rhythm of an atom … (2–4 sentence chunk).", // BACK: the story
+  facts:[ "…", "…", "…" ],      // BACK: 3–4 bite-sized key points
+  connects:"Atomic clocks → GPS → the internet"   // BACK: OPTIONAL "→" thread
 }
 ```
 
-**A "how it's made" / maker card** adds a verified link back:
+**A "how it's made" / maker card** adds a verified link back (shown on the back):
 ```js
 {
   id:"kamaka", cat:"ʻUkulele", where:"Honolulu · since 1916", accent:"#b5732f", motif:"strings",
   title:"Kamaka Hawaii", lead:"How it’s made",
   url:"https://kamakahawaii.com/", link:"Visit Kamaka",   // url = the link back; must be real & live
-  hook:"…", facts:[ "…", "…", "…" ]
+  hook:"…", back:"… the maker's story …", facts:[ "…", "…", "…" ]
 }
 ```
+
+Every card needs a **`back`** — the "nice chunk of text" the flip reveals (a real 2–4 sentence
+paragraph, not just the facts restated).
 
 Rules:
 - **Facts must be accurate.** These are real science/history/craft. Hedge origin stories the way the

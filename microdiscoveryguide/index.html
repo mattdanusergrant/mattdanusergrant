@@ -4,56 +4,56 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Micro Discovery Guide — how the world works, one card at a time</title>
-<meta name="description" content="A no-ads micro-learning feed about how things work, how they're made, and how it all connects. Land on a random card, scroll for another — from atomic clocks to koa ukuleles to Roman concrete." />
+<meta name="description" content="A no-ads deck of collectible knowledge cards. Land on a random card, tap to flip it for the full story, and scroll for another — from atomic clocks to koa ukuleles to Roman concrete." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#0d1413" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Micro Discovery Guide" />
 <meta property="og:title" content="Micro Discovery Guide — how the world works, one card at a time" />
-<meta property="og:description" content="A no-ads micro-learning feed: how things work, how they're made, and how it all connects. Scroll for a random card." />
+<meta property="og:description" content="A no-ads deck of collectible knowledge cards. Tap to flip for the full story; scroll for a random card." />
 <meta property="og:url" content="https://mattdanusergrant.com/microdiscoveryguide/" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Micro Discovery Guide" />
-<meta name="twitter:description" content="A no-ads micro-learning feed about how things work, how they're made, and how it all connects." />
+<meta name="twitter:description" content="A no-ads deck of collectible knowledge cards — tap to flip, scroll for another." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Archivo:wght@500;600;700&display=swap" rel="stylesheet" />
 
 <style>
-/* ============ MICRO DISCOVERY GUIDE — a micro-learning feed of how things work ============ */
+/* ============ MICRO DISCOVERY GUIDE — a deck of collectible knowledge cards ============ */
 :root{
   --display:'Fraunces','Hoefler Text','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
   --body:'Newsreader','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
   --label:'Archivo','Helvetica Neue',system-ui,-apple-system,sans-serif;
   --bg:#0d1413; --bg2:#131c1b; --plate:#16211f; --ink:#f3ede1; --ink-soft:#d8d2c5;
   --muted:#93a09c; --line:#243230; --line2:#33453f; --gold:#c9a24b; --gold-soft:#e3c987;
-  --shadow:0 24px 60px -30px rgba(0,0,0,.8); --accent:#c9a24b;
+  --shadow:0 30px 70px -32px rgba(0,0,0,.85); --accent:#c9a24b;
 }
-:root[data-theme="dark"]{
-  --bg:#0d1413; --bg2:#131c1b; --plate:#16211f; --ink:#f3ede1; --ink-soft:#d8d2c5;
+:root[data-theme="dark"]{ --bg:#0d1413; --bg2:#131c1b; --plate:#16211f; --ink:#f3ede1; --ink-soft:#d8d2c5;
   --muted:#93a09c; --line:#243230; --line2:#33453f; --gold:#c9a24b; --gold-soft:#e3c987;
-  --shadow:0 24px 60px -30px rgba(0,0,0,.8);
-}
+  --shadow:0 30px 70px -32px rgba(0,0,0,.85); }
 @media(prefers-color-scheme:light){
-  :root{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f4f1ea; --ink:#182421; --ink-soft:#3a4744;
+  :root{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f7f4ec; --ink:#182421; --ink-soft:#3a4744;
     --muted:#6f7a72; --line:#d8d3c4; --line2:#c6c0ae; --gold:#9c7a2b; --gold-soft:#b89440;
-    --shadow:0 22px 48px -30px rgba(40,44,40,.35); }
+    --shadow:0 26px 56px -30px rgba(40,44,40,.4); }
 }
-:root[data-theme="light"]{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f4f1ea; --ink:#182421; --ink-soft:#3a4744;
+:root[data-theme="light"]{ --bg:#eae7de; --bg2:#f2efe7; --plate:#f7f4ec; --ink:#182421; --ink-soft:#3a4744;
   --muted:#6f7a72; --line:#d8d3c4; --line2:#c6c0ae; --gold:#9c7a2b; --gold-soft:#b89440;
-  --shadow:0 22px 48px -30px rgba(40,44,40,.35); }
+  --shadow:0 26px 56px -30px rgba(40,44,40,.4); }
 
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:19px;line-height:1.6;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-optical-sizing:auto}
+body{margin:0;background:
+  radial-gradient(140% 100% at 50% 0%, color-mix(in srgb,var(--gold) 6%, transparent), transparent 55%),
+  var(--bg);
+  color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-optical-sizing:auto}
 a{color:inherit;text-decoration:none}
 ::selection{background:var(--gold);color:#0d1413}
 
 .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:12px clamp(14px,4vw,32px);background:color-mix(in srgb,var(--bg) 86%,transparent);
+  padding:12px clamp(14px,4vw,32px);background:color-mix(in srgb,var(--bg) 84%,transparent);
   backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .wordmark{display:flex;align-items:center;gap:.55em;background:none;border:0;cursor:pointer;
   font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;
@@ -68,56 +68,79 @@ a{color:inherit;text-decoration:none}
 @media(max-width:430px){ .btn{padding:6px 10px;letter-spacing:.03em} .wordmark{letter-spacing:.05em} }
 
 #feed{display:flex;flex-direction:column}
-.card{min-height:calc(100svh - 54px);display:flex;flex-direction:column;justify-content:center;
-  padding:clamp(30px,6vw,64px) clamp(18px,5vw,32px);border-bottom:1px solid var(--line);position:relative}
-.card .inner{max-width:640px;margin:0 auto;width:100%;animation:rise .5s ease both}
-@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.card .inner{animation:none}}
+.slot{min-height:calc(100svh - 54px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:26px 16px}
 
-.kicker{font-family:var(--label);font-weight:700;letter-spacing:.2em;text-transform:uppercase;font-size:12px;
-  color:var(--accent);display:inline-flex;align-items:center;gap:.7em;margin-bottom:16px}
-.kicker::before{content:"";width:22px;height:1px;background:var(--accent);display:inline-block}
-.card h2{font-family:var(--display);font-weight:500;font-size:clamp(34px,7vw,60px);line-height:1.02;
-  letter-spacing:-.02em;margin:0;text-wrap:balance}
-.card .hook{font-family:var(--display);font-style:italic;color:var(--ink-soft);font-size:clamp(19px,3.2vw,24px);
-  line-height:1.35;margin:16px 0 0;text-wrap:pretty}
+/* the collectible card */
+.card{width:min(92vw,384px);height:min(82svh,650px);perspective:1700px;cursor:pointer;position:relative;
+  animation:rise .5s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.card{animation:none}}
+.flipper{position:relative;width:100%;height:100%;transition:transform .62s cubic-bezier(.2,.72,.2,1);transform-style:preserve-3d}
+.card.flipped .flipper{transform:rotateY(180deg)}
+@media(prefers-reduced-motion:reduce){.flipper{transition:none}}
+.card:focus-visible{outline:none}
+.card:focus-visible .face{outline:2px solid var(--gold);outline-offset:3px}
 
-.plate{aspect-ratio:16/5;border-radius:5px;border:1px solid var(--line2);overflow:hidden;position:relative;
-  box-shadow:var(--shadow);margin:26px 0}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border-radius:20px;overflow:hidden;display:flex;flex-direction:column;
+  background:linear-gradient(168deg, var(--plate), var(--bg2));border:1px solid var(--line2);
+  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.05)}
+.back{transform:rotateY(180deg)}
+/* foil frame drawn from the card's accent */
+.face::before{content:"";position:absolute;inset:0;border-radius:20px;padding:1.3px;pointer-events:none;z-index:3;
+  background:linear-gradient(150deg, color-mix(in srgb,var(--accent) 80%,transparent), transparent 38%,
+    transparent 62%, color-mix(in srgb,var(--accent) 45%,transparent));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask-composite:exclude}
+
+.cardtop{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 17px 0;flex:none}
+.type{font-family:var(--label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;
+  color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.num{font-family:var(--label);font-weight:600;letter-spacing:.08em;font-size:11px;color:var(--muted);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* front */
+.art{margin:13px 17px 0;flex:none;aspect-ratio:16/8;border-radius:11px;overflow:hidden;position:relative;
+  border:1px solid var(--line2)}
 .motif{position:absolute;inset:0;width:100%;height:100%}
+.front .name{font-family:var(--display);font-weight:500;font-size:clamp(25px,5.6vw,33px);line-height:1.03;
+  letter-spacing:-.015em;margin:18px 17px 0;color:var(--ink);text-wrap:balance}
+.front .flavor{font-family:var(--display);font-style:italic;font-size:clamp(16px,3vw,18px);line-height:1.36;
+  color:var(--ink-soft);margin:12px 17px 0}
+.front .where{font-family:var(--label);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);margin:12px 17px 0}
+.tap{margin-top:auto;padding:14px 17px 16px;display:flex;align-items:center;gap:.5em;font-family:var(--label);
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tap .ic{font-size:14px;color:var(--accent)}
 
-.how{margin:6px 0 0;counter-reset:step;border-top:1px solid var(--line)}
-.how .lab{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:11px;
-  color:var(--accent);padding:14px 0 2px;display:block}
-.how ul{margin:0;padding:0}
-.how li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;
-  padding:12px 0;border-bottom:1px solid var(--line);counter-increment:step}
-.how li::before{content:counter(step);font-family:var(--display);font-size:17px;color:var(--accent);
-  line-height:1.4;font-variant-numeric:tabular-nums;min-width:1.1em}
-.how li span{font-size:16.5px;line-height:1.5;color:var(--ink-soft)}
-
-.connects{margin-top:18px;font-family:var(--label);font-size:12.5px;letter-spacing:.01em;color:var(--ink-soft);
-  border-top:1px dashed var(--line2);padding-top:14px}
-.connects b{text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--accent);margin-right:10px;
-  font-size:10.5px}
-
-.visit{margin-top:24px;display:flex;flex-wrap:wrap;align-items:center;gap:14px}
-.visit a{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-weight:700;
-  letter-spacing:.03em;font-size:13px;text-transform:uppercase;color:var(--bg);background:var(--accent);
-  border:1px solid var(--accent);border-radius:999px;padding:11px 20px;transition:filter .15s,transform .12s}
+/* back */
+.back .body{padding:16px 18px 6px;overflow:auto;flex:1;min-height:0}
+.back .name{font-family:var(--display);font-weight:500;font-size:clamp(20px,4.4vw,25px);line-height:1.06;
+  letter-spacing:-.01em;margin:0 0 12px;color:var(--ink)}
+.prose{font-family:var(--body);font-size:16px;line-height:1.55;color:var(--ink-soft);margin:0}
+.points{margin:16px 0 0;padding:0;border-top:1px solid var(--line)}
+.points li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:start;
+  padding:9px 0;border-bottom:1px solid var(--line)}
+.points li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:9px}
+.points li span{font-size:14.5px;line-height:1.45;color:var(--muted)}
+.connects{margin:15px 0 0;font-family:var(--label);font-size:12px;letter-spacing:.01em;color:var(--ink-soft);
+  border-top:1px dashed var(--line2);padding-top:12px}
+.connects b{text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--accent);margin-right:9px;font-size:10px}
+.visit{padding:10px 18px 16px;flex:none}
+.visit a{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-weight:700;letter-spacing:.03em;
+  font-size:12.5px;text-transform:uppercase;color:var(--bg);background:var(--accent);border:1px solid var(--accent);
+  border-radius:999px;padding:10px 17px;transition:filter .15s,transform .12s}
 .visit a:hover,.visit a:focus-visible{filter:brightness(1.08);transform:translateY(-1px);outline:none}
 .visit a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
-.visit .where{font-family:var(--label);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 
-.next-hint{position:absolute;left:0;right:0;bottom:20px;text-align:center;font-family:var(--label);
-  font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);pointer-events:none}
+.next-hint{margin:6px 0 2px;text-align:center;font-family:var(--label);font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--muted)}
 .next-hint .arr{display:block;font-size:15px;margin-top:6px;animation:bob 1.8s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
 @media(prefers-reduced-motion:reduce){.next-hint .arr{animation:none}}
-
 #sentinel{height:1px}
-.foot{padding:34px 20px 60px;text-align:center;color:var(--muted);font-family:var(--label);font-size:11.5px;
-  letter-spacing:.08em;border-top:1px solid var(--line)}
+.foot{padding:30px 20px 60px;text-align:center;color:var(--muted);font-family:var(--label);font-size:11.5px;
+  letter-spacing:.08em}
 .foot b{color:var(--ink-soft);font-weight:600}
 </style>
 </head>
@@ -132,10 +155,9 @@ a{color:inherit;text-decoration:none}
 
 <main id="feed"></main>
 <div id="sentinel"></div>
-<footer class="foot"><b>How the world works — and who figured it out.</b> No ads, one card at a time. Keep scrolling.</footer>
+<footer class="foot"><b>Tap a card to flip it.</b> A deck of how the world works — no ads. Keep scrolling for another.</footer>
 
 <script>
-/* motif: layered gradient + inline SVG line-art, tinted by accent. No external images. */
 function motif(kind, a){
   var svg, i;
   if(kind==="scroll"){
@@ -164,253 +186,316 @@ function motif(kind, a){
     svg='<polygon points="180,30 300,120 240,220 120,220 60,120" fill="none" stroke="'+a+'" stroke-width="1.3" opacity=".9"/>'+
         '<path d="M60 120 L180 120 L300 120 M180 30 L180 120 M120 220 L180 120 L240 220" stroke="'+a+'" stroke-width="1" opacity=".55" fill="none"/>';
   }
-  var grad='radial-gradient(120% 160% at 80% 0%, color-mix(in srgb,'+a+' 32%, transparent), transparent 62%),'+
+  var grad='radial-gradient(120% 170% at 82% -10%, color-mix(in srgb,'+a+' 34%, transparent), transparent 62%),'+
            'linear-gradient(160deg, var(--plate), var(--bg2))';
   return '<div class="motif" style="background:'+grad+'"></div>'+
          '<svg class="motif" viewBox="0 0 360 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'+svg+'</svg>';
 }
 
-/* =================== THE COLLECTION — grows over time =================== */
-/* Each card teaches ONE thing: how something works, how it's made, or who made it.
-   Fields: cat (category), title, where?, accent, motif, hook, lead? (facts label),
-   facts[] (3–4 bite-sized points), connects? (a "→" thread), url?+link? (a real link back). */
+/* =================== THE DECK — each card flips: front = the face, back = the story =================== */
 var CARDS = [
 
 /* ---- How it's made — real makers, linked back to them ---- */
-{ id:"philip-rickard", cat:"Hawaiian heirloom gold", where:"Honolulu", accent:"#c9a24b", motif:"scroll", lead:"How it’s made",
+{ id:"philip-rickard", cat:"Hawaiian gold", where:"Honolulu", accent:"#c9a24b", motif:"scroll", lead:"How it’s made",
   title:"Philip Rickard", url:"https://www.philiprickard.com/", link:"Visit Philip Rickard",
-  hook:"The jeweler who traced the Hawaiian heirloom bracelet back to a Victorian gift — and still makes them by hand.",
-  facts:["A band of gold is cut, formed to the wrist, and hand-engraved with scrolls, maile leaves, and a name.","The engraved letters are filled with black enamel and polished flush, so the name reads sharp against bright gold.","Rickard spent six years researching the craft’s 1880s origin and wrote the book on it."] },
-{ id:"na-hoku", cat:"Hawaiian heirloom jewelry", where:"Honolulu · since 1924", accent:"#c9a24b", motif:"scroll", lead:"How it’s made",
+  hook:"The jeweler who traced the Hawaiian heirloom bracelet to a Victorian gift — and still makes them by hand.",
+  facts:["A band of gold is cut, formed to the wrist, and hand-engraved with scrolls, leaves, and a name.","The letters are filled with black enamel and polished flush, so the name reads sharp against bright gold.","Rickard spent six years researching the craft’s 1880s origin."],
+  back:"Hawaiian heirloom jewelry traces to the 1880s, when Hawaiian royalty came home from Queen Victoria’s jubilee wearing black-enameled English keepsakes and made the look their own. Philip Rickard spent six years documenting that history before building the bracelets the traditional way — every scroll, leaf and letter cut into the gold by hand, then filled with black enamel and polished flush so a loved one’s name stays crisp for generations. That handing-down is the whole point of an heirloom." },
+{ id:"na-hoku", cat:"Hawaiian jewelry", where:"Honolulu · since 1924", accent:"#c9a24b", motif:"scroll", lead:"How it’s made",
   title:"Nā Hoku", url:"https://www.nahoku.com/", link:"Visit Nā Hoku",
   hook:"A Honolulu family that has hand-engraved Hawaiian heirloom jewelry for a hundred years.",
-  facts:["Every heirloom piece is engraved by hand — so no two are ever identical.","Flowers are carved in relief, standing up from a cut-away background.","The black in the lettering is enamel sunk into the metal, never paint."] },
-{ id:"maui-divers", cat:"Hawaiian black coral", where:"Lahaina, Maui · est. 1958", accent:"#6f7f86", motif:"facet", lead:"How it’s made",
+  facts:["Every heirloom piece is engraved by hand — so no two are ever identical.","Flowers are carved in relief, standing up from a cut-away background.","The black in the lettering is enamel sunk into the metal, never paint."],
+  back:"Founded in Honolulu in 1924, Nā Hoku is among the oldest names in Hawaiian heirloom jewelry, and a century on it still engraves the classic maile-and-plumeria designs by hand. The flowers are carved in relief so they stand above a cut-away ground, and names are sunk into the metal and inked with black enamel. Because a person does the cutting rather than a machine, no two pieces are truly identical — those tiny variations are the maker’s fingerprint." },
+{ id:"maui-divers", cat:"Black coral", where:"Lahaina, Maui · est. 1958", accent:"#6f7f86", motif:"facet", lead:"How it’s made",
   title:"Maui Divers Jewelry", url:"https://www.mauidivers.com/", link:"Visit Maui Divers",
   hook:"They found Hawaiʻi’s black coral in 1958 — then figured out how to harvest it without wrecking the reef.",
-  facts:["Licensed divers selectively cut mature black-coral colonies over 150 feet down.","The living tissue is stripped to a hard black skeleton that polishes up like glass.","They pioneered sustainable harvesting with the University of Hawaiʻi; black coral is the state gem."] },
-{ id:"niihau-heritage", cat:"Niʻihau shell lei", where:"Niʻihau & Kauaʻi", accent:"#d8a7a0", motif:"wave", lead:"How it’s made",
-  title:"Niʻihau Heritage Cultural Foundation", url:"https://niihauheritage.org/", link:"Visit the Foundation",
+  facts:["Licensed divers selectively cut mature black-coral colonies over 150 feet down.","The living tissue is stripped to a hard black skeleton that polishes up like glass.","They pioneered sustainable harvesting with the University of Hawaiʻi."],
+  back:"Black coral isn’t a rock but the slow-grown skeleton of a deep-sea animal, and Hawaiʻi named it the state gem in 1987. Maui Divers found the islands’ beds off the Molokai Channel in the late 1950s and, working with the University of Hawaiʻi, helped set the licensed, selective, deep-diving harvest that keeps it sustainable. Stripped of its living tissue and polished, the dull black skeleton takes on a deep, glassy shine — often set against warm gold." },
+{ id:"niihau-heritage", cat:"Shell lei", where:"Niʻihau & Kauaʻi", accent:"#d8a7a0", motif:"wave", lead:"How it’s made",
+  title:"Niʻihau Heritage", url:"https://niihauheritage.org/", link:"Visit the Foundation",
   hook:"Keepers of the world’s rarest lei — necklaces sewn from shells smaller than a grain of rice.",
-  facts:["Tiny kahelelani shells wash up on Niʻihau after winter storms and are sorted by size and color by hand.","Each shell is pierced with a fine needle and strung in traditional patterns.","One lei can hold ten thousand shells and take a year — the name is protected by Hawaiʻi law."] },
-{ id:"kauai-curators", cat:"Niʻihau shell lei · Kauai Curators", where:"Kauaʻi", accent:"#d8a7a0", motif:"wave", lead:"How it’s made",
+  facts:["Tiny kahelelani shells wash up on Niʻihau after winter storms and are sorted by hand.","Each shell is pierced with a fine needle and strung in traditional patterns.","One lei can hold ten thousand shells and take a year to finish."],
+  back:"Niʻihau, the privately held ‘Forbidden Isle,’ is the one place tiny kahelelani and momi shells wash up in the numbers a lei-maker needs. Sorting them by size and color, piercing each with a needle, and stringing thousands in traditional patterns can take a year — which is why a genuine Niʻihau lei rivals fine jewelry in value. The Niʻihau Heritage Cultural Foundation guards that history, and the name itself, which Hawaiʻi law now protects from imitations." },
+{ id:"kauai-curators", cat:"Shell lei", where:"Kauaʻi", accent:"#d8a7a0", motif:"wave", lead:"How it’s made",
   title:"Janelle Kienow", url:"https://www.kauaicurators.com/about/janelle-kienow/", link:"Visit Kauai Curators",
   hook:"Fifteen-plus years sorting and stringing Niʻihau shells — and defending the craft’s name.",
-  facts:["Shells are graded by color: plain white is common; deep reds and blues are rare and costly.","Each shell is hand-pierced and knotted so it faces the light.","She advocates for protecting the ‘Niʻihau’ name from cheaper imitations."] },
+  facts:["Shells are graded by color: plain white is common; deep reds and blues are rare and costly.","Each shell is hand-pierced and knotted so it faces the light.","She advocates for protecting the ‘Niʻihau’ name from imitations."],
+  back:"A Niʻihau lei’s worth lives in its color and its consistency: plain white shells are common, but deep reds, golds and blues are rare, and matching thousands of them is a feat of patient sorting. Janelle Kienow has done that work for over fifteen years, and she’s also a public advocate for protecting the ‘Niʻihau’ name from cheaper leis strung elsewhere. Every shell is hand-pierced and knotted so it turns toward the light." },
 { id:"martin-macarthur", cat:"Koa wood", where:"Hawaiʻi", accent:"#b07d3f", motif:"grain", lead:"How it’s made",
   title:"Martin & MacArthur", url:"https://www.martinandmacarthur.com/", link:"Visit Martin & MacArthur",
   hook:"Hawaiʻi koa makers who will openly show you how a koa ring is made.",
-  facts:["Curly koa is chosen for grain that shimmers as it turns — an effect called chatoyance.","Rings are turned or bent-laminated, stabilized with resin, and finished to a deep gloss.","That shimmer is the wood catching light at different angles, not a stain."] },
+  facts:["Curly koa is chosen for grain that shimmers as it turns — an effect called chatoyance.","Rings are turned or bent-laminated, stabilized with resin, and finished to a gloss.","That shimmer is the wood catching light at different angles, not a stain."],
+  back:"Koa is Hawaiʻi’s storied hardwood — the wood of voyaging canoes and royal bowls — and its most prized boards carry a rippling ‘curl’ that seems to shift as you turn them, an optical effect called chatoyance. Martin & MacArthur work that figured koa into rings and objects: turning or laminating it, stabilizing it with resin, and finishing it to a deep gloss that makes the grain look almost liquid. The shimmer isn’t stain — it’s the wood catching light at different angles." },
 { id:"pono-woodworks", cat:"Koa rings", where:"Big Island", accent:"#b07d3f", motif:"grain", lead:"How it’s made",
   title:"Pono Woodworks", url:"https://ponowoodworks.com/", link:"Visit Pono Woodworks",
   hook:"Koa rings made only from trees that were already dead or fallen.",
-  facts:["No living koa is cut — the wood is salvaged or fallen.","It’s resin-stabilized under pressure so a ring can take daily wear.","A metal or second-wood liner adds strength inside the band."] },
+  facts:["No living koa is cut — the wood is salvaged or fallen.","It’s resin-stabilized under pressure so a ring can take daily wear.","A metal or second-wood liner adds strength inside the band."],
+  back:"Koa grows slowly and matters ecologically, so Pono Woodworks makes its rings only from trees that were already dead or fallen — never freshly cut. The salvaged wood is infused with resin under pressure so a thin band can survive daily wear, and a metal or second-wood liner adds strength inside the ring. It’s a way to wear one of Hawaiʻi’s most meaningful woods without taking a living tree from the forest." },
 { id:"nakoa", cat:"Koa jewelry", where:"Hawaiʻi", accent:"#b07d3f", motif:"grain", lead:"How it’s made",
   title:"Nakoa", url:"https://nakoajewelry.com/", link:"Visit Nakoa",
   hook:"Forty-plus years hand-carving jewelry from Hawaiʻi’s canoe wood.",
-  facts:["Koa built voyaging canoes and royal bowls long before it circled fingers.","Pieces are carved and sanded by hand to pull the curl forward.","Koa isn’t indestructible — an occasional wipe of oil keeps it glowing."] },
+  facts:["Koa built voyaging canoes and royal bowls long before it circled fingers.","Pieces are carved and sanded by hand to pull the curl forward.","Koa isn’t indestructible — an occasional wipe of oil keeps it glowing."],
+  back:"Long before it circled fingers, koa built the great voyaging canoes and the calabashes of chiefs — so a koa ring carries a lot of Hawaiian history on a small band. Nakoa has hand-carved koa jewelry for more than forty years, sanding each piece to bring the curl forward. Koa isn’t indestructible, though: kept off long soaks and given the occasional wipe of oil, it holds its glow for decades." },
 { id:"flotsam", cat:"Sunrise shells", where:"North Shore, Oʻahu", accent:"#e0955a", motif:"facet", lead:"How it’s made",
   title:"Flotsam & Co.", url:"https://www.flotsamand.co/sunrise-shells", link:"Visit Flotsam & Co.",
   hook:"They free-dive a hundred feet for a thumbnail-sized shell that blushes pink to gold.",
-  facts:["Sunrise shells bury in deep sand channels; divers fan the sand by hand to find them.","The color lives in a thin layer, so they’re never bleached or over-scrubbed.","The fragile shells are bezel-set in gold so they can actually be worn."] },
-{ id:"monica-shore", cat:"Sunrise shell jewelry", where:"Haleʻiwa, Oʻahu", accent:"#e0955a", motif:"facet", lead:"How it’s made",
+  facts:["Sunrise shells bury in deep sand channels; divers fan the sand by hand to find them.","The color lives in a thin layer, so they’re never bleached or over-scrubbed.","The fragile shells are bezel-set in gold so they can actually be worn."],
+  back:"The sunrise shell is a scallop no bigger than a thumbnail whose ribs run from pink through orange to gold, and tradition holds the finest were once reserved for aliʻi. You don’t really buy a good one — you find it, and Flotsam & Co. free-dive a hundred feet to fan the sand where the living scallops bury themselves. Because the color sits in a paper-thin layer, they’re never bleached; the fragile shells are cradled in gold bezels so they can survive being worn." },
+{ id:"monica-shore", cat:"Sunrise shells", where:"Haleʻiwa, Oʻahu", accent:"#e0955a", motif:"facet", lead:"How it’s made",
   title:"MonicaByTheShore", url:"http://www.monicabytheshore.com/", link:"Visit MonicaByTheShore",
   hook:"North-Shore sunrise-shell jewelry, made one shell at a time.",
-  facts:["Once reserved for aliʻi, sunrise shells are Hawaiʻi’s most coveted beach find.","Shells are graded on color, symmetry and no chips; matched pairs for earrings are hardest.","Each is set in gold to protect the thin, fragile shell."] },
+  facts:["Once reserved for aliʻi, sunrise shells are Hawaiʻi’s most coveted beach find.","Shells are graded on color, symmetry and no chips; matched pairs are hardest.","Each is set in gold to protect the thin, fragile shell."],
+  back:"Sunrise shells are Hawaiʻi’s most coveted beach find, graded on color saturation, symmetry and freedom from chips — and a matched pair for earrings is far harder to assemble than a single shell. MonicaByTheShore makes North-Shore sunrise-shell jewelry a piece at a time, setting each thin shell in protective gold. It’s the small-maker counterpoint to the big houses: one person, one shell, one setting at a time." },
 { id:"kamaka", cat:"ʻUkulele", where:"Honolulu · since 1916", accent:"#b5732f", motif:"strings", lead:"How it’s made",
   title:"Kamaka Hawaii", url:"https://kamakahawaii.com/", link:"Visit Kamaka",
   hook:"Four generations building ʻukulele by hand — and they still air-dry their koa for six years.",
-  facts:["Koa is air-dried five to six years so it won’t warp — never kiln-dried.","Sides are wetted and bent over heat; the top is braced to tune its voice.","Twenty-plus hands touch each one, and the president plays every uke before it ships."] },
+  facts:["Koa is air-dried five to six years so it won’t warp — never kiln-dried.","Sides are wetted and bent over heat; the top is braced to tune its voice.","Twenty-plus hands touch each one before it ships."],
+  back:"The ʻukulele arrived with Portuguese laborers in the 1880s and became Hawaiian within a generation; by 1916 Samuel Kamaka was building them in his Honolulu garage. Four generations later, Kamaka still air-dries its koa for five or six years so it won’t warp, bends the sides over heat, and braces each top to tune its voice. More than twenty pairs of hands touch every instrument, and the company president plays each one before it’s allowed to ship." },
 { id:"koaloha", cat:"ʻUkulele", where:"Oʻahu", accent:"#b5732f", motif:"strings", lead:"How it’s made",
   title:"KoAloha", url:"https://www.koaloha.com/", link:"Visit KoAloha",
   hook:"Founded by an inventor who ran a plastics factory before he made ‘koa + aloha.’",
-  facts:["Alvin ‘Pops’ Okami started KoAloha in the mid-1990s.","A distinctive internal bracing gives it a bright, projecting tone.","Still made by the Okami family and their team on Oʻahu."] },
+  facts:["Alvin ‘Pops’ Okami started KoAloha in the mid-1990s.","A distinctive internal bracing gives it a bright, projecting tone.","Still made by the Okami family and their team on Oʻahu."],
+  back:"KoAloha was started in the mid-1990s by Alvin ‘Pops’ Okami, an inventor who had run a plastics factory before he turned to instruments — and it shows in a distinctive internal bracing that gives the ukes a bright, projecting tone. The name fuses koa and aloha, and the instruments are still built by the Okami family and their team on Oʻahu. It’s one of the four Hawaiian ‘K’ houses that define the modern ʻukulele." },
 { id:"kanilea", cat:"ʻUkulele", where:"Oʻahu · since 1998", accent:"#7d9b5b", motif:"strings", lead:"How it’s made",
   title:"Kanileʻa ʻUkulele", url:"https://kanileaukulele.com/", link:"Visit Kanileʻa",
   hook:"They plant a koa tree for every single ʻukulele they build.",
-  facts:["Founded in 1998 by Joe and Kristen Souza.","High-end instruments made with a stated environmental streak.","One uke, one tree — trying to give back the forest they draw from."] },
-{ id:"koolau", cat:"ʻUkulele & guitars", where:"Oʻahu", accent:"#b5732f", motif:"strings", lead:"How it’s made",
+  facts:["Founded in 1998 by Joe and Kristen Souza.","High-end instruments made with a stated environmental streak.","One uke, one tree — trying to give back the forest they draw from."],
+  back:"Kanileʻa, founded in 1998 by Joe and Kristen Souza, is the conservationist of Hawaiʻi’s ukulele builders: for every instrument it makes, the company plants a koa tree, trying to give back the forest it draws from. The instruments are high-end and finely finished, but the tree-per-uke pledge is the part players remember. It’s a small, concrete answer to a real question — what happens to the wood a craft depends on." },
+{ id:"koolau", cat:"ʻUkulele", where:"Oʻahu", accent:"#b5732f", motif:"strings", lead:"How it’s made",
   title:"Koʻolau", url:"https://www.koolauukulele.com/", link:"Visit Koʻolau",
   hook:"The fourth Hawaiian ‘K’ — building with far more than koa.",
-  facts:["Uses spruce, redwood, rosewood, tropical ash and more.","Leans into custom, made-to-order instruments.","Has focused on manufacturing fine Hawaiian ukes for decades."] },
+  facts:["Uses spruce, redwood, rosewood, tropical ash and more.","Leans into custom, made-to-order instruments.","Has focused on manufacturing fine Hawaiian ukes for decades."],
+  back:"Koʻolau is the fourth of Hawaiʻi’s great ‘K’ ukulele houses, and the one that reaches furthest beyond koa — building with spruce, redwood, rosewood, tropical ash and more, and leaning into custom, made-to-order instruments. Different woods give different voices, so a Koʻolau can sound quite unlike an all-koa uke of the same size. It’s proof that ‘Made in Hawaiʻi’ is a standard of craft, not a single recipe." },
 { id:"pyzel", cat:"Surfboards", where:"Waialua, North Shore", accent:"#2f8f9d", motif:"wave", lead:"How it’s made",
   title:"Pyzel Surfboards", url:"https://pyzelsurfboards.com/", link:"Visit Pyzel",
   hook:"The North Shore shaper behind the boards John John Florence rides to world titles.",
-  facts:["Jon Pyzel started in a backyard shaping bay in the mid-’90s.","A board is carved from a foam blank with a wood stringer, then glassed in fiberglass and resin.","The boards get tested on the heaviest waves on earth, minutes from the bay."] },
+  facts:["Jon Pyzel started in a backyard shaping bay in the mid-’90s.","A board is carved from a foam blank with a wood stringer, then glassed in fiberglass and resin.","The boards get tested on the heaviest waves on earth, minutes from the bay."],
+  back:"The North Shore of Oʻahu is the proving ground for the surfing world, and the boards that survive there set the standard everywhere else. Jon Pyzel started shaping in a backyard bay in the mid-’90s and now makes the boards John John Florence rides to world titles. A board is carved from a foam blank with a wood stringer, then sealed in fiberglass and resin — but the real craft is in millimeters of shape, tested minutes from the bay on the heaviest waves anywhere." },
 { id:"tokoro", cat:"Surfboards", where:"Oʻahu", accent:"#2f8f9d", motif:"wave", lead:"How it’s made",
   title:"Tokoro Surfboards", url:"https://www.tokorosurfboards.com/", link:"Visit Tokoro",
   hook:"One of Hawaiʻi’s most respected shapers — and surfers.",
-  facts:["Wade Tokoro shapes on Oʻahu.","Shaping is subtraction: cut the outline and curves, millimeters at a time.","Then glassed, hot-coated, sanded, and finned by hand."] },
+  facts:["Wade Tokoro shapes on Oʻahu.","Shaping is subtraction: cut the outline and curves, millimeters at a time.","Then glassed, hot-coated, sanded, and finned by hand."],
+  back:"Wade Tokoro is one of Hawaiʻi’s most respected shapers, and a serious surfer himself — the kind of maker who knows exactly how a board should feel because he rides what he builds. Shaping is a craft of subtraction: the outline and curves are cut from a foam blank a fraction of an inch at a time, then the board is glassed, hot-coated, sanded and finned by hand. On Oʻahu, a shaper’s reputation is earned in the water, not the showroom." },
 { id:"aipa", cat:"Surfboards", where:"Oʻahu · since 1970", accent:"#c86b57", motif:"wave", lead:"How it’s made",
   title:"Aipa Surf Co.", url:"https://www.aipasurf.com/", link:"Visit Aipa",
   hook:"Ben Aipa invented the swallowtail — and his sons still run the shop.",
-  facts:["Aipa started shaping in 1970 and rewrote what a surfboard tail could do.","He invented the double-edged swallowtail (1972) and the split-tail (1974).","The shop is now led by his sons, Duke and Akila."] },
+  facts:["Aipa started shaping in 1970 and rewrote what a surfboard tail could do.","He invented the double-edged swallowtail (1972) and the split-tail (1974).","The shop is now led by his sons, Duke and Akila."],
+  back:"Ben Aipa started shaping in 1970 and rewrote what a surfboard tail could do, inventing the double-edged swallowtail in 1972 and the split-tail in 1974 — designs that let surfers turn harder and later than before. The shop is now run by his sons, Duke and Akila, carrying the family’s ideas forward. Aipa is a reminder that a single shaper’s inventions can change how the whole world surfs." },
 
 /* ---- Time ---- */
 { id:"time-relative", cat:"Time", accent:"#2f8f9d", motif:"pulse",
   title:"Why a Moving Clock Runs Slow", hook:"Time isn’t the same for everyone — it depends on how fast you move and how deep in gravity you sit.",
-  facts:["Einstein showed moving clocks tick slower, and clocks deeper in gravity tick slower too.","The effect is tiny at everyday speeds, but it is real and has been measured.","A clock on a mountaintop runs very slightly faster than one at sea level."], connects:"Relativity → GPS → smartphones" },
+  facts:["Einstein showed moving clocks tick slower, and clocks deeper in gravity tick slower too.","The effect is tiny at everyday speeds, but real and measured.","A clock on a mountaintop runs slightly faster than one at sea level."], connects:"Relativity → GPS → smartphones",
+  back:"We tend to picture time as one universal clock ticking the same for everyone, but Einstein showed it isn’t so. A clock that moves fast, or sits deeper in a gravitational field, genuinely ticks slower — time is ‘relative’ to your motion and place. The effect is far too small to feel at human speeds, yet it’s been measured with precise clocks, and a clock on a mountaintop really does run a hair faster than one at sea level." },
 { id:"gps-einstein", cat:"Time", accent:"#5b8fb0", motif:"orbit",
-  title:"Why GPS Only Works Because Einstein Was Right", hook:"Your phone’s map would drift miles off in a single day if it ignored relativity.",
-  facts:["GPS satellites carry atomic clocks that, seen from the ground, tick a little fast — mostly because they sit higher in gravity.","The system corrects for both speed and gravity, exactly as relativity predicts.","Without the fix, positions would grow wrong by about 10 km every day."], connects:"Atomic clocks → GPS → self-driving cars" },
+  title:"Why GPS Needs Einstein", hook:"Your phone’s map would drift miles off in a single day if it ignored relativity.",
+  facts:["GPS satellites carry atomic clocks that, seen from the ground, tick a little fast.","The system corrects for both speed and gravity, exactly as relativity predicts.","Without the fix, positions would grow wrong by about 10 km every day."], connects:"Atomic clocks → GPS → self-driving cars",
+  back:"GPS is the everyday proof that relativity is real. Each satellite carries an atomic clock, and because those clocks sit high in Earth’s weaker gravity and move quickly, they tick at a slightly different rate than clocks on the ground. The system bakes in the exact correction relativity predicts; without it, your position would drift by roughly ten kilometers a day. Einstein’s abstract theory is quietly keeping your map honest." },
 { id:"measuring-time", cat:"Time", where:"Ancient → 1600s", accent:"#b07d3f", motif:"scroll",
   title:"How Humans First Measured Time", hook:"Before clocks, people told time with shadows, dripping water, and burning rope.",
-  facts:["Sundials split the day by the sun’s shadow; water clocks measured it by flow.","Mechanical clocks with an ‘escapement’ arrived in medieval Europe.","The pendulum (Huygens, 1650s) first made clocks accurate to seconds a day."] },
+  facts:["Sundials split the day by the sun’s shadow; water clocks measured it by flow.","Mechanical clocks with an ‘escapement’ arrived in medieval Europe.","The pendulum (1650s) first made clocks accurate to seconds a day."], connects:"Sundials → clocks → atomic time",
+  back:"For most of history, telling time meant watching something move steadily: a shadow crossing a sundial, water dripping through a marked vessel, a candle or knotted rope burning down. Medieval Europe added mechanical clocks with an ‘escapement’ that doled out a gear’s motion in even ticks, and in the 1650s Huygens’ pendulum made clocks accurate to seconds a day. Each step tightened humanity’s grip on ‘now.’" },
 { id:"atomic-clocks", cat:"Time", accent:"#2f8f9d", motif:"pulse",
   title:"Atomic Clocks", hook:"The most precise machines ever built keep time by counting the buzz of a single kind of atom.",
-  facts:["A cesium atom flips between two states at a rock-steady rate — 9,192,631,770 times a second defines one second.","The best atomic clocks would lose less than a second over the age of the universe.","They quietly underpin GPS, the internet, and financial timestamps."], connects:"Atomic clocks → GPS → the internet" },
+  facts:["A cesium atom flips between two states 9,192,631,770 times a second — that defines the second.","The best would lose under a second over the age of the universe.","They quietly underpin GPS, the internet, and finance."], connects:"Atomic clocks → GPS → the internet",
+  back:"An atomic clock keeps time not with a swinging pendulum but with the rock-steady rhythm of an atom: a cesium atom flips between two energy states at a fixed rate, and 9,192,631,770 of those flips is defined as exactly one second. The best atomic clocks would drift less than a second across the entire age of the universe. That almost absurd precision is what makes GPS, synchronized networks, and modern finance possible." },
 { id:"longitude", cat:"Time", where:"1700s", accent:"#5b8fb0", motif:"wave",
   title:"The Longitude Problem", hook:"For centuries sailors could find how far north they were — but not how far east or west.",
-  facts:["Longitude is really a time problem: compare local noon to the time back home.","Ships needed a clock that kept time through storms and pitching seas — pendulums couldn’t.","John Harrison’s marine chronometer finally solved it, and saved countless lives."], connects:"Clocks → navigation → global trade" },
+  facts:["Longitude is really a time problem: compare local noon to the time back home.","Ships needed a clock that kept time through storms — pendulums couldn’t.","John Harrison’s marine chronometer finally solved it."], connects:"Clocks → navigation → global trade",
+  back:"Sailors could always find their latitude from the sun and stars, but longitude — how far east or west — stumped them for centuries and wrecked countless ships. The trick is that longitude is really a time problem: if you know the time back home and compare it to local noon, the difference tells you how far around the globe you’ve come. The catch was building a clock that kept accurate time on a pitching deck, which John Harrison finally achieved in the 1700s." },
 { id:"time-trade", cat:"Time", where:"1800s", accent:"#b07d3f", motif:"grid",
-  title:"Why the Railroads Invented Time Zones", hook:"Standardized time is younger than the steam engine — trains forced it into being.",
-  facts:["Towns once each kept their own local noon; that chaos wrecked train schedules.","Railroads pushed standard time zones in the 1800s.","Synchronized time let markets, shipping, and telegraphs coordinate worldwide."], connects:"Railroads → time zones → globalization" },
+  title:"Why Railroads Invented Time Zones", hook:"Standardized time is younger than the steam engine — the trains forced it into being.",
+  facts:["Towns once each kept their own local noon; that chaos wrecked train schedules.","Railroads pushed standard time zones in the 1800s.","Synchronized time let markets and telegraphs coordinate worldwide."], connects:"Railroads → time zones → globalization",
+  back:"Standardized time is surprisingly modern — and the railroads invented it. When every town kept its own local noon, train schedules became chaos, so railways imposed shared time zones in the 1800s. Synchronized clocks let markets open together, ships and telegraphs coordinate, and trade run on a common beat. The idea that ‘noon’ means the same thing across a whole region is an industrial-age convenience we now take completely for granted." },
 { id:"network-time", cat:"Time", accent:"#2f8f9d", motif:"pulse",
-  title:"How the Internet Keeps a Billion Clocks in Sync", hook:"Every server, trade, and message depends on computers agreeing on ‘now.’",
-  facts:["The Network Time Protocol (NTP) syncs devices to reference clocks over the internet.","It measures and cancels out network delay to stay within milliseconds.","Many reference clocks trace back to atomic time from GPS or national labs."], connects:"Atomic clocks → NTP → everything online" },
+  title:"How the Internet Syncs a Billion Clocks", hook:"Every server, trade, and message depends on computers agreeing on ‘now.’",
+  facts:["The Network Time Protocol (NTP) syncs devices to reference clocks over the internet.","It measures and cancels out network delay to stay within milliseconds.","Many reference clocks trace back to atomic time from GPS or national labs."], connects:"Atomic clocks → NTP → everything online",
+  back:"Every trade, message, and log entry online depends on computers agreeing on the current instant, often to the millisecond. The Network Time Protocol keeps them in step: a device asks reference clocks for the time, measures how long the round trip took, and cancels out that delay to land on an accurate ‘now.’ Many of those reference clocks trace back, ultimately, to atomic time from GPS or national labs — so the internet quietly runs on atomic seconds." },
 
 /* ---- Navigation ---- */
 { id:"polynesian-nav", cat:"Navigation", where:"The Pacific", accent:"#5b8fb0", motif:"wave",
   title:"Polynesian Wayfinding", hook:"Voyagers crossed thousands of miles of open Pacific with no instruments at all.",
-  facts:["They read swells, winds, stars, clouds, and birds as a living map.","Star ‘paths’ rising and setting on the horizon held their direction through the night.","The voyages of Hōkūleʻa proved the old methods still work."], connects:"Stars → compasses → satellites" },
+  facts:["They read swells, winds, stars, clouds, and birds as a living map.","Star ‘paths’ rising and setting held their direction through the night.","The voyages of Hōkūleʻa proved the old methods still work."], connects:"Stars → compasses → satellites",
+  back:"Long before compasses reached the Pacific, Polynesian navigators crossed thousands of miles of open ocean with no instruments — reading swells, winds, the flight of birds, and the rising and setting points of stars as a living map held in memory. The knowledge nearly vanished under colonization, but the 1970s voyages of the canoe Hōkūleʻa, guided by traditional wayfinders, proved the old methods still work. It’s one of humanity’s great feats of applied observation." },
 { id:"roman-roads", cat:"Navigation", where:"Ancient Rome", accent:"#b07d3f", motif:"grid",
   title:"Roman Roads", hook:"Some roads built two thousand years ago still carry traffic today.",
-  facts:["Layered foundations of stone, gravel, and fitted paving shed water and lasted centuries.","Roads let Rome move armies, mail, and trade at unheard-of speed.","‘All roads lead to Rome’ was literally an engineered network of about 80,000 km."], connects:"Roman roads → logistics → railroads" },
+  facts:["Layered stone, gravel and fitted paving shed water and lasted centuries.","Roads let Rome move armies, mail, and trade at unheard-of speed.","‘All roads lead to Rome’ was an engineered network of ~80,000 km."], connects:"Roman roads → logistics → railroads",
+  back:"Rome’s roads were engineered in layers — a deep foundation of stone and gravel topped with fitted paving that shed water — and some still carry traffic two thousand years later. They let Rome move armies, mail, and trade at speeds the ancient world had never seen, knitting a vast empire together. ‘All roads lead to Rome’ was literal: a network of about 80,000 kilometers, and the distant ancestor of every logistics system since." },
 { id:"compass", cat:"Navigation", where:"China → the world", accent:"#6f7f86", motif:"orbit",
   title:"The Magnetic Compass", hook:"A splinter of magnetized iron let ships sail out of sight of land.",
-  facts:["Lodestone — naturally magnetized rock — lines up with Earth’s magnetic field.","First used for divination in China, then adapted for navigation.","It freed sailors from needing clear skies to hold a course."], connects:"Compass → maps → GPS" },
+  facts:["Lodestone — naturally magnetized rock — lines up with Earth’s magnetic field.","First used for divination in China, then adapted for navigation.","It freed sailors from needing clear skies to hold a course."], connects:"Compass → maps → GPS",
+  back:"The compass began as lodestone — naturally magnetized rock that lines up with Earth’s magnetic field — and was first used for divination in China before being adapted for navigation. Its power was simple but enormous: a ship could now hold a steady course even when clouds hid the sun and stars. That freedom to sail out of sight of land, in any weather, helped open the age of long-distance sea travel." },
 { id:"maps", cat:"Navigation", accent:"#5b8fb0", motif:"grid",
   title:"How a Flat Map Lies", hook:"You can’t peel a globe flat without stretching it — every map trades one truth for another.",
-  facts:["A ‘projection’ must give up accurate area, shape, or distance; you can’t keep all three.","Mercator keeps directions true for sailing but hugely inflates the poles.","Different jobs use different projections — there is no single ‘correct’ map."], connects:"Maps → surveying → satellites" },
+  facts:["A ‘projection’ must give up accurate area, shape, or distance — you can’t keep all three.","Mercator keeps directions true for sailing but inflates the poles.","Different jobs use different projections; there’s no single ‘correct’ map."], connects:"Maps → surveying → satellites",
+  back:"A globe is curved and a map is flat, and you can’t flatten a sphere without stretching it — so every map is a compromise called a projection, giving up accurate area, shape, or distance because it can’t keep all three at once. Mercator keeps compass directions true, which is perfect for sailing, but it balloons the poles until Greenland rivals Africa. There’s no single ‘correct’ map, only the right projection for the job." },
 { id:"satellites", cat:"Navigation", accent:"#5b8fb0", motif:"orbit",
   title:"The Satellites That Know Where You Are", hook:"Right now, a few dozen satellites are quietly triangulating your pocket.",
-  facts:["Your receiver times signals from several satellites to work out where it is.","At least four satellites fix your position and correct your device’s clock.","GPS now shares the sky with Galileo, GLONASS, and BeiDou."], connects:"Atomic clocks → satellites → self-driving cars" },
+  facts:["Your receiver times signals from several satellites to work out where it is.","At least four satellites fix your position and correct your device’s clock.","GPS now shares the sky with Galileo, GLONASS, and BeiDou."], connects:"Atomic clocks → satellites → self-driving cars",
+  back:"Satellite navigation works by timing: your receiver listens to signals from several satellites, and because it knows exactly when each was sent and how fast radio travels, it can work out its distance from each — and thus its position. At least four satellites are needed, which also lets your device correct its own cheap clock against their atomic ones. GPS now shares the sky with Europe’s Galileo, Russia’s GLONASS, and China’s BeiDou." },
 { id:"self-driving", cat:"Navigation", accent:"#6f7f86", motif:"grid",
   title:"How a Car Drives Itself", hook:"A self-driving car builds a live 3-D model of the world many times a second.",
-  facts:["Lidar, radar, and cameras fuse into one moving picture of road, cars, and people.","Software predicts what everything nearby will do next, then plans a path.","Precise maps and GPS tell it where it sits to within a lane."], connects:"GPS → sensors → AI" },
+  facts:["Lidar, radar, and cameras fuse into one moving picture of road, cars, and people.","Software predicts what everything nearby will do next, then plans a path.","Precise maps and GPS tell it where it sits to within a lane."], connects:"GPS → sensors → AI",
+  back:"A self-driving car fuses several senses into one live model of the world, rebuilt many times a second: lidar and radar measure distances, cameras read signs and lane lines, and detailed maps plus GPS pin its position to within a lane. Software then predicts what every nearby car and pedestrian is likely to do next and plans a safe path through them. It’s less about steering than about perceiving and predicting fast enough to act." },
 
 /* ---- Materials ---- */
 { id:"stone-tools", cat:"Materials", where:"Prehistory", accent:"#b07d3f", motif:"facet",
   title:"Stone Age Tools", hook:"The first technology was knowing which rock breaks into a sharp edge.",
-  facts:["Knapping flint or obsidian flakes off razor edges under careful control.","Sharper tools meant better hunting, butchering, and woodworking.","Toolmaking runs back over three million years in our ancestry."], connects:"Stone → bronze → iron" },
+  facts:["Knapping flint or obsidian flakes off razor edges under careful control.","Sharper tools meant better hunting, butchering, and woodworking.","Toolmaking runs back over three million years."], connects:"Stone → bronze → iron",
+  back:"Humanity’s first technology was a deep understanding of rock: certain stones like flint and obsidian fracture in predictable, glass-sharp flakes when struck just right, a skill called knapping. Sharper, more reliable edges transformed hunting, butchering, and woodworking, and the ability to make tools compounded across generations. Stone toolmaking stretches back over three million years — older than our own species — making it the longest-running technology we have." },
 { id:"bronze", cat:"Materials", where:"~3300 BCE", accent:"#b07d3f", motif:"facet",
   title:"Bronze", hook:"Mixing two soft-ish metals made something hard enough to name an age after.",
-  facts:["Copper plus a little tin makes bronze, far harder than either alone.","It cast cleanly into tools, weapons, and art.","Tin was rare, so bronze drove some of the first long-distance trade."], connects:"Bronze → iron → steel" },
+  facts:["Copper plus a little tin makes bronze, far harder than either alone.","It cast cleanly into tools, weapons, and art.","Tin was rare, so bronze drove long-distance trade."], connects:"Bronze → iron → steel",
+  back:"Bronze was humanity’s first great alloy: melt copper with a little tin and you get a metal far harder and more useful than either on its own, one that casts cleanly into tools, weapons, and art. Its importance was so vast we named an age after it. Tin was scarce and rarely found near copper, so making bronze forced early peoples into some of the first long-distance trade networks — metallurgy quietly building an interconnected world." },
 { id:"iron", cat:"Materials", where:"~1200 BCE", accent:"#6f7f86", motif:"facet",
-  title:"Iron", hook:"Iron ore is everywhere — the trick was building a fire hot enough to free it.",
-  facts:["Iron is common but needs high heat and real skill to smelt and work.","Once mastered, cheap iron put good tools and weapons in everyone’s hands.","Wrought iron is tough but soft; the next leap was controlling carbon."], connects:"Iron → steel → skyscrapers" },
+  title:"Iron", hook:"Iron ore is everywhere — the trick was a fire hot enough to free it.",
+  facts:["Iron is common but needs high heat and skill to smelt and work.","Once mastered, cheap iron put good tools in everyone’s hands.","Wrought iron is tough but soft; the next leap was controlling carbon."], connects:"Iron → steel → skyscrapers",
+  back:"Unlike scarce tin, iron ore is everywhere — the hard part was reaching temperatures high enough to smelt it and gaining the skill to work it. Once mastered, iron democratized technology: good tools and weapons no longer depended on rare trade metals, so they spread to ordinary people. Early wrought iron was tough but soft, and the next thousand years of metallurgy would be a quest to control one crucial ingredient inside it — carbon." },
 { id:"steel", cat:"Materials", accent:"#6f7f86", motif:"grid",
   title:"Steel", hook:"Steel is just iron with a pinch of carbon — and it built the modern world.",
-  facts:["A small, controlled amount of carbon makes iron dramatically stronger and springier.","The Bessemer process (1850s) made steel cheap at scale.","It made railroads, skyscrapers, ships, and long bridges possible."], connects:"Steel → railroads → skyscrapers" },
+  facts:["A small, controlled amount of carbon makes iron far stronger and springier.","The Bessemer process (1850s) made steel cheap at scale.","It made railroads, skyscrapers, ships, and long bridges possible."], connects:"Steel → railroads → skyscrapers",
+  back:"Steel is iron with a carefully controlled trace of carbon, and that small addition makes it dramatically stronger, harder, and springier than plain iron. For millennia steel was precious and hand-made, until the Bessemer process in the 1850s let it be produced cheaply at industrial scale. That flood of affordable steel is what physically built the modern world — the railroads, skyscrapers, ships, and long-span bridges that would collapse under their own weight in any weaker material." },
 { id:"roman-concrete", cat:"Materials", where:"Ancient Rome", accent:"#6f7f86", motif:"grid",
   title:"Roman Concrete", hook:"Roman harbors have stood in seawater for 2,000 years — modern concrete cracks in decades.",
-  facts:["Their mix used volcanic ash and lime.","Seawater actually triggered new minerals to grow, healing cracks over time.","Scientists are still reverse-engineering it for durable, greener concrete."], connects:"Concrete → architecture → cities" },
+  facts:["Their mix used volcanic ash and lime.","Seawater actually triggered new minerals to grow, healing cracks.","Scientists still reverse-engineer it for durable, greener concrete."], connects:"Concrete → architecture → cities",
+  back:"Roman concrete has survived two millennia submerged in seawater, while much modern concrete crumbles in decades — a puzzle scientists are still unpacking. The Roman mix used volcanic ash and lime, and rather than being attacked by seawater, it reacted with it: new minerals grew inside the material over time, actually sealing cracks. Understanding that self-healing chemistry could help us build more durable, less carbon-hungry concrete today." },
 { id:"aluminum", cat:"Materials", accent:"#5b8fb0", motif:"facet",
   title:"Aluminum", hook:"Aluminum was once more precious than gold — until electricity set it free.",
-  facts:["It’s the most common metal in Earth’s crust, but bonds tightly to oxygen.","The Hall–Héroult process (1886) uses electricity to smelt it cheaply.","Light and rust-resistant, it made modern aircraft possible."], connects:"Aluminum → aviation → space" },
+  facts:["It’s the most common metal in Earth’s crust but bonds tightly to oxygen.","The Hall–Héroult process (1886) uses electricity to smelt it cheaply.","Light and rust-resistant, it made modern aircraft possible."], connects:"Aluminum → aviation → space",
+  back:"Aluminum is the most abundant metal in Earth’s crust, yet for most of history it was more precious than gold — because it bonds so tightly to oxygen that freeing the pure metal was nearly impossible. That changed in 1886 with the Hall–Héroult process, which uses a strong electric current to smelt it cheaply. Suddenly a light, strong, rust-resistant metal was everywhere, and it made modern aircraft — and much of the space age — possible." },
 { id:"carbon-fiber", cat:"Materials", accent:"#6f7f86", motif:"grain",
   title:"Carbon Fiber", hook:"Thread thinner than a hair, woven and glued, can beat steel and weigh a fraction as much.",
-  facts:["Fibers of nearly pure carbon are spun, then set in resin.","The weave makes it stiff and strong along the direction of the fibers.","Used in jets, race cars, bikes, and wind-turbine blades."], connects:"Carbon fiber → aviation → clean energy" },
+  facts:["Fibers of nearly pure carbon are spun, then set in resin.","The weave is stiff and strong along the direction of the fibers.","Used in jets, race cars, bikes, and wind-turbine blades."], connects:"Carbon fiber → aviation → clean energy",
+  back:"Carbon fiber is exactly what it sounds like — threads of nearly pure carbon, each thinner than a human hair — woven into cloth and locked in resin. Aligned along the fibers, the result is stiffer and stronger than steel at a fraction of the weight, though it’s directional: strong the way the threads run. That strength-to-weight ratio is why it shows up wherever weight is the enemy, from jets and race cars to bicycles and wind-turbine blades." },
 { id:"graphene", cat:"Materials", accent:"#8f7bc0", motif:"grid",
   title:"Graphene", hook:"A sheet of carbon one atom thick — among the thinnest and strongest materials known.",
-  facts:["It’s a single layer of graphite, first isolated with sticky tape in 2004.","It conducts heat and electricity superbly and is nearly transparent.","Researchers are chasing uses in electronics, batteries, and filters."], connects:"Graphene → electronics → future chips" },
+  facts:["It’s a single layer of graphite, first isolated with sticky tape in 2004.","It conducts heat and electricity superbly and is nearly transparent.","Researchers are chasing uses in electronics, batteries, and filters."], connects:"Graphene → electronics → future chips",
+  back:"Graphene is a single layer of carbon atoms locked in a honeycomb lattice — a sheet just one atom thick, yet among the strongest materials ever measured. Famously, it was first isolated in 2004 by peeling graphite apart with ordinary sticky tape, an experiment that won a Nobel Prize. It conducts heat and electricity superbly and is nearly transparent, and researchers are still chasing its potential in electronics, batteries, sensors, and filtration." },
 
 /* ---- Physics, computing, energy ---- */
 { id:"semiconductors", cat:"Computing", accent:"#8f7bc0", motif:"grid",
   title:"Semiconductors", hook:"The whole digital world runs on a material that’s neither a good conductor nor a good insulator.",
-  facts:["Silicon can be ‘doped’ so current switches on and off — a transistor.","Billions of transistors are etched onto a chip smaller than a fingernail.","Phones, cars, and fridges now all run on them."], connects:"Quantum mechanics → chips → computers" },
+  facts:["Silicon can be ‘doped’ so current switches on and off — a transistor.","Billions of transistors are etched onto a chip smaller than a fingernail.","Phones, cars, and fridges now all run on them."], connects:"Quantum mechanics → chips → computers",
+  back:"A semiconductor like silicon sits in a useful middle ground — neither a good conductor nor a good insulator — and by adding tiny amounts of other elements (‘doping’) engineers can make it switch current on and off on command. That switch is the transistor, and billions of them etched onto a chip smaller than a fingernail form the brains of every computer. The entire digital age rests on this one trick of controllable conduction." },
 { id:"quantum", cat:"Physics", accent:"#8f7bc0", motif:"orbit",
   title:"Quantum Mechanics", hook:"At the tiniest scales, the universe stops being certain and starts dealing in odds.",
-  facts:["Particles act like waves and can sit in a mix of states at once.","Some pairs of things — like position and speed — can’t both be known exactly.","It sounds bizarre, yet it underlies lasers, chips, and MRI machines."], connects:"Quantum → semiconductors → lasers" },
+  facts:["Particles act like waves and can sit in a mix of states at once.","Some pairs of things — like position and speed — can’t both be known exactly.","It underlies lasers, chips, and MRI machines."], connects:"Quantum → semiconductors → lasers",
+  back:"At the scale of atoms, the familiar rules break down: particles behave like waves, can occupy a blur of several states at once, and are governed by probabilities rather than certainties. There’s even a hard limit — you can’t pin down some pairs of properties, like a particle’s position and its speed, both exactly. It sounds like philosophy, but this strange machinery is real and practical, quietly underpinning lasers, computer chips, and MRI scanners." },
 { id:"lasers", cat:"Physics", accent:"#2f8f9d", motif:"pulse",
   title:"Lasers", hook:"A laser is just light marching in perfect lockstep — and that changes everything.",
-  facts:["Atoms are pumped with energy, then release light all in step.","That coherence makes a tight, pure, powerful beam.","Lasers read discs, cut steel, carry data, and do eye surgery."], connects:"Quantum → lasers → fiber optics" },
+  facts:["Atoms are pumped with energy, then release light all in step.","That coherence makes a tight, pure, powerful beam.","Lasers read discs, cut steel, carry data, and do eye surgery."], connects:"Quantum → lasers → fiber optics",
+  back:"Ordinary light is a jumble of many colors and phases; a laser is light made orderly. Atoms are pumped full of energy and then coaxed to release it all in step, producing a beam that is a single color and marches in perfect lockstep — ‘coherent’ light. That coherence makes the beam tight, pure, and controllable, which is why the same basic device can read a disc, cut steel, carry internet traffic through glass, and reshape a cornea." },
 { id:"fiber-optics", cat:"Computing", accent:"#2f8f9d", motif:"pulse",
   title:"Fiber Optics", hook:"The internet mostly travels as pulses of light in glass thinner than a hair.",
-  facts:["Light bounces down a glass fiber by total internal reflection.","It carries far more data, far farther, than copper wire.","Undersea fiber links whole continents at nearly the speed of light."], connects:"Lasers → fiber → the internet" },
+  facts:["Light bounces down a glass fiber by total internal reflection.","It carries far more data, far farther, than copper wire.","Undersea fiber links whole continents at nearly light speed."], connects:"Lasers → fiber → the internet",
+  back:"Most of the internet travels as flashes of laser light racing down hair-thin strands of ultra-pure glass. The light stays trapped inside by ‘total internal reflection,’ bouncing along the fiber for miles without leaking out, and it carries vastly more data, much farther, than copper wire ever could. Bundles of these fibers cross entire ocean floors, linking continents at nearly the speed of light — the physical backbone of the online world." },
 { id:"internet", cat:"Computing", accent:"#5b8fb0", motif:"grid",
   title:"How the Internet Actually Works", hook:"There’s no ‘cloud’ — it’s cables, and a clever trick called packet switching.",
-  facts:["Messages are chopped into packets that each find their own route.","Shared rules (TCP/IP) let any network talk to any other.","The data mostly rides physical fiber, including cables across the ocean floor."], connects:"Fiber → the internet → AI" },
+  facts:["Messages are chopped into packets that each find their own route.","Shared rules (TCP/IP) let any network talk to any other.","The data mostly rides physical fiber, including cables across the ocean floor."], connects:"Fiber → the internet → AI",
+  back:"The ‘cloud’ is a comforting fiction — underneath, the internet is cables and a clever idea called packet switching. Every message is chopped into small packets that each find their own route across the network and are reassembled at the far end, so no single failure stops the flow. A shared set of rules, TCP/IP, lets any network talk to any other, and the whole thing rides on very physical fiber, right down to cables lying on the ocean floor." },
 { id:"ai", cat:"Computing", accent:"#8f7bc0", motif:"grid",
   title:"How Modern AI Learns", hook:"Today’s AI isn’t programmed with rules — it’s shown examples until the patterns stick.",
-  facts:["Neural networks nudge millions of numbers to shrink their own mistakes.","More data and more computing power made them suddenly capable.","They predict likely patterns — powerful, but capable of being confidently wrong."], connects:"Chips → data → AI" },
+  facts:["Neural networks nudge millions of numbers to shrink their own mistakes.","More data and computing power made them suddenly capable.","They predict likely patterns — powerful, but able to be confidently wrong."], connects:"Chips → data → AI",
+  back:"Classic software follows rules a human wrote; modern AI works differently. A neural network starts with millions of random numbers and is shown vast numbers of examples, nudging those numbers again and again to shrink its mistakes until useful patterns emerge. Feed it enough data and computing power and it becomes startlingly capable — but at heart it’s predicting likely patterns, which is why it can be fluent, powerful, and confidently wrong all at once." },
 { id:"electricity", cat:"Energy", accent:"#e0955a", motif:"pulse",
   title:"How Electricity Reaches Your Wall", hook:"Most power still comes from spinning a magnet to shove electrons — however you do the spinning.",
-  facts:["Steam, water, or wind turns a turbine that turns a generator.","Transformers raise the voltage for long trips, then drop it for your home.","The grid has to match supply to demand second by second."], connects:"Steam → generators → the grid" },
+  facts:["Steam, water, or wind turns a turbine that turns a generator.","Transformers raise voltage for long trips, then drop it for your home.","The grid must match supply to demand second by second."], connects:"Steam → generators → the grid",
+  back:"Strip away the fuel and most electricity is made the same way: spin a magnet inside coils of wire and you push electrons through them. Coal, gas, nuclear, hydro, and wind are just different ways to turn that turbine. Transformers then crank the voltage up for an efficient long-distance journey and back down for your outlets, and because electricity can’t be easily stored, grid operators must balance supply against demand second by second, all day, every day." },
 
 /* ---- Space & astronomy ---- */
 { id:"how-far-stars", cat:"Astronomy", accent:"#5b8fb0", motif:"orbit",
-  title:"How We Measure the Distance to Stars", hook:"We’ve never visited a star — so how do we know how far away they are?",
-  facts:["Nearby stars shift against the background as Earth swings around the sun (parallax).","Certain stars pulse at a rate that reveals their true brightness.","Comparing true brightness to how bright they look gives distance across the cosmos."], connects:"Parallax → cosmic distance → the expanding universe" },
+  title:"How We Measure the Stars", hook:"We’ve never visited a star — so how do we know how far away they are?",
+  facts:["Nearby stars shift against the background as Earth orbits (parallax).","Certain stars pulse at a rate that reveals their true brightness.","Comparing true to apparent brightness gives distance across the cosmos."], connects:"Parallax → cosmic distance → the expanding universe",
+  back:"We’ve never touched a star, yet we know their distances — through a ladder of clever tricks. Nearby stars appear to shift slightly against the background as Earth swings from one side of its orbit to the other, and the size of that shift gives their distance (parallax). Farther out, certain stars pulse at a rate tied to their true brightness, so comparing how bright they truly are to how bright they look reveals how far the light has traveled. Rung by rung, that ladder measures the cosmos." },
 { id:"rockets", cat:"Space", accent:"#6f7f86", motif:"orbit",
-  title:"How a Rocket Reaches Orbit", hook:"Reaching orbit isn’t about going up — it’s about going sideways fast enough to keep missing the ground.",
-  facts:["A rocket throws mass (exhaust) down to push itself up — Newton’s third law.","Orbit means falling around Earth so fast you never hit it: roughly 28,000 km/h.","Most of a rocket is fuel; ‘staging’ drops dead weight along the way."], connects:"Newton → rockets → satellites" },
+  title:"How a Rocket Reaches Orbit", hook:"Orbit isn’t about going up — it’s about going sideways fast enough to keep missing the ground.",
+  facts:["A rocket throws mass (exhaust) down to push itself up — Newton’s third law.","Orbit means falling around Earth so fast you never hit it — ~28,000 km/h.","‘Staging’ drops dead fuel weight along the way."], connects:"Newton → rockets → satellites",
+  back:"A rocket flies by Newton’s third law: it hurls mass — hot exhaust — downward, and the reaction pushes it up. But reaching orbit isn’t really about altitude; it’s about sideways speed. To orbit is to fall toward Earth while moving so fast — roughly 28,000 km/h — that the ground curves away beneath you as quickly as you fall, so you keep missing it. Since most of a rocket is fuel, it sheds spent stages along the way to avoid dragging dead weight." },
 { id:"telescopes", cat:"Astronomy", accent:"#8f7bc0", motif:"orbit",
   title:"How Telescopes See the Past", hook:"Look at a distant galaxy and you’re seeing light that left before the Earth existed.",
-  facts:["Light takes time to travel, so ‘far away’ always means ‘long ago.’","Bigger mirrors gather more light and reveal fainter, older objects.","Space telescopes climb above the blur of the atmosphere."], connects:"Light → telescopes → cosmology" },
+  facts:["Light takes time to travel, so ‘far away’ always means ‘long ago.’","Bigger mirrors gather more light and reveal fainter, older objects.","Space telescopes climb above the blur of the atmosphere."], connects:"Light → telescopes → cosmology",
+  back:"Because light travels at a finite speed, every telescope is also a time machine: the farther away something is, the longer its light has been traveling, so you see it as it was long ago — sometimes before the Earth even formed. Bigger mirrors gather more of that ancient, faint light, revealing older and dimmer objects, and putting a telescope in space lifts it above the atmosphere’s blur. Looking out into space is, unavoidably, looking back in time." },
 
 /* ---- Life, biology, medicine ---- */
 { id:"evolution", cat:"Life", accent:"#7d9b5b", motif:"grain",
   title:"How Evolution Actually Works", hook:"Nobody designs a species — small advantages just pile up over deep time.",
-  facts:["Random variation plus survival of what works reshapes life across generations.","Tiny edges compound over millions of years into eyes, wings, and brains.","We watch it happen fast in bacteria and viruses today."], connects:"DNA → variation → new species" },
+  facts:["Random variation plus survival of what works reshapes life across generations.","Tiny edges compound over millions of years into eyes, wings, and brains.","We watch it happen fast in bacteria and viruses today."], connects:"DNA → variation → new species",
+  back:"Evolution has no designer and no goal. Living things vary randomly from one another, and whatever variations happen to help survival and reproduction get passed on more often — so over generations, populations drift toward what works. Given deep time, those tiny advantages compound into astonishing complexity: eyes, wings, brains. It isn’t just ancient history, either; we watch evolution happen in fast-breeding bacteria and viruses within a single human lifetime." },
 { id:"dna", cat:"Life", accent:"#c86b57", motif:"strings",
   title:"DNA, Life’s Instruction Tape", hook:"Every living thing runs on a four-letter code written in a twisted ladder.",
-  facts:["Sequences of four ‘bases’ spell out how to build proteins.","Cells copy and read this code to grow, repair, and reproduce.","Reading and editing DNA now drives medicine and biotech."], connects:"DNA → evolution → gene editing" },
+  facts:["Sequences of four ‘bases’ spell out how to build proteins.","Cells copy and read this code to grow, repair, and reproduce.","Reading and editing DNA now drives medicine and biotech."], connects:"DNA → evolution → gene editing",
+  back:"Every living thing — bacterium, redwood, or human — runs on the same kind of code: DNA, a twisted ladder whose rungs are just four chemical ‘letters.’ Their order spells out instructions for building proteins, the molecular machines that do life’s work, and cells faithfully copy and read this code to grow, repair themselves, and reproduce. Our recent ability to read and even edit that code is quietly rewriting medicine, agriculture, and biotechnology." },
 { id:"vaccines", cat:"Medicine", accent:"#c86b57", motif:"facet",
   title:"How a Vaccine Trains You", hook:"A vaccine is a rehearsal — it shows your immune system the enemy with the danger removed.",
-  facts:["It presents a harmless piece or version of a germ.","Your body builds memory cells that recognize the real thing fast.","That head start can stop an infection before it takes hold."], connects:"Immunity → vaccines → public health" },
+  facts:["It presents a harmless piece or version of a germ.","Your body builds memory cells that recognize the real thing fast.","That head start can stop an infection before it takes hold."], connects:"Immunity → vaccines → public health",
+  back:"A vaccine is a rehearsal for your immune system. It presents a harmless preview of a germ — a fragment, a weakened version, or instructions to build one telltale piece — so your body can learn the enemy’s face without the disease. In response it builds memory cells that stand ready for years, so if the real pathogen ever arrives, the counterattack is fast enough to stop an infection before it takes hold. Multiply that across a population and diseases lose their foothold." },
 { id:"antibiotics", cat:"Medicine", accent:"#7d9b5b", motif:"facet",
   title:"Antibiotics — and Why They’re Failing", hook:"A mold that killed bacteria launched modern medicine — and overuse is undoing it.",
-  facts:["Penicillin, discovered from a mold, was the first mass antibiotic.","Antibiotics kill or stop bacteria — not viruses.","Overuse breeds resistant bacteria, a growing global threat."], connects:"Penicillin → antibiotics → resistance" },
+  facts:["Penicillin, from a mold, was the first mass antibiotic.","Antibiotics kill or stop bacteria — not viruses.","Overuse breeds resistant bacteria, a growing global threat."], connects:"Penicillin → antibiotics → resistance",
+  back:"Modern medicine leapt forward when a mold, Penicillium, was found to kill bacteria — giving us penicillin and the age of antibiotics, drugs that made once-deadly infections routine to cure. But antibiotics only work on bacteria, not viruses, and every use is also a selection pressure: the few bacteria that survive pass on their resistance. Overusing these drugs is breeding tougher and tougher bugs, making antibiotic resistance one of the great slow-moving threats to global health." },
 { id:"germ-theory", cat:"Medicine", where:"1800s", accent:"#c86b57", motif:"facet",
   title:"Germ Theory", hook:"For most of history, no one knew that invisible living things caused disease.",
-  facts:["Pasteur and Koch linked specific microbes to specific illnesses.","Handwashing and sterilization suddenly saved millions of lives.","It moved medicine from blaming bad ‘airs’ to targeting real causes."], connects:"Microscopes → germ theory → antibiotics" },
+  facts:["Pasteur and Koch linked specific microbes to specific illnesses.","Handwashing and sterilization suddenly saved millions of lives.","It moved medicine from blaming bad ‘airs’ to targeting real causes."], connects:"Microscopes → germ theory → antibiotics",
+  back:"For most of history, disease was blamed on bad ‘airs,’ imbalances, or punishment — no one knew that invisible living things were the culprits. In the 1800s, Pasteur, Koch, and others proved that specific microbes cause specific illnesses, one of the most consequential ideas in human history. Almost overnight, simple acts like handwashing and sterilizing instruments began saving millions of lives, and medicine could finally aim at real causes instead of guessing." },
 
 /* ---- Chemistry, earth, climate ---- */
 { id:"periodic-table", cat:"Chemistry", accent:"#8f7bc0", motif:"grid",
-  title:"Why the Periodic Table Is Shaped Like That", hook:"Mendeleev’s table wasn’t just a list — its gaps predicted elements no one had found yet.",
-  facts:["Elements line up by their atomic structure, so each column behaves alike.","Mendeleev left holes and correctly predicted the missing elements.","The shape mirrors how electrons stack up in shells."], connects:"Atoms → the table → chemistry" },
+  title:"Why the Periodic Table Looks Like That", hook:"Mendeleev’s table wasn’t just a list — its gaps predicted elements no one had found yet.",
+  facts:["Elements line up by atomic structure, so each column behaves alike.","Mendeleev left holes and correctly predicted the missing elements.","The shape mirrors how electrons stack up in shells."], connects:"Atoms → the table → chemistry",
+  back:"The periodic table is far more than an alphabetized list of elements. Mendeleev arranged the known elements by their properties and noticed the pattern repeated in regular cycles — so he left deliberate gaps and predicted the properties of elements no one had yet discovered. When they were later found, matching his predictions, it was a triumph. We now know the table’s shape reflects how electrons stack up in shells around each atom, which is why elements in a column behave alike." },
 { id:"plate-tectonics", cat:"Earth", accent:"#6f7f86", motif:"grid",
   title:"Plate Tectonics", hook:"The ground under you is a raft drifting on molten rock — a few centimeters a year.",
-  facts:["Earth’s crust is broken into plates that slowly move.","Their edges raise mountains, open oceans, and set off quakes and volcanoes.","The idea was mocked for decades before the evidence won."], connects:"Tectonics → earthquakes → continents" },
+  facts:["Earth’s crust is broken into plates that slowly move.","Their edges raise mountains, open oceans, and set off quakes and volcanoes.","The idea was mocked for decades before the evidence won."], connects:"Tectonics → earthquakes → continents",
+  back:"The solid ground beneath you is actually a set of enormous rocky plates drifting on the hot, slowly-flowing rock below, creeping a few centimeters a year — about as fast as your fingernails grow. Where these plates pull apart, collide, or grind past one another, they raise mountains, open oceans, and unleash earthquakes and volcanoes. The idea was ridiculed for decades until seafloor evidence made it undeniable, and it now unifies almost all of geology." },
 { id:"carbon-cycle", cat:"Climate", accent:"#7d9b5b", motif:"pulse",
   title:"Why CO₂ Warms the Planet", hook:"Some gases let sunlight in but trap the heat trying to leave — physics, not opinion.",
-  facts:["CO₂ and methane absorb the infrared heat Earth radiates back out.","Burning fossil fuels releases carbon that was locked away for ages.","More of these gases means the planet simply holds more heat."], connects:"Fossil fuels → CO₂ → warming" },
+  facts:["CO₂ and methane absorb the infrared heat Earth radiates back out.","Burning fossil fuels releases carbon locked away for ages.","More of these gases means the planet holds more heat."], connects:"Fossil fuels → CO₂ → warming",
+  back:"Sunlight arrives as visible light, warms the ground, and the Earth re-radiates that energy as invisible infrared heat. Gases like carbon dioxide and methane are transparent to incoming sunlight but absorb that outgoing heat — so the more of them in the air, the more heat the planet retains. It’s straightforward physics, demonstrated in the 1800s. Burning fossil fuels releases carbon that was locked underground for millions of years, thickening that blanket faster than at any time in human history." },
 { id:"deep-time", cat:"Geology", accent:"#b07d3f", motif:"grain",
   title:"How We Read the Age of the Earth", hook:"Rocks keep time — if you know how to read radioactive decay.",
-  facts:["Some elements decay into others at a fixed, clock-like rate.","Measuring the ratio dates the rock.","It shows the Earth is about 4.5 billion years old."], connects:"Radioactivity → dating → deep time" },
+  facts:["Some elements decay into others at a fixed, clock-like rate.","Measuring the ratio dates the rock.","It shows the Earth is about 4.5 billion years old."], connects:"Radioactivity → dating → deep time",
+  back:"Rocks contain built-in clocks. Certain radioactive elements decay into other elements at a fixed, unchangeable rate — a known half-life — so by measuring the ratio of parent to daughter atoms in a mineral, scientists can calculate how long ago it formed. This radiometric dating reveals a history almost too vast to grasp: the Earth is about 4.5 billion years old. Learning to read deep time reshaped how humanity understands its own tiny place in the story." },
 
 /* ---- History, civilization, economics, math, building, flight ---- */
 { id:"writing", cat:"Human history", where:"~3200 BCE", accent:"#b07d3f", motif:"scroll",
   title:"The Invention of Writing", hook:"Writing began not as poetry but as accounting — receipts for grain and taxes.",
-  facts:["Early cuneiform tracked goods and debts in Mesopotamia.","Recording let knowledge outlive memory and travel across time.","It’s arguably the technology that made history itself possible."], connects:"Writing → records → civilization" },
+  facts:["Early cuneiform tracked goods and debts in Mesopotamia.","Recording let knowledge outlive memory and travel across time.","It’s arguably the technology that made history itself possible."], connects:"Writing → records → civilization",
+  back:"Writing didn’t begin with poetry or prayer — it began with accounting. The earliest cuneiform tablets from Mesopotamia are receipts: tallies of grain, livestock, and debts, made as cities grew too complex for memory alone. But once ideas could be fixed in clay, knowledge could outlive the person who held it and travel across distance and time. It’s arguably the invention that made history itself possible — everything before it is, literally, prehistory." },
 { id:"agriculture", cat:"Agriculture", where:"~10,000 BCE", accent:"#7d9b5b", motif:"grain",
   title:"How Farming Rewrote Humanity", hook:"When people started planting instead of chasing food, nearly everything else followed.",
-  facts:["Reliable food surpluses let populations settle and grow.","Surplus freed some people to specialize — crafts, rulers, priests.","It enabled cities, writing, and inequality alike."], connects:"Farming → cities → states" },
+  facts:["Reliable food surpluses let populations settle and grow.","Surplus freed some people to specialize — crafts, rulers, priests.","It enabled cities, writing, and inequality alike."], connects:"Farming → cities → states",
+  back:"For hundreds of thousands of years humans foraged and hunted; then, around ten thousand years ago, several peoples independently began to farm. Planting and herding produced storable surpluses, which let populations settle in one place and grow. Crucially, a surplus meant not everyone had to find food — freeing some people to become potters, priests, soldiers, and rulers. That single shift set off a chain reaction that produced cities, writing, states, and steep new inequalities alike." },
 { id:"money", cat:"Economics", accent:"#c9a24b", motif:"grid",
   title:"What Money Actually Is", hook:"Money isn’t wealth — it’s a shared story about who owes what.",
-  facts:["It solves barter’s problem: you needn’t want exactly what the other person has.","It works only because everyone trusts everyone else will accept it too.","From shells to gold to numbers on a screen, the trust is the technology."], connects:"Barter → money → banking" },
+  facts:["It solves barter’s problem: you needn’t want exactly what the other has.","It works only because everyone trusts everyone else will accept it.","From shells to gold to numbers on a screen, the trust is the technology."], connects:"Barter → money → banking",
+  back:"Money isn’t wealth itself; it’s a shared agreement about value. Barter only works if two people each happen to want what the other has, which is rare — money slips into that gap as something everyone will accept, so any trade can be split into a sale and a purchase. Its real substance is trust: gold, cowrie shells, paper, and numbers in a database have all served as money for exactly as long as people believed others would take them in turn." },
 { id:"zero", cat:"Mathematics", accent:"#8f7bc0", motif:"orbit",
   title:"The Number That Took Millennia to Invent", hook:"Nothing is easy to count — treating ‘nothing’ as a number was a revolution.",
-  facts:["Zero as both a placeholder and a number came via India, then the Arab world.","It made our place-value number system and easy arithmetic possible.","Without it there’s no algebra, no calculus, no computing."], connects:"Zero → algebra → computers" },
+  facts:["Zero as both a placeholder and a number came via India, then the Arab world.","It made our place-value number system and easy arithmetic possible.","Without it there’s no algebra, no calculus, no computing."], connects:"Zero → algebra → computers",
+  back:"Counting things is ancient, but treating ‘nothing’ as a number in its own right was a genuine conceptual leap that took civilizations millennia. The idea of zero — both as a placeholder that makes 1, 10, and 100 distinct, and as a quantity you can calculate with — matured in India and spread through the medieval Arab world into Europe. It’s the quiet keystone of the number system we use today, and without it there is no algebra, no calculus, and no computing." },
 { id:"arches", cat:"Architecture", accent:"#b07d3f", motif:"facet",
   title:"Why the Arch Changed Building", hook:"Stack stones in a curve and gravity holds them up instead of pulling them down.",
-  facts:["An arch turns downward weight into a sideways push its sides resist.","It spans wide gaps using small, weak pieces like brick or stone.","Arches, vaults, and domes built aqueducts, cathedrals, and bridges."], connects:"Arch → vault → dome" },
+  facts:["An arch turns downward weight into a sideways push its sides resist.","It spans wide gaps using small, weak pieces like brick or stone.","Arches, vaults, and domes built aqueducts, cathedrals, and bridges."], connects:"Arch → vault → dome",
+  back:"A flat stone beam cracks under its own weight across any real span — but bend that line of stones into a curve and something wonderful happens: each block presses on its neighbors, turning the downward pull of gravity into a sideways squeeze that the arch’s supports absorb. Suddenly small, weak pieces like brick or cut stone can span wide gaps. Stretch an arch and you get a vault; spin it and you get a dome — the geometry behind aqueducts, cathedrals, and bridges for two thousand years." },
 { id:"flight", cat:"Flight", accent:"#5b8fb0", motif:"wave",
   title:"How a Wing Actually Lifts", hook:"A wing works by throwing air downward — the plane rises as the reaction.",
-  facts:["Wings deflect air down; the air pushes back up (Newton, again).","Shape and angle set how much air gets turned.","Enough speed over the wing makes enough lift to fly."], connects:"Wings → engines → jets" },
+  facts:["Wings deflect air down; the air pushes back up (Newton, again).","Shape and angle set how much air gets turned.","Enough speed over the wing makes enough lift to fly."], connects:"Wings → engines → jets",
+  back:"The clearest way to understand a wing is Newton’s third law: a wing is shaped and tilted so it deflects a great deal of air downward, and in reaction that air pushes the wing — and the plane — upward. The wing’s curve and its angle to the oncoming air set how much gets turned and thus how much lift is produced, and moving fast enough forces enough air down each second to hold tons of aircraft aloft. Flight is, in a sense, continuously throwing the sky beneath you." },
 { id:"jet-engine", cat:"Flight", accent:"#6f7f86", motif:"pulse",
   title:"The Jet Engine", hook:"Suck, squeeze, bang, blow — four words explain how a jet crosses an ocean.",
-  facts:["It pulls in air, compresses it, burns fuel, and blasts the exhaust out the back.","That thrust shoves the plane forward — equal and opposite.","Turbofans sip far less fuel than early jets: quieter, cheaper flight."], connects:"Combustion → jets → globalization" },
+  facts:["It pulls in air, compresses it, burns fuel, and blasts exhaust out the back.","That thrust shoves the plane forward — equal and opposite.","Turbofans sip far less fuel than early jets: quieter, cheaper flight."], connects:"Combustion → jets → globalization",
+  back:"Engineers sum up a jet engine in four words: suck, squeeze, bang, blow. It sucks in air, squeezes it to high pressure with spinning compressor blades, mixes in fuel and ignites it (‘bang’), then blasts the hot gas out the back — and by Newton’s third law, that rearward blast shoves the plane forward. Modern turbofans route most of their air around the core to move a huge, gentle column of air, which is far quieter and thriftier than early jets, and made mass affordable air travel possible." },
 { id:"containerization", cat:"Engineering", accent:"#5b8fb0", motif:"grid",
   title:"The Box That Globalized the World", hook:"A plain steel box is one of the most important inventions of the 20th century.",
-  facts:["Standard containers let cranes swap cargo between ship, train, and truck in minutes.","Loading costs collapsed, so making things far away suddenly paid off.","It quietly powered modern globalization."], connects:"Roman roads → containers → your online order" }
+  facts:["Standard containers let cranes swap cargo between ship, train, and truck in minutes.","Loading costs collapsed, so making things far away suddenly paid off.","It quietly powered modern globalization."], connects:"Roman roads → containers → your online order",
+  back:"It looks like nothing — a ribbed steel box — but the standardized shipping container reshaped the global economy. Before it, loading a ship meant armies of dockworkers hand-stacking mismatched cargo for days; the container let a crane swap a sealed, standard box between ship, train, and truck in minutes. Freight costs collapsed, and suddenly it made economic sense to manufacture things half a world away from where they’d be sold. That humble box is a quiet engine of modern globalization." }
 
 ];
 
-/* =================== THE FEED — random, infinite =================== */
+/* =================== THE FEED — random, infinite, each card flips =================== */
 var feed=document.getElementById('feed');
-var bag=[], lastId=null, firstCard=true;
+var bag=[], lastId=null, firstCard=true, TOTAL=CARDS.length;
+function pad(n){ n=String(n); return n.length<2?'0'+n:n; }
 
 function shuffle(arr){ var a=arr.slice(), i, j, t;
   for(i=a.length-1;i>0;i--){ j=Math.floor(Math.random()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
@@ -418,36 +503,48 @@ function refill(){ bag=shuffle(CARDS); if(bag.length>1 && bag[0].id===lastId){ b
 function nextCard(){ if(!bag.length) refill(); var c=bag.shift(); lastId=c.id; return c; }
 
 function cardHTML(c){
-  var lead=c.lead || "The short version";
-  var how='<div class="how"><span class="lab">'+lead+'</span><ul>';
-  for(var i=0;i<c.facts.length;i++) how+='<li><span>'+c.facts[i]+'</span></li>';
-  how+='</ul></div>';
-  var kick=c.cat+(c.where?' · '+c.where:'');
+  var n=CARDS.indexOf(c)+1;
+  var top='<div class="cardtop"><span class="type">'+c.cat+'</span><span class="num">Nº '+pad(n)+' / '+TOTAL+'</span></div>';
+  var front='<div class="face front">'+top+
+      '<div class="art">'+motif(c.motif,c.accent)+'</div>'+
+      '<h2 class="name">'+c.title+'</h2>'+
+      '<p class="flavor">'+c.hook+'</p>'+
+      (c.where?'<div class="where">'+c.where+'</div>':'')+
+      '<div class="tap"><span class="ic">⤺</span>Tap to flip</div>'+
+    '</div>';
+  var points='';
+  if(c.facts && c.facts.length){ points='<ul class="points">';
+    for(var i=0;i<c.facts.length;i++) points+='<li><span>'+c.facts[i]+'</span></li>'; points+='</ul>'; }
   var connects=c.connects?'<div class="connects"><b>Connects to</b>'+c.connects+'</div>':'';
-  var link=c.url?'<div class="visit"><a href="'+c.url+'" target="_blank" rel="noopener noreferrer">'+(c.link||('Visit '+c.title))+' ↗</a><span class="where">the maker, in their own words</span></div>':'';
+  var visit=c.url?'<div class="visit"><a href="'+c.url+'" target="_blank" rel="noopener noreferrer">'+(c.link||('Visit '+c.title))+' ↗</a></div>':'';
+  var back='<div class="face back">'+top+
+      '<div class="body"><h3 class="name">'+c.title+'</h3><p class="prose">'+c.back+'</p>'+points+connects+'</div>'+
+      visit+
+    '</div>';
   var hint=firstCard?'<div class="next-hint">Scroll for another<span class="arr">↓</span></div>':'';
-  return '<article class="card" style="--accent:'+c.accent+'"><div class="inner">'+
-    '<span class="kicker">'+kick+'</span>'+
-    '<h2>'+c.title+'</h2>'+
-    '<p class="hook">'+c.hook+'</p>'+
-    '<div class="plate">'+motif(c.motif,c.accent)+'</div>'+
-    how+connects+link+
-    '</div>'+hint+'</article>';
+  return '<div class="slot"><div class="card" tabindex="0" role="button" aria-label="'+c.title+' — tap to flip">'+
+    '<div class="flipper">'+front+back+'</div></div>'+hint+'</div>';
 }
 function addCard(){ var wrap=document.createElement('div'); wrap.innerHTML=cardHTML(nextCard());
   feed.appendChild(wrap.firstChild); firstCard=false; }
+function topUp(){ var d=document.documentElement, g=0;
+  while(d.scrollHeight-(d.scrollTop+d.clientHeight) < d.clientHeight*2 && g++<8){ addCard(); } }
 function reset(){ feed.innerHTML=''; bag=[]; lastId=null; firstCard=true; addCard(); window.scrollTo(0,0); topUp(); }
 
-/* keep at least ~2 screens of cards below the viewport, always */
-function topUp(){
-  var d=document.documentElement, guard=0;
-  while(d.scrollHeight-(d.scrollTop+d.clientHeight) < d.clientHeight*2 && guard++<8){ addCard(); }
-}
-var io=new IntersectionObserver(function(entries){ if(entries[0].isIntersecting) topUp(); },{rootMargin:'1200px 0px'});
+var io=new IntersectionObserver(function(e){ if(e[0].isIntersecting) topUp(); },{rootMargin:'1200px 0px'});
 io.observe(document.getElementById('sentinel'));
 var ticking=false;
 window.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(function(){ topUp(); ticking=false; }); } },{passive:true});
 window.addEventListener('resize',topUp);
+
+/* flip on tap/click (but not when tapping a link); keyboard too */
+feed.addEventListener('click',function(e){
+  if(e.target.closest('a')) return;
+  var card=e.target.closest('.card'); if(card) card.classList.toggle('flipped');
+});
+feed.addEventListener('keydown',function(e){
+  if(e.key==='Enter'||e.key===' '){ var card=e.target.closest('.card'); if(card){ e.preventDefault(); card.classList.toggle('flipped'); } }
+});
 
 document.getElementById('home').addEventListener('click',reset);
 document.getElementById('shuffle').addEventListener('click',reset);
