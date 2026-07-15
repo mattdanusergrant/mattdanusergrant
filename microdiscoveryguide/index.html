@@ -138,6 +138,22 @@ a{color:inherit;text-decoration:none}
   background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:12px 26px;cursor:pointer}
 .done:hover{filter:brightness(1.07)}
 .cardwrap{display:flex;justify-content:center}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+/* pack reveal — a micro scroll through the 3 full cards */
+.overlay.reveal{align-items:stretch;padding:0}
+.overlay.reveal .sheet{max-width:none;width:100%;max-height:none;height:100dvh;overflow-y:auto;scroll-snap-type:y proximity}
+.pr-top{position:sticky;top:0;z-index:5;padding:13px 16px;background:linear-gradient(var(--bg),color-mix(in srgb,var(--bg) 55%,transparent));backdrop-filter:blur(6px);
+  font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:10.5px;color:var(--gold)}
+.pr-slot{min-height:calc(100dvh - 44px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;scroll-snap-align:center;padding:14px 16px 20px}
+.pr-slot .card{animation:rise .5s ease both}
+@media(prefers-reduced-motion:reduce){.pr-slot .card{animation:none}}
+.pr-badge{font-family:var(--label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:10px;color:var(--bg);background:var(--gold);border-radius:999px;padding:5px 13px}
+.pr-badge.foil{color:#20160c;background:linear-gradient(90deg,#ffd76e,#a0f0d0,#9fd0ff,#e6a8ff,#ffd76e);background-size:220% 100%;animation:holoTag 4s linear infinite}
+.pr-badge.dup{background:var(--line2);color:var(--ink-soft)}
+.pr-hint{font-family:var(--label);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.pr-hint .arr{display:inline-block;animation:bob 1.8s ease-in-out infinite}
+.pr-end{gap:18px}
 
 /* ======= the collectible card (front/back flip) ======= */
 .card{width:min(90vw,360px);height:min(80svh,620px);perspective:1700px;cursor:pointer;position:relative;
@@ -663,16 +679,24 @@ function showView(v){ current=v;
   if(v==='packs') renderPacks(); else renderCollection();
   window.scrollTo(0,0);
 }
-function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); }
-function closeOverlay(){ overlay.classList.remove('on'); closeBtn.classList.remove('on'); sheet.innerHTML='';
+function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); document.body.style.overflow='hidden'; sheet.scrollTop=0; }
+function closeOverlay(){ overlay.classList.remove('on','reveal'); closeBtn.classList.remove('on'); sheet.innerHTML=''; document.body.style.overflow='';
   if(current==='packs') renderPacks(); else renderCollection(); }
 
+/* opening a pack = a micro scroll through the 3 full cards (tap to flip each) */
 function packFlow(setName){
-  var res=openPack(setName);
-  var anyFoil=res.some(function(r){return r.foil;});
-  var h='<div class="reveal-h">'+setName+' Booster</div><div class="reveal-s">'+(anyFoil?'✦ A foil! Nice pull.':'You pulled…')+'</div><div class="reveal">';
-  res.forEach(function(r){ h+=miniHTML(r.c,{foil:r.foil,isNew:r.isNew}); });
-  h+='</div><button class="done" id="revealdone">Add to binder</button>';
+  var res=openPack(setName), anyFoil=res.some(function(r){return r.foil;});
+  var h='<div class="pr-top">'+setName+' Booster'+(anyFoil?' · ✦ foil pull!':'')+' &nbsp;·&nbsp; tap to flip · scroll ↓</div>';
+  res.forEach(function(r,i){
+    var badge = r.newFoil?'<span class="pr-badge foil">✦ New foil</span>'
+              : r.foil?'<span class="pr-badge foil">✦ Foil</span>'
+              : r.isNew?'<span class="pr-badge">New card</span>'
+              : '<span class="pr-badge dup">Duplicate</span>';
+    var hint = i<res.length-1?'<div class="pr-hint">Scroll <span class="arr">↓</span></div>':'';
+    h+='<div class="pr-slot">'+badge+faceHTML(r.c,r.foil)+hint+'</div>';
+  });
+  h+='<div class="pr-slot pr-end"><div class="pr-hint">'+res.length+' cards added to your binder</div><button class="done" id="revealdone">Done</button></div>';
+  overlay.classList.add('reveal');
   openOverlay(h);
   document.getElementById('revealdone').addEventListener('click',closeOverlay);
 }
