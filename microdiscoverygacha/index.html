@@ -315,6 +315,11 @@ a{color:inherit;text-decoration:none}
 .ckicker{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:calc(10px*var(--ps));color:var(--accent)}
 .prose{font-family:var(--body);font-size:calc(16px*var(--ps));line-height:1.5;color:var(--ink-soft);margin:0}
 .cfact{font-family:var(--display);font-weight:500;font-size:calc(clamp(18px,4.4vw,23px)*var(--ps));line-height:1.32;color:var(--ink);margin:0}
+/* magazine-article pages */
+.article{justify-content:center;gap:calc(13px*var(--ps));padding:14px 20px}
+.ahead{font-family:var(--display);font-weight:500;font-size:calc(clamp(19px,4.6vw,25px)*var(--ps));line-height:1.07;letter-spacing:-.012em;color:var(--ink);margin:0;text-wrap:balance}
+.apara{font-family:var(--body);font-size:calc(15.5px*var(--ps));line-height:1.54;color:var(--ink-soft);margin:0}
+.article.lead .apara::first-letter{font-family:var(--display);font-weight:600;font-size:calc(3.1em*var(--ps));line-height:.82;float:left;margin:.02em .09em 0 0;color:var(--accent)}
 .connects{font-family:var(--label);font-size:calc(13px*var(--ps));line-height:1.5;color:var(--ink-soft)}
 .connects b{display:block;text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--accent);font-size:calc(10px*var(--ps));margin-bottom:6px}
 .cvisit{align-self:flex-start;display:inline-flex;align-items:center;gap:.5em;margin-top:4px;font-family:var(--label);font-weight:700;letter-spacing:.03em;
@@ -530,32 +535,67 @@ var CARDS = [
 /* ---- Time ---- */
 { id:"time-relative", cat:"Time", accent:"#2f8f9d", motif:"pulse",
   title:"Why a Moving Clock Runs Slow", hook:"Time isn’t the same for everyone — it depends on how fast you move and how deep in gravity you sit.",
-  facts:["Einstein showed moving clocks tick slower, and clocks deeper in gravity tick slower too.","The effect is tiny at everyday speeds, but real and measured.","A clock on a mountaintop runs slightly faster than one at sea level."], connects:"Relativity → GPS → smartphones",
-  back:"We tend to picture time as one universal clock ticking the same for everyone, but Einstein showed it isn’t so. A clock that moves fast, or sits deeper in a gravitational field, genuinely ticks slower — time is ‘relative’ to your motion and place. The effect is far too small to feel at human speeds, yet it’s been measured with precise clocks, and a clock on a mountaintop really does run a hair faster than one at sea level." },
+  connects:"Relativity → GPS → smartphones",
+  article:[
+    "We carry a stubborn intuition that time is a single river, flowing at the same rate for everyone, everywhere. For most of history no experiment could challenge it. Then in 1905 a young patent clerk named Albert Einstein followed one strange fact — that light always travels at the same speed, no matter how you chase it — to a jarring conclusion: time itself must bend. How fast a clock ticks depends on who is watching, and how they move.",
+    "Start with motion. A clock speeding past you genuinely ticks slower than your own — not because it is faulty, but because time runs at a different rate for it. The faster it travels, the wider the gap. At the pace of cars or jets the difference is unimaginably small, mere billionths of a second, which is why no one noticed for thousands of years. But it is no illusion, and it never switches off.",
+    "A decade later Einstein found that gravity slows time too. The deeper you sit in a gravitational well, the slower your clock runs, so a clock at sea level ticks a hair behind an identical one on a mountaintop, where Earth’s pull is slightly weaker. Taken to its strange conclusion, your head is ageing a sliver faster than your feet. The effects are minuscule, but they are exactly what the equations demand.",
+    "None of this is philosophy. Fly atomic clocks around the world, or carry one up a tower, and they return disagreeing by precisely the amount relativity predicted. Time is not a fixed stage on which events play out; it stretches and compresses with speed and gravity. That truth might have stayed a laboratory curiosity — until engineers tried to build a navigation system spanning the whole planet, and found they could not ignore it."
+  ] },
 { id:"gps-einstein", cat:"Time", accent:"#5b8fb0", motif:"orbit",
   title:"Why GPS Needs Einstein", hook:"Your phone’s map would drift miles off in a single day if it ignored relativity.",
-  facts:["GPS satellites carry atomic clocks that, seen from the ground, tick a little fast.","The system corrects for both speed and gravity, exactly as relativity predicts.","Without the fix, positions would grow wrong by about 10 km every day."], connects:"Atomic clocks → GPS → self-driving cars",
-  back:"GPS is the everyday proof that relativity is real. Each satellite carries an atomic clock, and because those clocks sit high in Earth’s weaker gravity and move quickly, they tick at a slightly different rate than clocks on the ground. The system bakes in the exact correction relativity predicts; without it, your position would drift by roughly ten kilometers a day. Einstein’s abstract theory is quietly keeping your map honest." },
+  connects:"Atomic clocks → GPS → self-driving cars",
+  article:[
+    "Almost everyone now carries a working proof of Einstein’s theories and mistakes it for a map. The little blue dot that pins you to a street corner is the output of one of the most demanding timing problems ever solved, and it works only because its designers took relativity literally. Ignore Einstein, and within minutes the dot begins to wander off.",
+    "GPS is really a fleet of flying clocks. Two dozen satellites circle high above the Earth, each carrying an atomic clock and endlessly broadcasting the exact time it believes it is. Your phone listens to several at once and measures how long each signal took to arrive. Because the signals travel at the speed of light, those tiny delays convert cleanly into distances, and the overlap of several distances pins down where you stand.",
+    "Here relativity intrudes twice over. The satellites race around the planet at thousands of miles per hour, which makes their clocks run slow; but they also orbit high in weaker gravity, which makes them run fast. Gravity wins the tug-of-war: seen from the ground, each satellite clock gains about thirty-eight millionths of a second every day — trivial, until you recall that light travels some eleven kilometers in that flicker of time.",
+    "So the system corrects for both effects, exactly as Einstein’s equations prescribe, before a single satellite leaves the ground. Skip the correction and your fix would smear by roughly ten kilometers a day, useless by lunchtime. Each time your map quietly keeps you on the right road, a theory scrawled in notebooks a century ago is doing the arithmetic — pure physics turned into an invisible public utility."
+  ] },
 { id:"measuring-time", cat:"Time", where:"Ancient → 1600s", accent:"#b07d3f", motif:"scroll",
   title:"How Humans First Measured Time", hook:"Before clocks, people told time with shadows, dripping water, and burning rope.",
-  facts:["Sundials split the day by the sun’s shadow; water clocks measured it by flow.","Mechanical clocks with an ‘escapement’ arrived in medieval Europe.","The pendulum (1650s) first made clocks accurate to seconds a day."], connects:"Sundials → clocks → atomic time",
-  back:"For most of history, telling time meant watching something move steadily: a shadow crossing a sundial, water dripping through a marked vessel, a candle or knotted rope burning down. Medieval Europe added mechanical clocks with an ‘escapement’ that doled out a gear’s motion in even ticks, and in the 1650s Huygens’ pendulum made clocks accurate to seconds a day. Each step tightened humanity’s grip on ‘now.’" },
+  connects:"Sundials → clocks → atomic time",
+  article:[
+    "The hardest thing about measuring time is that time refuses to hold still while you measure it. For most of human history the answer was to borrow something else that moved at a dependable pace and read the hour off it instead. The sun was the obvious candidate, but people pressed all kinds of steady motions into service, each a small victory over the slipperiness of ‘now.’",
+    "A sundial split the day by the slow sweep of a shadow — elegant, but useless after dark or under cloud. So other cultures measured time by flow: water clocks let liquid drip through a marked vessel, and a burning candle or a knotted rope smoldering at a known rate could portion out the night. None were precise, yet together they let people agree, roughly, on when to pray, to trade, or to meet.",
+    "The leap to true mechanism came in medieval Europe, with a clever part called the escapement — a toothed wheel nudged forward one notch at a time by a rocking lever, releasing stored energy in even, countable ticks. For the first time a machine, rather than the sky, was doling out the hours. These early clocks were proud town-square monuments, but they still strayed by many minutes a day.",
+    "The decisive gain arrived in the 1650s, when Christiaan Huygens harnessed the pendulum. A swinging weight of a given length takes very nearly the same time for every swing, and by governing a clock with one, Huygens pushed accuracy from minutes a day down to seconds. Shadow, flow, escapement, pendulum — each step tightened humanity’s grip on the present, and set the stage for a precision that would one day be measured against the atom itself."
+  ] },
 { id:"atomic-clocks", cat:"Time", accent:"#2f8f9d", motif:"pulse",
   title:"Atomic Clocks", hook:"The most precise machines ever built keep time by counting the buzz of a single kind of atom.",
-  facts:["A cesium atom flips between two states 9,192,631,770 times a second — that defines the second.","The best would lose under a second over the age of the universe.","They quietly underpin GPS, the internet, and finance."], connects:"Atomic clocks → GPS → the internet",
-  back:"An atomic clock keeps time not with a swinging pendulum but with the rock-steady rhythm of an atom: a cesium atom flips between two energy states at a fixed rate, and 9,192,631,770 of those flips is defined as exactly one second. The best atomic clocks would drift less than a second across the entire age of the universe. That almost absurd precision is what makes GPS, synchronized networks, and modern finance possible." },
+  connects:"Atomic clocks → GPS → the internet",
+  article:[
+    "A pendulum is only ever as steady as the metal it is made from, and metal stretches with heat and wears with age. To do far better, physicists went hunting for a pendulum that could never be filed down, warped, or worn — and found one hidden inside the atom. The atomic clock, the most precise machine humanity has built, keeps time by counting a rhythm woven into matter itself.",
+    "The trick relies on a cesium atom, which flips between two energy states at an absolutely fixed rate when bathed in microwaves tuned to just the right frequency. Count 9,192,631,770 of those flips and exactly one second has passed. In fact the second is no longer defined by the turning Earth at all: since 1967 it has been defined by that atomic count, making the atom the master metronome of the modern world.",
+    "The precision is almost hard to believe. The best atomic clocks are so stable that, had one been started at the Big Bang, it would be off by less than a single second today — and newer optical designs do better still. This is not precision for its own sake. At this level, measuring time becomes a way to measure position, motion, and even gravity with the same exquisite delicacy.",
+    "That is why atomic clocks, though almost no one ever sees one, quietly hold up daily life. GPS satellites carry them; the internet leans on them to stamp events in the right order; global finance uses them to sequence trades to the microsecond. Whenever a system needs everyone to agree on the exact instant something happened, an atom counting its own heartbeat is usually the final word."
+  ] },
 { id:"longitude", cat:"Time", where:"1700s", accent:"#5b8fb0", motif:"wave",
   title:"The Longitude Problem", hook:"For centuries sailors could find how far north they were — but not how far east or west.",
-  facts:["Longitude is really a time problem: compare local noon to the time back home.","Ships needed a clock that kept time through storms — pendulums couldn’t.","John Harrison’s marine chronometer finally solved it."], connects:"Clocks → navigation → global trade",
-  back:"Sailors could always find their latitude from the sun and stars, but longitude — how far east or west — stumped them for centuries and wrecked countless ships. The trick is that longitude is really a time problem: if you know the time back home and compare it to local noon, the difference tells you how far around the globe you’ve come. The catch was building a clock that kept accurate time on a pitching deck, which John Harrison finally achieved in the 1700s." },
+  connects:"Clocks → navigation → global trade",
+  article:[
+    "For centuries a ship could tell how far north or south it was with ease — the sun by day and the stars by night gave up latitude readily. But knowing how far east or west you had sailed, your longitude, was a deadly guess. Fleets ran aground on coasts they believed were still safely over the horizon, and the steady loss of ships made longitude the great unsolved problem of the age of sail.",
+    "The surprising key is that longitude is really a question about time. The Earth turns a steady fifteen degrees every hour, so if you know the exact time at a fixed reference place and compare it with your own local noon — the moment the sun stands highest overhead — the gap between the two clocks tells you precisely how far around the globe you have come. Solve the clock, and you solve the map.",
+    "There lay the catch. The finest timekeepers of the day were pendulum clocks, and a pendulum is hopeless on a rolling, pitching deck amid changing heat and damp. Governments dangled enormous prizes for a clock that could carry accurate home-time across an ocean, and for decades the leading astronomers, betting on the stars instead, insisted such a machine was simply impossible.",
+    "It was a self-taught English carpenter, John Harrison, who proved them wrong. Over a lifetime he built a succession of marine chronometers that held near-perfect time through storm and heat, using springs and balances immune to a ship’s motion. His clocks let a captain know exactly where he stood on the blank ocean, turning sea navigation from perilous guesswork into reliable science — and stitching the world’s coastlines into a single mappable whole."
+  ] },
 { id:"time-trade", cat:"Time", where:"1800s", accent:"#b07d3f", motif:"grid",
   title:"Why Railroads Invented Time Zones", hook:"Standardized time is younger than the steam engine — the trains forced it into being.",
-  facts:["Towns once each kept their own local noon; that chaos wrecked train schedules.","Railroads pushed standard time zones in the 1800s.","Synchronized time let markets and telegraphs coordinate worldwide."], connects:"Railroads → time zones → globalization",
-  back:"Standardized time is surprisingly modern — and the railroads invented it. When every town kept its own local noon, train schedules became chaos, so railways imposed shared time zones in the 1800s. Synchronized clocks let markets open together, ships and telegraphs coordinate, and trade run on a common beat. The idea that ‘noon’ means the same thing across a whole region is an industrial-age convenience we now take completely for granted." },
+  connects:"Railroads → time zones → globalization",
+  article:[
+    "It feels as though time zones must be as old as time itself. In fact, shared standardized time is younger than the steam engine — and it was the railways that dragged it into being. Before trains, no one needed a whole region to agree on the hour, and so no one did; each town simply kept its own.",
+    "Every town set its clocks by its own local noon, the instant the sun crossed overhead. That meant a city a hundred miles to the east ran several minutes ahead of its neighbor, with every place between keeping a slightly different time. For centuries this was harmless — until the railroad arrived, and a single timetable had to stitch together dozens of towns each insisting on its own ‘now.’ The result was missed connections, confusion, and collisions.",
+    "The railways’ solution was radical: carve the map into broad bands and force every town within one to keep the same clock, whatever the sun was doing overhead. Standard time zones spread through the 1800s, first along the rails and then across entire nations, until the idea that ‘noon’ named the same moment across a whole region became utterly ordinary. The sun no longer set the clocks; the network did.",
+    "Once regions shared a clock, far more than trains fell into step. Stock exchanges could open together, telegraph offices could coordinate their messages, and factories and ships could run on a common beat. The humble need to keep trains from crashing had quietly laid one of the foundations of a connected world economy — a piece of industrial plumbing so successful that we now forget anyone ever had to invent it."
+  ] },
 { id:"network-time", cat:"Time", accent:"#2f8f9d", motif:"pulse",
   title:"How the Internet Syncs a Billion Clocks", hook:"Every server, trade, and message depends on computers agreeing on ‘now.’",
-  facts:["The Network Time Protocol (NTP) syncs devices to reference clocks over the internet.","It measures and cancels out network delay to stay within milliseconds.","Many reference clocks trace back to atomic time from GPS or national labs."], connects:"Atomic clocks → NTP → everything online",
-  back:"Every trade, message, and log entry online depends on computers agreeing on the current instant, often to the millisecond. The Network Time Protocol keeps them in step: a device asks reference clocks for the time, measures how long the round trip took, and cancels out that delay to land on an accurate ‘now.’ Many of those reference clocks trace back, ultimately, to atomic time from GPS or national labs — so the internet quietly runs on atomic seconds." },
+  connects:"Atomic clocks → NTP → everything online",
+  article:[
+    "Every message you send, every payment you make, and every line written into a server’s log carries a timestamp — and for the internet to make sense, those timestamps must agree, often to within a few thousandths of a second. Yet the network is built from a billion cheap clocks, each quietly drifting in its own direction. Keeping them all honest is a ceaseless, invisible act of coordination.",
+    "The workhorse behind it is the Network Time Protocol. A computer politely asks a more accurate clock what time it is, but the reply is already stale when it arrives, delayed by its trip across the network. So NTP measures how long the round trip took, assumes the delay was roughly equal in each direction, and subtracts it — landing on a corrected ‘now’ good to a few milliseconds despite all the messy, variable wiring in between.",
+    "These reference clocks are arranged in a strict pecking order. Ordinary machines sync to better-connected servers, which sync to still better ones, and at the very top sit a small number of clocks disciplined directly by GPS or by national timekeeping laboratories. Follow any timestamp far enough up the chain, and it leads, ultimately, back to a cesium atom counting its own flips.",
+    "So the internet, for all its outward chaos, runs on atomic seconds trickling down from a handful of master clocks. That silent agreement is what lets a trade settle in the correct order, a video call stay in sync, and two servers on opposite sides of the planet accept that the same instant really is the same instant. ‘Now’ has quietly become a shared utility, piped everywhere at once."
+  ] },
 
 /* ---- Navigation ---- */
 { id:"polynesian-nav", cat:"Navigation", where:"The Pacific", accent:"#5b8fb0", motif:"wave",
@@ -848,8 +888,10 @@ function cardDepth(c, copies){
    unlocked one at a time by copies owned (level). Swipe/arrow left-right pages through them. */
 function cardPageList(c, copies){
   copies=Math.max(1,copies||1);
-  var F=(c.facts?c.facts.length:0), hasMore=!!(c.connects||c.url);
-  var items=[{k:'story'}]; for(var i=0;i<F;i++) items.push({k:'fact',i:i}); if(hasMore) items.push({k:'more'});
+  var items=[], i;
+  if(c.article&&c.article.length){ for(i=0;i<c.article.length;i++) items.push({k:'art',i:i}); }  /* magazine-article pages */
+  else { items.push({k:'story'}); var F=(c.facts?c.facts.length:0); for(i=0;i<F;i++) items.push({k:'fact',i:i}); }
+  if(c.connects||c.url) items.push({k:'more'});
   var maxContent=items.length, unlocked=Math.min(copies,maxContent);
   return { pages:[{k:'front'}].concat(items.slice(0,unlocked)), unlocked:unlocked, maxContent:maxContent };
 }
@@ -860,6 +902,11 @@ function cardPageInner(c, foil, info, page){
   if(pg.k==='front'){
     body='<div class="art">'+motif(c.motif,c.accent)+(foil?'<span class="foiltag">✦ Foil</span>':'')+'</div>'+
          '<h2 class="cname">'+c.title+'</h2><p class="chook">'+c.hook+'</p>'+(c.where?'<div class="cwhere">'+c.where+'</div>':'');
+  } else if(pg.k==='art'){
+    var lead=pg.i===0, total=(c.article?c.article.length:1);
+    body='<div class="cbody article'+(lead?' lead':'')+'">'+
+      (lead?'<h3 class="ahead">'+c.title+'</h3>':'<div class="ckicker">'+c.cat+' · '+(pg.i+1)+' of '+total+'</div>')+
+      '<p class="apara">'+c.article[pg.i]+'</p></div>';
   } else if(pg.k==='story'){
     body='<div class="cbody"><div class="ckicker">The idea</div><p class="prose">'+c.back+'</p></div>';
   } else if(pg.k==='fact'){
