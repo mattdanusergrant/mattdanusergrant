@@ -341,6 +341,7 @@
         <div class="tool" data-act="ach" title="Achievements — earned across every city you build"><span class="ico">🏅</span>Awards</div>
         <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
         <div class="tool" data-act="import" title="Paste a share code to load a city"><span class="ico">📥</span>Import city</div>
+        <div class="tool" data-act="tune" id="tuneitem" hidden title="Adjust the balance numbers live — for playtesting"><span class="ico">🎛️</span>Tuning</div>
         <span class="pol-sec" style="margin-top:7px">Theme</span>
         <div class="themerow" id="themerow"></div>
       </div></div>
@@ -486,15 +487,28 @@
   function isNight(){var ph=todPhase();return ph>=0.66&&ph<0.97;}      // public-transport pressure: trips generated vs road + transit capacity
   var TRIPW={res:1,tower:2,com:1.5,ind:1.2,fac:1.2};     // trips generated per building level (a growing city needs to move people)
 
+  // ---- BALANCE TUNING: the playtest knobs in one place. Override live with zero code edits via the
+  //      🎛️ Tuning panel (Settings, shown with ?dev), a `mdg-tune` localStorage blob, or ?tune={"k":v}. ----
+  var TUNE_DEFAULTS={
+    exportPrice:4, intRate:0.01, serviceRate:0.06, serviceFree:400, resYield:2.4,   // core money economy
+    tradeRate:2, tradeSpend:0.30,                                                    // two-way trade barter
+    elecTier:6, elecGoodsIn:1.2, elecOilIn:0.8, elecPrice:3,                         // Electronics recipe
+    adjBonus:0.20, adjCap:5                                                          // Factory adjacency
+  };
+  var TUNE=(function(){var d={};for(var k in TUNE_DEFAULTS)d[k]=TUNE_DEFAULTS[k];
+    function merge(src){if(!src)return;try{var o=(typeof src==='string')?JSON.parse(src):src;for(var kk in o)if((kk in d)&&typeof o[kk]==='number'&&isFinite(o[kk]))d[kk]=o[kk];}catch(e){}}
+    try{merge(localStorage.getItem('mdg-tune'));}catch(e){}                          // saved overrides
+    try{merge(new URLSearchParams(location.search).get('tune'));}catch(e){}          // shareable URL overrides win
+    return d;})();
   // ---- economy: everything costs money; a working city earns it; debt charges interest ----
   var COST={road:4,rail:10,transit:110,res:15,com:25,ind:35,fac:60,park:20,power:120,solar:80,water:100,bank:180,port:140,tower:200,mon1:0,mon2:0,mon3:0,bulldoze:0};
   var UPKEEP={power:8,solar:1,water:6,road:0.2,rail:0.3,transit:4,bank:4,port:5,tower:3};  // ₵/month (solar is clean & cheap to run; a fossil station costs more)
   var TAX={res:6,com:5,ind:3,fac:3,tower:14};           // ₵/month per building level (Towers are dense = high tax)
-  var CASH_START=10000, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;   // generous starting buffer so the first city is stress-free (the service sink still bites as you grow)
+  var CASH_START=10000, EXPORT_PRICE=TUNE.exportPrice, INT_RATE=TUNE.intRate, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;   // generous starting buffer so the first city is stress-free (the service sink still bites as you grow)
   // public services scale with population — the sink that ends infinite wealth. First ~400 residents free
   // (early game breathes); past that every resident costs, so a big city must fund itself with exports &
   // commerce (tax-per-head falls as density rises), not just sprawl. Net income stays tight, never runaway.
-  var SERVICE_RATE=0.06, SERVICE_FREE=400, serviceCost=0;
+  var SERVICE_RATE=TUNE.serviceRate, SERVICE_FREE=TUNE.serviceFree, serviceCost=0;
   // tier at which each tool unlocks (index into MS: 0=Hamlet,1=Village,…); absent = available from start.
   // Start bare — just Road, Homes, Power, Water — and research the rest by growing through the tiers.
   var TIER_UNLOCK={com:0,solar:1,park:2,ind:2,rail:3,fac:3,transit:4,bank:5,port:6,tower:7};
@@ -537,7 +551,7 @@
     if(POL.cp)income+=popTarget*0.012;                           // congestion-pricing tolls
     if(POL.ft)upkeep+=popTarget*0.010;                           // fare-free transit subsidy
     income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium*exportMult*EVMOD.exportM; // Ports + Green Logistics tech lift export revenue; a trade partner short on Goods pays a premium
-    income+=elecExportRate*EXPORT_PRICE*3*(1+PORT_BOOST*ports)*exportMult*EVMOD.exportM;         // Electronics are an advanced export — 3× the price of raw Goods
+    income+=elecExportRate*EXPORT_PRICE*TUNE.elecPrice*(1+PORT_BOOST*ports)*exportMult*EVMOD.exportM; // Electronics are an advanced export — elecPrice× the price of raw Goods
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
     serviceCost=Math.round(Math.max(0,popTarget-SERVICE_FREE)*SERVICE_RATE);    // public services grow with population — the money sink
@@ -1138,9 +1152,9 @@
   // resource the map lacks must be imported. SUP[id] (0.35..1) is how well each need is met → soft slowdown.
   var STOCK={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};   // city-wide raw-resource pools
   var SUP={lumber:1,grain:1,ore:1,stone:1,oil:1,fish:1};     // supply ratio per resource (floored 0.35) — throttles growth
-  var RES_YIELD=2.4;                                          // raw units per extractor level per tick
-  var ELEC_TIER=6;                                            // the Electronics recipe unlocks at District tier
-  var TRADE_RATE=2, TRADE_SPEND=0.30;                         // two-way barter: 1 Goods buys 2 raw units; spend up to 30% of the Goods reserve/tick
+  var RES_YIELD=TUNE.resYield;                                // raw units per extractor level per tick
+  var ELEC_TIER=TUNE.elecTier;                               // the Electronics recipe unlocks at District tier
+  var TRADE_RATE=TUNE.tradeRate, TRADE_SPEND=TUNE.tradeSpend; // two-way barter: Goods buys raw units; spend a share of the Goods reserve/tick
   function elecUnlocked(){return maxMS>=ELEC_TIER;}           // advanced factory recipe gate
   var matWanted=false, terrBonus=0, matStock=0;              // matStock kept as ore+stone (legacy blocker compat)
   var tradePremium=1, tradeGoodsIn=0, tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};
@@ -1162,7 +1176,7 @@
   function facAdjMult(c,r){                                   // ADJACENCY: a Factory's throughput scales with co-located Works
     var nn=nbs(c,r),n=0;
     for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];if(inB(a,b)){var g=grid[idx(a,b)];if(g.t==='ind'&&g.lvl>0)n++;}}
-    return {mult:1+Math.min(n,5)*0.2, adj:n};                 // +20% per adjacent Works, capped at +100% (5)
+    return {mult:1+Math.min(n,TUNE.adjCap)*TUNE.adjBonus, adj:n};   // +bonus per adjacent Works, capped
   }
   function computeResources(){
     var facs=0,shops=0,works=0,resLv=0,towerLv=0,zoneLv=0,ti,tp;
@@ -1206,8 +1220,8 @@
     var made=Math.min(STOCK.ore,STOCK.stone,goodsCap*1.5);              // Factories on the Goods recipe need BOTH ore AND stone
     STOCK.ore-=made;STOCK.stone-=made;var goodsMade=made*(2/1.5);goodsStock+=goodsMade+tradeGoodsIn;
     var elecMade=0;
-    if(elecCap>0){var poss=Math.max(0,Math.min(goodsStock/1.2,STOCK.oil/0.8,elecCap));   // Electronics = 1.2 Goods + 0.8 Oil → 1
-      goodsStock-=poss*1.2;STOCK.oil-=poss*0.8;elecStock+=poss;elecMade=poss;}
+    if(elecCap>0){var poss=Math.max(0,Math.min(goodsStock/TUNE.elecGoodsIn,STOCK.oil/TUNE.elecOilIn,elecCap));   // Electronics = elecGoodsIn Goods + elecOilIn Oil → 1
+      goodsStock-=poss*TUNE.elecGoodsIn;STOCK.oil-=poss*TUNE.elecOilIn;elecStock+=poss;elecMade=poss;}
     var needG=shops*1.5, sold=Math.min(goodsStock,needG);goodsStock-=sold;
     exportRate=0;elecExportRate=0;
     if(railToWorld){var xcap=Math.min(connectedRailCount*1.2,60);
@@ -1228,7 +1242,7 @@
     // ---- flow snapshot for the Economy panel ----
     RESIDS.forEach(function(id){var e=econ.res[id];e.make=make[id];e.imp=tradeImp[id];e.need=need[id];e.stock=STOCK[id];e.sup=SUP[id];});
     econ.res.grain.food=foodAvail;                                       // grain panel notes fish-as-food
-    econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=goodsMade;econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=needG;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;econ.goods.sup=SUP.goods;econ.goods.tradeOut=tradeGoodsOut;econ.goods.elecUse=elecMade*1.2;
+    econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=goodsMade;econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=needG;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;econ.goods.sup=SUP.goods;econ.goods.tradeOut=tradeGoodsOut;econ.goods.elecUse=elecMade*TUNE.elecGoodsIn;
     econ.elec.make=elecMade;econ.elec.exp=elecExportRate;econ.elec.stock=elecStock;econ.elec.cap=elecCap;
   }
 
@@ -1635,6 +1649,26 @@
         withUndo(function(){rg.recipe=nr;});scheduleSave();svcDirty=true;dirty=true;ioModal.hidden=true;});
       document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
       ioModal.hidden=false;return;
+    } else if(kind==='tune'){
+      // live balance tuning — Save writes a compact mdg-tune override and reloads; Defaults clears it
+      var META=[['sec','Economy'],['exportPrice','Export price (₵/Goods)',1],['intRate','Debt interest / tick',0.005],['serviceRate','Service cost / extra pop',0.01],['serviceFree','Free-service population',50],['resYield','Extractor yield / level',0.2],
+        ['sec','Trade (two-way barter)'],['tradeRate','Raw units bought per Goods',0.5],['tradeSpend','Goods reserve spent / tick',0.05],
+        ['sec','Electronics'],['elecTier','Unlock tier (0–8)',1],['elecGoodsIn','Goods in / Electronics',0.1],['elecOilIn','Oil in / Electronics',0.1],['elecPrice','Electronics price × Goods',0.5],
+        ['sec','Adjacency'],['adjBonus','Factory bonus / adjacent Works',0.05],['adjCap','Max adjacent Works counted',1]];
+      var th='<h3>🎛️ Balance tuning</h3><p>Adjust the economy live for playtesting — <b>Save</b> reloads with your numbers (kept in this browser). Share a set by appending <code>?tune={"tradeRate":3}</code> to the URL.</p><div style="max-height:min(56vh,420px);overflow-y:auto;margin:0 -2px;padding:0 4px">';
+      for(var mi=0;mi<META.length;mi++){var m=META[mi];
+        if(m[0]==='sec'){th+='<div style="font:700 10px system-ui;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 2px">'+m[1]+'</div>';continue;}
+        var chg=TUNE[m[0]]!==TUNE_DEFAULTS[m[0]];
+        th+='<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 2px;font:500 11.5px system-ui;color:var(--ink)"><span>'+m[1]+(chg?' <span style="color:#C98B2A" title="changed from default '+TUNE_DEFAULTS[m[0]]+'">•</span>':'')+'</span>'
+          +'<input type="number" data-tk="'+m[0]+'" value="'+TUNE[m[0]]+'" step="'+m[2]+'" style="width:82px;padding:5px 7px;border:1.5px solid var(--line-2);border-radius:7px;background:var(--bg);color:var(--ink);font:600 12px system-ui;text-align:right"></label>';}
+      th+='</div><div class="iorow"><button type="button" id="tune-def">Defaults</button><button type="button" id="io-x">Cancel</button><button type="button" class="pri" id="tune-save">Save &amp; reload</button></div>';
+      ioBox.innerHTML=th;
+      document.getElementById('tune-save').addEventListener('click',function(){var out={},ins=ioBox.querySelectorAll('[data-tk]');
+        for(var i=0;i<ins.length;i++){var k=ins[i].getAttribute('data-tk'),v=parseFloat(ins[i].value);if(isFinite(v)&&v!==TUNE_DEFAULTS[k])out[k]=v;}
+        try{if(Object.keys(out).length)localStorage.setItem('mdg-tune',JSON.stringify(out));else localStorage.removeItem('mdg-tune');}catch(e){}location.reload();});
+      document.getElementById('tune-def').addEventListener('click',function(){try{localStorage.removeItem('mdg-tune');}catch(e){}location.reload();});
+      document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
+      ioModal.hidden=false;return;
     } else if(kind==='econ'){
       // Economy readout — production vs consumption balance per resource, so the supply chain is legible
       var e=econ;
@@ -1778,6 +1812,7 @@
     if(act){e.stopPropagation();closeMenus();ioOpen(act.getAttribute('data-act'));return;}   // Stats/Awards/Export/Import
   });
   buildThemeRow(); applyTheme(curTheme);                    // restore the saved theme on boot
+  if(new URLSearchParams(location.search).has('dev')||localStorage.getItem('mdg-tune')){var _ti=document.getElementById('tuneitem');if(_ti)_ti.hidden=false;}   // reveal the Tuning panel for playtesting
 
   // ---- guided first-run: a short objective path that teaches the loop as you play ----
   var TUTOR_KEY='mdg-tutor-done';
@@ -2226,7 +2261,7 @@
         if(t==='ind'){var oid=extractorOutput(c,r,g);
           eo=oid?'Extracts <b>+'+(+(g.lvl*RES_YIELD).toFixed(1))+'</b> '+RESICON[oid]+' '+RESNAME[oid]+'/tick':'<span class="no">No resource here</span> <span class="ik">— site on forest/farmland/hills/desert or beside a mountain/coast</span>';}
         else if(t==='fac'){var am=facAdjMult(c,r),ab=Math.round((am.mult-1)*100),M=am.mult;
-          if(g.recipe==='elec'&&elecUnlocked())eo='💡 <b>Electronics</b>: '+(+(g.lvl*M*1.2).toFixed(1))+' 📦 + '+(+(g.lvl*M*0.8).toFixed(1))+' 🛢 → <b>'+(+(g.lvl*M).toFixed(1))+'</b>/tick';
+          if(g.recipe==='elec'&&elecUnlocked())eo='💡 <b>Electronics</b>: '+(+(g.lvl*M*TUNE.elecGoodsIn).toFixed(1))+' 📦 + '+(+(g.lvl*M*TUNE.elecOilIn).toFixed(1))+' 🛢 → <b>'+(+(g.lvl*M).toFixed(1))+'</b>/tick';
           else eo='📦 <b>Goods</b>: '+(+(g.lvl*M*1.5).toFixed(1))+' ⛏ + '+(+(g.lvl*M*1.5).toFixed(1))+' 🧱 → <b>'+(+(g.lvl*M*2).toFixed(1))+'</b>/tick';
           if(am.adj>0)eo+=' <span class="ok">+'+ab+'% · '+am.adj+' adj Works</span>';
           if(elecUnlocked())eo+=' <span class="ik">— tap to switch recipe</span>';}
@@ -2610,6 +2645,7 @@
     goods:function(v){if(v!==undefined)goodsStock=v;return goodsStock;},
     state:function(){return {ms:maxMS,cash:treasury,goods:goodsStock,elec:elecStock,tpBest:throughputBest,tpAvg:throughputAvg};},
     undo:function(){doUndo();},undoDepth:function(){return undoStack.length;},
+    tune:function(){return {live:TUNE,def:TUNE_DEFAULTS,rate:TRADE_RATE,elecTier:ELEC_TIER,resYield:RES_YIELD};},
     save:function(){save();},saveKey:function(){return SAVE_KEY;}
   };}
   requestAnimationFrame(frame);
