@@ -724,6 +724,7 @@ function cardById(id){ for(var i=0;i<CARDS.length;i++) if(CARDS[i].id===id) retu
 var SKEY='mdg-collection-v1', S, MSG=null, MSGN=0;
 function load(){ try{S=JSON.parse(localStorage.getItem(SKEY));}catch(e){S=null;} if(!S)S={}; if(!S.coll)S.coll={};
   if(typeof S.tokens!=='number') S.tokens=Array.isArray(S.packs)?S.packs.length:0; /* migrate: old unopened packs become tokens */
+  if(typeof S.sparks!=='number') S.sparks=0;
   delete S.packs; }
 function save(){ try{localStorage.setItem(SKEY,JSON.stringify(S));}catch(e){} }
 function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
@@ -751,6 +752,12 @@ function openPack(setName){
     var newFoil=false; if(foil&&!S.coll[c.id].foil){S.coll[c.id].foil=true;newFoil=true;}
     return {c:c,foil:foil,isNew:isNew,newFoil:newFoil};
   });
+  /* duplicates melt into sparks: 1 spark = 1/100 Pack Token, auto-converted at 100 */
+  var dups=res.filter(function(r){return !r.isNew;}).length;
+  if(dups){ S.sparks+=dups; var gained=0;
+    while(S.sparks>=100){ S.sparks-=100; S.tokens++; gained++; }
+    if(gained){ MSG="sparks"; MSGN=gained; }
+  }
   save(); return res;
 }
 
@@ -803,11 +810,12 @@ function tokenFlow(){
 function renderCollection(){
   var h='<div class="view"><div class="vhead">Your Binder</div>';
   var totalOwned=Object.keys(S.coll).length, t=S.tokens;
-  h+='<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day) · tap a card to read it</div>';
+  h+='<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day)'+(S.sparks?' · ✧ '+S.sparks+'/100':'')+' · tap a card to read it</div>';
   var msg=MSG,msgN=MSGN; MSG=null;
   if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b> — hit the gold <b>✦ Open a pack</b> button to rip your first booster: we deal three packs, you keep one.</div>';
   else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — the gold button awaits.</div>';
-  else if(msg==="notokens") h+='<div class="banner"><b>No Pack Tokens left.</b> A fresh one arrives tomorrow — meanwhile, browse your binder.</div>';
+  else if(msg==="notokens") h+='<div class="banner"><b>No Pack Tokens left.</b> A fresh one arrives tomorrow — duplicates you pull also drip ✧ sparks toward free tokens (100 ✧ = 1 token).</div>';
+  else if(msg==="sparks") h+='<div class="banner"><b>✧ 100 sparks!</b> Your duplicates just melted into <b>+'+msgN+' Pack Token'+(msgN>1?'s':'')+'</b> ('+S.sparks+'/100 toward the next).</div>';
   var activeSeries=SET_SERIES[activeSet], i, s;
   h+='<div class="seriestabs">';
   for(i=0;i<SERIES.length;i++){ var sr=SERIES[i], srSets=setsOf(sr), srOwned=0;
@@ -854,11 +862,13 @@ function packFlow(setName){
     var badge = r.newFoil?'<span class="pr-badge foil">✦ New foil</span>'
               : r.foil?'<span class="pr-badge foil">✦ Foil</span>'
               : r.isNew?'<span class="pr-badge">New card</span>'
-              : '<span class="pr-badge dup">Duplicate</span>';
+              : '<span class="pr-badge dup">Duplicate · +1 ✧</span>';
     h+='<div class="pr-slot">'+badge+faceHTML(r.c,r.foil)+'</div>';
   });
   h+='</div>';
-  h+='<div class="pr-bottom"><div class="pr-hint">tap to flip &nbsp;<span class="arr">↔</span>&nbsp; '+res.length+' cards added to your binder</div>'
+  var dups=res.filter(function(r){return !r.isNew;}).length;
+  var sparkNote=dups?' &nbsp;·&nbsp; +'+dups+' ✧ ('+S.sparks+'/100)':'';
+  h+='<div class="pr-bottom"><div class="pr-hint">tap to flip &nbsp;<span class="arr">↔</span>&nbsp; '+res.length+' cards added to your binder'+sparkNote+'</div>'
     +'<button class="done" id="revealdone">Done</button></div>';
   overlay.classList.add('reveal');
   openOverlay(h);

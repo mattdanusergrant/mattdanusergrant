@@ -20,6 +20,8 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
 - **New player** starts with **0 packs and 3 Pack Tokens**.
 - **Daily token.** You get **+1 token each day** (up to 7 accrue if you're away). Old saves migrate:
   any unopened packs convert 1:1 into tokens.
+- **Sparks (dupe pity).** Every duplicate pulled melts into a **✧ spark = 1/100 Pack Token**;
+  at 100 sparks a token is granted automatically (foil-upgrades on owned cards count too).
 - **The binder IS the landing page.** There are no separate views: you land on your collection
   (series tabs → set tabs → the card grid), and a small floating gold **✦ Open a pack** button
   (bottom-right, with your token count) is always in reach. Owned cards show their art, unowned
