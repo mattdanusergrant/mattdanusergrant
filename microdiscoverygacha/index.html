@@ -60,7 +60,13 @@ a{color:inherit;text-decoration:none}
 .view{max-width:1040px;margin:0 auto;padding:22px clamp(14px,4vw,28px) 70px}
 .chead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px 18px;flex-wrap:wrap}
 .chl{min-width:0}
-.openpack{position:relative;flex:none;margin-top:8px;display:inline-flex;align-items:center;gap:9px;
+.chead-actions{display:flex;align-items:center;gap:9px;margin-top:8px;flex-wrap:wrap}
+.scrollbtn{display:inline-flex;align-items:center;gap:7px;font-family:var(--label);font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  font-size:12px;color:var(--ink);background:none;border:1px solid var(--line2);border-radius:999px;padding:12px 16px;cursor:pointer;transition:.18s}
+.scrollbtn .sci{font-size:14px;color:var(--gold)}
+.scrollbtn:hover,.scrollbtn:focus-visible{border-color:var(--gold);color:var(--ink)}
+.scrollbtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.openpack{position:relative;flex:none;display:inline-flex;align-items:center;gap:9px;
   font-family:var(--label);font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-size:12px;color:var(--bg);
   background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:12px 18px;cursor:pointer;
   box-shadow:0 16px 36px -14px color-mix(in srgb,var(--gold) 70%,#000)}
@@ -222,6 +228,16 @@ a{color:inherit;text-decoration:none}
 @media(min-width:1140px){.pr-hint .arr{animation:none}}
 .pr-bottom{flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 16px calc(14px + env(safe-area-inset-bottom,0px))}
 .pr-bottom .done{margin-top:0}
+
+/* Scroll Mode — endless vertical feed of owned cards, one per screen */
+.overlay.scrollmode{align-items:stretch;padding:0}
+.overlay.scrollmode .sheet{max-width:none;width:100%;height:100dvh;max-height:none;overflow:hidden;display:flex;flex-direction:column;text-align:center}
+.sf-top{flex:none;padding:13px 54px 8px;font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:10.5px;color:var(--gold)}
+.sf-feed{flex:1;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior-y:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.sf-feed::-webkit-scrollbar{display:none}
+.sf-slot{height:100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;padding:4px 16px 16px;animation:rise .5s ease both}
+.sf-slot .card{width:min(88vw,360px);height:min(74dvh,600px)}
+@media(prefers-reduced-motion:reduce){.sf-slot{animation:none}}
 
 /* ======= the collectible card (front/back flip) ======= */
 .card{width:min(90vw,360px);height:min(80svh,620px);perspective:1700px;cursor:pointer;position:relative;
@@ -834,8 +850,10 @@ function renderCollection(){
   var totalOwned=Object.keys(S.coll).length, t=S.tokens;
   var op='<button class="openpack'+(t<1?' zero':'')+'" data-openpack aria-label="'+(t<1?'No Pack Tokens — a new one arrives tomorrow':'Open a pack ('+t+' token'+(t===1?'':'s')+' left)')+'">'
     +'<span class="opct">✦ '+t+'</span><span class="oplb">'+(t<1?'+1 tomorrow':'Open a pack')+'</span></button>';
+  var sc=totalOwned>0?'<button class="scrollbtn" data-scroll aria-label="Scroll Mode — browse your collection one random card at a time"><span class="sci">↕</span>Scroll Mode</button>':'';
   var h='<div class="view"><div class="chead"><div class="chl"><div class="vhead">Your Binder</div>'+
-    '<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day)'+(S.sparks?' · ✧ '+S.sparks+'/100':'')+' · tap a card to read it</div></div>'+op+'</div>';
+    '<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day)'+(S.sparks?' · ✧ '+S.sparks+'/100':'')+' · tap a card to read it</div></div>'+
+    '<div class="chead-actions">'+sc+op+'</div></div>';
   var msg=MSG,msgN=MSGN; MSG=null;
   if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b> — hit the gold <b>✦ Open a pack</b> button to rip your first booster: we deal three packs, you keep one.</div>';
   else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — the gold button awaits.</div>';
@@ -880,7 +898,7 @@ function fitCard(card){
 function fitCards(){ var cs=sheet.querySelectorAll('.card'),i; for(i=0;i<cs.length;i++) fitCard(cs[i]); }
 function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); document.body.style.overflow='hidden'; sheet.scrollTop=0;
   fitCards(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitCards); }
-function closeOverlay(){ overlay.classList.remove('on','reveal'); closeBtn.classList.remove('on'); sheet.innerHTML=''; document.body.style.overflow='';
+function closeOverlay(){ overlay.classList.remove('on','reveal','scrollmode'); closeBtn.classList.remove('on'); sheet.innerHTML=''; document.body.style.overflow='';
   renderCollection(); }
 
 /* opening a pack = the 3 full cards in a close row; flick left-right, tap to flip */
@@ -907,6 +925,38 @@ function packFlow(setName){
 function showCardModal(id){ var c=cardById(id); if(!c) return; var foil=S.coll[id]&&S.coll[id].foil;
   openOverlay('<div class="cardwrap">'+faceHTML(c,foil)+'</div>'); }
 
+/* Scroll Mode — an endless feed of your owned cards, one random card per screen */
+function scrollMode(){
+  var owned=CARDS.filter(function(c){return S.coll[c.id];});
+  if(!owned.length) return;
+  var bag=[], last=null;
+  function refill(){ bag=owned.map(function(c){return c.id;});
+    for(var i=bag.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)),t=bag[i];bag[i]=bag[j];bag[j]=t; }
+    if(owned.length>1 && bag[bag.length-1]===last){ var s=bag[0];bag[0]=bag[bag.length-1];bag[bag.length-1]=s; }
+  }
+  function nextId(){ if(!bag.length) refill(); var id=bag.pop(); last=id; return id; }
+  function slotHTML(){ var id=nextId(), c=cardById(id); return '<div class="sf-slot">'+faceHTML(c,S.coll[id]&&S.coll[id].foil)+'</div>'; }
+  var h='<div class="sf-top">✧ Scroll Mode &nbsp;·&nbsp; tap to flip · swipe up for the next</div><div class="sf-feed" id="sffeed">';
+  for(var i=0;i<5;i++) h+=slotHTML();
+  h+='</div>';
+  overlay.classList.add('scrollmode');
+  openOverlay(h);
+  var feed=document.getElementById('sffeed'), ticking=false;
+  feed.addEventListener('scroll',function(){
+    if(ticking) return; ticking=true;
+    requestAnimationFrame(function(){ ticking=false;
+      if(feed.scrollHeight-(feed.scrollTop+feed.clientHeight) < feed.clientHeight*1.5){
+        var add=''; for(var k=0;k<4;k++) add+=slotHTML();
+        feed.insertAdjacentHTML('beforeend',add);
+        var cs=feed.querySelectorAll('.card'); for(var j=Math.max(0,cs.length-4);j<cs.length;j++) fitCard(cs[j]);
+      }
+      while(feed.children.length>16 && feed.children[0].getBoundingClientRect().bottom < -60){
+        var hgt=feed.children[0].offsetHeight; feed.removeChild(feed.children[0]); feed.scrollTop-=hgt;
+      }
+    });
+  });
+}
+
 /* ===== events ===== */
 document.getElementById('home').addEventListener('click',function(){ renderCollection(); window.scrollTo(0,0); });
 closeBtn.addEventListener('click',closeOverlay);
@@ -914,6 +964,7 @@ overlay.addEventListener('click',function(e){ if(e.target===overlay) closeOverla
 
 view.addEventListener('click',function(e){
   var op=e.target.closest('[data-openpack]'); if(op){ if(S.tokens<1){ MSG="notokens"; renderCollection(); window.scrollTo(0,0); } else tokenFlow(); return; }
+  var sm=e.target.closest('[data-scroll]'); if(sm){ scrollMode(); return; }
   var sr=e.target.closest('[data-series]'); if(sr){ activeSet=setsOf(sr.getAttribute('data-series'))[0]; renderCollection(); return; }
   var st=e.target.closest('[data-set]'); if(st){ activeSet=st.getAttribute('data-set'); renderCollection(); return; }
   var mn=e.target.closest('.mini[data-id]'); if(mn){ showCardModal(mn.getAttribute('data-id')); return; }

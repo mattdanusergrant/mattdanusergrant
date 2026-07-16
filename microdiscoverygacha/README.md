@@ -33,6 +33,10 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
   opposite the "Your Binder" title (token count included; wraps under the title on phones). Owned
   cards show their art, unowned show a locked slot, foils get a holo star. Tap a card to read it
   and flip for the back.
+- **Scroll Mode.** A **↕ Scroll Mode** button in the header opens an endless full-screen feed of
+  the cards you own — one random card per screen (vertical scroll-snap, TikTok-style), tap to flip,
+  swipe for the next. A shuffle-bag cycles through your whole collection before repeating; the feed
+  appends forever and prunes offscreen cards to stay light. Shown only once you own a card.
 - **Two themes** (dark / light), remembered; otherwise follows the device.
 
 ## Series → Sets
