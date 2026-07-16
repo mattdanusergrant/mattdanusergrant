@@ -288,24 +288,26 @@ a{color:inherit;text-decoration:none}
   text-transform:uppercase;cursor:pointer;padding:6px 10px}
 .ob-skip:hover{color:var(--ink)}
 
-/* ======= the collectible card (front/back flip) ======= */
+/* ======= the collectible card (a swipeable multi-page flip-book) ======= */
 .card{width:min(90vw,360px);height:min(80svh,620px);perspective:1700px;cursor:pointer;position:relative;
   touch-action:pan-y;-webkit-tap-highlight-color:transparent}
-.flipper{position:relative;width:100%;height:100%;transition:transform .62s cubic-bezier(.2,.72,.2,1);transform-style:preserve-3d}
-.card.flipped .flipper{transform:rotateY(180deg)}
+.card:focus-visible{outline:2px solid var(--gold);outline-offset:4px;border-radius:22px}
+.flipper{position:relative;width:100%;height:100%;transition:transform .58s cubic-bezier(.2,.72,.2,1);transform-style:preserve-3d;transform:rotateY(var(--rot,0deg))}
 @media(prefers-reduced-motion:reduce){.flipper{transition:none}}
-.card:not(.flipped) .back{pointer-events:none}.card.flipped .front{pointer-events:none}
-.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:20px;overflow:hidden;
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:20px;overflow:hidden;--ps:1;
   display:flex;flex-direction:column;background:linear-gradient(168deg,var(--plate),var(--bg2));border:1px solid var(--line2);
   box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.05)}
-.front{transform:translateZ(.6px)}
-.back{transform:rotateY(180deg) translateZ(.6px)}
+.fa{transform:translateZ(.6px)}
+.fb{transform:rotateY(180deg) translateZ(.6px)}
 .face::before{content:"";position:absolute;inset:0;border-radius:20px;padding:1.3px;pointer-events:none;z-index:3;
   background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 92%,transparent),color-mix(in srgb,var(--gold) 30%,transparent) 30%,transparent 48%,transparent 56%,color-mix(in srgb,var(--accent) 55%,transparent));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 .face::after{content:"";position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:2;
   background:linear-gradient(122deg,rgba(255,255,255,.075) 0%,rgba(255,255,255,0) 24%),radial-gradient(92% 46% at 16% -6%,rgba(255,255,255,.06),transparent 70%);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
+.card.foil .face::before{background:conic-gradient(from 200deg,#e8869b,#7cc8f5,#93e6a6,#f5d76e,#c79bf0,#e8869b);opacity:.95}
+.card.foil .face::after{background:linear-gradient(122deg,rgba(255,255,255,.11) 0%,transparent 26%),linear-gradient(58deg,rgba(255,120,190,.13),rgba(120,210,255,.13) 25%,rgba(150,255,180,.13) 50%,rgba(255,225,120,.13) 72%,rgba(200,140,255,.13));
+  background-size:auto,260% 260%;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 14%,transparent);animation:holo 7s linear infinite}
 .cardtop{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 17px 0;flex:none}
 .type{font-family:var(--label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:10.5px;color:var(--accent);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:color-mix(in srgb,var(--accent) 13%,transparent);
@@ -313,45 +315,34 @@ a{color:inherit;text-decoration:none}
 .setmark{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right;flex:none}
 .setname{font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:9.5px;color:var(--accent);white-space:nowrap}
 .num{font-family:var(--label);font-weight:600;letter-spacing:.06em;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.art{margin:calc(13px*var(--fs,1)) 17px 0;flex:none;height:calc(146px*var(--fs,1));border-radius:11px;overflow:hidden;position:relative;border:1px solid var(--line2)}
+/* front (cover) page */
+.art{margin:calc(13px*var(--ps)) 17px 0;flex:none;height:calc(146px*var(--ps));border-radius:11px;overflow:hidden;position:relative;border:1px solid var(--line2)}
 .art::after{content:"";position:absolute;inset:0;border-radius:11px;pointer-events:none;box-shadow:inset 0 -34px 44px -32px rgba(0,0,0,.5),inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
 .motif{position:absolute;inset:0;width:100%;height:100%}
-.foiltag{display:none;align-items:center;gap:.35em;font-family:var(--label);font-weight:700;flex:none;
-  letter-spacing:.1em;text-transform:uppercase;font-size:9px;color:#20160c;padding:3px 9px;border-radius:999px;
+.foiltag{position:absolute;top:8px;right:8px;z-index:2;display:inline-flex;align-items:center;gap:.35em;font-family:var(--label);font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;font-size:9px;color:#20160c;padding:3px 9px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(0,0,0,.5);
   background:linear-gradient(90deg,#ffd76e,#a0f0d0,#9fd0ff,#e6a8ff,#ffd76e);background-size:220% 100%;animation:holoTag 4s linear infinite}
-.card.foil .foiltag{display:inline-flex}
-.card.foil .face::before{background:conic-gradient(from 200deg,#e8869b,#7cc8f5,#93e6a6,#f5d76e,#c79bf0,#e8869b);opacity:.95}
-.card.foil .face::after{background:linear-gradient(122deg,rgba(255,255,255,.11) 0%,transparent 26%),linear-gradient(58deg,rgba(255,120,190,.13),rgba(120,210,255,.13) 25%,rgba(150,255,180,.13) 50%,rgba(255,225,120,.13) 72%,rgba(200,140,255,.13));
-  background-size:auto,260% 260%;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 14%,transparent);animation:holo 7s linear infinite}
-.front{--fs:1}
-.front .name{font-family:var(--display);font-weight:500;font-size:calc(clamp(24px,5.4vw,31px)*var(--fs));line-height:1.03;letter-spacing:-.015em;margin:calc(17px*var(--fs)) 17px 0;color:var(--ink);text-wrap:balance}
-.front .flavor{font-family:var(--display);font-style:italic;font-size:calc(clamp(15px,3vw,17px)*var(--fs));line-height:1.36;color:var(--ink-soft);margin:calc(12px*var(--fs)) 17px 0}
-.front .where{font-family:var(--label);font-size:calc(11px*var(--fs));letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:calc(11px*var(--fs)) 17px 0}
-.cardfoot{margin-top:auto;padding:calc(13px*var(--fs)) 17px calc(15px*var(--fs));display:flex;align-items:center;justify-content:space-between;gap:10px}
-.tap{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
-.tap .ic{font-size:14px;color:var(--accent)}
-/* back body scales via --bs so every depth level fits without scrolling (set by fitCard JS) */
-.back .body{--bs:1;padding:15px 17px 4px;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column}
-.back .name{font-family:var(--display);font-weight:500;font-size:calc(clamp(18px,4vw,23px)*var(--bs));line-height:1.06;letter-spacing:-.01em;margin:0 0 calc(11px*var(--bs));color:var(--ink)}
-.prose{font-family:var(--body);font-size:calc(15.5px*var(--bs));line-height:1.5;color:var(--ink-soft);margin:0}
-.points{margin:calc(13px*var(--bs)) 0 0;padding:0;border-top:1px solid var(--line)}
-.points li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:calc(11px*var(--bs));align-items:start;padding:calc(8px*var(--bs)) 0;border-bottom:1px solid var(--line)}
-.points li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:calc(8px*var(--bs))}
-.points li span{font-size:calc(13.8px*var(--bs));line-height:1.42;color:var(--muted)}
-.connects{margin:calc(13px*var(--bs)) 0 0;font-family:var(--label);font-size:calc(12px*var(--bs));letter-spacing:.01em;color:var(--ink-soft);border-top:1px dashed var(--line2);padding-top:calc(11px*var(--bs))}
-.connects b{text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--accent);margin-right:9px;font-size:calc(10px*var(--bs))}
-/* depth-level UI */
-.lvl{flex:none;display:flex;align-items:center;gap:9px;padding:9px 18px;border-top:1px solid var(--line)}
-.lvl .dots{letter-spacing:2px;font-size:10px;white-space:nowrap}
-.lvl .dots b{color:var(--accent);font-weight:400}
-.lvl .dots i{color:var(--line2);font-style:normal}
-.lvltxt{font-family:var(--label);font-weight:600;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.lvchip{font-family:var(--label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px;color:var(--accent);
-  border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);border-radius:999px;padding:3px 8px;background:color-mix(in srgb,var(--accent) 10%,transparent)}
-.visit{padding:10px 18px 16px;flex:none}
-.visit a{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-weight:700;letter-spacing:.03em;font-size:12.5px;text-transform:uppercase;
-  color:var(--bg);background:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:10px 17px}
-.visit a:hover{filter:brightness(1.08)}
+.cname{font-family:var(--display);font-weight:500;font-size:calc(clamp(24px,5.4vw,31px)*var(--ps));line-height:1.03;letter-spacing:-.015em;margin:calc(16px*var(--ps)) 17px 0;color:var(--ink);text-wrap:balance}
+.chook{font-family:var(--display);font-style:italic;font-size:calc(clamp(15px,3vw,17px)*var(--ps));line-height:1.36;color:var(--ink-soft);margin:calc(12px*var(--ps)) 17px 0}
+.cwhere{font-family:var(--label);font-size:calc(11px*var(--ps));letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:calc(11px*var(--ps)) 17px 0}
+/* content pages */
+.cbody{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:calc(13px*var(--ps));padding:10px 20px;overflow:hidden}
+.ckicker{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:calc(10px*var(--ps));color:var(--accent)}
+.prose{font-family:var(--body);font-size:calc(16px*var(--ps));line-height:1.5;color:var(--ink-soft);margin:0}
+.cfact{font-family:var(--display);font-weight:500;font-size:calc(clamp(18px,4.4vw,23px)*var(--ps));line-height:1.32;color:var(--ink);margin:0}
+.connects{font-family:var(--label);font-size:calc(13px*var(--ps));line-height:1.5;color:var(--ink-soft)}
+.connects b{display:block;text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--accent);font-size:calc(10px*var(--ps));margin-bottom:6px}
+.cvisit{align-self:flex-start;display:inline-flex;align-items:center;gap:.5em;margin-top:4px;font-family:var(--label);font-weight:700;letter-spacing:.03em;
+  font-size:calc(12.5px*var(--ps));text-transform:uppercase;color:var(--bg);background:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:10px 17px}
+.cvisit:hover{filter:brightness(1.08)}
+/* foot: page indicator + swipe affordance (present on every page) */
+.cfoot{margin-top:auto;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 18px calc(14px)}
+.parrow{font-family:var(--label);font-size:19px;line-height:1;color:var(--accent);width:18px;text-align:center;flex:none;user-select:none}
+.parrow.off{opacity:.16}.parrow.lock{opacity:.34;color:var(--muted)}
+.pdots{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+.pdots span{width:6px;height:6px;border-radius:50%;background:var(--line2);transition:transform .2s}
+.pdots span.on{background:var(--accent);transform:scale(1.4)}
+.pdots span.lock{background:none;border:1px solid var(--line2)}
 
 </style>
 </head>
@@ -868,21 +859,57 @@ function cardDepth(c, copies){
   var lvl=Math.min(copies,max);
   return {lvl:lvl, max:max, facts:Math.min(lvl-1,F), connects:!!c.connects&&(lvl>=2+F)};
 }
-function faceHTML(c, foil, copies){
-  var d=cardDepth(c,copies!=null?copies:((S.coll[c.id]&&S.coll[c.id].n)||1));
-  var dots=''; for(var k=0;k<d.max;k++) dots+=k<d.lvl?'<b>●</b>':'<i>○</i>';
-  var lvtag='<span class="lvchip" title="Depth level">Lv '+d.lvl+'</span>';
+/* a card is a swipeable flip-book: page 0 = cover, then story / each fact / a "going deeper" page,
+   unlocked one at a time by copies owned (level). Swipe/arrow left-right pages through them. */
+function cardPageList(c, copies){
+  copies=Math.max(1,copies||1);
+  var F=(c.facts?c.facts.length:0), hasMore=!!(c.connects||c.url);
+  var items=[{k:'story'}]; for(var i=0;i<F;i++) items.push({k:'fact',i:i}); if(hasMore) items.push({k:'more'});
+  var maxContent=items.length, unlocked=Math.min(copies,maxContent);
+  return { pages:[{k:'front'}].concat(items.slice(0,unlocked)), unlocked:unlocked, maxContent:maxContent };
+}
+function cardPageInner(c, foil, info, page){
+  var pg=info.pages[page];
   var top='<div class="cardtop"><span class="type">'+c.cat+'</span><span class="setmark"><span class="setname">'+c.set+'</span><span class="num">'+pad(c._n)+' / '+pad(c._of)+'</span></span></div>';
-  var front='<div class="face front">'+top+'<div class="art">'+motif(c.motif,c.accent)+'</div>'+
-    '<h2 class="name">'+c.title+'</h2><p class="flavor">'+c.hook+'</p>'+(c.where?'<div class="where">'+c.where+'</div>':'')+
-    '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div>'+lvtag+'<span class="foiltag">✦ Foil</span></div></div>';
-  var points=''; if(d.facts>0){ points='<ul class="points">'; for(var i=0;i<d.facts;i++) points+='<li><span>'+c.facts[i]+'</span></li>'; points+='</ul>'; }
-  var connects=d.connects?'<div class="connects"><b>Connects to</b>'+c.connects+'</div>':'';
-  var lvline=d.lvl<d.max?'+1 copy goes deeper':'Fully studied';
-  var lvfoot='<div class="lvl"><span class="dots">'+dots+'</span><span class="lvltxt">Lv '+d.lvl+' · '+lvline+'</span></div>';
-  var visit=c.url?'<div class="visit"><a href="'+c.url+'" target="_blank" rel="noopener noreferrer">'+(c.link||('Visit '+c.title))+' ↗</a></div>':'';
-  var back='<div class="face back">'+top+'<div class="body"><h3 class="name">'+c.title+'</h3><p class="prose">'+c.back+'</p>'+points+connects+'</div>'+lvfoot+visit+'</div>';
-  return '<div class="card'+(foil?' foil':'')+'" tabindex="0" role="button" aria-label="'+c.title+' — tap to flip" style="--accent:'+c.accent+'"><div class="flipper">'+front+back+'</div></div>';
+  var body;
+  if(pg.k==='front'){
+    body='<div class="art">'+motif(c.motif,c.accent)+(foil?'<span class="foiltag">✦ Foil</span>':'')+'</div>'+
+         '<h2 class="cname">'+c.title+'</h2><p class="chook">'+c.hook+'</p>'+(c.where?'<div class="cwhere">'+c.where+'</div>':'');
+  } else if(pg.k==='story'){
+    body='<div class="cbody"><div class="ckicker">The idea</div><p class="prose">'+c.back+'</p></div>';
+  } else if(pg.k==='fact'){
+    body='<div class="cbody"><div class="ckicker">Key point '+(pg.i+1)+' / '+c.facts.length+'</div><p class="cfact">'+c.facts[pg.i]+'</p></div>';
+  } else {
+    var conn=c.connects?'<div class="connects"><b>Connects to</b>'+c.connects+'</div>':'';
+    var visit=c.url?'<a class="cvisit" href="'+c.url+'" target="_blank" rel="noopener noreferrer">'+(c.link||('Visit '+c.title))+' ↗</a>':'';
+    body='<div class="cbody"><div class="ckicker">Going deeper</div>'+conn+visit+'</div>';
+  }
+  var last=info.pages.length-1, dots='';
+  for(var j=0;j<=info.maxContent;j++){ var cls=j===page?'on':(j<=info.unlocked?'':'lock'); dots+='<span'+(cls?' class="'+cls+'"':'')+'></span>'; }
+  var lockedAhead=last<info.maxContent;
+  var foot='<div class="cfoot"><span class="parrow'+(page>0?'':' off')+'" aria-hidden="true">‹</span>'+
+    '<span class="pdots">'+dots+'</span>'+
+    '<span class="parrow'+(page<last?'':(lockedAhead?' lock':' off'))+'" aria-hidden="true">›</span></div>';
+  return top+body+foot;
+}
+function faceHTML(c, foil, copies){
+  copies=copies!=null?copies:((S.coll[c.id]&&S.coll[c.id].n)||1);
+  var info=cardPageList(c,copies);
+  return '<div class="card'+(foil?' foil':'')+'" data-id="'+c.id+'" data-copies="'+copies+'" data-page="0" data-rot="0" tabindex="0" role="group" aria-label="'+c.title+' — swipe left and right to page through" style="--accent:'+c.accent+';--rot:0deg">'+
+    '<div class="flipper"><div class="face fa">'+cardPageInner(c,foil,info,0)+'</div><div class="face fb"></div></div></div>';
+}
+/* flip one page forward (dir=+1) or back (dir=-1) */
+function flipCard(cardEl, dir){
+  var c=cardById(cardEl.dataset.id); if(!c) return;
+  var copies=+cardEl.dataset.copies||1, info=cardPageList(c,copies);
+  var cur=+cardEl.dataset.page||0, target=cur+dir;
+  if(target<0||target>info.pages.length-1) return;
+  var curRot=+cardEl.dataset.rot||0, targetRot=curRot+(dir>0?180:-180);
+  var showsB=Math.abs(Math.round(targetRot/180))%2===1;
+  var faceEl=cardEl.querySelector(showsB?'.fb':'.fa');
+  faceEl.innerHTML=cardPageInner(c,cardEl.classList.contains('foil'),info,target);
+  fitFace(faceEl);
+  cardEl.dataset.page=target; cardEl.dataset.rot=targetRot; cardEl.style.setProperty('--rot',targetRot+'deg');
 }
 
 /* spending a token = deal 3 random boosters, keep 1 */
@@ -953,15 +980,15 @@ function renderCollection(){
   }
   h+='</div></div>'; view.innerHTML=h;
 }
-/* no scrolling on cards, ever: shrink a face's contents (via a CSS scale var) until it fits its box */
-function fitFace(el, prop, floor){ if(!el) return;
-  var v=1; el.style.setProperty(prop,v); var g=0;
-  while(el.scrollHeight>el.clientHeight+1 && v>floor && g++<40){ v-=0.03; el.style.setProperty(prop,v); }
+/* no scrolling on cards, ever: shrink a face's page (via the --ps scale var) until it fits its box.
+   content pages clip inside .cbody, so measure that too, not just the face. */
+function faceOverflow(faceEl){ var o=faceEl.scrollHeight-faceEl.clientHeight, b=faceEl.querySelector('.cbody');
+  if(b) o=Math.max(o,b.scrollHeight-b.clientHeight); return o; }
+function fitFace(faceEl){ if(!faceEl) return;
+  var v=1; faceEl.style.setProperty('--ps',v); var g=0;
+  while(faceOverflow(faceEl)>1 && v>0.62 && g++<40){ v-=0.03; faceEl.style.setProperty('--ps',v); }
 }
-function fitCard(card){
-  fitFace(card.querySelector('.back .body'),'--bs',0.66);  /* back body text */
-  fitFace(card.querySelector('.face.front'),'--fs',0.7);   /* front art + text */
-}
+function fitCard(card){ fitFace(card.querySelector('.face.fa')); var fb=card.querySelector('.face.fb'); if(fb&&fb.innerHTML.trim()) fitFace(fb); }
 function fitCards(){ var cs=sheet.querySelectorAll('.card'),i; for(i=0;i<cs.length;i++) fitCard(cs[i]); }
 function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); document.body.style.overflow='hidden'; sheet.scrollTop=0;
   fitCards(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitCards); }
@@ -973,7 +1000,7 @@ function closeOverlay(){ overlay.classList.remove('on','reveal','scrollmode'); c
 function packFlow(setName){
   var res=openPack(setName), anyFoil=res.some(function(r){return r.foil;});
   var newN=res.filter(function(r){return r.isNew;}).length, dups=res.length-newN;
-  var h='<div class="sf-top">'+setName+' Booster'+(anyFoil?' · ✦ foil pull!':'')+' &nbsp;·&nbsp; tap to flip · swipe up</div>';
+  var h='<div class="sf-top">'+setName+' Booster'+(anyFoil?' · ✦ foil pull!':'')+' &nbsp;·&nbsp; swipe ‹ › to read · swipe up for next</div>';
   h+='<div class="sf-feed" id="prfeed">';
   res.forEach(function(r){
     var badge = r.newFoil?'<span class="pr-badge foil">✦ New foil</span>'
@@ -1004,7 +1031,7 @@ function runOnboarding(){
       '<div class="ob-kicker">Welcome to Micro Discovery Gacha</div>'+
       '<h2 class="ob-h">Collect how the world works.</h2>'+
       '<div class="ob-card">'+faceHTML(c,false)+'</div>'+
-      '<div class="ob-hint">Tap the card to flip it — every card teaches one real thing.</div>'+
+      '<div class="ob-hint">Swipe the card left &amp; right to read it — each swipe turns to a new page.</div>'+
       '<button class="done" data-goto="2">Next</button>'+
     '</div>'+
     '<div class="ob-step" data-step="2" hidden>'+
@@ -1047,7 +1074,7 @@ function scrollMode(){
   }
   function nextId(){ if(!bag.length) refill(); var id=bag.pop(); last=id; return id; }
   function slotHTML(){ var id=nextId(), c=cardById(id); return '<div class="sf-slot">'+faceHTML(c,S.coll[id]&&S.coll[id].foil)+'</div>'; }
-  var h='<div class="sf-top">✧ Scroll Mode &nbsp;·&nbsp; tap to flip · swipe up for the next</div><div class="sf-feed" id="sffeed">';
+  var h='<div class="sf-top">✧ Scroll Mode &nbsp;·&nbsp; swipe ‹ › to read · up-down for next card</div><div class="sf-feed" id="sffeed">';
   for(var i=0;i<5;i++) h+=slotHTML();
   h+='</div>';
   overlay.classList.add('scrollmode');
@@ -1084,9 +1111,19 @@ view.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ v
 sheet.addEventListener('click',function(e){ if(e.target.closest('a')) return;
   var ch=e.target.closest('[data-choose]'); if(ch){ S.tokens=Math.max(0,S.tokens-1); save(); packFlow(ch.getAttribute('data-choose')); return; }
   var pk=e.target.closest('.pack'); if(pk){ pk.classList.toggle('flipped'); return; }
-  var card=e.target.closest('.card'); if(card) card.classList.toggle('flipped'); });
-sheet.addEventListener('keydown',function(e){ if(e.key!=='Enter'&&e.key!==' ') return;
-  var pk=e.target.closest&&e.target.closest('.pack'); if(pk){ e.preventDefault(); pk.classList.toggle('flipped'); } });
+  var card=e.target.closest('.card'); if(card){ if(card._noclick){ card._noclick=false; return; }
+    var r=card.getBoundingClientRect(); flipCard(card,(e.clientX-r.left)>r.width/2?1:-1); } });
+/* horizontal swipe pages the card (vertical swipes pass through to the feed) */
+var _sx=0,_sy=0,_sc=null;
+sheet.addEventListener('touchstart',function(e){ var card=e.target.closest('.card'); _sc=card; if(!card)return; card._noclick=false; var t=e.changedTouches[0]; _sx=t.clientX; _sy=t.clientY; },{passive:true});
+sheet.addEventListener('touchend',function(e){ var card=_sc; _sc=null; if(!card||e.target.closest('a'))return;
+  var t=e.changedTouches[0], dx=t.clientX-_sx, dy=t.clientY-_sy;
+  if(Math.abs(dx)>38 && Math.abs(dx)>Math.abs(dy)*1.3){ card._noclick=true; flipCard(card,dx>0?1:-1); } },{passive:true});
+sheet.addEventListener('keydown',function(e){
+  var pk=e.target.closest&&e.target.closest('.pack');
+  if(pk&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); pk.classList.toggle('flipped'); return; }
+  var card=e.target.closest&&e.target.closest('.card');
+  if(card&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); flipCard(card,e.key==='ArrowRight'?1:-1); } });
 
 var root=document.documentElement;
 try{var saved=localStorage.getItem('mdg-mag-theme'); if(saved)root.setAttribute('data-theme',saved);}catch(e){}
