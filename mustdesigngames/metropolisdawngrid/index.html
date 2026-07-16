@@ -195,6 +195,8 @@
   .tools .spacer{flex:1}
   .reset{cursor:pointer;font-size:12px;color:var(--muted);background:none;border:none;font-family:inherit;text-decoration:underline;text-underline-offset:2px}
   .reset:hover{color:var(--ink)}
+  .reset:disabled{opacity:.4;cursor:default;text-decoration:none}
+  #undo{margin-right:12px}
   .hint{font-size:12px;color:var(--muted);max-width:330px;line-height:1.4}
   @media(max-width:760px){.hint{display:none}}
   .tutor{position:absolute;top:12px;left:12px;z-index:6;width:min(252px,74vw);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;box-shadow:var(--shadow);padding:11px 13px;font-size:12.5px;pointer-events:none}
@@ -344,6 +346,7 @@
       </div></div>
     <span class="spacer"></span>
     <span class="curtool" id="curtool" title="Current tool">Road</span>
+    <button class="reset" id="undo" type="button" title="Undo your last edit (Ctrl+Z)" disabled>⟲ Undo</button>
     <button class="reset" id="reset" type="button">Reset</button>
   </footer>
 
@@ -937,9 +940,9 @@
       return;}
     if(OBSERVE)return;                                              // clicks do nothing in observe mode
     if(isLineBrush()){                                              // road/rail: click start → click end
-      if(!lineAnchor)lineAnchor=p; else{commitLine(lineAnchor,p);lineAnchor=null;}
+      if(!lineAnchor)lineAnchor=p; else{withUndo(function(){commitLine(lineAnchor,p);});lineAnchor=null;}
       dirty=true;return;}
-    lastPaint=-1;var placed=paintAt(p.c,p.r);                       // every other tool: place exactly one
+    lastPaint=-1;var placed;withUndo(function(){placed=paintAt(p.c,p.r);});   // every other tool: place exactly one (undo-recorded)
     if(placed&&brush!=='inspect'&&brush!=='bulldoze'&&!isLineBrush())selectBrush('inspect');   // building placed → default back to the selector
   }
   canvas.addEventListener('pointerdown',down);
@@ -991,6 +994,7 @@
   var PANKEY={w:'u',arrowup:'u',s:'d',arrowdown:'d',a:'l',arrowleft:'l',d:'r',arrowright:'r'};   // WASD / arrows pan the camera
   window.addEventListener('keydown',function(e){
     var lk=e.key.toLowerCase();
+    if((e.ctrlKey||e.metaKey)&&lk==='z'){e.preventDefault();doUndo();return;}   // Ctrl/Cmd+Z rewinds the last edit
     if(PANKEY[lk]){keys[PANKEY[lk]]=1;e.preventDefault();return;}
     if(e.key==='`'||e.key==='i'||e.key==='I'){selectBrush('inspect');return;}    // ` is the shortcut (I kept as an alias); inspect works in observe mode too
     if(e.key==='+'||e.key==='='){setZoom(zoom*1.2);return;}         // keyboard zoom
@@ -1032,6 +1036,7 @@
   window.addEventListener('pointerup',function(){mmDrag=false;});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
+    try{pushUndoState(serialize());}catch(e){}            // let a single Undo recover an accidental Reset
     hwGeom();                                            // interchange (+ resource bands) before regenerating terrain
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
     try{localStorage.removeItem(TUTOR_KEY);}catch(e){}tutorDone=false;tutorActive=true;tutorStep=-1;   // a Reset is a true fresh start — replay the intro quest
@@ -1626,8 +1631,8 @@
         +opt('elec','💡','Electronics','Goods + Oil → Electronics. Exports at <b>3×</b> the price of raw Goods — but eats Goods you could sell.',cur==='elec')
         +'<div class="iorow"><button type="button" id="io-x">Close</button></div>';
       var rbtns=ioBox.querySelectorAll('[data-recipe]');
-      for(var rbi=0;rbi<rbtns.length;rbi++)rbtns[rbi].addEventListener('click',function(){
-        rg.recipe=this.getAttribute('data-recipe')==='elec'?'elec':'goods';scheduleSave();svcDirty=true;dirty=true;ioModal.hidden=true;});
+      for(var rbi=0;rbi<rbtns.length;rbi++)rbtns[rbi].addEventListener('click',function(){var nr=this.getAttribute('data-recipe')==='elec'?'elec':'goods';
+        withUndo(function(){rg.recipe=nr;});scheduleSave();svcDirty=true;dirty=true;ioModal.hidden=true;});
       document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
       ioModal.hidden=false;return;
     } else if(kind==='econ'){
@@ -2399,12 +2404,12 @@
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
   window.addEventListener('pagehide',function(){save();});   // flush on leave — a debounced save may still be pending
-  function save(){if(OBSERVE||ioImporting)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];
+  function serialize(){var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];   // the whole city as one compact payload (also the cloud-save + undo unit)
       if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail)){var row=[c,r,g.t,g.lvl,g.rail?1:0,1];if(g.t==='fac'&&g.recipe==='elec')row.push('elec');out.push(row);}}   // one hex per building (7th = Factory recipe)
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
-    var payload=JSON.stringify({v:11,ms:maxMS,stock:STOCK,goods:goodsStock,elec:elecStock,best:Math.round(throughputBest),cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
-    localStorage.setItem(SAVE_KEY,payload);netSaveCity(payload);}catch(e){}}   // mirror to the cloud (throttled, offline-safe)
+    return JSON.stringify({v:11,ms:maxMS,stock:STOCK,goods:goodsStock,elec:elecStock,best:Math.round(throughputBest),cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});}
+  function save(){if(OBSERVE||ioImporting)return;try{var payload=serialize();localStorage.setItem(SAVE_KEY,payload);netSaveCity(payload);}catch(e){}}   // mirror to the cloud (throttled, offline-safe)
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
     if(!Array.isArray(d)&&d.v!==10&&d.v!==11){try{localStorage.removeItem(SAVE_KEY);}catch(e2){}return;}   // pre-v10 economy saves start fresh; v10 migrates forward to v11 (new fields default)
     var list=Array.isArray(d)?[]:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
@@ -2422,6 +2427,40 @@
       if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
       g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];if(a[6]==='elec')g.recipe='elec';});
     dirty=true;}catch(e){}}
+
+  // ---- undo: snapshot the city before each edit; Ctrl+Z / the ⟲ button rewinds ----
+  var undoStack=[], UNDO_MAX=40, undoBtn;
+  function refreshUndoBtn(){if(undoBtn)undoBtn.disabled=!undoStack.length;}
+  function pushUndoState(json){undoStack.push(json);if(undoStack.length>UNDO_MAX)undoStack.shift();refreshUndoBtn();}
+  function withUndo(fn){                                    // run an edit, but record the pre-edit state IF it actually changed anything
+    if(OBSERVE){fn();return;}
+    var before;try{before=serialize();}catch(e){before=null;}
+    fn();
+    if(before!=null){try{if(serialize()!==before)pushUndoState(before);}catch(e){}}
+  }
+  function applyParsed(d){                                  // reset the grid to a saved snapshot and repaint every readout (undo restore)
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(g&&g.t!=='highway'){g.t='empty';g.lvl=0;g.grow=0;g.rail=false;g.recipe=undefined;g.foot=undefined;}}
+    if(typeof d.ms==='number')maxMS=d.ms;
+    if(d.stock&&typeof d.stock==='object')RESIDS.forEach(function(k){if(typeof d.stock[k]==='number')STOCK[k]=d.stock[k];});
+    if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
+    if(typeof d.elec==='number')elecStock=d.elec;if(typeof d.best==='number')throughputBest=d.best;
+    if(Array.isArray(d.ct))contracts=d.ct.filter(function(a){return CDEF[a[0]];}).map(function(a){return {key:a[0],target:a[1],reward:a[2],inv:!!a[3],text:a[4]};});
+    if(typeof d.cd==='number')contractsDone=d.cd;
+    activeEv=(d.ev&&EVDEF[d.ev.k])?{key:d.ev.k,left:Math.max(1,d.ev.l|0),chosen:d.ev.c||null}:null;
+    if(typeof d.evc==='number')evCooldown=d.evc;
+    if(d.pol){POL.tax=Math.max(0,Math.min(2,d.pol.t|0));POL.cp=!!d.pol.cp;POL.sm=!!d.pol.sm;POL.ft=!!d.pol.ft;}
+    (d.cells||[]).forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
+      if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
+      g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];if(a[6]==='elec')g.recipe='elec';});
+    MAXLVL=densCap();syncTech();evalEventMods();
+    computeServices();computeDemand();computeResources();
+    updateCashUI();updateToolLocks();renderPolicy();renderContracts();renderEvent();updateResourceUI();updateDemandUI();
+    svcDirty=true;dirty=true;mapDirty=true;
+  }
+  function doUndo(){if(OBSERVE||!undoStack.length)return;var json=undoStack.pop();refreshUndoBtn();
+    try{applyParsed(JSON.parse(json));cancelLine();scheduleSave();
+      toastEl.innerHTML='↩ <b>Undone</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},1300);}catch(e){}}
+  undoBtn=document.getElementById('undo');if(undoBtn)undoBtn.addEventListener('click',doUndo);refreshUndoBtn();   // wire the ⟲ button (runs after undoStack init)
 
   // ---- animation loop ----
   var lastFrame=performance.now(),lastAmbient=0;
@@ -2570,6 +2609,7 @@
     facmult:function(c,r){return facAdjMult(c,r);},setMs:function(n){maxMS=n;MAXLVL=densCap();syncTech();},
     goods:function(v){if(v!==undefined)goodsStock=v;return goodsStock;},
     state:function(){return {ms:maxMS,cash:treasury,goods:goodsStock,elec:elecStock,tpBest:throughputBest,tpAvg:throughputAvg};},
+    undo:function(){doUndo();},undoDepth:function(){return undoStack.length;},
     save:function(){save();},saveKey:function(){return SAVE_KEY;}
   };}
   requestAnimationFrame(frame);
