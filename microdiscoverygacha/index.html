@@ -1786,7 +1786,7 @@ function tokenFlow(){
   var pool=SETS.slice(),i,j,tmp;
   for(i=pool.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));tmp=pool[i];pool[i]=pool[j];pool[j]=tmp;}
   var offer=pool.slice(0,2);
-  var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Tap a pack to open it</h2><div class="choicegrid">';
+  var h='<div class="pk-choice"><h2>Choose one</h2><div class="choicegrid">';
   for(i=0;i<offer.length;i++){ var s=offer[i], owned=ownedInSet(s), foils=foilsInSet(s);
     h+='<div class="pk-slot"><button class="pack" data-choose="'+s+'" aria-label="Open '+s+' booster: '+PACK_SIZE+' cards, costs 1 token" style="--accent:'+SET_COLOR[s]+'">'+
        '<div class="crimp"></div>'+
