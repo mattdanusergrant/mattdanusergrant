@@ -248,7 +248,7 @@ a{color:inherit;text-decoration:none}
 .setmark{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right;flex:none}
 .setname{font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:9.5px;color:var(--accent);white-space:nowrap}
 .num{font-family:var(--label);font-weight:600;letter-spacing:.06em;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.art{margin:13px 17px 0;flex:none;aspect-ratio:16/9;border-radius:11px;overflow:hidden;position:relative;border:1px solid var(--line2)}
+.art{margin:calc(13px*var(--fs,1)) 17px 0;flex:none;height:calc(146px*var(--fs,1));border-radius:11px;overflow:hidden;position:relative;border:1px solid var(--line2)}
 .art::after{content:"";position:absolute;inset:0;border-radius:11px;pointer-events:none;box-shadow:inset 0 -34px 44px -32px rgba(0,0,0,.5),inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
 .motif{position:absolute;inset:0;width:100%;height:100%}
 .foiltag{display:none;align-items:center;gap:.35em;font-family:var(--label);font-weight:700;flex:none;
@@ -258,10 +258,11 @@ a{color:inherit;text-decoration:none}
 .card.foil .face::before{background:conic-gradient(from 200deg,#e8869b,#7cc8f5,#93e6a6,#f5d76e,#c79bf0,#e8869b);opacity:.95}
 .card.foil .face::after{background:linear-gradient(122deg,rgba(255,255,255,.11) 0%,transparent 26%),linear-gradient(58deg,rgba(255,120,190,.13),rgba(120,210,255,.13) 25%,rgba(150,255,180,.13) 50%,rgba(255,225,120,.13) 72%,rgba(200,140,255,.13));
   background-size:auto,260% 260%;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 14%,transparent);animation:holo 7s linear infinite}
-.front .name{font-family:var(--display);font-weight:500;font-size:clamp(24px,5.4vw,31px);line-height:1.03;letter-spacing:-.015em;margin:18px 17px 0;color:var(--ink);text-wrap:balance}
-.front .flavor{font-family:var(--display);font-style:italic;font-size:clamp(15px,3vw,17px);line-height:1.36;color:var(--ink-soft);margin:12px 17px 0}
-.front .where{font-family:var(--label);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 17px 0}
-.cardfoot{margin-top:auto;padding:14px 17px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.front{--fs:1}
+.front .name{font-family:var(--display);font-weight:500;font-size:calc(clamp(24px,5.4vw,31px)*var(--fs));line-height:1.03;letter-spacing:-.015em;margin:calc(17px*var(--fs)) 17px 0;color:var(--ink);text-wrap:balance}
+.front .flavor{font-family:var(--display);font-style:italic;font-size:calc(clamp(15px,3vw,17px)*var(--fs));line-height:1.36;color:var(--ink-soft);margin:calc(12px*var(--fs)) 17px 0}
+.front .where{font-family:var(--label);font-size:calc(11px*var(--fs));letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:calc(11px*var(--fs)) 17px 0}
+.cardfoot{margin-top:auto;padding:calc(13px*var(--fs)) 17px calc(15px*var(--fs));display:flex;align-items:center;justify-content:space-between;gap:10px}
 .tap{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
 .tap .ic{font-size:14px;color:var(--accent)}
 /* back body scales via --bs so every depth level fits without scrolling (set by fitCard JS) */
@@ -867,10 +868,14 @@ function renderCollection(){
   }
   h+='</div></div>'; view.innerHTML=h;
 }
-/* no scrolling on cards, ever: shrink each back's body until it fits its box */
-function fitCard(card){ var b=card.querySelector('.back .body'); if(!b) return;
-  var bs=1; b.style.setProperty('--bs',bs); var g=0;
-  while(b.scrollHeight>b.clientHeight+1 && bs>0.68 && g++<40){ bs-=0.03; b.style.setProperty('--bs',bs); }
+/* no scrolling on cards, ever: shrink a face's contents (via a CSS scale var) until it fits its box */
+function fitFace(el, prop, floor){ if(!el) return;
+  var v=1; el.style.setProperty(prop,v); var g=0;
+  while(el.scrollHeight>el.clientHeight+1 && v>floor && g++<40){ v-=0.03; el.style.setProperty(prop,v); }
+}
+function fitCard(card){
+  fitFace(card.querySelector('.back .body'),'--bs',0.66);  /* back body text */
+  fitFace(card.querySelector('.face.front'),'--fs',0.7);   /* front art + text */
 }
 function fitCards(){ var cs=sheet.querySelectorAll('.card'),i; for(i=0;i<cs.length;i++) fitCard(cs[i]); }
 function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); document.body.style.overflow='hidden'; sheet.scrollTop=0;
