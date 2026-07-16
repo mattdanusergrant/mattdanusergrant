@@ -59,6 +59,14 @@
   .zoomctl button{border:0;background:transparent;color:var(--ink-2);font-size:15px;font-weight:600;cursor:pointer;padding:5px 11px;font-family:inherit;line-height:1}
   .zoomctl button:hover{background:var(--line)}
   .zoomctl #zoompct{font-size:11px;min-width:46px;border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);color:var(--muted)}
+  .lenstoggle{position:absolute;right:14px;bottom:198px;z-index:6;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--paper);border:1.5px solid var(--line-2);border-radius:9px;box-shadow:var(--shadow);color:var(--ink-2);font-size:16px;cursor:pointer;transition:border-color .15s,background .15s;line-height:1}
+  .lenstoggle:hover{background:var(--line)}
+  .lenstoggle.on{border-color:#4C88B8;background:rgba(76,136,184,.12);color:var(--ink)}
+  .lenslegend{position:absolute;right:14px;bottom:242px;z-index:6;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:7px 10px;display:flex;flex-direction:column;gap:3px;font:600 10.5px system-ui,sans-serif;color:var(--ink-2)}
+  .lenslegend b{font-family:'Fraunces',serif;font-weight:600;font-size:11.5px;color:var(--ink);margin-bottom:2px}
+  .lenslegend span{display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .lenslegend i{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+  @media(max-width:640px){.lenstoggle{right:8px;bottom:134px;width:32px;height:32px;font-size:14px}.lenslegend{display:none}}
   .inspect .it{font-family:'Fraunces',serif;font-weight:600;font-size:14px;letter-spacing:-.01em;margin-bottom:2px}
   .inspect .ik{color:var(--muted)} .inspect b{color:var(--ink-2)}
   .inspect .ok{color:#3E9E5E;font-weight:600} .inspect .no{color:#D0704A;font-weight:600}
@@ -273,6 +281,15 @@
       <button data-z="fit" type="button" title="Reset zoom" id="zoompct">100%</button>
       <button data-z="in" type="button" title="Zoom in (+)">+</button>
     </div>
+    <button class="lenstoggle" id="lenstoggle" type="button" title="Throughput lens (G) — colour buildings by supply health">📊</button>
+    <div class="lenslegend" id="lenslegend" hidden>
+      <b>Throughput</b>
+      <span><i style="background:#E4553C"></i>Starved</span>
+      <span><i style="background:#E0A93E"></i>Tight</span>
+      <span><i style="background:#43B96B"></i>Fed</span>
+      <span><i style="background:#4C88B8"></i>Overmaking</span>
+      <span><i style="background:#9A8E78"></i>Idle</span>
+    </div>
   </div>
   <div id="worldfade"></div>
 
@@ -400,6 +417,7 @@
   var grid=[], brush='road', lastPaint=-1, dirty=true, svcDirty=false, lastPulseAt=-9999;
   var lineAnchor=null, hoverCell=null;                      // road/rail line-tool state
   var dragStart=null, panned=false;                         // pointer: distinguish a click (place one) from a drag (pan)
+  var econLens=(function(){try{return localStorage.getItem('mdg-lens')==='1';}catch(e){return false;}})();  // throughput lens overlay (a view preference)
   // ---- region: where this patch sits on the shared world (carried in from the globe dive) ----
   var REGION=(function(){try{
     var q=new URLSearchParams(location.search);
@@ -930,6 +948,12 @@
   document.getElementById('zoomctl').addEventListener('click',function(e){var btn=e.target.closest('button');if(!btn)return;var z=btn.getAttribute('data-z');
     if(z==='in')setZoom(zoom*1.25);else if(z==='out')setZoom(zoom/1.25);else setZoom(1);});
   canvas.addEventListener('contextmenu',function(e){e.preventDefault();cancelLine();});   // right-click cancels a pending line
+  var lensBtn=document.getElementById('lenstoggle'),lensLegend=document.getElementById('lenslegend');
+  function setLens(on){econLens=!!on;if(lensBtn)lensBtn.classList.toggle('on',econLens);if(lensLegend)lensLegend.hidden=!econLens;
+    try{localStorage.setItem('mdg-lens',econLens?'1':'0');}catch(e){}dirty=true;}
+  function toggleLens(){setLens(!econLens);}
+  if(lensBtn)lensBtn.addEventListener('click',toggleLens);
+  setLens(econLens);                                          // reflect the restored preference on boot
 
   var tools=document.getElementById('tools');
   var _hinted={};
@@ -968,6 +992,7 @@
     if(e.key==='`'||e.key==='i'||e.key==='I'){selectBrush('inspect');return;}    // ` is the shortcut (I kept as an alias); inspect works in observe mode too
     if(e.key==='+'||e.key==='='){setZoom(zoom*1.2);return;}         // keyboard zoom
     if(e.key==='-'||e.key==='_'){setZoom(zoom/1.2);return;}
+    if(e.key==='g'||e.key==='G'){toggleLens();return;}             // throughput lens overlay (works in observe mode too)
     if(OBSERVE)return;if(e.key==='Escape'){cancelLine();return;}
     var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank','p':'port','P':'port','t':'tower','T':'tower','e':'solar','E':'solar','m':'transit','M':'transit'}[e.key];if(m)selectBrush(m);});
   window.addEventListener('keyup',function(e){var lk=e.key.toLowerCase();if(PANKEY[lk])keys[PANKEY[lk]]=0;});
@@ -2145,6 +2170,30 @@
   function updateInspect(){if(brush!=='inspect'||!hoverCell||!inB(hoverCell.c,hoverCell.r)){if(inspectEl)inspectEl.hidden=true;return;}
     inspectEl.innerHTML=tileInfo(hoverCell.c,hoverCell.r);inspectEl.hidden=false;}
 
+  // ---- throughput lens: colour each RUNNING building by how well its supply chain is met ----
+  // A pure read on data the sim already computes (SUP / econ) — no new state, no new micro. Turns the
+  // whole map into a visible bottleneck puzzle: red = starved, amber = tight, green = fed, blue = making
+  // more than anything consumes (wasted capacity), grey = an idle Works with no resource to pull.
+  var LENS={low:'#E4553C',mid:'#E0A93E',good:'#43B96B',over:'#4C88B8',idle:'#9A8E78'};
+  function lensColor(c,r,g){
+    var t=g.t; if(!g.lvl)return null;                          // only a built, running building has throughput
+    if(t==='ind'){                                            // Works = extractor: is its output used, wasted, or nil?
+      var id=extractorOutput(c,r,g); if(!id)return LENS.idle;  // sited where nothing can be extracted
+      var e=econ.res[id];
+      if(e&&e.need<0.05&&(e.make+e.imp)>0.05&&e.stock>2)return LENS.over;   // making a resource nothing consumes
+      return LENS.good;
+    }
+    if(t==='fac'){                                            // Factory: starved on inputs, glutted on output, or humming
+      var s=growthSup('fac'); if(s<0.6)return LENS.low; if(s<0.95)return LENS.mid;
+      var gd=econ.goods; if(gd&&(gd.sell+gd.exp)<gd.make-0.05&&gd.stock>4)return LENS.over;  // Goods pile up unsold
+      return LENS.good;
+    }
+    if(t==='res'||t==='com'||t==='tower'){                    // consumers: colour by how well the input basket is met
+      var s2=growthSup(t); return s2<0.6?LENS.low:s2<0.95?LENS.mid:LENS.good;
+    }
+    return null;                                              // utilities / civic / landmarks aren't part of the flow
+  }
+
   function draw(){
     if(!cols)return;
     ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;
@@ -2163,6 +2212,15 @@
     // freeway + roads + rail, painted as continuous LAYERED networks (casings before surfaces),
     // so each type reads as one unbroken path instead of overlapping per-hex sections
     paintNetworks(vx0,vy0,vx1,vy1);
+    // throughput lens: tint each running building's hex by supply health (drawn UNDER the sprites → a colour ring)
+    if(econLens){var lensB={},lc,lr,lcell,lk2;
+      for(lr=vy0;lr<vy1;lr++)for(lc=vx0;lc<vx1;lc++){lcell=grid[idx(lc,lr)];if(!lcell)continue;
+        var lcol=lensColor(lc,lr,lcell);if(!lcol)continue;(lensB[lcol]||(lensB[lcol]=[])).push([lc,lr]);}
+      ctx.globalAlpha=0.34;
+      for(lk2 in lensB){var ll=lensB[lk2];ctx.beginPath();
+        for(var li=0;li<ll.length;li++)hexPath(hx(ll[li][0],ll[li][1]),hy(ll[li][1]),1);
+        ctx.fillStyle=lk2;ctx.fill();}
+      ctx.globalAlpha=1;}
     // structures — every building is one hex: hex lot base + the sprite scaled into the inscribed square
     for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){
       cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway')continue;
@@ -2421,6 +2479,7 @@
     hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};},anchors:function(){return resAnchors();},hdist:function(c,r){return hexDist(c,r,BANDC,BANDR);},
     stock:function(){return STOCK;},sup:function(){return SUP;},extract:function(c,r){return inB(c,r)?extractorOutput(c,r,grid[idx(c,r)]):null;},econres:function(){return econ.res;},
     growthsup:function(t){return growthSup(t);},blocked:function(c,r){return blocker(c,r);},tick:function(){tick();},
+    lens:function(c,r){return inB(c,r)?lensColor(c,r,grid[idx(c,r)]):null;},lensOn:function(v){setLens(v);return econLens;},
     tradeTest:function(res){TRADES.length=0;TRADES.push({lat:0,lon:0,tier:3,supplies:res,wantsGoods:true,name:'TestPartner'});railToWorld=true;connectedRailCount=12;},
     computeRes:function(){computeResources();},   // resource step only (skips computeServices' rail recompute) — test harness
     save:function(){save();},saveKey:function(){return SAVE_KEY;}
