@@ -79,17 +79,31 @@ set is derived from `cat`. Each card:
 {
   id:"kamaka", cat:"ʻUkulele", where:"Honolulu · since 1916", accent:"#b5732f", motif:"strings",
   title:"Kamaka Hawaii",
-  hook:"one flavor line (front)",
-  back:"a real 2–4 sentence paragraph (the back — REQUIRED)",
-  facts:[ "…", "…", "…" ],           // key points (back)
-  connects:"A → B → C",              // OPTIONAL thread (back)
+  hook:"one flavor line (the cover teaser)",
+  article:[                          // REQUIRED — a mini-magazine article, one paragraph per page
+    "Paragraph 1 — opens with a hook.",
+    "Paragraph 2 — develops it.",
+    "Paragraph 3 — goes deeper.",
+    "Paragraph 4 — lands a resonant conclusion."
+  ],
+  connects:"A → B → C",              // OPTIONAL thread (shown on the going-deeper page)
   url:"https://kamakahawaii.com/", link:"Visit Kamaka"   // maker cards only; must be real & live
 }
 ```
 
-Rules: accurate facts, a real live `url` for maker cards, keep it bite-sized. If you add a new
-`cat`, map it in `CAT_SET` so the card lands in a set. Motifs:
+**Card = a swipeable mini-magazine article.** Each card is a stack of pages: a **cover** (art +
+title + hook), then **one `article` paragraph per page** (page 1 is a headline + drop-cap lede),
+ending on a **going-deeper page** (the `connects` thread and/or the maker's **Visit ↗** link).
+Copies owned unlock the pages one at a time (level = copies).
+
+Rules for `article`: **4 paragraphs** is the house standard; each must be **self-contained** (a
+complete thought ending on a satisfying beat or a hook to the next) and **≤ ~440 characters** so it
+fits one card at full size with no shrink. Facts must be accurate; maker cards keep only real,
+sourced details and a live `url`. If you add a new `cat`, map it in `CAT_SET`. Motifs:
 `scroll · wave · grain · facet · strings · orbit · grid · pulse`.
+
+*(Legacy `back` + `facts` fields still render as a fallback if a card has no `article`, but new
+cards should use `article`.)*
 
 **Filling every set to 18** (currently: Makers of Hawaii 17, Makers of Thailand 10, Materials 8, Time 7, Signals 7,
 Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 75; Hawaii is 1 short of full) is an ongoing
