@@ -13,7 +13,7 @@ A single self-contained page — `index.html`, no build step, no backend, no ads
 in the browser (`localStorage`, key `mdg-collection-v1`).
 
 - **Pack Tokens.** Packs aren't owned directly — you hold **tokens**. Spending a token deals you
-  **3 random packs (distinct sets)** and you **pick 1** to rip open.
+  **2 random packs (distinct sets)** and you **pick 1** to rip open.
 - **Booster packs.** A pack contains **3 random cards from its set**, and each slot has a low
   (~1-in-12) chance to be **foil** — so an all-foil pack is possible but insanely rare. Foil cards
   wear a holo **✦ Foil** pill in the card's bottom-right corner.

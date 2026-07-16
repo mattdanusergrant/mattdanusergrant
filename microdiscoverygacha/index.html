@@ -154,7 +154,7 @@ a{color:inherit;text-decoration:none}
 .pk-choice{padding:8px 4px}
 .pk-choice .kicker{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:10.5px;color:var(--gold)}
 .pk-choice h2{font-family:var(--display);font-weight:500;font-size:clamp(21px,4vw,29px);letter-spacing:-.01em;margin:8px 0 0;color:var(--ink)}
-.choicegrid{display:grid;grid-template-columns:repeat(3,minmax(96px,190px));gap:clamp(10px,2.4vw,18px);justify-content:center;margin:22px 0 16px}
+.choicegrid{display:grid;grid-template-columns:repeat(2,minmax(120px,220px));gap:clamp(12px,3vw,22px);justify-content:center;margin:22px 0 16px}
 
 /* series tabs > set tabs + binder */
 .seriestabs{display:flex;gap:10px;padding:16px 0 2px;flex-wrap:wrap}
@@ -881,8 +881,8 @@ function tokenFlow(){
   if(S.tokens<1) return;
   var pool=SETS.slice(),i,j,tmp;
   for(i=pool.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));tmp=pool[i];pool[i]=pool[j];pool[j]=tmp;}
-  var offer=pool.slice(0,3);
-  var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Three packs — keep one</h2><div class="choicegrid">';
+  var offer=pool.slice(0,2);
+  var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Two packs — keep one</h2><div class="choicegrid">';
   for(i=0;i<offer.length;i++){ var s=offer[i], owned=ownedInSet(s), foils=foilsInSet(s);
     h+='<div class="pk-slot"><div class="pack" tabindex="0" role="button" aria-label="'+s+' booster — tap to flip" style="--accent:'+SET_COLOR[s]+'"><div class="pflip">'+
        '<div class="pface pfront"><div class="crimp"></div>'+
@@ -907,7 +907,7 @@ function renderCollection(){
     '<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day)'+(S.sparks?' · ✧ '+S.sparks+'/100':'')+' · tap a card to read it</div></div>'+
     '<div class="chead-actions">'+sc+op+'</div></div>';
   var msg=MSG,msgN=MSGN; MSG=null;
-  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b> — hit the gold <b>✦ Open a pack</b> button to rip your first booster: we deal three packs, you keep one.</div>';
+  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b> — hit the gold <b>✦ Open a pack</b> button to rip your first booster: we deal two packs, you keep one.</div>';
   else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — the gold button awaits.</div>';
   else if(msg==="notokens") h+='<div class="banner"><b>No Pack Tokens left.</b> A fresh one arrives tomorrow — duplicates you pull also drip ✧ sparks toward free tokens (100 ✧ = 1 token).</div>';
   else if(msg==="sparks") h+='<div class="banner"><b>✧ 100 sparks!</b> Your duplicates just melted into <b>+'+msgN+' Pack Token'+(msgN>1?'s':'')+'</b> ('+S.sparks+'/100 toward the next).</div>';
@@ -995,7 +995,7 @@ function runOnboarding(){
       '<h2 class="ob-h">Open packs. Fill your binder.</h2>'+
       '<ul class="ob-list">'+
         '<li><b>✦ Pack Tokens</b> — you have three. A fresh one arrives every day.</li>'+
-        '<li><b>Boosters</b> — spend a token, we deal three packs, you keep one (3 cards).</li>'+
+        '<li><b>Boosters</b> — spend a token, we deal two packs, you keep one (3 cards).</li>'+
         '<li><b>Level up</b> — pull a card you already own and it goes a level deeper.</li>'+
       '</ul>'+
       '<button class="done" id="ob-start">Open my first pack →</button>'+
