@@ -260,6 +260,14 @@ a{color:inherit;text-decoration:none}
 .sf-slot{height:100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;padding:4px 16px 16px;animation:rise .5s ease both}
 .sf-slot .card{width:min(88vw,360px);height:min(74dvh,600px)}
 @media(prefers-reduced-motion:reduce){.sf-slot{animation:none}}
+/* pack reveal reuses the scroll feed: badge above each card, a Done card at the end */
+.pr-slot2{flex-direction:column;gap:11px;padding-top:8px}
+.pr-slot2 .card{height:min(66dvh,540px)}
+.pr-end2 .pr-endcard{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:340px;padding:26px 22px;text-align:center;
+  border:1px solid var(--line2);border-radius:18px;background:linear-gradient(168deg,var(--plate),var(--bg2));box-shadow:var(--shadow)}
+.pr-endh{font-family:var(--display);font-weight:500;font-size:clamp(20px,4.4vw,26px);color:var(--ink)}
+.pr-ends{font-family:var(--label);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pr-end2 .done{margin-top:4px}
 
 /* first-run onboarding */
 .overlay.intro .sheet{max-width:440px}
@@ -819,10 +827,11 @@ function initEconomy(){
 function ownedInSet(s){ return cardsOf(s).filter(function(c){return S.coll[c.id];}).length; }
 function foilsInSet(s){ return cardsOf(s).filter(function(c){return S.coll[c.id]&&S.coll[c.id].foil;}).length; }
 
+var PACK_SIZE=5;
 function openPack(setName){
-  var pool=cardsOf(setName).slice(),i,j,t;
+  var setCards=cardsOf(setName), pool=setCards.slice(),i,j,t,picks=[];
   for(i=pool.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=pool[i];pool[i]=pool[j];pool[j]=t;}
-  var picks=pool.slice(0,Math.min(3,pool.length));
+  for(i=0;i<PACK_SIZE;i++){ picks.push(pool.length?pool.pop():setCards[Math.floor(Math.random()*setCards.length)]); } /* unique first, then repeats fill small sets */
   var res=picks.map(function(c){
     var foil=Math.random()<FOIL_P, had=S.coll[c.id], isNew=!had;
     if(!had) S.coll[c.id]={n:0,foil:false};
@@ -877,23 +886,28 @@ function faceHTML(c, foil, copies){
 }
 
 /* spending a token = deal 3 random boosters, keep 1 */
+/* a fun random pair of rip-labels, [left,right] */
+var RIP_PAIRS=[['Rip This','Rip That'],['Rip Left','Rip Right'],['This One','That One'],['Rip Here','Rip There'],
+  ['Crack This','Crack That'],['Tear This','Tear That'],['Yoink This','Yoink That'],['Rip It','Rip It'],
+  ['Pick Me','No, Me!'],['Open This','Open That'],['Send It','Send It'],['Gimme This','Gimme That'],['Rip ‹','Rip ›']];
 function tokenFlow(){
   if(S.tokens<1) return;
   var pool=SETS.slice(),i,j,tmp;
   for(i=pool.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));tmp=pool[i];pool[i]=pool[j];pool[j]=tmp;}
   var offer=pool.slice(0,2);
+  var rip=RIP_PAIRS[Math.floor(Math.random()*RIP_PAIRS.length)];
   var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Two packs — keep one</h2><div class="choicegrid">';
   for(i=0;i<offer.length;i++){ var s=offer[i], owned=ownedInSet(s), foils=foilsInSet(s);
     h+='<div class="pk-slot"><div class="pack" tabindex="0" role="button" aria-label="'+s+' booster — tap to flip" style="--accent:'+SET_COLOR[s]+'"><div class="pflip">'+
        '<div class="pface pfront"><div class="crimp"></div>'+
-         '<div class="part">'+motif(SET_MOTIF[s],SET_COLOR[s])+'<div class="pname">'+s+'</div><div class="plabel">Booster · 3 cards</div></div>'+
+         '<div class="part">'+motif(SET_MOTIF[s],SET_COLOR[s])+'<div class="pname">'+s+'</div><div class="plabel">Booster · '+PACK_SIZE+' cards</div></div>'+
        '<div class="crimp b"></div></div>'+
        '<div class="pface pback"><div class="crimp"></div>'+
          '<div class="pbody"><div class="psetname">'+s+'</div><p class="pblurb">'+SET_BLURB[s]+'</p>'+
            '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div></div>'+
        '<div class="crimp b"></div></div>'+
     '</div></div>'+
-    '<button class="rip" data-choose="'+s+'">Rip It</button></div>';
+    '<button class="rip" data-choose="'+s+'">'+rip[i]+'</button></div>';
   }
   h+='</div><div class="pr-hint">tap a pack to inspect · costs 1 token · you have '+S.tokens+'</div></div>';
   openOverlay(h);
@@ -955,23 +969,26 @@ function closeOverlay(){ overlay.classList.remove('on','reveal','scrollmode'); c
   renderCollection(); }
 
 /* opening a pack = the 3 full cards in a close row; flick left-right, tap to flip */
+/* opening a pack = a vertical scroll-feed through the pulled cards, one per screen */
 function packFlow(setName){
   var res=openPack(setName), anyFoil=res.some(function(r){return r.foil;});
-  var h='<div class="pr-top">'+setName+' Booster'+(anyFoil?' · ✦ foil pull!':'')+'</div>';
-  h+='<div class="pr-row">';
+  var newN=res.filter(function(r){return r.isNew;}).length, dups=res.length-newN;
+  var h='<div class="sf-top">'+setName+' Booster'+(anyFoil?' · ✦ foil pull!':'')+' &nbsp;·&nbsp; tap to flip · swipe up</div>';
+  h+='<div class="sf-feed" id="prfeed">';
   res.forEach(function(r){
     var badge = r.newFoil?'<span class="pr-badge foil">✦ New foil</span>'
               : r.foil?'<span class="pr-badge foil">✦ Foil</span>'
               : r.isNew?'<span class="pr-badge">New card</span>'
               : '<span class="pr-badge dup">Duplicate · +1 ✧</span>';
-    h+='<div class="pr-slot">'+badge+faceHTML(r.c,r.foil)+'</div>';
+    h+='<div class="sf-slot pr-slot2">'+badge+faceHTML(r.c,r.foil)+'</div>';
   });
+  var summary=newN+' new'+(dups?' · '+dups+' duplicate'+(dups>1?'s':'')+' (+'+dups+' ✧, '+S.sparks+'/100)':'');
+  h+='<div class="sf-slot pr-end2"><div class="pr-endcard">'+
+       '<div class="pr-endh">'+res.length+' cards added to your binder</div>'+
+       '<div class="pr-ends">'+summary+'</div>'+
+       '<button class="done" id="revealdone">Done</button></div></div>';
   h+='</div>';
-  var dups=res.filter(function(r){return !r.isNew;}).length;
-  var sparkNote=dups?' &nbsp;·&nbsp; +'+dups+' ✧ ('+S.sparks+'/100)':'';
-  h+='<div class="pr-bottom"><div class="pr-hint">tap to flip &nbsp;<span class="arr">↔</span>&nbsp; '+res.length+' cards added to your binder'+sparkNote+'</div>'
-    +'<button class="done" id="revealdone">Done</button></div>';
-  overlay.classList.add('reveal');
+  overlay.classList.add('scrollmode');
   openOverlay(h);
   document.getElementById('revealdone').addEventListener('click',closeOverlay);
 }
@@ -995,7 +1012,7 @@ function runOnboarding(){
       '<h2 class="ob-h">Open packs. Fill your binder.</h2>'+
       '<ul class="ob-list">'+
         '<li><b>✦ Pack Tokens</b> — you have three. A fresh one arrives every day.</li>'+
-        '<li><b>Boosters</b> — spend a token, we deal two packs, you keep one (3 cards).</li>'+
+        '<li><b>Boosters</b> — spend a token, we deal two packs, you keep one (5 cards).</li>'+
         '<li><b>Level up</b> — pull a card you already own and it goes a level deeper.</li>'+
       '</ul>'+
       '<button class="done" id="ob-start">Open my first pack →</button>'+

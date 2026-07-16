@@ -14,9 +14,12 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
 
 - **Pack Tokens.** Packs aren't owned directly — you hold **tokens**. Spending a token deals you
   **2 random packs (distinct sets)** and you **pick 1** to rip open.
-- **Booster packs.** A pack contains **3 random cards from its set**, and each slot has a low
-  (~1-in-12) chance to be **foil** — so an all-foil pack is possible but insanely rare. Foil cards
-  wear a holo **✦ Foil** pill in the card's bottom-right corner.
+- **Booster packs.** A pack contains **5 cards from its set** (sets with fewer than 5 unique cards
+  fill the rest with repeats — which just feed sparks/levels), and each slot has a low (~1-in-12)
+  chance to be **foil** — so an all-foil pack is possible but insanely rare. Foil cards wear a holo
+  **✦ Foil** pill in the card's bottom-right corner. Opening a pack plays as a **vertical
+  scroll-feed** (one card per screen, tap to flip, swipe up) ending on a summary card. The two
+  choice buttons get random flavor labels each time (Rip This/Rip That, Rip Left/Rip Right, …).
 - **Onboarding (first run).** New players get a short **wonder-first** intro: a curated starter
   card to flip and read, then a one-screen rules explainer, then a **guided first pack** — so you
   land on a binder that already has cards (the starter gift + your first 3), not an empty grid.
