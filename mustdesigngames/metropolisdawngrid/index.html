@@ -2646,6 +2646,16 @@
     state:function(){return {ms:maxMS,cash:treasury,goods:goodsStock,elec:elecStock,tpBest:throughputBest,tpAvg:throughputAvg};},
     undo:function(){doUndo();},undoDepth:function(){return undoStack.length;},
     tune:function(){return {live:TUNE,def:TUNE_DEFAULTS,rate:TRADE_RATE,elecTier:ELEC_TIER,resYield:RES_YIELD};},
+    stats:function(){var cnt={};for(var i=0;i<grid.length;i++){var g=grid[i];if(g&&g.t&&g.t!=='empty'&&g.t!=='highway'){cnt[g.t]=(cnt[g.t]||0)+1;}}
+      return {tier:maxMS,tierName:(MS[maxMS]?MS[maxMS].l:'Outpost'),pop:Math.round(popTarget),cash:Math.round(treasury),net:Math.round(netRate),insolvent:!!insolvent,service:Math.round(serviceCost),
+        tpAvg:+throughputAvg.toFixed(2),tpBest:+throughputBest.toFixed(2),goods:+goodsStock.toFixed(1),elec:+elecStock.toFixed(1),expGoods:+exportRate.toFixed(1),expElec:+elecExportRate.toFixed(1),
+        powerGen:powerGen,powerUse:powerUse,powerOK:!!powerOK,waterGen:waterGen,waterUse:waterUse,waterOK:!!waterOK,
+        congestion:+congestion.toFixed(3),trafDemand:+trafficDemand.toFixed(1),trafCap:+trafficCap.toFixed(1),
+        stock:{lumber:+STOCK.lumber.toFixed(1),grain:+STOCK.grain.toFixed(1),ore:+STOCK.ore.toFixed(1),stone:+STOCK.stone.toFixed(1),oil:+STOCK.oil.toFixed(1),fish:+STOCK.fish.toFixed(1)},
+        sup:{lumber:+SUP.lumber.toFixed(2),grain:+SUP.grain.toFixed(2),ore:+SUP.ore.toFixed(2),stone:+SUP.stone.toFixed(2),oil:+SUP.oil.toFixed(2),goods:+(SUP.goods||1).toFixed(2)},
+        buildings:cnt,region:(REGION?REGION.name:'home'),spec:regionProfile(WOX,WOY).near};},
+    setPartners:function(arr){TRADES.length=0;(arr||[]).forEach(function(res,i){TRADES.push({lat:0,lon:i,tier:3,supplies:res,cls:res,wantsGoods:true,name:'P'+i});});railToWorld=true;if(!connectedRailCount)connectedRailCount=12;return TRADES.length;},
+    setRecipes:function(frac){var facs=[];for(var i=0;i<grid.length;i++){var g=grid[i];if(g&&g.t==='fac'&&g.lvl)facs.push(g);}var want=Math.round(facs.length*(frac||0)),set=0;for(var j=0;j<facs.length&&set<want;j++){facs[j].recipe='elec';set++;}return {facs:facs.length,elec:set};},
     save:function(){save();},saveKey:function(){return SAVE_KEY;}
   };}
   requestAnimationFrame(frame);
