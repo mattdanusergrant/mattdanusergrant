@@ -59,6 +59,14 @@
   .zoomctl button{border:0;background:transparent;color:var(--ink-2);font-size:15px;font-weight:600;cursor:pointer;padding:5px 11px;font-family:inherit;line-height:1}
   .zoomctl button:hover{background:var(--line)}
   .zoomctl #zoompct{font-size:11px;min-width:46px;border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);color:var(--muted)}
+  .lenstoggle{position:absolute;right:14px;bottom:198px;z-index:6;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--paper);border:1.5px solid var(--line-2);border-radius:9px;box-shadow:var(--shadow);color:var(--ink-2);font-size:16px;cursor:pointer;transition:border-color .15s,background .15s;line-height:1}
+  .lenstoggle:hover{background:var(--line)}
+  .lenstoggle.on{border-color:#4C88B8;background:rgba(76,136,184,.12);color:var(--ink)}
+  .lenslegend{position:absolute;right:14px;bottom:242px;z-index:6;background:var(--paper);border:1.5px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:7px 10px;display:flex;flex-direction:column;gap:3px;font:600 10.5px system-ui,sans-serif;color:var(--ink-2)}
+  .lenslegend b{font-family:'Fraunces',serif;font-weight:600;font-size:11.5px;color:var(--ink);margin-bottom:2px}
+  .lenslegend span{display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .lenslegend i{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+  @media(max-width:640px){.lenstoggle{right:8px;bottom:134px;width:32px;height:32px;font-size:14px}.lenslegend{display:none}}
   .inspect .it{font-family:'Fraunces',serif;font-weight:600;font-size:14px;letter-spacing:-.01em;margin-bottom:2px}
   .inspect .ik{color:var(--muted)} .inspect b{color:var(--ink-2)}
   .inspect .ok{color:#3E9E5E;font-weight:600} .inspect .no{color:#D0704A;font-weight:600}
@@ -187,6 +195,8 @@
   .tools .spacer{flex:1}
   .reset{cursor:pointer;font-size:12px;color:var(--muted);background:none;border:none;font-family:inherit;text-decoration:underline;text-underline-offset:2px}
   .reset:hover{color:var(--ink)}
+  .reset:disabled{opacity:.4;cursor:default;text-decoration:none}
+  #undo{margin-right:12px}
   .hint{font-size:12px;color:var(--muted);max-width:330px;line-height:1.4}
   @media(max-width:760px){.hint{display:none}}
   .tutor{position:absolute;top:12px;left:12px;z-index:6;width:min(252px,74vw);background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;box-shadow:var(--shadow);padding:11px 13px;font-size:12.5px;pointer-events:none}
@@ -273,6 +283,15 @@
       <button data-z="fit" type="button" title="Reset zoom" id="zoompct">100%</button>
       <button data-z="in" type="button" title="Zoom in (+)">+</button>
     </div>
+    <button class="lenstoggle" id="lenstoggle" type="button" title="Throughput lens (G) — colour buildings by supply health">📊</button>
+    <div class="lenslegend" id="lenslegend" hidden>
+      <b>Throughput</b>
+      <span><i style="background:#E4553C"></i>Starved</span>
+      <span><i style="background:#E0A93E"></i>Tight</span>
+      <span><i style="background:#43B96B"></i>Fed</span>
+      <span><i style="background:#4C88B8"></i>Overmaking</span>
+      <span><i style="background:#9A8E78"></i>Idle</span>
+    </div>
   </div>
   <div id="worldfade"></div>
 
@@ -322,11 +341,13 @@
         <div class="tool" data-act="ach" title="Achievements — earned across every city you build"><span class="ico">🏅</span>Awards</div>
         <div class="tool" data-act="export" title="Copy this city as a share code"><span class="ico">📤</span>Export city</div>
         <div class="tool" data-act="import" title="Paste a share code to load a city"><span class="ico">📥</span>Import city</div>
+        <div class="tool" data-act="tune" id="tuneitem" hidden title="Adjust the balance numbers live — for playtesting"><span class="ico">🎛️</span>Tuning</div>
         <span class="pol-sec" style="margin-top:7px">Theme</span>
         <div class="themerow" id="themerow"></div>
       </div></div>
     <span class="spacer"></span>
     <span class="curtool" id="curtool" title="Current tool">Road</span>
+    <button class="reset" id="undo" type="button" title="Undo your last edit (Ctrl+Z)" disabled>⟲ Undo</button>
     <button class="reset" id="reset" type="button">Reset</button>
   </footer>
 
@@ -400,6 +421,7 @@
   var grid=[], brush='road', lastPaint=-1, dirty=true, svcDirty=false, lastPulseAt=-9999;
   var lineAnchor=null, hoverCell=null;                      // road/rail line-tool state
   var dragStart=null, panned=false;                         // pointer: distinguish a click (place one) from a drag (pan)
+  var econLens=(function(){try{return localStorage.getItem('mdg-lens')==='1';}catch(e){return false;}})();  // throughput lens overlay (a view preference)
   // ---- region: where this patch sits on the shared world (carried in from the globe dive) ----
   var REGION=(function(){try{
     var q=new URLSearchParams(location.search);
@@ -446,7 +468,7 @@
   var WATER_OUT=1000, WATER_PER_TILE=180;          // each tower's output; each coast/lake tile feeding a road adds some
   var WATERUSE={res:1,com:1,ind:2,fac:2,tower:3,bank:1,port:1};   // water drawn per building level
   var waterGen=0, waterUse=0, waterOK=true;        // city-wide water budget
-  var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0;
+  var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0, elecExportRate=0;
   var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
   var congestion=0, trafficDemand=0, trafficCap=0;
   var auraMap=null, obsBuilt=false;                    // landmark growth aura + Observatory city-wide lift
@@ -465,15 +487,28 @@
   function isNight(){var ph=todPhase();return ph>=0.66&&ph<0.97;}      // public-transport pressure: trips generated vs road + transit capacity
   var TRIPW={res:1,tower:2,com:1.5,ind:1.2,fac:1.2};     // trips generated per building level (a growing city needs to move people)
 
+  // ---- BALANCE TUNING: the playtest knobs in one place. Override live with zero code edits via the
+  //      🎛️ Tuning panel (Settings, shown with ?dev), a `mdg-tune` localStorage blob, or ?tune={"k":v}. ----
+  var TUNE_DEFAULTS={
+    exportPrice:4, intRate:0.01, serviceRate:0.06, serviceFree:400, resYield:2.4,   // core money economy
+    tradeRate:2, tradeSpend:0.30,                                                    // two-way trade barter
+    elecTier:6, elecGoodsIn:1.2, elecOilIn:0.8, elecPrice:3,                         // Electronics recipe
+    adjBonus:0.20, adjCap:5                                                          // Factory adjacency
+  };
+  var TUNE=(function(){var d={};for(var k in TUNE_DEFAULTS)d[k]=TUNE_DEFAULTS[k];
+    function merge(src){if(!src)return;try{var o=(typeof src==='string')?JSON.parse(src):src;for(var kk in o)if((kk in d)&&typeof o[kk]==='number'&&isFinite(o[kk]))d[kk]=o[kk];}catch(e){}}
+    try{merge(localStorage.getItem('mdg-tune'));}catch(e){}                          // saved overrides
+    try{merge(new URLSearchParams(location.search).get('tune'));}catch(e){}          // shareable URL overrides win
+    return d;})();
   // ---- economy: everything costs money; a working city earns it; debt charges interest ----
   var COST={road:4,rail:10,transit:110,res:15,com:25,ind:35,fac:60,park:20,power:120,solar:80,water:100,bank:180,port:140,tower:200,mon1:0,mon2:0,mon3:0,bulldoze:0};
   var UPKEEP={power:8,solar:1,water:6,road:0.2,rail:0.3,transit:4,bank:4,port:5,tower:3};  // ₵/month (solar is clean & cheap to run; a fossil station costs more)
   var TAX={res:6,com:5,ind:3,fac:3,tower:14};           // ₵/month per building level (Towers are dense = high tax)
-  var CASH_START=10000, EXPORT_PRICE=4, INT_RATE=0.01, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;   // generous starting buffer so the first city is stress-free (the service sink still bites as you grow)
+  var CASH_START=10000, EXPORT_PRICE=TUNE.exportPrice, INT_RATE=TUNE.intRate, CREDIT_BASE=1200, CREDIT_PER_TIER=1400, REFUND=0.25;   // generous starting buffer so the first city is stress-free (the service sink still bites as you grow)
   // public services scale with population — the sink that ends infinite wealth. First ~400 residents free
   // (early game breathes); past that every resident costs, so a big city must fund itself with exports &
   // commerce (tax-per-head falls as density rises), not just sprawl. Net income stays tight, never runaway.
-  var SERVICE_RATE=0.06, SERVICE_FREE=400, serviceCost=0;
+  var SERVICE_RATE=TUNE.serviceRate, SERVICE_FREE=TUNE.serviceFree, serviceCost=0;
   // tier at which each tool unlocks (index into MS: 0=Hamlet,1=Village,…); absent = available from start.
   // Start bare — just Road, Homes, Power, Water — and research the rest by growing through the tiers.
   var TIER_UNLOCK={com:0,solar:1,park:2,ind:2,rail:3,fac:3,transit:4,bank:5,port:6,tower:7};
@@ -516,6 +551,7 @@
     if(POL.cp)income+=popTarget*0.012;                           // congestion-pricing tolls
     if(POL.ft)upkeep+=popTarget*0.010;                           // fare-free transit subsidy
     income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium*exportMult*EVMOD.exportM; // Ports + Green Logistics tech lift export revenue; a trade partner short on Goods pays a premium
+    income+=elecExportRate*EXPORT_PRICE*TUNE.elecPrice*(1+PORT_BOOST*ports)*exportMult*EVMOD.exportM; // Electronics are an advanced export — elecPrice× the price of raw Goods
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
     serviceCost=Math.round(Math.max(0,popTarget-SERVICE_FREE)*SERVICE_RATE);    // public services grow with population — the money sink
@@ -913,12 +949,14 @@
   function up(e){
     if(!dragStart)return;var p=cellFromEvent(e),wasPan=panned;dragStart=null;panned=false;
     if(wasPan){dirty=true;return;}                                  // it was a pan — don't build
-    if(brush==='inspect'){hoverCell=p;updateInspect();return;}      // inspect: never modifies a tile
+    if(brush==='inspect'){hoverCell=p;updateInspect();                                    // inspect: never modifies a tile…
+      if(!OBSERVE&&inB(p.c,p.r)){var _fg=grid[idx(p.c,p.r)];if(_fg&&_fg.t==='fac'&&_fg.lvl>0&&elecUnlocked())ioOpen('recipe',p.c,p.r);}  // …except tapping a Factory picks its recipe
+      return;}
     if(OBSERVE)return;                                              // clicks do nothing in observe mode
     if(isLineBrush()){                                              // road/rail: click start → click end
-      if(!lineAnchor)lineAnchor=p; else{commitLine(lineAnchor,p);lineAnchor=null;}
+      if(!lineAnchor)lineAnchor=p; else{withUndo(function(){commitLine(lineAnchor,p);});lineAnchor=null;}
       dirty=true;return;}
-    lastPaint=-1;var placed=paintAt(p.c,p.r);                       // every other tool: place exactly one
+    lastPaint=-1;var placed;withUndo(function(){placed=paintAt(p.c,p.r);});   // every other tool: place exactly one (undo-recorded)
     if(placed&&brush!=='inspect'&&brush!=='bulldoze'&&!isLineBrush())selectBrush('inspect');   // building placed → default back to the selector
   }
   canvas.addEventListener('pointerdown',down);
@@ -930,6 +968,12 @@
   document.getElementById('zoomctl').addEventListener('click',function(e){var btn=e.target.closest('button');if(!btn)return;var z=btn.getAttribute('data-z');
     if(z==='in')setZoom(zoom*1.25);else if(z==='out')setZoom(zoom/1.25);else setZoom(1);});
   canvas.addEventListener('contextmenu',function(e){e.preventDefault();cancelLine();});   // right-click cancels a pending line
+  var lensBtn=document.getElementById('lenstoggle'),lensLegend=document.getElementById('lenslegend');
+  function setLens(on){econLens=!!on;if(lensBtn)lensBtn.classList.toggle('on',econLens);if(lensLegend)lensLegend.hidden=!econLens;
+    try{localStorage.setItem('mdg-lens',econLens?'1':'0');}catch(e){}dirty=true;}
+  function toggleLens(){setLens(!econLens);}
+  if(lensBtn)lensBtn.addEventListener('click',toggleLens);
+  setLens(econLens);                                          // reflect the restored preference on boot
 
   var tools=document.getElementById('tools');
   var _hinted={};
@@ -964,10 +1008,12 @@
   var PANKEY={w:'u',arrowup:'u',s:'d',arrowdown:'d',a:'l',arrowleft:'l',d:'r',arrowright:'r'};   // WASD / arrows pan the camera
   window.addEventListener('keydown',function(e){
     var lk=e.key.toLowerCase();
+    if((e.ctrlKey||e.metaKey)&&lk==='z'){e.preventDefault();doUndo();return;}   // Ctrl/Cmd+Z rewinds the last edit
     if(PANKEY[lk]){keys[PANKEY[lk]]=1;e.preventDefault();return;}
     if(e.key==='`'||e.key==='i'||e.key==='I'){selectBrush('inspect');return;}    // ` is the shortcut (I kept as an alias); inspect works in observe mode too
     if(e.key==='+'||e.key==='='){setZoom(zoom*1.2);return;}         // keyboard zoom
     if(e.key==='-'||e.key==='_'){setZoom(zoom/1.2);return;}
+    if(e.key==='g'||e.key==='G'){toggleLens();return;}             // throughput lens overlay (works in observe mode too)
     if(OBSERVE)return;if(e.key==='Escape'){cancelLine();return;}
     var m={'1':'road','2':'rail','3':'res','4':'com','5':'ind','6':'fac','7':'park','8':'power','9':'water','0':'bulldoze','b':'bank','B':'bank','p':'port','P':'port','t':'tower','T':'tower','e':'solar','E':'solar','m':'transit','M':'transit'}[e.key];if(m)selectBrush(m);});
   window.addEventListener('keyup',function(e){var lk=e.key.toLowerCase();if(PANKEY[lk])keys[PANKEY[lk]]=0;});
@@ -1004,6 +1050,7 @@
   window.addEventListener('pointerup',function(){mmDrag=false;});
   document.getElementById('reset').addEventListener('click',function(){
     if(!confirm('Clear the whole city?'))return;
+    try{pushUndoState(serialize());}catch(e){}            // let a single Undo recover an accidental Reset
     hwGeom();                                            // interchange (+ resource bands) before regenerating terrain
     for(var i=0;i<grid.length;i++)grid[i]=newCell(i%cols,(i/cols)|0);
     try{localStorage.removeItem(TUTOR_KEY);}catch(e){}tutorDone=false;tutorActive=true;tutorStep=-1;   // a Reset is a true fresh start — replay the intro quest
@@ -1105,10 +1152,15 @@
   // resource the map lacks must be imported. SUP[id] (0.35..1) is how well each need is met → soft slowdown.
   var STOCK={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};   // city-wide raw-resource pools
   var SUP={lumber:1,grain:1,ore:1,stone:1,oil:1,fish:1};     // supply ratio per resource (floored 0.35) — throttles growth
-  var RES_YIELD=2.4;                                          // raw units per extractor level per tick
+  var RES_YIELD=TUNE.resYield;                                // raw units per extractor level per tick
+  var ELEC_TIER=TUNE.elecTier;                               // the Electronics recipe unlocks at District tier
+  var TRADE_RATE=TUNE.tradeRate, TRADE_SPEND=TUNE.tradeSpend; // two-way barter: Goods buys raw units; spend a share of the Goods reserve/tick
+  function elecUnlocked(){return maxMS>=ELEC_TIER;}           // advanced factory recipe gate
   var matWanted=false, terrBonus=0, matStock=0;              // matStock kept as ore+stone (legacy blocker compat)
   var tradePremium=1, tradeGoodsIn=0, tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};
-  var econ={res:{},goods:{make:0,imp:0,sell:0,need:0,exp:0,stock:0,facs:0,shops:0}};
+  var econ={res:{},goods:{make:0,imp:0,sell:0,need:0,exp:0,stock:0,facs:0,shops:0},elec:{make:0,exp:0,use:0,stock:0}};
+  var elecStock=0;                                          // advanced good: Electronics (Goods + Oil → Electronics, the nested chain)
+  var throughputNow=0, throughputAvg=0, throughputBest=0;   // ENDGAME SCORE: sustained finished-output/tick (Goods + 3×Electronics), +best-ever
   RESIDS.forEach(function(id){econ.res[id]={make:0,imp:0,use:0,need:0,stock:0,sup:1};});
   function extractorOutput(c,r,g){                            // the resource a Works pulls, decided by its terrain
     var t=g.terr, prof=regionProfile(WOX,WOY);
@@ -1121,26 +1173,39 @@
   function supOf(avail,need){return need<1?1:Math.max(0.35,Math.min(1,avail/need));}   // <1/tick need = ungated (early-game bootstrap grace)
   var ZONE_NEEDS={res:['grain','lumber'],tower:['grain','lumber','oil'],com:['goods','lumber'],ind:['lumber'],fac:['ore','stone','lumber']};
   function growthSup(t){var need=ZONE_NEEDS[t];if(!need)return 1;var s=1;for(var k=0;k<need.length;k++){var v=SUP[need[k]];if(v!=null&&v<s)s=v;}return s;}
+  function facAdjMult(c,r){                                   // ADJACENCY: a Factory's throughput scales with co-located Works
+    var nn=nbs(c,r),n=0;
+    for(var k=0;k<6;k++){var a=nn[k][0],b=nn[k][1];if(inB(a,b)){var g=grid[idx(a,b)];if(g.t==='ind'&&g.lvl>0)n++;}}
+    return {mult:1+Math.min(n,TUNE.adjCap)*TUNE.adjBonus, adj:n};   // +bonus per adjacent Works, capped
+  }
   function computeResources(){
     var facs=0,shops=0,works=0,resLv=0,towerLv=0,zoneLv=0,ti,tp;
     var make={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};
+    var goodsCap=0,elecCap=0,eu=elecUnlocked();                          // effective factory input-capacity, split by recipe
     for(var i=0;i<grid.length;i++){var g=grid[i];if(!g||!g.lvl)continue;var t=g.t;
       if(t==='ind'){works+=g.lvl;var id=extractorOutput(i%cols,(i/cols)|0,g);if(id)make[id]+=g.lvl*RES_YIELD;}
-      else if(t==='fac')facs+=g.lvl; else if(t==='com')shops+=g.lvl;
+      else if(t==='fac'){facs+=g.lvl;var cap=g.lvl*facAdjMult(i%cols,(i/cols)|0).mult;   // adjacency-boosted throughput
+        if(eu&&g.recipe==='elec')elecCap+=cap; else goodsCap+=cap;}
+      else if(t==='com')shops+=g.lvl;
       else if(t==='res')resLv+=g.lvl; else if(t==='tower')towerLv+=g.lvl;
       if(ZONES[t])zoneLv+=g.lvl;}
-    // trade imports per resource (filled by the trade phase from rail partners)
-    tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};tradeGoodsIn=0;tradePremium=1;
+    // ---- TWO-WAY TRADE: barter your Goods RESERVE for neighbours' raw surplus (imports are no longer free) ----
+    tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};tradeGoodsIn=0;tradePremium=1;var tradeGoodsOut=0,tradeDesired=0;
     if(TRADES.length&&railToWorld){
       var landCount=0, perRail=Math.min(connectedRailCount*0.8,25);
       for(ti=0;ti<TRADES.length;ti++){tp=TRADES[ti];var flow=perRail*(1+(tp.tier||2)*0.15);
         if(tp.supplies==='goods')tradeGoodsIn+=flow; else if(tradeImp[tp.supplies]!==undefined){tradeImp[tp.supplies]+=flow;landCount++;}}
       var cap=28;RESIDS.forEach(function(id){tradeImp[id]=Math.min(tradeImp[id],cap);});tradeGoodsIn=Math.min(tradeGoodsIn,22);
-      if(landCount>0)tradePremium=Math.min(1.7,1.5+landCount*0.05);   // partners short on Goods pay a premium for your exports
+      RESIDS.forEach(function(id){tradeDesired+=tradeImp[id];});                         // total raw units the partners can ship you
+      var budget=Math.max(0,goodsStock*TRADE_SPEND), payable=budget*TRADE_RATE;          // Goods reserve you'll spend → raw units it buys
+      var scale=tradeDesired>0?Math.min(1,payable/tradeDesired):0;                        // throttle imports to what you can pay for
+      if(scale<1)RESIDS.forEach(function(id){tradeImp[id]*=scale;});
+      tradeGoodsOut=tradeDesired*scale/TRADE_RATE; goodsStock-=tradeGoodsOut;             // ship the Goods out as payment
+      if(landCount>0)tradePremium=Math.min(1.7,1.5+landCount*0.05);   // partners short on Goods pay a premium for your surplus exports
     }
-    RESIDS.forEach(function(id){STOCK[id]+=make[id]+tradeImp[id];});     // production + imports into the pools
+    RESIDS.forEach(function(id){STOCK[id]+=make[id]+tradeImp[id];});     // domestic extraction + paid-for imports into the pools
     // ---- needs (per tick) ----
-    var need={grain:resLv*0.4+towerLv*0.7, lumber:zoneLv*0.2, ore:facs*1.5, stone:facs*1.5, oil:towerLv*0.4, fish:0};
+    var need={grain:resLv*0.4+towerLv*0.7, lumber:zoneLv*0.2, ore:goodsCap*1.5, stone:goodsCap*1.5, oil:towerLv*0.4+elecCap*0.8, fish:0};
     var foodAvail=STOCK.grain+STOCK.fish;                                // fish substitutes for grain as food
     SUP.grain=supOf(foodAvail,need.grain);
     SUP.lumber=supOf(STOCK.lumber,need.lumber);
@@ -1150,24 +1215,35 @@
     var foodUse=Math.min(foodAvail,need.grain);
     if(foodAvail>0){var fg=foodUse*STOCK.grain/foodAvail;STOCK.grain-=fg;STOCK.fish-=(foodUse-fg);}
     STOCK.lumber-=Math.min(STOCK.lumber,need.lumber);
-    STOCK.oil-=Math.min(STOCK.oil,need.oil);
-    var made=Math.min(STOCK.ore,STOCK.stone,facs*1.5);                   // Factories need BOTH ore AND stone → Goods
-    STOCK.ore-=made;STOCK.stone-=made;goodsStock+=made*(2/1.5)+tradeGoodsIn;
+    STOCK.oil-=Math.min(STOCK.oil,need.oil);                             // Towers draw oil first
+    // ---- production: Goods (Ore + Stone), then the NESTED chain Electronics (Goods + Oil) ----
+    var made=Math.min(STOCK.ore,STOCK.stone,goodsCap*1.5);              // Factories on the Goods recipe need BOTH ore AND stone
+    STOCK.ore-=made;STOCK.stone-=made;var goodsMade=made*(2/1.5);goodsStock+=goodsMade+tradeGoodsIn;
+    var elecMade=0;
+    if(elecCap>0){var poss=Math.max(0,Math.min(goodsStock/TUNE.elecGoodsIn,STOCK.oil/TUNE.elecOilIn,elecCap));   // Electronics = elecGoodsIn Goods + elecOilIn Oil → 1
+      goodsStock-=poss*TUNE.elecGoodsIn;STOCK.oil-=poss*TUNE.elecOilIn;elecStock+=poss;elecMade=poss;}
     var needG=shops*1.5, sold=Math.min(goodsStock,needG);goodsStock-=sold;
-    exportRate=0;
-    if(railToWorld&&goodsStock>0.01){var xcap=Math.min(connectedRailCount*1.2,60);exportRate=Math.min(goodsStock,xcap);goodsStock-=exportRate;}
+    exportRate=0;elecExportRate=0;
+    if(railToWorld){var xcap=Math.min(connectedRailCount*1.2,60);
+      if(goodsStock>0.01){exportRate=Math.min(goodsStock,xcap);goodsStock-=exportRate;}
+      if(elecStock>0.01){var ecap=Math.min(connectedRailCount*0.6,30);elecExportRate=Math.min(elecStock,ecap);elecStock-=elecExportRate;}}
     RESIDS.forEach(function(id){STOCK[id]=Math.max(0,Math.min(STOCK[id],CAPRES));});
-    goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));
+    goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));elecStock=Math.max(0,Math.min(elecStock,CAPRES));
     // ---- flags + legacy compat ----
     matStock=STOCK.ore+STOCK.stone;
     matHealthy=(SUP.ore>=0.999&&SUP.stone>=0.999); goodsHealthy=(needG-sold)<=0.01;
     matWanted=(SUP.lumber<1||SUP.grain<1||SUP.ore<1||SUP.stone<1);       // Works speed up when any raw is short
     SUP.goods=supOf(goodsStock+sold,needG);
     demand.fac=(shops>0&&!goodsHealthy)?3:((STOCK.ore>2&&STOCK.stone>2)?1:(facs<shops?1:-1));
+    // ---- ENDGAME SCORE: finished output/tick (Goods + 3× Electronics), exponentially smoothed → "sustained" ----
+    throughputNow=goodsMade+elecMade*3;
+    throughputAvg=throughputAvg*0.9+throughputNow*0.1;
+    if(throughputAvg>throughputBest)throughputBest=throughputAvg;
     // ---- flow snapshot for the Economy panel ----
     RESIDS.forEach(function(id){var e=econ.res[id];e.make=make[id];e.imp=tradeImp[id];e.need=need[id];e.stock=STOCK[id];e.sup=SUP[id];});
     econ.res.grain.food=foodAvail;                                       // grain panel notes fish-as-food
-    econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=made*(2/1.5);econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=needG;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;econ.goods.sup=SUP.goods;
+    econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=goodsMade;econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=needG;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;econ.goods.sup=SUP.goods;econ.goods.tradeOut=tradeGoodsOut;econ.goods.elecUse=elecMade*TUNE.elecGoodsIn;
+    econ.elec.make=elecMade;econ.elec.exp=elecExportRate;econ.elec.stock=elecStock;econ.elec.cap=elecCap;
   }
 
   function complement(c,r,t){
@@ -1214,7 +1290,7 @@
   var popEl=document.getElementById('pop'),popShown=0,popTarget=0;
   function updatePop(){var p=0;for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
     if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='tower')p+=g.lvl*g.lvl*135;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;else if(LMARK[g.t])p+=60;}
-    p+=Math.round(exportRate*35);                         // trade income from rail exports sustains extra population
+    p+=Math.round(exportRate*35+elecExportRate*95);       // trade income from rail exports sustains extra population (Electronics worth more)
     popTarget=p;}
   var reslowEl=document.getElementById('reslow'),reswStat=document.getElementById('rstat-res'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp');
   var pwrEl=document.getElementById('pwr'),pwrStat=document.getElementById('pwrstat'),watEl=document.getElementById('wat'),watStat=document.getElementById('watstat');
@@ -1256,6 +1332,8 @@
       for(var tt=prev+1;tt<=reached;tt++){var u=tierUnlocks(tt),dc=DENS[Math.min(DENS.length-1,tt+1)];   // announce what each new tier grants
         var parts=u.slice();if(dc>DENS[Math.min(DENS.length-1,tt)])parts.push('taller buildings (L'+dc+')');
         if(parts.length)setTimeout((function(p,l){return function(){toastEl.innerHTML='🔓 '+l+' unlocks <b>'+p.join(' · ')+'</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},3600);};})(parts,MS[tt].l),1400);}
+      if(prev<ELEC_TIER&&reached>=ELEC_TIER)setTimeout(function(){toastEl.innerHTML='💡 <b>Electronics recipe unlocked</b> — tap a Factory (🔍 Inspect) to switch it to advanced goods.';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},4400);},2100);
+      if(prev<MS.length-1&&reached>=MS.length-1)setTimeout(function(){toastEl.innerHTML='🏁 Megacity — cash is no longer the game. Chase <b>⚙️ Output/tick</b> (Economy panel), your endgame score.';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},4800);},2700);
     }}
   var goalLabel=document.getElementById('goal-label'),goalFill=document.getElementById('goal-fill');
   function updateGoalUI(){var ni=maxMS+1;
@@ -1325,6 +1403,7 @@
     cash: {icon:'🏦',label:'Treasury',        unit:'banked',    money:true, val:function(){return treasury;}, suggest:function(){return niceNum(treasury*1.6+3000);}},
     net:  {icon:'📈',label:'Monthly surplus', unit:'per mo',    money:true, val:function(){return netRate;},  suggest:function(){return niceNum(Math.max(200,netRate*1.6+300));}},
     exp:  {icon:'📦',label:'Exports',         unit:'Goods/mo',  val:function(){return exportRate;},         suggest:function(){return niceNum(Math.max(10,exportRate*1.6+8));}},
+    output:{icon:'⚙️',label:'Output/tick',    unit:'finished',  val:function(){return throughputAvg;},      suggest:function(){return niceNum(Math.max(20,throughputAvg*1.6+10));}},
     fac:  {icon:'🏭',label:'Factories',       unit:'built',     val:function(){return censusCount('fac');}, suggest:function(){return censusCount('fac')+3;}},
     tower:{icon:'🏙️',label:'Towers',          unit:'built',     val:function(){return censusCount('tower');},suggest:function(){return censusCount('tower')+3;}},
     park: {icon:'🌳',label:'Parks',           unit:'open',      val:function(){return censusCount('park');},suggest:function(){return censusCount('park')+4;}},
@@ -1442,7 +1521,9 @@
     {k:'lmark',  n:'Monumental',         d:'Place a landmark',                    t:function(){return censusCount('mon1')+censusCount('mon2')+censusCount('mon3')>0;}},
     {k:'law',    n:'Lawmaker',           d:'Enact all three ordinances at once',  t:function(){return POL.cp&&POL.sm&&POL.ft;}},
     {k:'storm',  n:'Storm Weathered',    d:'See a city event through to the end', t:null},
-    {k:'flow',   n:'Free Flowing',       d:'3,000+ citizens with clear streets',  t:function(){return popTarget>=3000&&congestion<=0.05;}}
+    {k:'flow',   n:'Free Flowing',       d:'3,000+ citizens with clear streets',  t:function(){return popTarget>=3000&&congestion<=0.05;}},
+    {k:'out60',  n:'Assembly Line',      d:'Sustain 60 finished output/tick',     t:function(){return throughputAvg>=60;}},
+    {k:'out180', n:'Megafactory',        d:'Sustain 180 finished output/tick',    t:function(){return throughputAvg>=180;}}
   ];
   var ACH_KEY='mdg-ach-v1', achSet={};
   try{achSet=JSON.parse(localStorage.getItem(ACH_KEY)||'{}')||{};}catch(e){achSet={};}
@@ -1490,7 +1571,7 @@
       ioModal.addEventListener('click',function(e){if(e.target===ioModal)ioModal.hidden=true;});}
     if(kind==='export'){
       save();                                            // flush the debounced save so the code is current
-      var raw=localStorage.getItem(SAVE_KEY)||'{"v":8,"cells":[]}', code=ioEnc(raw);
+      var raw=localStorage.getItem(SAVE_KEY)||'{"v":11,"cells":[]}', code=ioEnc(raw);
       ioBox.innerHTML='<h3>📤 Export city</h3><p>Your whole city as one share code — keep it as a backup or send it to another browser. Import it there with <b>Tools → Import city</b>.</p>'
         +'<textarea id="io-t" readonly></textarea><div class="ioerr" id="io-e"></div>'
         +'<div class="iorow"><button type="button" id="io-dl">Download file</button><button type="button" class="pri" id="io-cp">Copy code</button><button type="button" id="io-x">Close</button></div>';
@@ -1553,6 +1634,41 @@
         document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
       };
       render();ioModal.hidden=false;return;
+    } else if(kind==='recipe'){
+      // Factory recipe chooser — the Satisfactory-style branching path (Consumer Goods vs Electronics)
+      var rc=arguments[1],rr=arguments[2],rg=grid[idx(rc,rr)];
+      if(!rg||rg.t!=='fac'){ioModal.hidden=true;return;}
+      var cur=rg.recipe==='elec'?'elec':'goods';
+      var opt=function(key,icon,title,desc,on){return '<button type="button" data-recipe="'+key+'" style="text-align:left;width:100%;padding:9px 11px;margin:5px 0;border:1.5px solid '+(on?'#7C6CB0':'var(--line-2)')+';border-radius:9px;background:'+(on?'rgba(124,108,176,.10)':'var(--bg)')+';color:var(--ink);font:600 12px system-ui;cursor:pointer">'+icon+' <b>'+title+'</b>'+(on?' <span style="color:#7C6CB0">✓ running</span>':'')+'<br><span style="font-weight:500;font-size:10.5px;color:var(--muted)">'+desc+'</span></button>';};
+      ioBox.innerHTML='<h3>🏭 Factory recipe</h3><p>Choose what this Factory builds. Advanced goods sell for far more — but they consume your finished Goods, a deeper chain to keep balanced.</p>'
+        +opt('goods','📦','Consumer Goods','Ore + Stone → Goods. The staple — Shops sell them, surplus exports for income.',cur==='goods')
+        +opt('elec','💡','Electronics','Goods + Oil → Electronics. Exports at <b>3×</b> the price of raw Goods — but eats Goods you could sell.',cur==='elec')
+        +'<div class="iorow"><button type="button" id="io-x">Close</button></div>';
+      var rbtns=ioBox.querySelectorAll('[data-recipe]');
+      for(var rbi=0;rbi<rbtns.length;rbi++)rbtns[rbi].addEventListener('click',function(){var nr=this.getAttribute('data-recipe')==='elec'?'elec':'goods';
+        withUndo(function(){rg.recipe=nr;});scheduleSave();svcDirty=true;dirty=true;ioModal.hidden=true;});
+      document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
+      ioModal.hidden=false;return;
+    } else if(kind==='tune'){
+      // live balance tuning — Save writes a compact mdg-tune override and reloads; Defaults clears it
+      var META=[['sec','Economy'],['exportPrice','Export price (₵/Goods)',1],['intRate','Debt interest / tick',0.005],['serviceRate','Service cost / extra pop',0.01],['serviceFree','Free-service population',50],['resYield','Extractor yield / level',0.2],
+        ['sec','Trade (two-way barter)'],['tradeRate','Raw units bought per Goods',0.5],['tradeSpend','Goods reserve spent / tick',0.05],
+        ['sec','Electronics'],['elecTier','Unlock tier (0–8)',1],['elecGoodsIn','Goods in / Electronics',0.1],['elecOilIn','Oil in / Electronics',0.1],['elecPrice','Electronics price × Goods',0.5],
+        ['sec','Adjacency'],['adjBonus','Factory bonus / adjacent Works',0.05],['adjCap','Max adjacent Works counted',1]];
+      var th='<h3>🎛️ Balance tuning</h3><p>Adjust the economy live for playtesting — <b>Save</b> reloads with your numbers (kept in this browser). Share a set by appending <code>?tune={"tradeRate":3}</code> to the URL.</p><div style="max-height:min(56vh,420px);overflow-y:auto;margin:0 -2px;padding:0 4px">';
+      for(var mi=0;mi<META.length;mi++){var m=META[mi];
+        if(m[0]==='sec'){th+='<div style="font:700 10px system-ui;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 2px">'+m[1]+'</div>';continue;}
+        var chg=TUNE[m[0]]!==TUNE_DEFAULTS[m[0]];
+        th+='<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 2px;font:500 11.5px system-ui;color:var(--ink)"><span>'+m[1]+(chg?' <span style="color:#C98B2A" title="changed from default '+TUNE_DEFAULTS[m[0]]+'">•</span>':'')+'</span>'
+          +'<input type="number" data-tk="'+m[0]+'" value="'+TUNE[m[0]]+'" step="'+m[2]+'" style="width:82px;padding:5px 7px;border:1.5px solid var(--line-2);border-radius:7px;background:var(--bg);color:var(--ink);font:600 12px system-ui;text-align:right"></label>';}
+      th+='</div><div class="iorow"><button type="button" id="tune-def">Defaults</button><button type="button" id="io-x">Cancel</button><button type="button" class="pri" id="tune-save">Save &amp; reload</button></div>';
+      ioBox.innerHTML=th;
+      document.getElementById('tune-save').addEventListener('click',function(){var out={},ins=ioBox.querySelectorAll('[data-tk]');
+        for(var i=0;i<ins.length;i++){var k=ins[i].getAttribute('data-tk'),v=parseFloat(ins[i].value);if(isFinite(v)&&v!==TUNE_DEFAULTS[k])out[k]=v;}
+        try{if(Object.keys(out).length)localStorage.setItem('mdg-tune',JSON.stringify(out));else localStorage.removeItem('mdg-tune');}catch(e){}location.reload();});
+      document.getElementById('tune-def').addEventListener('click',function(){try{localStorage.removeItem('mdg-tune');}catch(e){}location.reload();});
+      document.getElementById('io-x').addEventListener('click',function(){ioModal.hidden=true;});
+      ioModal.hidden=false;return;
     } else if(kind==='econ'){
       // Economy readout — production vs consumption balance per resource, so the supply chain is legible
       var e=econ;
@@ -1589,19 +1705,39 @@
         resBlocks+=block(RESICON[id]+' '+RESNAME[id],m.c,rows,net,'stock '+Math.round(r.stock)+supLbl,hint);
       });
       // Goods: Factories turn Ore+Stone into Goods → Shops sell + rail exports
-      var g=e.goods,gNet=g.make+g.imp-g.sell-g.exp,gRows=flowRow('Factories produce',g.make,true);
+      var g=e.goods;
+      var gRows=flowRow('Factories produce',g.make,true);
       if(g.imp>0.05)gRows+=flowRow('Imported by rail',g.imp,true);
       gRows+=flowRow('Shops sell',g.sell,false);
       if(g.exp>0.05)gRows+=flowRow('Exported to '+hubShort(),g.exp,false);
+      if(g.elecUse>0.05)gRows+=flowRow('Into Electronics',g.elecUse,false);
+      if(g.tradeOut>0.05)gRows+=flowRow('Bartered for imports',g.tradeOut,false);
+      var gNet=g.make+g.imp-g.sell-g.exp-(g.elecUse||0)-(g.tradeOut||0);
       var gHint=g.facs===0?'No Factories yet — they turn Ore + Stone into Goods, which Shops sell.'
-        :(g.sell<g.need-0.05?'Shops want '+ef(g.need)+'/tick but only get '+ef(g.sell)+' — feed Factories more Ore & Stone.'
+        :(g.sell<g.need-0.05?'Shops want '+ef(g.need)+'/tick but only get '+ef(g.sell)+' — feed Factories more Ore &amp; Stone.'
         :(g.exp>0.05?'Surplus Goods rail out to '+hubShort()+' for export income.':(gNet>2?'Goods surplus — lay rail to the highway to export them.':'')));
+      // Electronics — the advanced nested good, shown once it's in play
+      var el=e.elec,elecBlock='';
+      if(el.make>0.05||el.stock>0.5||el.cap>0){
+        var elRows=flowRow('Factories make',el.make,true);
+        if(el.exp>0.05)elRows+=flowRow('Exported to '+hubShort(),el.exp,false);
+        var elNet=el.make-el.exp;
+        var elHint=el.cap<=0?'Set a Factory to the <b>Electronics</b> recipe (tap it with 🔍 Inspect) to make advanced goods.'
+          :(el.make<0.05?'Electronics factories are starved — they need finished <b>Goods</b> + <b>Oil</b> to run.'
+          :'Advanced export — 3× the price of raw Goods.');
+        elecBlock=block('💡 Electronics','#C98B2A',elRows,elNet,'stock '+Math.round(el.stock),elHint);
+      }
+      var outBanner='<div style="display:flex;justify-content:space-between;align-items:baseline;border:1.5px solid #7C6CB0;border-radius:9px;padding:8px 11px;margin:2px 0 4px;background:rgba(124,108,176,.08)">'
+        +'<span style="font:700 12.5px system-ui;color:var(--ink)">⚙️ Output <span style="font-weight:500;font-size:10px;color:var(--muted)">sustained finished/tick</span></span>'
+        +'<b style="font:700 15px system-ui;color:#7C6CB0">'+ef(throughputAvg)+' <span style="font-weight:500;font-size:10px;color:var(--muted)">best '+ef(throughputBest)+'</span></b></div>';
       var pNet=powerGen-powerUse,wNet=waterGen-waterUse;
       var pRows=flowRow('Stations generate',powerGen,true)+flowRow('Buildings draw',powerUse,false);
       var wRows=flowRow('Towers &amp; coast supply',waterGen,true)+flowRow('Buildings draw',waterUse,false);
       var body='<div style="max-height:min(60vh,440px);overflow-y:auto;margin:0 -2px;padding:0 2px">'
+        +outBanner
         +(resBlocks||'<div style="font:500 11px system-ui;color:var(--muted);padding:6px 0">No extractors yet — build a Works (🔍 Tools) on a resource terrain to start pulling raw materials.</div>')
         +block('📦 Goods','#7C6CB0',gRows,gNet,'stock '+Math.round(g.stock),gHint)
+        +elecBlock
         +block('⚡ Power','#E0A93E',pRows,pNet,pNet>=0?'covered':'short',pNet<0?'A deficit browns out unpowered buildings — add a station or Solar.':'')
         +block('💧 Water','#4C88B8',wRows,wNet,wNet>=0?'covered':'short',wNet<0?'A deficit leaves buildings dry — add a Water Tower (or build by a coast/lake).':'')
         +'</div>';
@@ -1676,6 +1812,7 @@
     if(act){e.stopPropagation();closeMenus();ioOpen(act.getAttribute('data-act'));return;}   // Stats/Awards/Export/Import
   });
   buildThemeRow(); applyTheme(curTheme);                    // restore the saved theme on boot
+  if(new URLSearchParams(location.search).has('dev')||localStorage.getItem('mdg-tune')){var _ti=document.getElementById('tuneitem');if(_ti)_ti.hidden=false;}   // reveal the Tuning panel for playtesting
 
   // ---- guided first-run: a short objective path that teaches the loop as you play ----
   var TUTOR_KEY='mdg-tutor-done';
@@ -2123,7 +2260,11 @@
         var eo='';
         if(t==='ind'){var oid=extractorOutput(c,r,g);
           eo=oid?'Extracts <b>+'+(+(g.lvl*RES_YIELD).toFixed(1))+'</b> '+RESICON[oid]+' '+RESNAME[oid]+'/tick':'<span class="no">No resource here</span> <span class="ik">— site on forest/farmland/hills/desert or beside a mountain/coast</span>';}
-        else if(t==='fac')eo='Turns <b>'+(g.lvl*1.5)+'</b> ⛏Ore + <b>'+(g.lvl*1.5)+'</b> 🧱Stone → <b>'+(g.lvl*2)+'</b> Goods/tick';
+        else if(t==='fac'){var am=facAdjMult(c,r),ab=Math.round((am.mult-1)*100),M=am.mult;
+          if(g.recipe==='elec'&&elecUnlocked())eo='💡 <b>Electronics</b>: '+(+(g.lvl*M*TUNE.elecGoodsIn).toFixed(1))+' 📦 + '+(+(g.lvl*M*TUNE.elecOilIn).toFixed(1))+' 🛢 → <b>'+(+(g.lvl*M).toFixed(1))+'</b>/tick';
+          else eo='📦 <b>Goods</b>: '+(+(g.lvl*M*1.5).toFixed(1))+' ⛏ + '+(+(g.lvl*M*1.5).toFixed(1))+' 🧱 → <b>'+(+(g.lvl*M*2).toFixed(1))+'</b>/tick';
+          if(am.adj>0)eo+=' <span class="ok">+'+ab+'% · '+am.adj+' adj Works</span>';
+          if(elecUnlocked())eo+=' <span class="ik">— tap to switch recipe</span>';}
         else if(t==='com')eo='Sells <b>'+(+(g.lvl*1.5).toFixed(1))+'</b> Goods/tick';
         else if(t==='res')eo='Houses <b>'+(g.lvl*g.lvl*45).toLocaleString()+'</b> people';
         else if(t==='tower')eo='Houses <b>'+(g.lvl*g.lvl*135).toLocaleString()+'</b> people';
@@ -2145,6 +2286,35 @@
   function updateInspect(){if(brush!=='inspect'||!hoverCell||!inB(hoverCell.c,hoverCell.r)){if(inspectEl)inspectEl.hidden=true;return;}
     inspectEl.innerHTML=tileInfo(hoverCell.c,hoverCell.r);inspectEl.hidden=false;}
 
+  // ---- throughput lens: colour each RUNNING building by how well its supply chain is met ----
+  // A pure read on data the sim already computes (SUP / econ) — no new state, no new micro. Turns the
+  // whole map into a visible bottleneck puzzle: red = starved, amber = tight, green = fed, blue = making
+  // more than anything consumes (wasted capacity), grey = an idle Works with no resource to pull.
+  var LENS={low:'#E4553C',mid:'#E0A93E',good:'#43B96B',over:'#4C88B8',idle:'#9A8E78'};
+  function lensColor(c,r,g){
+    var t=g.t; if(!g.lvl)return null;                          // only a built, running building has throughput
+    if(t==='ind'){                                            // Works = extractor: is its output used, wasted, or nil?
+      var id=extractorOutput(c,r,g); if(!id)return LENS.idle;  // sited where nothing can be extracted
+      var e=econ.res[id];
+      if(e&&e.need<0.05&&(e.make+e.imp)>0.05&&e.stock>2)return LENS.over;   // making a resource nothing consumes
+      return LENS.good;
+    }
+    if(t==='fac'){                                            // Factory: starved on inputs, glutted on output, or humming
+      if(g.recipe==='elec'&&elecUnlocked()){                  // Electronics recipe draws Goods + Oil, not Ore + Stone
+        if(econ.elec.cap>0&&econ.elec.make<0.05)return LENS.low;                 // no Goods/Oil to run on
+        if(econ.elec.stock>8&&econ.elec.exp<0.05)return LENS.over;               // Electronics piling up unshipped
+        return LENS.good;
+      }
+      var s=growthSup('fac'); if(s<0.6)return LENS.low; if(s<0.95)return LENS.mid;
+      var gd=econ.goods; if(gd&&(gd.sell+gd.exp)<gd.make-0.05&&gd.stock>4)return LENS.over;  // Goods pile up unsold
+      return LENS.good;
+    }
+    if(t==='res'||t==='com'||t==='tower'){                    // consumers: colour by how well the input basket is met
+      var s2=growthSup(t); return s2<0.6?LENS.low:s2<0.95?LENS.mid:LENS.good;
+    }
+    return null;                                              // utilities / civic / landmarks aren't part of the flow
+  }
+
   function draw(){
     if(!cols)return;
     ctx.save();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;
@@ -2163,6 +2333,15 @@
     // freeway + roads + rail, painted as continuous LAYERED networks (casings before surfaces),
     // so each type reads as one unbroken path instead of overlapping per-hex sections
     paintNetworks(vx0,vy0,vx1,vy1);
+    // throughput lens: tint each running building's hex by supply health (drawn UNDER the sprites → a colour ring)
+    if(econLens){var lensB={},lc,lr,lcell,lk2;
+      for(lr=vy0;lr<vy1;lr++)for(lc=vx0;lc<vx1;lc++){lcell=grid[idx(lc,lr)];if(!lcell)continue;
+        var lcol=lensColor(lc,lr,lcell);if(!lcol)continue;(lensB[lcol]||(lensB[lcol]=[])).push([lc,lr]);}
+      ctx.globalAlpha=0.34;
+      for(lk2 in lensB){var ll=lensB[lk2];ctx.beginPath();
+        for(var li=0;li<ll.length;li++)hexPath(hx(ll[li][0],ll[li][1]),hy(ll[li][1]),1);
+        ctx.fillStyle=lk2;ctx.fill();}
+      ctx.globalAlpha=1;}
     // structures — every building is one hex: hex lot base + the sprite scaled into the inscribed square
     for(r=vy0;r<vy1;r++)for(c=vx0;c<vx1;c++){
       cell=grid[idx(c,r)];if(!cell)continue;var t=cell.t;if(t==='empty'||t==='road'||t==='highway')continue;
@@ -2260,17 +2439,18 @@
   var saveTimer=0;
   function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(save,400);}
   window.addEventListener('pagehide',function(){save();});   // flush on leave — a debounced save may still be pending
-  function save(){if(OBSERVE||ioImporting)return;try{var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];
-      if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail))out.push([c,r,g.t,g.lvl,g.rail?1:0,1]);}   // one hex per building
+  function serialize(){var out=[];for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var g=grid[idx(c,r)];   // the whole city as one compact payload (also the cloud-save + undo unit)
+      if(g&&g.t!=='highway'&&(g.t!=='empty'||g.rail)){var row=[c,r,g.t,g.lvl,g.rail?1:0,1];if(g.t==='fac'&&g.recipe==='elec')row.push('elec');out.push(row);}}   // one hex per building (7th = Factory recipe)
     var ct=contracts.map(function(c){return [c.key,c.target,c.reward,c.inv?1:0,c.text];});
     var ev=activeEv?{k:activeEv.key,l:activeEv.left,c:activeEv.chosen||''}:null;
-    var payload=JSON.stringify({v:10,ms:maxMS,stock:STOCK,goods:goodsStock,cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});
-    localStorage.setItem(SAVE_KEY,payload);netSaveCity(payload);}catch(e){}}   // mirror to the cloud (throttled, offline-safe)
+    return JSON.stringify({v:11,ms:maxMS,stock:STOCK,goods:goodsStock,elec:elecStock,best:Math.round(throughputBest),cash:treasury,cells:out,ct:ct,cd:contractsDone,h:[hist.pop,hist.cash,hist.net,hist.cong],ev:ev,evc:evCooldown,pol:{t:POL.tax,cp:POL.cp?1:0,sm:POL.sm?1:0,ft:POL.ft?1:0}});}
+  function save(){if(OBSERVE||ioImporting)return;try{var payload=serialize();localStorage.setItem(SAVE_KEY,payload);netSaveCity(payload);}catch(e){}}   // mirror to the cloud (throttled, offline-safe)
   function load(){try{var raw=localStorage.getItem(SAVE_KEY);if(!raw)return;var d=JSON.parse(raw);
-    if(!Array.isArray(d)&&d.v!==10){try{localStorage.removeItem(SAVE_KEY);}catch(e2){}return;}   // multi-resource economy: pre-v10 saves start fresh
+    if(!Array.isArray(d)&&d.v!==10&&d.v!==11){try{localStorage.removeItem(SAVE_KEY);}catch(e2){}return;}   // pre-v10 economy saves start fresh; v10 migrates forward to v11 (new fields default)
     var list=Array.isArray(d)?[]:(d.cells||[]);if(!Array.isArray(d)&&typeof d.ms==='number')maxMS=d.ms;
     if(!Array.isArray(d)){if(d.stock&&typeof d.stock==='object')RESIDS.forEach(function(k){if(typeof d.stock[k]==='number')STOCK[k]=d.stock[k];});
       if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
+      if(typeof d.elec==='number')elecStock=d.elec;if(typeof d.best==='number')throughputBest=d.best;   // v11: advanced good + endgame best
       if(Array.isArray(d.ct))contracts=d.ct.filter(function(a){return CDEF[a[0]];}).map(function(a){return {key:a[0],target:a[1],reward:a[2],inv:!!a[3],text:a[4]};});
       if(typeof d.cd==='number')contractsDone=d.cd;
       if(d.ev&&EVDEF[d.ev.k])activeEv={key:d.ev.k,left:Math.max(1,d.ev.l|0),chosen:d.ev.c||null};
@@ -2280,8 +2460,42 @@
       evalEventMods();}
     list.forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
       if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
-      g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];});
+      g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];if(a[6]==='elec')g.recipe='elec';});
     dirty=true;}catch(e){}}
+
+  // ---- undo: snapshot the city before each edit; Ctrl+Z / the ⟲ button rewinds ----
+  var undoStack=[], UNDO_MAX=40, undoBtn;
+  function refreshUndoBtn(){if(undoBtn)undoBtn.disabled=!undoStack.length;}
+  function pushUndoState(json){undoStack.push(json);if(undoStack.length>UNDO_MAX)undoStack.shift();refreshUndoBtn();}
+  function withUndo(fn){                                    // run an edit, but record the pre-edit state IF it actually changed anything
+    if(OBSERVE){fn();return;}
+    var before;try{before=serialize();}catch(e){before=null;}
+    fn();
+    if(before!=null){try{if(serialize()!==before)pushUndoState(before);}catch(e){}}
+  }
+  function applyParsed(d){                                  // reset the grid to a saved snapshot and repaint every readout (undo restore)
+    for(var i=0;i<grid.length;i++){var g=grid[i];if(g&&g.t!=='highway'){g.t='empty';g.lvl=0;g.grow=0;g.rail=false;g.recipe=undefined;g.foot=undefined;}}
+    if(typeof d.ms==='number')maxMS=d.ms;
+    if(d.stock&&typeof d.stock==='object')RESIDS.forEach(function(k){if(typeof d.stock[k]==='number')STOCK[k]=d.stock[k];});
+    if(typeof d.goods==='number')goodsStock=d.goods;if(typeof d.cash==='number')treasury=d.cash;
+    if(typeof d.elec==='number')elecStock=d.elec;if(typeof d.best==='number')throughputBest=d.best;
+    if(Array.isArray(d.ct))contracts=d.ct.filter(function(a){return CDEF[a[0]];}).map(function(a){return {key:a[0],target:a[1],reward:a[2],inv:!!a[3],text:a[4]};});
+    if(typeof d.cd==='number')contractsDone=d.cd;
+    activeEv=(d.ev&&EVDEF[d.ev.k])?{key:d.ev.k,left:Math.max(1,d.ev.l|0),chosen:d.ev.c||null}:null;
+    if(typeof d.evc==='number')evCooldown=d.evc;
+    if(d.pol){POL.tax=Math.max(0,Math.min(2,d.pol.t|0));POL.cp=!!d.pol.cp;POL.sm=!!d.pol.sm;POL.ft=!!d.pol.ft;}
+    (d.cells||[]).forEach(function(a){var c=a[0],r=a[1];if(!inB(c,r))return;var g=grid[idx(c,r)];if(g.t==='highway')return;
+      if(a[2]!=='empty'&&noBuild(g.terr)&&a[2]!=='road')return;
+      g.t=a[2];g.lvl=a[3]||0;g.grow=0;g.pulse=-9999;g.rail=!!a[4];if(a[6]==='elec')g.recipe='elec';});
+    MAXLVL=densCap();syncTech();evalEventMods();
+    computeServices();computeDemand();computeResources();
+    updateCashUI();updateToolLocks();renderPolicy();renderContracts();renderEvent();updateResourceUI();updateDemandUI();
+    svcDirty=true;dirty=true;mapDirty=true;
+  }
+  function doUndo(){if(OBSERVE||!undoStack.length)return;var json=undoStack.pop();refreshUndoBtn();
+    try{applyParsed(JSON.parse(json));cancelLine();scheduleSave();
+      toastEl.innerHTML='↩ <b>Undone</b>';toastEl.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove('on');},1300);}catch(e){}}
+  undoBtn=document.getElementById('undo');if(undoBtn)undoBtn.addEventListener('click',doUndo);refreshUndoBtn();   // wire the ⟲ button (runs after undoStack init)
 
   // ---- animation loop ----
   var lastFrame=performance.now(),lastAmbient=0;
@@ -2421,8 +2635,17 @@
     hwc:function(){return {gc:HWGC,gr:HWGR,bc:BANDC,br:BANDR};},anchors:function(){return resAnchors();},hdist:function(c,r){return hexDist(c,r,BANDC,BANDR);},
     stock:function(){return STOCK;},sup:function(){return SUP;},extract:function(c,r){return inB(c,r)?extractorOutput(c,r,grid[idx(c,r)]):null;},econres:function(){return econ.res;},
     growthsup:function(t){return growthSup(t);},blocked:function(c,r){return blocker(c,r);},tick:function(){tick();},
+    lens:function(c,r){return inB(c,r)?lensColor(c,r,grid[idx(c,r)]):null;},lensOn:function(v){setLens(v);return econLens;},
     tradeTest:function(res){TRADES.length=0;TRADES.push({lat:0,lon:0,tier:3,supplies:res,wantsGoods:true,name:'TestPartner'});railToWorld=true;connectedRailCount=12;},
     computeRes:function(){computeResources();},   // resource step only (skips computeServices' rail recompute) — test harness
+    elec:function(){return {stock:elecStock,make:econ.elec.make,exp:econ.elec.exp,cap:econ.elec.cap};},
+    tp:function(){return {now:throughputNow,avg:throughputAvg,best:throughputBest};},
+    recipe:function(c,r,v){var g=inB(c,r)?grid[idx(c,r)]:null;if(g&&g.t==='fac'){if(v!==undefined)g.recipe=v;return g.recipe||'goods';}return null;},
+    facmult:function(c,r){return facAdjMult(c,r);},setMs:function(n){maxMS=n;MAXLVL=densCap();syncTech();},
+    goods:function(v){if(v!==undefined)goodsStock=v;return goodsStock;},
+    state:function(){return {ms:maxMS,cash:treasury,goods:goodsStock,elec:elecStock,tpBest:throughputBest,tpAvg:throughputAvg};},
+    undo:function(){doUndo();},undoDepth:function(){return undoStack.length;},
+    tune:function(){return {live:TUNE,def:TUNE_DEFAULTS,rate:TRADE_RATE,elecTier:ELEC_TIER,resYield:RES_YIELD};},
     save:function(){save();},saveKey:function(){return SAVE_KEY;}
   };}
   requestAnimationFrame(frame);
