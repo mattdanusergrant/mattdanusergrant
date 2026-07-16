@@ -25,3 +25,6 @@
 /makersdissectgadgets/*  /microdiscoverygacha/:splat  301
 /makersdeserveglory/*    /microdiscoverygacha/:splat  301
 /microdiscoveryguide/*   /microdiscoverygacha/:splat  301
+
+# Case study moved under /case-studies/
+/mustdesigngames/metropolisdawngrid/case-study/*  /case-studies/metropolisdawngrid/:splat  301
