@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>A multi-tenant SaaS with no server · Case Study · Matt Danuser-Grant</title>
-<meta name="description" content="Engineering case study: shipping a live, multi-tenant scheduling SaaS whose entire backend is Postgres row-level security and RPC functions on Neon — no custom server, plus a 57-line Cloudflare Worker to survive iOS/Safari cookie policy." />
+<meta name="description" content="Engineering case study: shipping a live, multi-tenant scheduling SaaS whose entire backend is Postgres row-level security and RPC functions on Neon (no custom server), plus a 57-line Cloudflare Worker to survive iOS/Safari cookie policy." />
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -165,13 +165,13 @@
   <header class="head">
     <p class="eyebrow">Case Study · Engineering</p>
     <h1>A multi-tenant SaaS <em>with no server.</em></h1>
-    <p class="lede">Keeping Cadence is a live, multi-tenant team-scheduling app. It has real accounts, cross-device sync, teams and invites, and a plan-vs-actual-hours permission model &mdash; and it runs at <strong>$0/month</strong> with <strong>no application server at all</strong>. The whole backend is Postgres row-level security and RPC functions on Neon, plus one 57-line edge worker. Here is how that holds together, and the two bugs that cost the most to find.</p>
+    <p class="lede">Keeping Cadence is a live, multi-tenant team-scheduling app. It has real accounts, cross-device sync, teams and invites, and a plan-vs-actual-hours permission model, and it runs at <strong>$0/month</strong> with <strong>no application server at all</strong>. The whole backend is Postgres row-level security and RPC functions on Neon, plus one 57-line edge worker. Here is how that holds together, and the two bugs that cost the most to find.</p>
   </header>
 
   <dl class="meta">
     <div><dt>What</dt><dd>Live multi-tenant scheduling SaaS</dd></div>
     <div><dt>Stack</dt><dd>Neon Postgres · PostgREST · Cloudflare Workers · vanilla JS</dd></div>
-    <div><dt>Role</dt><dd>Solo &mdash; design, DB, client, infra</dd></div>
+    <div><dt>Role</dt><dd>Solo: design, DB, client, infra</dd></div>
     <div><dt>Status</dt><dd>Shipped &amp; live</dd></div>
   </dl>
 
@@ -179,7 +179,7 @@
 
     <section>
       <h2>The constraint that shaped everything</h2>
-      <p>I wanted accounts and sync without paying for or babysitting a backend. The usual answer is a small API server &mdash; auth middleware, an ORM, a hosting bill, a thing to patch. I wanted none of it. The constraint became the design: <strong>if there is no server, the database itself has to be the API, and the database has to enforce every rule.</strong></p>
+      <p>I wanted accounts and sync without paying for or babysitting a backend. The usual answer is a small API server: auth middleware, an ORM, a hosting bill, a thing to patch. I wanted none of it. The constraint became the design: <strong>if there is no server, the database itself has to be the API, and the database has to enforce every rule.</strong></p>
       <p>Neon makes that possible. Its Data API exposes Postgres over REST (PostgREST), and Neon Auth issues the identity. So the browser talks straight to the database: reads are table <code>GET</code>s filtered by row-level security; writes are <code>POST /rpc/&hellip;</code> calls to Postgres functions. The front end is a single static <code>app.html</code> on a CDN. There is nothing in between to run.</p>
 
       <figure class="arch">
@@ -189,7 +189,7 @@
             <marker id="cs-arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6A6A6A"/></marker>
           </defs>
           <rect x="1" y="1" width="958" height="468" rx="16" fill="#FBF8F2" stroke="#CBC4B2"/>
-          <text x="32" y="40" font-size="20" font-weight="700" fill="#15161C">Keeping Cadence &mdash; no server, just Neon</text>
+          <text x="32" y="40" font-size="20" font-weight="700" fill="#15161C">Keeping Cadence · no server, just Neon</text>
           <text x="32" y="62" font-size="13" fill="#6A6A6A">A static single-file app talks directly to Neon. The only edge piece is a 57-line stateless Cloudflare Worker.</text>
           <rect x="32" y="92" width="196" height="340" rx="12" fill="#FFFFFF" stroke="#CBC4B2"/>
           <text x="130" y="122" font-size="15" font-weight="700" fill="#15161C" text-anchor="middle">Browser</text>
@@ -215,13 +215,13 @@
           <rect x="300" y="176" width="176" height="44" rx="9" fill="#FFFFFF" stroke="#009E73" stroke-width="2"/>
           <text x="388" y="194" font-size="12.5" font-weight="600" fill="#15161C" text-anchor="middle">Cloudflare Worker</text>
           <text x="388" y="210" font-size="11" fill="#6A6A6A" text-anchor="middle">same-origin auth proxy</text>
-          <text x="512" y="166" font-size="11.5" font-weight="600" fill="#009E73">Auth &mdash; HttpOnly cookie &rarr; short-lived Data API JWT</text>
+          <text x="512" y="166" font-size="11.5" font-weight="600" fill="#009E73">Auth · HttpOnly cookie &rarr; short-lived Data API JWT</text>
           <line x1="228" y1="198" x2="298" y2="198" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
           <line x1="476" y1="198" x2="730" y2="198" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
           <rect x="300" y="272" width="210" height="44" rx="9" fill="#FFFFFF" stroke="#0072B2" stroke-width="2"/>
           <text x="405" y="290" font-size="12.5" font-weight="600" fill="#15161C" text-anchor="middle">Neon Data API (PostgREST)</text>
           <text x="405" y="306" font-size="11" fill="#6A6A6A" text-anchor="middle">GET /schedules · /weeks · /teams</text>
-          <text x="546" y="262" font-size="11.5" font-weight="600" fill="#0072B2">Reads &mdash; bearer JWT, RLS-filtered</text>
+          <text x="546" y="262" font-size="11.5" font-weight="600" fill="#0072B2">Reads · bearer JWT, RLS-filtered</text>
           <line x1="228" y1="294" x2="298" y2="294" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
           <line x1="510" y1="294" x2="730" y2="294" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
           <rect x="284" y="368" width="150" height="46" rx="9" fill="#FFFFFF" stroke="#D55E00" stroke-width="2"/>
@@ -230,7 +230,7 @@
           <rect x="470" y="368" width="150" height="46" rx="9" fill="#FFFFFF" stroke="#D55E00" stroke-width="2"/>
           <text x="545" y="386" font-size="12" font-weight="600" fill="#15161C" text-anchor="middle">kc_private worker</text>
           <text x="545" y="402" font-size="10.5" fill="#6A6A6A" text-anchor="middle">SECURITY DEFINER</text>
-          <text x="284" y="358" font-size="11.5" font-weight="600" fill="#D55E00">Writes &mdash; POST /rpc/*, validated + concurrency-checked</text>
+          <text x="284" y="358" font-size="11.5" font-weight="600" fill="#D55E00">Writes · POST /rpc/*, validated + concurrency-checked</text>
           <line x1="228" y1="391" x2="282" y2="391" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
           <line x1="434" y1="391" x2="468" y2="391" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
           <line x1="620" y1="391" x2="730" y2="391" stroke="#6A6A6A" marker-end="url(#cs-arw)"/>
@@ -242,26 +242,26 @@
 
     <section>
       <h2>Authorization is the architecture</h2>
-      <p>With no server to check permissions, every rule lives in Postgres. Reads are governed by <strong>row-level security</strong>: a policy on each table decides what the signed-in user can see (their own profile; teams they own or joined; schedules assigned to them or in a team they own). A user simply cannot <code>GET</code> another tenant&rsquo;s rows &mdash; the database refuses.</p>
-      <p>Writes use a two-layer pattern I&rsquo;m proud of. The only functions the Data API exposes are thin <strong><code>SECURITY INVOKER</code> wrappers</strong> in the <code>public</code> schema. Each one reads the caller&rsquo;s identity once, then delegates to a privileged <strong><code>SECURITY DEFINER</code> worker</strong> in a separate <code>kc_private</code> schema that is <em>not</em> exposed by the API. The workers do the real work but trust only the user id the wrapper hands them. A column-level grant even hides a team&rsquo;s secret invite token from ordinary <code>SELECT</code>s. It is genuine privilege separation, written in SQL rather than a framework &mdash; and I verified it live with negative tests: RLS isolation between users, and confirming the private workers are unreachable through the API.</p>
-      <p class="pull">If there&rsquo;s no server, the database is the API &mdash; so the database has to be the security boundary too.</p>
+      <p>With no server to check permissions, every rule lives in Postgres. Reads are governed by <strong>row-level security</strong>: a policy on each table decides what the signed-in user can see (their own profile; teams they own or joined; schedules assigned to them or in a team they own). A user simply cannot <code>GET</code> another tenant&rsquo;s rows. The database refuses.</p>
+      <p>Writes use a two-layer pattern I&rsquo;m proud of. The only functions the Data API exposes are thin <strong><code>SECURITY INVOKER</code> wrappers</strong> in the <code>public</code> schema. Each one reads the caller&rsquo;s identity once, then delegates to a privileged <strong><code>SECURITY DEFINER</code> worker</strong> in a separate <code>kc_private</code> schema that is <em>not</em> exposed by the API. The workers do the real work but trust only the user id the wrapper hands them. A column-level grant even hides a team&rsquo;s secret invite token from ordinary <code>SELECT</code>s. It is genuine privilege separation, written in SQL rather than a framework, and I verified it live with negative tests: RLS isolation between users, and confirming the private workers are unreachable through the API.</p>
+      <p class="pull">If there&rsquo;s no server, the database is the API, so the database has to be the security boundary too.</p>
     </section>
 
     <section>
-      <h2>Gotcha 1 &mdash; the signed-in user was <code>NULL</code> inside my own functions</h2>
-      <p>The first version put the logic directly in <code>SECURITY DEFINER</code> functions and asked Postgres &ldquo;who is calling?&rdquo; It always answered <code>NULL</code>. On this Neon project the JWT identity only resolves while running as the <code>authenticated</code> role &mdash; inside a <code>SECURITY DEFINER</code> function, which runs as the table owner, both <code>auth.uid()</code> and the request&rsquo;s JWT claims are empty. A brand-new signup couldn&rsquo;t even create its own profile row.</p>
+      <h2>Gotcha 1 · the signed-in user was <code>NULL</code> inside my own functions</h2>
+      <p>The first version put the logic directly in <code>SECURITY DEFINER</code> functions and asked Postgres &ldquo;who is calling?&rdquo; It always answered <code>NULL</code>. On this Neon project the JWT identity only resolves while running as the <code>authenticated</code> role. Inside a <code>SECURITY DEFINER</code> function, which runs as the table owner, both <code>auth.uid()</code> and the request&rsquo;s JWT claims are empty. A brand-new signup couldn&rsquo;t even create its own profile row.</p>
       <p>The fix is the invoker/definer split above: read the identity <em>once</em>, in the invoker context, via a <code>current_uid()</code> helper (Neon&rsquo;s <code>auth.uid()</code> with a fallback to the <code>sub</code> claim so it needs no grant on the auth schema), and thread that id down to the privileged worker as an argument. Identity is captured in the one place it&rsquo;s trustworthy and passed explicitly everywhere else.</p>
     </section>
 
     <section>
-      <h2>Gotcha 2 &mdash; iOS quietly logged everyone out on refresh</h2>
-      <p>Login worked, then a page refresh signed you out &mdash; but only on Safari and iOS. Neon Auth&rsquo;s session cookie is set by the <code>neon.tech</code> host, which is <em>third-party</em> to the app&rsquo;s domain, so Safari&rsquo;s tracking prevention dropped it. Moving to a same-site <strong>subdomain</strong> still failed: iOS WebKit won&rsquo;t persist a cookie for a host the user never visited at the top level.</p>
-      <p>The fix was to make the cookie first-party by routing auth <strong>same-origin</strong>: <code>app&hellip;/__neonauth</code> is rewritten to a 57-line Cloudflare Worker that proxies to Neon, so the cookie is set on the app&rsquo;s own origin and every browser keeps it. The Worker also does a few non-obvious header transforms (stripping <code>x-forwarded-host</code>, which otherwise makes Neon reject the request). Hiding under it was a client bug that masked the whole thing: the session-restore call was gated on a bearer token that Neon never sends, so it never ran &mdash; the cookie was there, just never checked. Now the app always restores from the cookie on load.</p>
+      <h2>Gotcha 2 · iOS quietly logged everyone out on refresh</h2>
+      <p>Login worked, then a page refresh signed you out, but only on Safari and iOS. Neon Auth&rsquo;s session cookie is set by the <code>neon.tech</code> host, which is <em>third-party</em> to the app&rsquo;s domain, so Safari&rsquo;s tracking prevention dropped it. Moving to a same-site <strong>subdomain</strong> still failed: iOS WebKit won&rsquo;t persist a cookie for a host the user never visited at the top level.</p>
+      <p>The fix was to make the cookie first-party by routing auth <strong>same-origin</strong>: <code>app&hellip;/__neonauth</code> is rewritten to a 57-line Cloudflare Worker that proxies to Neon, so the cookie is set on the app&rsquo;s own origin and every browser keeps it. The Worker also does a few non-obvious header transforms (stripping <code>x-forwarded-host</code>, which otherwise makes Neon reject the request). Hiding under it was a client bug that masked the whole thing: the session-restore call was gated on a bearer token that Neon never sends, so it never ran. The cookie was there, just never checked. Now the app always restores from the cookie on load.</p>
       <div class="callout">
         <p class="label">Why these two were worth writing down</p>
         <ul>
           <li><strong>They&rsquo;re invisible in the happy path.</strong> Both passed a casual test on desktop Chrome and failed only in production, on specific engines, under specific policies.</li>
-          <li><strong>They&rsquo;re the price of &ldquo;no server.&rdquo;</strong> Pushing auth and authorization to the edges of the stack means learning exactly how JWT context and browser cookie policy behave &mdash; knowledge a middle-tier server would have hidden.</li>
+          <li><strong>They&rsquo;re the price of &ldquo;no server.&rdquo;</strong> Pushing auth and authorization to the edges of the stack means learning exactly how JWT context and browser cookie policy behave, knowledge a middle-tier server would have hidden.</li>
         </ul>
       </div>
     </section>
@@ -273,19 +273,19 @@
         <li><strong>Tests &amp; CI on a build-stepless app.</strong> A dependency-free harness loads the single inline <code>&lt;script&gt;</code> in a Node <code>vm</code> behind a DOM stub and asserts the load-bearing pure logic (time math, data migration, the share-link round-trip). GitHub Actions runs it on every push.</li>
         <li><strong>Honest sync state.</strong> The client no longer swallows save failures; a persisted dirty-set tracks unsynced edits, the indicator shows synced / offline / failed with a retry, and a pull can&rsquo;t clobber an edit that hasn&rsquo;t landed yet.</li>
         <li><strong>Optimistic concurrency.</strong> Two devices editing the same week used to silently overwrite each other. Saves now carry the last-seen <code>updated_at</code>; if the row moved on, Postgres raises a <em>stale write</em> and the client reloads the winner instead of clobbering it.</li>
-        <li><strong>Defense in depth at the DB.</strong> Because any authenticated caller can hit the RPCs directly, the save functions validate payload shape and size in SQL and cap free-text lengths &mdash; the client can&rsquo;t be the only thing keeping data sane. All of it has its own SQL test suite.</li>
+        <li><strong>Defense in depth at the DB.</strong> Because any authenticated caller can hit the RPCs directly, the save functions validate payload shape and size in SQL and cap free-text lengths. The client can&rsquo;t be the only thing keeping data sane. All of it has its own SQL test suite.</li>
       </ul>
     </section>
 
     <section>
       <h2>What it demonstrates</h2>
       <ul>
-        <li><strong>Postgres authorization engineering</strong> &mdash; RLS policies, <code>SECURITY INVOKER</code>/<code>DEFINER</code> privilege separation, an unexposed private schema, and column-level grants: real multi-tenant access control written in SQL, not bought from a framework.</li>
-        <li><strong>Web-auth internals</strong> &mdash; HttpOnly cookie semantics, <code>SameSite</code>/<code>Partitioned</code>, Safari ITP and iOS WebKit persistence rules, and JWT minting with refresh-on-401.</li>
-        <li><strong>Edge/infra composition</strong> &mdash; a Cloudflare Worker reverse proxy with surgical header rewriting, host-based rewrites, and custom DNS across providers, deliberately kept to $0/month.</li>
-        <li><strong>Product judgment</strong> &mdash; knowing which corners to leave (email verification off for a private beta) and which to harden (never silently lose a user&rsquo;s saved hours).</li>
+        <li><strong>Postgres authorization engineering</strong>: RLS policies, <code>SECURITY INVOKER</code>/<code>DEFINER</code> privilege separation, an unexposed private schema, and column-level grants: real multi-tenant access control written in SQL, not bought from a framework.</li>
+        <li><strong>Web-auth internals</strong>: HttpOnly cookie semantics, <code>SameSite</code>/<code>Partitioned</code>, Safari ITP and iOS WebKit persistence rules, and JWT minting with refresh-on-401.</li>
+        <li><strong>Edge/infra composition</strong>: a Cloudflare Worker reverse proxy with surgical header rewriting, host-based rewrites, and custom DNS across providers, deliberately kept to $0/month.</li>
+        <li><strong>Product judgment</strong>: knowing which corners to leave (email verification off for a private beta) and which to harden (never silently lose a user&rsquo;s saved hours).</li>
       </ul>
-      <p>The one place this design would ever add a server is a Stripe webhook receiver &mdash; the single seam where money, not data, has to cross. That&rsquo;s a deliberate line, documented, not an accident.</p>
+      <p>The one place this design would ever add a server is a Stripe webhook receiver: the single seam where money, not data, has to cross. That&rsquo;s a deliberate line, documented, not an accident.</p>
     </section>
 
     <div class="tags">

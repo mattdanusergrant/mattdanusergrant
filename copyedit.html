@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Copy Desk · Matt Danuser-Grant</title>
-<meta name="description" content="Backstage copy-editing desk — every line of copy on the site, editable in one place." />
+<meta name="description" content="Backstage copy-editing desk: every line of copy on the site, editable in one place." />
 <meta name="robots" content="noindex, nofollow" />
 <script>!function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)}()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -87,11 +87,11 @@
   <nav class="nav"><a class="brand" href="/">Matt Danuser-Grant</a><span>Copy Desk</span></nav>
 
   <h1>Copy Desk</h1>
-  <p class="lede">Every line of copy on the site, editable in one place. Edit any box —
-  changes save as a draft <b>in this browser</b> automatically. When you're done, click
+  <p class="lede">Every line of copy on the site, editable in one place. Edit any box.
+  Changes save as a draft <b>in this browser</b> automatically. When you're done, click
   <b>Export edits</b> and send the downloaded file back to Matt; nothing here changes the
   live site directly. Keep inline styling like <em>italics</em> unless it's wrong.
-  Tick <b>done</b> on each entry as you review it — the bar below tracks your progress.</p>
+  Tick <b>done</b> on each entry as you review it. The bar below tracks your progress.</p>
 
   <div class="prog" id="prog" hidden>
     <div class="prog-top"><span class="lab" id="prog-label">0 of 0 entries done</span><span class="pct" id="prog-pct">0%</span></div>
@@ -99,17 +99,17 @@
   </div>
 
   <div class="stats" id="stats" hidden>
-    <div class="hero-tile"><span class="hero-num" id="total-words">—</span><span class="hero-sub">words across the site</span></div>
+    <div class="hero-tile"><span class="hero-num" id="total-words">–</span><span class="hero-sub">words across the site</span></div>
     <table class="stat-t" aria-label="Words per section"><tbody id="stat-rows"></tbody></table>
   </div>
 
   <div class="toolbar">
-    <input id="q" type="search" placeholder="Filter copy… (e.g. 'designer', 'Play', 'Neon')" />
+    <input id="q" type="search" placeholder="Filter copy (e.g. 'designer', 'Play', 'Neon')" />
     <button type="button" class="chip" id="only-edited">Edited only</button>
     <button type="button" class="chip" id="hide-done">Hide done</button>
   </div>
 
-  <div id="desk"><p class="loading">Loading site copy…</p></div>
+  <div id="desk"><p class="loading">Loading site copy</p></div>
 </div>
 
 <div class="bar"><div class="bar-in">
@@ -140,15 +140,15 @@
     {g:'Case studies', path:'/case-studies/access-control-in-sql.html', label:'Access control as architecture'},
     {g:'Case studies', path:'/case-studies/keeping-cadence-no-server.html', label:'Multi-tenant SaaS, no server (shelved)'},
     {g:'Case studies', path:'/case-studies/living-atlas-fantasy-rpg.html', label:'A living atlas (shelved)'},
-    {g:'Tools', path:'/mathdrawsgraphics/index.html', label:'Math Draws Graphics — hub'},
-    {g:'Tools', path:'/mathdrawsgraphics/code-art/index.html', label:'Math Draws Graphics — Code Art'},
-    {g:'Tools', path:'/mathdrawsgraphics/pixel-art/index.html', label:'Math Draws Graphics — Pixel Art'},
+    {g:'Tools', path:'/mathdrawsgraphics/index.html', label:'Math Draws Graphics · hub'},
+    {g:'Tools', path:'/mathdrawsgraphics/code-art/index.html', label:'Math Draws Graphics · Code Art'},
+    {g:'Tools', path:'/mathdrawsgraphics/pixel-art/index.html', label:'Math Draws Graphics · Pixel Art'},
     {g:'Tools', path:'/makedopegrooves/index.html', label:'Make Dope Grooves'},
-    {g:'Tools', path:'/makedopegrooves/crafter.html', label:'Make Dope Grooves — Code Crafter'},
-    {g:'Arcade', path:'/mustdesigngames/index.html', label:'Must Design Games — gallery'},
-    {g:'Arcade', path:'/mustdesigngames/account/index.html', label:'Arcade — account'},
+    {g:'Tools', path:'/makedopegrooves/crafter.html', label:'Make Dope Grooves · Code Crafter'},
+    {g:'Arcade', path:'/mustdesigngames/index.html', label:'Must Design Games · gallery'},
+    {g:'Arcade', path:'/mustdesigngames/account/index.html', label:'Arcade · account'},
     {g:'Games', path:'/mustdesigngames/metropolisdawngrid/index.html', label:'Metropolis Dawn Grid'},
-    {g:'Games', path:'/mustdesigngames/metropolisdawngrid/world/index.html', label:'Metropolis Dawn Grid — world view'},
+    {g:'Games', path:'/mustdesigngames/metropolisdawngrid/world/index.html', label:'Metropolis Dawn Grid · world view'},
     {g:'Games', path:'/mustdesigngames/moondruidguardians/index.html', label:'Moon Druid Guardians'},
     {g:'Games', path:'/mustdesigngames/mossdapplegrove/index.html', label:'Moss Dapple Grove'},
     {g:'Games', path:'/mustdesigngames/mosslings/index.html', label:'Mosslings'},
@@ -367,7 +367,7 @@
     a.href=URL.createObjectURL(blob);
     a.download='copy-edits-'+new Date().toISOString().slice(0,10)+'.json';
     a.click(); URL.revokeObjectURL(a.href);
-    document.getElementById('status').textContent='Exported — send the file to Matt.';
+    document.getElementById('status').textContent='Exported. Send the file to Matt.';
   });
   document.getElementById('copy').addEventListener('click',function(){
     navigator.clipboard.writeText(JSON.stringify(buildExport(),null,2)).then(function(){
