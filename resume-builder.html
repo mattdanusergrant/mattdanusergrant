@@ -17,7 +17,7 @@
 <meta property="og:title" content="Markdown Document Generator · Matt Danuser-Grant" />
 <meta property="og:description" content="A plain-text resume builder by Matt Danuser-Grant. Write on the left, watch a clean, ATS-safe resume build on the right, save straight to PDF. No account." />
 <meta property="og:image" content="https://mattdanusergrant.com/og.png" />
-<meta property="og:image:alt" content="Matt Danuser-Grant — Principal Game Designer" />
+<meta property="og:image:alt" content="Matt Danuser-Grant · Principal Game Designer" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Markdown Document Generator · Matt Danuser-Grant" />
 <meta name="twitter:description" content="A plain-text resume builder by Matt Danuser-Grant. Write on the left, watch a clean, ATS-safe resume build on the right, save straight to PDF. No account." />
@@ -194,12 +194,12 @@
       <details class="legend">
         <summary>Formatting cheatsheet</summary>
         <ul>
-          <li><code># Your Name</code> — then a line for your title, then a line of contacts split by <code>|</code></li>
-          <li><code>## Section</code> — a heading (Summary, Experience, Education…)</li>
+          <li><code># Your Name</code>, then a line for your title, then a line of contacts split by <code>|</code></li>
+          <li><code>## Section</code>: a heading (Summary, Experience, Education)</li>
           <li>Plain paragraphs under a heading become summary text</li>
-          <li><code>### Company, Role @ Dates</code> — starts an entry</li>
-          <li><code>&gt; note</code> — an italic line under an entry (a credit, a tagline, a course list)</li>
-          <li><code>- bullet</code> — a bullet point</li>
+          <li><code>### Company, Role @ Dates</code>: starts an entry</li>
+          <li><code>&gt; note</code>: an italic line under an entry (a credit, a tagline, a course list)</li>
+          <li><code>- bullet</code>: a bullet point</li>
         </ul>
       </details>
       <p class="pane-tag">Source</p>
@@ -404,7 +404,7 @@
     var f=file.files[0]; if(!f)return;
     var r=new FileReader();
     r.onload=function(){ editor.value=r.result; update(); };
-    r.onerror=function(){ alert('Sorry — that file could not be read. Try a plain-text (.txt or .md) file.'); };
+    r.onerror=function(){ alert('Sorry, that file could not be read. Try a plain-text (.txt or .md) file.'); };
     r.readAsText(f); file.value='';
   });
 })();
