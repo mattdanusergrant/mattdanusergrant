@@ -1098,7 +1098,7 @@ var _sx=0,_sy=0,_sc=null;
 sheet.addEventListener('touchstart',function(e){ var card=e.target.closest('.card'); _sc=card; if(!card)return; card._noclick=false; var t=e.changedTouches[0]; _sx=t.clientX; _sy=t.clientY; },{passive:true});
 sheet.addEventListener('touchend',function(e){ var card=_sc; _sc=null; if(!card||e.target.closest('a'))return;
   var t=e.changedTouches[0], dx=t.clientX-_sx, dy=t.clientY-_sy;
-  if(Math.abs(dx)>38 && Math.abs(dx)>Math.abs(dy)*1.3){ card._noclick=true; flipCard(card,dx>0?1:-1); } },{passive:true});
+  if(Math.abs(dx)>38 && Math.abs(dx)>Math.abs(dy)*1.3){ card._noclick=true; flipCard(card,dx<0?1:-1); } },{passive:true});
 sheet.addEventListener('keydown',function(e){
   var card=e.target.closest&&e.target.closest('.card');
   if(card&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); flipCard(card,e.key==='ArrowRight'?1:-1); } });
