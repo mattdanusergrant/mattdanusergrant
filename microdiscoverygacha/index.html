@@ -55,7 +55,29 @@ a{color:inherit;text-decoration:none}
 .btn .cnt{display:inline-block;min-width:16px;padding:0 4px;margin-left:5px;border-radius:999px;background:color-mix(in srgb,var(--ink) 16%,transparent);
   font-size:10px;line-height:15px;text-align:center;vertical-align:1px}
 .btn.tab.on .cnt{background:rgba(0,0,0,.22)}
-@media(max-width:440px){.btn{padding:6px 9px;letter-spacing:.02em}.wordmark span.full{display:none}}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;padding:7px;width:36px;height:36px;color:var(--muted)}
+.iconbtn svg{display:block;transition:transform .3s ease}
+.iconbtn:hover svg,.iconbtn[aria-expanded="true"] svg{transform:rotate(45deg)}
+@media(max-width:440px){.btn{padding:6px 9px;letter-spacing:.02em}.iconbtn{padding:6px;width:34px;height:34px}.wordmark span.full{display:none}}
+
+/* settings menu */
+.menu{position:fixed;top:54px;right:clamp(10px,4vw,30px);z-index:70;width:250px;max-width:calc(100vw - 20px);
+  background:var(--bg2);border:1px solid var(--line2);border-radius:14px;box-shadow:0 26px 60px -22px rgba(0,0,0,.7);
+  padding:8px;animation:menupop .16s ease both;transform-origin:top right}
+@keyframes menupop{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.menu{animation:none}}
+.menu[hidden]{display:none}
+.menu-h{font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:10px;color:var(--muted);padding:8px 10px 6px}
+.menu-sep{font-family:var(--label);font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:9px;color:var(--muted);
+  padding:9px 10px 5px;margin-top:4px;border-top:1px solid var(--line);opacity:.75}
+.menu-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:none;border:0;cursor:pointer;
+  font-family:var(--body);font-size:15px;color:var(--ink);text-align:left;padding:11px 10px;border-radius:9px;transition:background .15s}
+.menu-row:hover,.menu-row:focus-visible{background:color-mix(in srgb,var(--ink) 7%,transparent);outline:none}
+.menu-val{font-family:var(--label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:10.5px;color:var(--accent)}
+.menu-plus{font-family:var(--label);font-weight:700;color:var(--gold);font-size:15px}
+.menu-row.danger{color:var(--ink-soft)}
+.menu-row.danger:hover{background:color-mix(in srgb,#c0483a 16%,transparent);color:var(--ink)}
+.menu-row.armed{background:color-mix(in srgb,#c0483a 22%,transparent);color:var(--ink);font-weight:600}
 
 .view{max-width:1040px;margin:0 auto;padding:22px clamp(14px,4vw,28px) 70px}
 .chead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px 18px;flex-wrap:wrap}
@@ -310,8 +332,17 @@ a{color:inherit;text-decoration:none}
 <div class="topbar">
   <button class="wordmark" id="home" aria-label="Micro Discovery Gacha — home"><span class="dot"></span>Micro <span class="full">Discovery Gacha</span></button>
   <div class="controls">
-    <button class="btn" id="theme" aria-label="Toggle light and dark">Theme</button>
+    <button class="btn iconbtn" id="gear" aria-label="Settings" aria-haspopup="menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg>
+    </button>
   </div>
+</div>
+<div class="menu" id="settings" role="menu" aria-label="Settings" hidden>
+  <div class="menu-h">Settings</div>
+  <button class="menu-row" id="set-theme" role="menuitem"><span>Theme</span><span class="menu-val" id="theme-val">Dark</span></button>
+  <div class="menu-sep">Debug</div>
+  <button class="menu-row" id="dbg-packs" role="menuitem"><span>+10 Pack Tokens</span><span class="menu-plus">＋</span></button>
+  <button class="menu-row danger" id="dbg-unlock" role="menuitem"><span>Unlock All Cards</span></button>
 </div>
 <main id="view"></main>
 <button class="close" id="closeov" aria-label="Close">✕</button>
@@ -979,10 +1010,33 @@ sheet.addEventListener('keydown',function(e){ if(e.key!=='Enter'&&e.key!==' ') r
 
 var root=document.documentElement;
 try{var saved=localStorage.getItem('mdg-mag-theme'); if(saved)root.setAttribute('data-theme',saved);}catch(e){}
-document.getElementById('theme').addEventListener('click',function(){
-  var cur=root.getAttribute('data-theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
-  var nxt=cur==='dark'?'light':'dark'; root.setAttribute('data-theme',nxt);
-  try{localStorage.setItem('mdg-mag-theme',nxt);}catch(e){}
+function curTheme(){ return root.getAttribute('data-theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); }
+
+/* settings menu */
+var gear=document.getElementById('gear'), menu=document.getElementById('settings'), themeVal=document.getElementById('theme-val');
+function syncTheme(){ themeVal.textContent=curTheme()==='dark'?'Dark':'Light'; }
+syncTheme();
+var menuOpen=false;
+function openMenu(){ menuOpen=true; menu.hidden=false; gear.setAttribute('aria-expanded','true'); disarmUnlock(); }
+function closeMenu(){ menuOpen=false; menu.hidden=true; gear.setAttribute('aria-expanded','false'); disarmUnlock(); }
+gear.addEventListener('click',function(e){ e.stopPropagation(); menuOpen?closeMenu():openMenu(); });
+menu.addEventListener('click',function(e){ e.stopPropagation(); });
+document.addEventListener('click',function(){ if(menuOpen) closeMenu(); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&menuOpen) closeMenu(); });
+
+document.getElementById('set-theme').addEventListener('click',function(){
+  var nxt=curTheme()==='dark'?'light':'dark'; root.setAttribute('data-theme',nxt);
+  try{localStorage.setItem('mdg-mag-theme',nxt);}catch(e){} syncTheme();
+});
+document.getElementById('dbg-packs').addEventListener('click',function(){
+  S.tokens+=10; save(); renderCollection(); closeMenu();
+});
+var unlockBtn=document.getElementById('dbg-unlock'), armed=false;
+function disarmUnlock(){ armed=false; unlockBtn.classList.remove('armed'); unlockBtn.firstChild.textContent='Unlock All Cards'; }
+unlockBtn.addEventListener('click',function(){
+  if(!armed){ armed=true; unlockBtn.classList.add('armed'); unlockBtn.firstChild.textContent='Tap again to confirm — unlock all '+CARDS.length; return; }
+  CARDS.forEach(function(c){ if(!S.coll[c.id]) S.coll[c.id]={n:1,foil:false}; });
+  save(); disarmUnlock(); closeMenu(); renderCollection();
 });
 
 load(); initEconomy(); renderCollection();
