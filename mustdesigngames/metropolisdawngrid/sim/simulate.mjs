@@ -50,12 +50,12 @@ function serve(dir) {
 }
 
 // ---- default parameter space ----
-const REGIONS = [                                          // varied spawn points → different terrain/resource profiles
-  { name: 'A', lat: 34.05, lon: -118.24 },
-  { name: 'B', lat: 48.86, lon: 2.35 },
-  { name: 'C', lat: -23.55, lon: -46.63 },
-  { name: 'D', lat: 1.35, lon: 103.82 },
-  { name: 'E', lat: 59.91, lon: 10.75 },
+const REGIONS = [                                          // a deliberate spread: some regions have Ore+Stone (run the Goods
+  { name: 'A', lat: -55, lon: -148 },                      //   chain), others don't (trade-dependent — build no factories)
+  { name: 'B', lat: -55, lon: -115 },                      // ore+stone present → makes Goods
+  { name: 'C', lat: -55, lon: -82 },                       // no ore+stone → trade-dependent
+  { name: 'D', lat: 34.05, lon: -118.24 },
+  { name: 'E', lat: 48.86, lon: 2.35 },
 ];
 
 // ---- args ----

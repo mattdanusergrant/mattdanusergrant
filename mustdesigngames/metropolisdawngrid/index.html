@@ -2523,30 +2523,32 @@
     // All buildings lvl 3 (established, no "needs X" cues). The city is a block CENTRED ON the
     // corridor (works for H / V / L / X shapes): street rows and building rows radiate from the
     // centre, skipping the freeway cells, so the highway runs *through* the city — on-ramps emerge
-    // where streets meet it. Building types follow a supply-chain-balanced quota so every city can
-    // actually convert Materials → Goods → exports (fac ≥ ind), while Works still favour the peaks.
+    // where streets meet it. Works are then SOURCED onto the region's real resource terrain so the
+    // supply chain actually runs; a region without Ore+Stone builds no Factories (it must trade).
     var TARGET=[4,6,10,30,64,92][tier], half=Math.min((cols>>1)-2, 7+tier*2);
     var CR=HWGR;                                                        // block centre sits on the interchange
     var CC=HWGC;
     var c0=Math.max(1,CC-half), c1=Math.min(cols-2,CC+half), c, placed=0, maxOff=1;
-    var want={res:Math.round(TARGET*0.46),com:Math.max(1,Math.round(TARGET*0.14)),ind:Math.max(1,Math.round(TARGET*0.18)),fac:Math.max(1,Math.round(TARGET*0.22))};
+    var prof=regionProfile(WOX,WOY);
+    var canGoods=!!prof.has.ore&&!!prof.has.stone;                     // only regions with BOTH inputs run the Ore+Stone→Goods chain
+    var want={res:Math.round(TARGET*(canGoods?0.46:0.62)),com:Math.max(1,Math.round(TARGET*0.16)),ind:Math.max(1,Math.round(TARGET*0.16)),fac:canGoods?Math.max(1,Math.round(TARGET*0.22)):0};
     var cnt={res:0,com:0,ind:0,fac:0};
-    function pick(mountain){
-      if(mountain&&cnt.ind<want.ind)return 'ind';                      // Works hug the peaks (capped by quota)
-      var order=['res','fac','ind','com'],best='res',gap=-1;           // else fill the biggest remaining need; overflow → homes
-      for(var i=0;i<order.length;i++){var k=order[i],g=want[k]-cnt[k];if(g>gap){gap=g;best=k;}}
+    function pick(c,r){
+      var g=grid[idx(c,r)],res=extractorOutput(c,r,g);
+      if(res&&cnt.ind<want.ind)return 'ind';                          // a productive cell → a Works (never waste one on housing)
+      var order=canGoods?['res','fac','com']:['res','com'],best='res',gap=-1;   // else fill the biggest remaining need
+      for(var i=0;i<order.length;i++){var k=order[i],gp=want[k]-cnt[k];if(gp>gap){gap=gp;best=k;}}
       return best;
     }
     // On a horizontal freeway arm, set the streets BACK one row (buildings abut the freeway, streets
     // beyond) so no road runs alongside it; the city joins the freeway only at a few punched ramps.
-    // Vertical arms need no setback — the cross-streets meet them perpendicular already.
     var hArm=(HWDIR==='W'||HWDIR==='E');                               // freeway runs E–W → set streets back off it
     for(var off=1;off<Math.max(rows,cols)&&placed<TARGET;off++){
       var street = hArm ? (off%2===0) : (off%2===1);
       for(var s=0;s<2;s++){var r=CR+(s?-1:1)*off; if(r<1||r>rows-2)continue;
         if(street){for(c=c0;c<=c1;c++)placeAt(c,r,'road',0);continue;}
         for(c=c0;c<=c1&&placed<TARGET;c++){var g=grid[idx(c,r)];if(g.t!=='empty'||noBuild(g.terr))continue;
-          var t=pick(nearMountain(c,r));placeAt(c,r,t,3);cnt[t]++;placed++;if(off>maxOff)maxOff=off;}
+          var t=pick(c,r);placeAt(c,r,t,3);cnt[t]++;placed++;if(off>maxOff)maxOff=off;}
       }
     }
     if(hArm){                                                          // punch discrete perpendicular on/off-ramps through to the setback street
@@ -2558,9 +2560,30 @@
         if(!made)for(var rc2=c0;rc2<=c1;rc2++){if(isHwy(rc2,HWGR)&&isRoadCell(rc2,st)&&!noBuild(grid[idx(rc2,fr)].terr)){placeAt(rc2,fr,'road',0);break;}}
       }
     }
-    var ur=Math.min(rows-3,CR+maxOff+1);                               // infrastructure past the built area, scaled so the city runs a surplus
-    var powNeed=(cnt.res*POWERUSE.res+cnt.com*POWERUSE.com+cnt.ind*POWERUSE.ind+cnt.fac*POWERUSE.fac)*3;
-    var watNeed=(cnt.res*WATERUSE.res+cnt.com*WATERUSE.com+cnt.ind*WATERUSE.ind+cnt.fac*WATERUSE.fac)*3;
+    // ---- SUPPLY SOURCING: put Works on the region's real resource terrain so the chain actually runs ----
+    // computeResources extracts/produces from city-wide pools (not gated on road/power), so what matters is
+    // that Works sit on the RIGHT terrain. Top up Works — nearest the interchange first — until the Factories'
+    // Ore+Stone demand and the population's Grain+Lumber demand are covered as far as the region allows.
+    function producing(resId){var h=0;for(var i=0;i<grid.length;i++){var g=grid[i];if(g&&g.t==='ind'&&g.lvl&&extractorOutput(i%cols,(i/cols)|0,g)===resId)h+=g.lvl*RES_YIELD;}return h;}
+    function sourceResource(resId,needUnits){
+      if(producing(resId)>=needUnits)return;
+      var cands=[];
+      for(var dr=-26;dr<=26;dr++)for(var dc=-26;dc<=26;dc++){var cc=CC+dc,rr=CR+dr;if(!inB(cc,rr))continue;
+        var g=grid[idx(cc,rr)];if(g.t!=='empty'||noBuild(g.terr))continue;if(extractorOutput(cc,rr,g)!==resId)continue;
+        cands.push([cc,rr,Math.abs(dc)+Math.abs(dr)]);}
+      cands.sort(function(a,b){return a[2]-b[2];});
+      var have=producing(resId);
+      for(var k=0;k<cands.length&&have<needUnits;k++){placeAt(cands[k][0],cands[k][1],'ind',3);have+=3*RES_YIELD;}
+    }
+    var facLv=cnt.fac*3;
+    if(canGoods){sourceResource('ore',facLv*1.5*1.15);sourceResource('stone',facLv*1.5*1.15);}   // feed the Factories (+ a little headroom)
+    sourceResource('grain',cnt.res*3*0.4+4);                                                       // feed the population
+    sourceResource('lumber',placed*3*0.2+4);                                                       // construction lumber
+    // ---- infrastructure: power + water sized to the ACTUAL placed buildings (incl. sourced Works) ----
+    var cR=0,cC=0,cI=0,cF=0;for(var gi=0;gi<grid.length;gi++){var gg=grid[gi];if(!gg||!gg.lvl)continue;if(gg.t==='res')cR++;else if(gg.t==='com')cC++;else if(gg.t==='ind')cI++;else if(gg.t==='fac')cF++;}
+    var ur=Math.min(rows-3,CR+maxOff+1);
+    var powNeed=(cR*POWERUSE.res+cC*POWERUSE.com+cI*POWERUSE.ind+cF*POWERUSE.fac)*3;
+    var watNeed=(cR*WATERUSE.res+cC*WATERUSE.com+cI*WATERUSE.ind+cF*WATERUSE.fac)*3;
     var nPow=Math.max(1,Math.ceil(powNeed*1.3/POWER_OUT)), nWat=Math.max(1,Math.ceil(watNeed*1.3/WATER_OUT)), made=0;
     for(var pc=c0;pc<=c1&&made<nPow;pc+=4){if(plantFits(pc,ur)){layPlant(pc,ur);made++;}}   // enough 3×3 stations (step past the footprint + gap)
     if(!made)for(var pf=c0;pf<=c1;pf++){if(plantFits(pf,ur)){layPlant(pf,ur);made++;break;}}
@@ -2642,6 +2665,7 @@
     tp:function(){return {now:throughputNow,avg:throughputAvg,best:throughputBest};},
     recipe:function(c,r,v){var g=inB(c,r)?grid[idx(c,r)]:null;if(g&&g.t==='fac'){if(v!==undefined)g.recipe=v;return g.recipe||'goods';}return null;},
     facmult:function(c,r){return facAdjMult(c,r);},setMs:function(n){maxMS=n;MAXLVL=densCap();syncTech();},
+    profileAt:function(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919;var p=regionProfile(ox,oy);return {near:p.near,med:p.med,far:p.far,has:p.has,canGoods:!!p.has.ore&&!!p.has.stone};},
     goods:function(v){if(v!==undefined)goodsStock=v;return goodsStock;},
     state:function(){return {ms:maxMS,cash:treasury,goods:goodsStock,elec:elecStock,tpBest:throughputBest,tpAvg:throughputAvg};},
     undo:function(){doUndo();},undoDepth:function(){return undoStack.length;},
