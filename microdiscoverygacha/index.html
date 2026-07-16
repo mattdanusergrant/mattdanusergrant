@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Micro Discovery Gacha — collect how the world works</title>
+<title>Micro Discovery Gacha · collect how the world works</title>
 <meta name="description" content="A no-ads collectible card game about how the world works. Open a booster pack every day, pull cards from sets like Makers of Hawaii, Time, and Cosmos, chase foils, and fill your binder." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#0d1413" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Micro Discovery Gacha" />
-<meta property="og:title" content="Micro Discovery Gacha — collect how the world works" />
+<meta property="og:title" content="Micro Discovery Gacha · collect how the world works" />
 <meta property="og:description" content="Open a booster pack every day, pull knowledge cards, chase foils, and fill your binder." />
 <meta property="og:url" content="https://mattdanusergrant.com/microdiscoverygacha/" />
 <meta name="twitter:card" content="summary_large_image" />
@@ -333,7 +333,7 @@ a{color:inherit;text-decoration:none}
 </head>
 <body>
 <div class="topbar">
-  <button class="wordmark" id="home" aria-label="Micro Discovery Gacha — home"><span class="dot"></span>Micro <span class="full">Discovery Gacha</span></button>
+  <button class="wordmark" id="home" aria-label="Micro Discovery Gacha · home"><span class="dot"></span>Micro <span class="full">Discovery Gacha</span></button>
   <div class="controls">
     <button class="btn iconbtn" id="gear" aria-label="Settings" aria-haspopup="menu" aria-expanded="false">
       <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg>
@@ -750,15 +750,15 @@ function setsOf(sr){ return SETS.filter(function(s){return SET_SERIES[s]===sr;})
 var SET_COLOR={"Makers of Hawaii":"#c9a24b","Makers of Thailand":"#b0563f","Time":"#2f8f9d","Navigation":"#5b8fb0","Materials":"#b07d3f","Signals":"#8f7bc0","Cosmos":"#7b86c9","Life & Medicine":"#7d9b5b","Earth & Elements":"#6f7f86","Civilization":"#b0894a"};
 var SET_MOTIF={"Makers of Hawaii":"wave","Makers of Thailand":"strings","Time":"scroll","Navigation":"grid","Materials":"grain","Signals":"pulse","Cosmos":"orbit","Life & Medicine":"pulse","Earth & Elements":"facet","Civilization":"strings"};
 var SET_BLURB={
-  "Makers of Hawaii":"Real island makers — and the crafts they keep alive.",
-  "Makers of Thailand":"Real Thai makers — silk, celadon, and looms in the hills.",
+  "Makers of Hawaii":"Real island makers, and the crafts they keep alive.",
+  "Makers of Thailand":"Real Thai makers: silk, celadon, and looms in the hills.",
   "Time":"How humans learned to slice a day into perfect pieces.",
-  "Navigation":"Finding your way — from stars to satellites.",
+  "Navigation":"Finding your way, from stars to satellites.",
   "Materials":"The stuff everything is made of, and why it holds.",
   "Signals":"Electricity, computing, and messages that move the world.",
-  "Cosmos":"The clockwork overhead — planets, light, and deep space.",
+  "Cosmos":"The clockwork overhead: planets, light, and deep space.",
   "Life & Medicine":"Bodies, cells, and the science of staying alive.",
-  "Earth & Elements":"Rock, water, weather — the planet's raw ingredients.",
+  "Earth & Elements":"Rock, water, weather: the planet's raw ingredients.",
   "Civilization":"The inventions that let strangers build things together."
 };
 var CAT_SET={
@@ -880,7 +880,7 @@ function cardPageInner(c, foil, info, page){
 function faceHTML(c, foil, copies){
   copies=copies!=null?copies:((S.coll[c.id]&&S.coll[c.id].n)||1);
   var info=cardPageList(c,copies);
-  return '<div class="card'+(foil?' foil':'')+'" data-id="'+c.id+'" data-copies="'+copies+'" data-page="0" data-rot="0" tabindex="0" role="group" aria-label="'+c.title+' — swipe left and right to page through" style="--accent:'+c.accent+';--rot:0deg">'+
+  return '<div class="card'+(foil?' foil':'')+'" data-id="'+c.id+'" data-copies="'+copies+'" data-page="0" data-rot="0" tabindex="0" role="group" aria-label="'+c.title+', swipe left and right to page through" style="--accent:'+c.accent+';--rot:0deg">'+
     '<div class="flipper"><div class="face fa">'+cardPageInner(c,foil,info,0)+'</div><div class="face fb"></div></div></div>';
 }
 /* flip one page forward (dir=+1) or back (dir=-1) */
@@ -905,7 +905,7 @@ function tokenFlow(){
   var offer=pool.slice(0,2);
   var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Tap a pack to open it</h2><div class="choicegrid">';
   for(i=0;i<offer.length;i++){ var s=offer[i], owned=ownedInSet(s), foils=foilsInSet(s);
-    h+='<div class="pk-slot"><button class="pack" data-choose="'+s+'" aria-label="Open '+s+' booster — '+PACK_SIZE+' cards, costs 1 token" style="--accent:'+SET_COLOR[s]+'">'+
+    h+='<div class="pk-slot"><button class="pack" data-choose="'+s+'" aria-label="Open '+s+' booster: '+PACK_SIZE+' cards, costs 1 token" style="--accent:'+SET_COLOR[s]+'">'+
        '<div class="crimp"></div>'+
        '<div class="part">'+
          '<div class="pname">'+s+'</div>'+
@@ -922,18 +922,18 @@ function tokenFlow(){
 }
 function renderCollection(){
   var totalOwned=Object.keys(S.coll).length, t=S.tokens;
-  var op='<button class="openpack'+(t<1?' zero':'')+'" data-openpack aria-label="'+(t<1?'No Pack Tokens — a new one arrives tomorrow':'Open a pack ('+t+' token'+(t===1?'':'s')+' left)')+'">'
+  var op='<button class="openpack'+(t<1?' zero':'')+'" data-openpack aria-label="'+(t<1?'No Pack Tokens. A new one arrives tomorrow':'Open a pack ('+t+' token'+(t===1?'':'s')+' left)')+'">'
     +'<span class="opct">✦ '+t+'</span><span class="oplb">'+(t<1?'+1 tomorrow':'Open a pack')+'</span></button>';
-  var sc=totalOwned>0?'<button class="scrollbtn" data-scroll aria-label="Scroll Mode — browse your collection one random card at a time"><span class="sci">↕</span>Scroll Mode</button>':'';
+  var sc=totalOwned>0?'<button class="scrollbtn" data-scroll aria-label="Scroll Mode: browse your collection one random card at a time"><span class="sci">↕</span>Scroll Mode</button>':'';
   var h='<div class="view"><div class="chead"><div class="chl"><div class="vhead">Your Binder</div>'+
     '<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day)'+(S.sparks?' · ✧ '+S.sparks+'/100':'')+' · tap a card to read it</div></div>'+
     '<div class="chead-actions">'+sc+op+'</div></div>';
   var msg=MSG,msgN=MSGN; MSG=null;
-  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b> — hit the gold <b>✦ Open a pack</b> button to rip your first booster: we deal two packs, you keep one.</div>';
-  else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — the gold button awaits.</div>';
-  else if(msg==="notokens") h+='<div class="banner"><b>No Pack Tokens left.</b> A fresh one arrives tomorrow — duplicates you pull also drip ✧ sparks toward free tokens (100 ✧ = 1 token).</div>';
+  if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b>. Hit the gold <b>✦ Open a pack</b> button to rip your first booster: we deal two packs, you keep one.</div>';
+  else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added. The gold button awaits.</div>';
+  else if(msg==="notokens") h+='<div class="banner"><b>No Pack Tokens left.</b> A fresh one arrives tomorrow. Duplicates you pull also drip ✧ sparks toward free tokens (100 ✧ = 1 token).</div>';
   else if(msg==="sparks") h+='<div class="banner"><b>✧ 100 sparks!</b> Your duplicates just melted into <b>+'+msgN+' Pack Token'+(msgN>1?'s':'')+'</b> ('+S.sparks+'/100 toward the next).</div>';
-  else if(msg==="firstbinder") h+='<div class="banner"><b>This is your binder.</b> Every card you own lives here — tap any card to read it and flip for the full story. Open more packs anytime with the gold button, and come back tomorrow for a fresh token. First goal: <b>complete a set</b> (18 cards).</div>';
+  else if(msg==="firstbinder") h+='<div class="banner"><b>This is your binder.</b> Every card you own lives here. Tap any card to read it and flip for the full story. Open more packs anytime with the gold button, and come back tomorrow for a fresh token. First goal: <b>complete a set</b> (18 cards).</div>';
   var activeSeries=SET_SERIES[activeSet], i, s;
   h+='<div class="seriestabs">';
   for(i=0;i<SERIES.length;i++){ var sr=SERIES[i], srSets=setsOf(sr), srOwned=0;
@@ -1012,16 +1012,16 @@ function runOnboarding(){
       '<div class="ob-kicker">Welcome to Micro Discovery Gacha</div>'+
       '<h2 class="ob-h">Collect how the world works.</h2>'+
       '<div class="ob-card">'+faceHTML(c,false)+'</div>'+
-      '<div class="ob-hint">Swipe the card left &amp; right to read it — each swipe turns to a new page.</div>'+
+      '<div class="ob-hint">Swipe the card left &amp; right to read it. Each swipe turns to a new page.</div>'+
       '<button class="done" data-goto="2">Next</button>'+
     '</div>'+
     '<div class="ob-step" data-step="2" hidden>'+
       '<div class="ob-kicker">How the game works</div>'+
       '<h2 class="ob-h">Open packs. Fill your binder.</h2>'+
       '<ul class="ob-list">'+
-        '<li><b>✦ Pack Tokens</b> — you have three. A fresh one arrives every day.</li>'+
-        '<li><b>Boosters</b> — spend a token, we deal two packs, you keep one (5 cards).</li>'+
-        '<li><b>Level up</b> — pull a card you already own and it goes a level deeper.</li>'+
+        '<li><b>✦ Pack Tokens</b>: you have three. A fresh one arrives every day.</li>'+
+        '<li><b>Boosters</b>: spend a token, we deal two packs, you keep one (5 cards).</li>'+
+        '<li><b>Level up</b>: pull a card you already own and it goes a level deeper.</li>'+
       '</ul>'+
       '<button class="done" id="ob-start">Open my first pack →</button>'+
       '<button class="ob-skip" id="ob-skip">Skip intro</button>'+
@@ -1136,11 +1136,11 @@ function armButton(btn, label, confirmLabel, onConfirm){
   });
   dangerBtns.push(btn);
 }
-armButton(document.getElementById('dbg-unlock'),'Unlock All Cards','Tap again to confirm — unlock all '+CARDS.length,function(){
+armButton(document.getElementById('dbg-unlock'),'Unlock All Cards','Tap again to confirm: unlock all '+CARDS.length,function(){
   CARDS.forEach(function(c){ if(!S.coll[c.id]) S.coll[c.id]={n:1,foil:false}; });
   save(); renderCollection();
 });
-armButton(document.getElementById('dbg-reset'),'Reset','Tap again to confirm — wipe everything',function(){
+armButton(document.getElementById('dbg-reset'),'Reset','Tap again to confirm: wipe everything',function(){
   try{ localStorage.removeItem(SKEY); }catch(e){}
   MSG=null; MSGN=0; activeSet=SETS[0];
   load(); initEconomy(); renderCollection(); runOnboarding();
