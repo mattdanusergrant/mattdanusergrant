@@ -109,46 +109,31 @@ a{color:inherit;text-decoration:none}
   background:color-mix(in srgb,var(--gold) 12%,transparent);font-family:var(--body);font-size:15.5px;color:var(--ink-soft)}
 .banner b{color:var(--ink);font-weight:600}
 
-/* booster packs — card-grade, tap to flip, rip open from the back */
-.pack{aspect-ratio:3/4.5;perspective:1400px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;--accent:var(--gold);
-  transition:transform .18s ease}
-.pack:hover{transform:translateY(-5px)}
-.pack:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:14px}
-.pflip{position:relative;width:100%;height:100%;transition:transform .62s cubic-bezier(.2,.72,.2,1);transform-style:preserve-3d}
-.pack.flipped .pflip{transform:rotateY(180deg)}
-@media(prefers-reduced-motion:reduce){.pflip{transition:none}}
-.pack:not(.flipped) .pback{pointer-events:none}.pack.flipped .pfront{pointer-events:none}
-.pface{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;overflow:hidden;
-  display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line2));
+/* booster packs — one tappable face, all info on it, tap to open */
+.pack{aspect-ratio:3/4.5;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;--accent:var(--gold);
+  display:flex;flex-direction:column;overflow:hidden;text-align:left;border-radius:14px;padding:0;
+  border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line2));
   background:linear-gradient(165deg,color-mix(in srgb,var(--accent) 26%,var(--plate)),color-mix(in srgb,var(--accent) 8%,var(--bg2)) 55%,var(--bg2));
-  box-shadow:0 24px 48px -20px rgba(0,0,0,.65),var(--shadow),inset 0 1px 0 rgba(255,255,255,.07);text-align:left}
-/* faces sit on separate 3D planes (0.6px apart) — coplanar faces z-fight in WebKit and bleed through each other */
-.pfront{transform:translateZ(.6px)}
-.pback{transform:rotateY(180deg) translateZ(.6px)}
-.pface::before{content:"";position:absolute;inset:0;border-radius:14px;padding:1.4px;pointer-events:none;z-index:3;
+  box-shadow:0 24px 48px -20px rgba(0,0,0,.65),var(--shadow),inset 0 1px 0 rgba(255,255,255,.07);transition:transform .18s ease}
+.pack:hover{transform:translateY(-5px)}
+.pack:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.pack::before{content:"";position:absolute;inset:0;border-radius:14px;padding:1.4px;pointer-events:none;z-index:3;
   background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 96%,transparent),color-mix(in srgb,var(--gold) 42%,transparent) 30%,color-mix(in srgb,var(--accent) 18%,transparent) 48%,color-mix(in srgb,var(--accent) 22%,transparent) 56%,color-mix(in srgb,var(--accent) 70%,transparent));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
-.pface::after{content:"";position:absolute;inset:0;border-radius:14px;pointer-events:none;z-index:2;
+.pack::after{content:"";position:absolute;inset:0;border-radius:14px;pointer-events:none;z-index:2;
   background:linear-gradient(118deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.03) 22%,rgba(255,255,255,0) 34%),radial-gradient(95% 48% at 18% -8%,rgba(255,255,255,.10),transparent 70%)}
 .crimp{flex:none;height:13px;z-index:1;border-bottom:1px solid color-mix(in srgb,var(--accent) 45%,var(--line2));
   background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--accent) 62%,var(--bg2)) 0 3px,color-mix(in srgb,var(--accent) 20%,var(--bg2)) 3px 7px)}
 .crimp.b{border-bottom:0;border-top:1px solid color-mix(in srgb,var(--accent) 45%,var(--line2))}
-.part{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:10px 11px}
-.part::after{content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(158deg,color-mix(in srgb,var(--accent) 30%,transparent),color-mix(in srgb,var(--accent) 8%,transparent) 38%,transparent 55%),
-  linear-gradient(transparent 40%,color-mix(in srgb,var(--bg2) 90%,transparent))}
-.pname{position:relative;z-index:1;font-family:var(--display);font-weight:600;font-size:clamp(15px,2.4vw,21px);line-height:1.06;color:var(--ink);text-wrap:balance}
-.plabel{position:relative;z-index:1;font-family:var(--label);font-weight:700;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);opacity:.85;margin-top:5px}
-.pbody{flex:1;min-height:0;display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:10px 11px}
-.psetname{font-family:var(--label);font-weight:700;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
-.pblurb{margin:0;font-family:var(--body);font-size:12.5px;line-height:1.38;color:var(--ink-soft);
-  overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
-.pstats{margin-top:auto;font-family:var(--label);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.pk-slot{display:flex;flex-direction:column;gap:10px;min-width:0}
-.rip{width:100%;font-family:var(--label);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:10.5px;color:var(--bg);
-  background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:9px 4px;cursor:pointer}
-.rip:hover,.rip:focus-visible{filter:brightness(1.07)}
-@media(max-width:460px){.pblurb{-webkit-line-clamp:3;font-size:11.5px}.pbody{gap:6px}}
+.part{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;padding:11px 12px 12px}
+.pname{font-family:var(--display);font-weight:600;font-size:clamp(15px,4.4vw,21px);line-height:1.05;color:var(--ink);text-wrap:balance}
+.plabel{font-family:var(--label);font-weight:700;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-top:5px}
+.part-art{flex:1;min-height:24px;margin:10px 0;border-radius:9px;overflow:hidden;position:relative;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line2))}
+.pblurb{flex:none;margin:0;font-family:var(--body);font-size:12.5px;line-height:1.34;color:var(--ink-soft);
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pstats{flex:none;margin-top:8px;font-family:var(--label);font-weight:700;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pk-slot{min-width:0}
+@media(max-width:460px){.pblurb{font-size:11px;-webkit-line-clamp:2}.part{padding:10px}}
 
 /* token → booster choice */
 .pk-choice{padding:8px 4px}
@@ -913,30 +898,26 @@ function flipCard(cardEl, dir){
 }
 
 /* spending a token = deal 3 random boosters, keep 1 */
-/* a fun random pair of rip-labels, [left,right] */
-var RIP_PAIRS=[['Rip This','Rip That'],['Rip Left','Rip Right'],['This One','That One'],['Rip Here','Rip There'],
-  ['Crack This','Crack That'],['Tear This','Tear That'],['Yoink This','Yoink That'],['Rip It','Rip It'],
-  ['Pick Me','No, Me!'],['Open This','Open That'],['Send It','Send It'],['Gimme This','Gimme That'],['Rip ‹','Rip ›']];
 function tokenFlow(){
   if(S.tokens<1) return;
   var pool=SETS.slice(),i,j,tmp;
   for(i=pool.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));tmp=pool[i];pool[i]=pool[j];pool[j]=tmp;}
   var offer=pool.slice(0,2);
-  var rip=RIP_PAIRS[Math.floor(Math.random()*RIP_PAIRS.length)];
-  var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Two packs — keep one</h2><div class="choicegrid">';
+  var h='<div class="pk-choice"><div class="kicker">Pack Token</div><h2>Tap a pack to open it</h2><div class="choicegrid">';
   for(i=0;i<offer.length;i++){ var s=offer[i], owned=ownedInSet(s), foils=foilsInSet(s);
-    h+='<div class="pk-slot"><div class="pack" tabindex="0" role="button" aria-label="'+s+' booster — tap to flip" style="--accent:'+SET_COLOR[s]+'"><div class="pflip">'+
-       '<div class="pface pfront"><div class="crimp"></div>'+
-         '<div class="part">'+motif(SET_MOTIF[s],SET_COLOR[s])+'<div class="pname">'+s+'</div><div class="plabel">Booster · '+PACK_SIZE+' cards</div></div>'+
-       '<div class="crimp b"></div></div>'+
-       '<div class="pface pback"><div class="crimp"></div>'+
-         '<div class="pbody"><div class="psetname">'+s+'</div><p class="pblurb">'+SET_BLURB[s]+'</p>'+
-           '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div></div>'+
-       '<div class="crimp b"></div></div>'+
-    '</div></div>'+
-    '<button class="rip" data-choose="'+s+'">'+rip[i]+'</button></div>';
+    h+='<div class="pk-slot"><button class="pack" data-choose="'+s+'" aria-label="Open '+s+' booster — '+PACK_SIZE+' cards, costs 1 token" style="--accent:'+SET_COLOR[s]+'">'+
+       '<div class="crimp"></div>'+
+       '<div class="part">'+
+         '<div class="pname">'+s+'</div>'+
+         '<div class="plabel">Booster · '+PACK_SIZE+' cards</div>'+
+         '<div class="part-art">'+motif(SET_MOTIF[s],SET_COLOR[s])+'</div>'+
+         '<p class="pblurb">'+SET_BLURB[s]+'</p>'+
+         '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div>'+
+       '</div>'+
+       '<div class="crimp b"></div>'+
+    '</button></div>';
   }
-  h+='</div><div class="pr-hint">tap a pack to inspect · costs 1 token · you have '+S.tokens+'</div></div>';
+  h+='</div><div class="pr-hint">costs 1 token · you have '+S.tokens+'</div></div>';
   openOverlay(h);
 }
 function renderCollection(){
@@ -1110,7 +1091,6 @@ view.addEventListener('click',function(e){
 view.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ var mn=e.target.closest('.mini[data-id]'); if(mn){ e.preventDefault(); showCardModal(mn.getAttribute('data-id')); } } });
 sheet.addEventListener('click',function(e){ if(e.target.closest('a')) return;
   var ch=e.target.closest('[data-choose]'); if(ch){ S.tokens=Math.max(0,S.tokens-1); save(); packFlow(ch.getAttribute('data-choose')); return; }
-  var pk=e.target.closest('.pack'); if(pk){ pk.classList.toggle('flipped'); return; }
   var card=e.target.closest('.card'); if(card){ if(card._noclick){ card._noclick=false; return; }
     var r=card.getBoundingClientRect(); flipCard(card,(e.clientX-r.left)>r.width/2?1:-1); } });
 /* horizontal swipe pages the card (vertical swipes pass through to the feed) */
@@ -1120,8 +1100,6 @@ sheet.addEventListener('touchend',function(e){ var card=_sc; _sc=null; if(!card|
   var t=e.changedTouches[0], dx=t.clientX-_sx, dy=t.clientY-_sy;
   if(Math.abs(dx)>38 && Math.abs(dx)>Math.abs(dy)*1.3){ card._noclick=true; flipCard(card,dx>0?1:-1); } },{passive:true});
 sheet.addEventListener('keydown',function(e){
-  var pk=e.target.closest&&e.target.closest('.pack');
-  if(pk&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); pk.classList.toggle('flipped'); return; }
   var card=e.target.closest&&e.target.closest('.card');
   if(card&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); flipCard(card,e.key==='ArrowRight'?1:-1); } });
 
