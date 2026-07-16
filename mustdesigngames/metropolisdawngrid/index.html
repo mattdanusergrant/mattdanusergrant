@@ -2540,9 +2540,14 @@
     var c0=Math.max(1,CC-half), c1=Math.min(cols-2,CC+half), c, placed=0, maxOff=1;
     var prof=regionProfile(WOX,WOY);
     var canGoods=!!prof.has.ore&&!!prof.has.stone;                     // only regions with BOTH inputs run the Ore+Stone→Goods chain
-    // goods regions diversify (homes/shops/factories); a trade-dependent region is an EXTRACTION town —
-    // fewer homes (less service burden), no factories, its Works sell the specialty resource abroad.
+    function extractableCount(resId){var n=0;for(var dr=-26;dr<=26;dr++)for(var dc=-26;dc<=26;dc++){var cc=CC+dc,rr=CR+dr;if(!inB(cc,rr))continue;var eg=grid[idx(cc,rr)];if(eg.t==='empty'&&!noBuild(eg.terr)&&extractorOutput(cc,rr,eg)===resId)n++;}return n;}
+    // goods regions diversify (homes/shops/factories); a trade-dependent region is an EXTRACTION town whose Works
+    // sell the specialty abroad. At these levels a home is a net DRAIN (service outgrows its tax), so SIZE the town
+    // to the export surplus the land can host — a thin-resource region becomes a small town, not a slow bankruptcy.
     var want={res:Math.round(TARGET*(canGoods?0.50:0.40)),com:Math.max(1,Math.round(TARGET*0.16)),fac:canGoods?Math.max(1,Math.round(TARGET*0.24)):0};
+    if(!canGoods){var worksEst=Math.min(31,extractableCount(prof.near)+(prof.med?extractableCount(prof.med):0));   // ≈ the Works the specialty terrain will actually host
+      want.res=Math.max(2,Math.min(want.res,Math.round(worksEst*1.1)));      // ~1.1 homes per extraction Works keeps services funded
+      want.com=Math.max(1,Math.min(want.com,Math.round(worksEst*0.5)));}
     var cnt={res:0,com:0,ind:0,fac:0};
     function quotasFull(){return cnt.res>=want.res&&cnt.com>=want.com&&cnt.fac>=want.fac;}
     function pick(){                                                   // the block lays homes/shops/(factories); ALL Works are sourced onto resource terrain below
@@ -2607,7 +2612,7 @@
     if(tier>=TIER_UNLOCK.transit){
       var trips=0,roadN=0;
       for(var ti=0;ti<grid.length;ti++){var tg=grid[ti];if(!tg)continue;if(tg.t==='road')roadN++;else if(tg.lvl&&TRIPW[tg.t])trips+=TRIPW[tg.t]*tg.lvl;}
-      var gap=Math.max(0,trips*1.7-roadN*0.6);                        // ×1.7: buildings grow past lvl 3 as the city charters tiers — size ahead of it
+      var gap=Math.max(0,trips*0.8-roadN*0.6);                        // ×0.8: cover ~80% of demand → a busy-but-flowing ~20% residual in dense cities, not a sterile 0%
       var nStops=Math.min(28,Math.ceil(gap/TRANSIT_CAP)), stopsMade=0;
       for(var to=1;to<=maxOff+3&&stopsMade<nStops;to++)for(var tss=0;tss<2&&stopsMade<nStops;tss++){
         var tr=CR+(tss?-1:1)*to;if(tr<1||tr>rows-2)continue;
