@@ -1137,7 +1137,8 @@ function armButton(btn, label, confirmLabel, onConfirm){
   dangerBtns.push(btn);
 }
 armButton(document.getElementById('dbg-unlock'),'Unlock All Cards','Tap again to confirm: unlock all '+CARDS.length,function(){
-  CARDS.forEach(function(c){ if(!S.coll[c.id]) S.coll[c.id]={n:1,foil:false}; });
+  CARDS.forEach(function(c){ var max=cardPageList(c,1).maxContent, rec=S.coll[c.id]||{n:0,foil:false};
+    rec.n=Math.max(rec.n,max); S.coll[c.id]=rec; }); /* max level = every page unlocked */
   save(); renderCollection();
 });
 armButton(document.getElementById('dbg-reset'),'Reset','Tap again to confirm: wipe everything',function(){
