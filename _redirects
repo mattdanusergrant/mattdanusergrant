@@ -26,5 +26,6 @@
 /makersdeserveglory/*    /microdiscoverygacha/:splat  301
 /microdiscoveryguide/*   /microdiscoverygacha/:splat  301
 
-# Case study moved under /case-studies/
-/mustdesigngames/metropolisdawngrid/case-study/*  /case-studies/metropolisdawngrid/:splat  301
+# Case study moved under /case-studies/ with a title-based slug
+/mustdesigngames/metropolisdawngrid/case-study/*  /case-studies/cozy-toy-to-commercial-flagship.html  301
+/case-studies/metropolisdawngrid/*                /case-studies/cozy-toy-to-commercial-flagship.html  301
