@@ -77,7 +77,9 @@ a{color:inherit;text-decoration:none}
   display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line2));
   background:linear-gradient(165deg,color-mix(in srgb,var(--accent) 26%,var(--plate)),color-mix(in srgb,var(--accent) 8%,var(--bg2)) 55%,var(--bg2));
   box-shadow:0 24px 48px -20px rgba(0,0,0,.65),var(--shadow),inset 0 1px 0 rgba(255,255,255,.07);text-align:left}
-.pback{transform:rotateY(180deg)}
+/* faces sit on separate 3D planes (0.6px apart) — coplanar faces z-fight in WebKit and bleed through each other */
+.pfront{transform:translateZ(.6px)}
+.pback{transform:rotateY(180deg) translateZ(.6px)}
 .pface::before{content:"";position:absolute;inset:0;border-radius:14px;padding:1.4px;pointer-events:none;z-index:3;
   background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 96%,transparent),color-mix(in srgb,var(--gold) 42%,transparent) 30%,color-mix(in srgb,var(--accent) 18%,transparent) 48%,color-mix(in srgb,var(--accent) 22%,transparent) 56%,color-mix(in srgb,var(--accent) 70%,transparent));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
@@ -230,7 +232,8 @@ a{color:inherit;text-decoration:none}
 .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:20px;overflow:hidden;
   display:flex;flex-direction:column;background:linear-gradient(168deg,var(--plate),var(--bg2));border:1px solid var(--line2);
   box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.05)}
-.back{transform:rotateY(180deg)}
+.front{transform:translateZ(.6px)}
+.back{transform:rotateY(180deg) translateZ(.6px)}
 .face::before{content:"";position:absolute;inset:0;border-radius:20px;padding:1.3px;pointer-events:none;z-index:3;
   background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 92%,transparent),color-mix(in srgb,var(--gold) 30%,transparent) 30%,transparent 48%,transparent 56%,color-mix(in srgb,var(--accent) 55%,transparent));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
