@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Micro Discovery Gacha · collect how the world works</title>
-<meta name="description" content="A no-ads collectible card game about how the world works. Open a booster pack every day, pull cards from sets like Hawaii, Time, and Cosmos, chase foils, and fill your binder." />
+<meta name="description" content="A no-ads collectible card game about how the world works. Open a booster pack every day, pull cards from sets like Makers of Hawaii, Time, and Cosmos, chase foils, and fill your binder." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#0d1413" />
 <meta property="og:type" content="website" />
@@ -157,6 +157,12 @@ a{color:inherit;text-decoration:none}
 .seriestab .srct{font-weight:600;font-size:9px;letter-spacing:.08em;opacity:.75;text-transform:none}
 .seriestab:hover{color:var(--ink);border-color:var(--gold)}
 .seriestab.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+/* mobile: a clean, uniform 2-col grid instead of a ragged wrap; drop " Series" so labels fit one line */
+@media(max-width:600px){
+  .seriestabs{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .seriestab{padding:11px 13px;font-size:12.5px;justify-content:center}
+  .seriestab .ssw{display:none}
+}
 .settabs{display:flex;gap:8px;overflow-x:auto;padding:12px 0 6px;-webkit-overflow-scrolling:touch}
 .settab{white-space:nowrap;font-family:var(--label);font-weight:600;letter-spacing:.02em;font-size:11.5px;color:var(--muted);
   background:none;border:1px solid var(--line2);border-radius:999px;padding:8px 13px;cursor:pointer;transition:.18s}
@@ -1623,19 +1629,21 @@ var CARDS = [
 
 /* ===== series > sets ===== */
 var SERIES=["Makers","Science","Technology","Nature","Cosmos","History"];
-var SET_SERIES={"Hawaii":"Makers","Thailand":"Makers",
+var SET_SERIES={"Makers of Hawaii":"Makers","Makers of Thailand":"Makers",
   "Time":"Science","Materials":"Science",
   "Signals":"Technology","Navigation":"Technology",
   "Life":"Nature","Earth":"Nature",
   "Cosmos":"Cosmos",
   "Civilization":"History"};
-var SETS=["Hawaii","Thailand","Time","Navigation","Materials","Signals","Cosmos","Life","Earth","Civilization"];
+var SETS=["Makers of Hawaii","Makers of Thailand","Time","Navigation","Materials","Signals","Cosmos","Life","Earth","Civilization"];
 function setsOf(sr){ return SETS.filter(function(s){return SET_SERIES[s]===sr;}); }
-var SET_COLOR={"Hawaii":"#c9a24b","Thailand":"#b0563f","Time":"#2f8f9d","Navigation":"#5b8fb0","Materials":"#b07d3f","Signals":"#8f7bc0","Cosmos":"#7b86c9","Life":"#7d9b5b","Earth":"#6f7f86","Civilization":"#b0894a"};
-var SET_MOTIF={"Hawaii":"wave","Thailand":"strings","Time":"scroll","Navigation":"grid","Materials":"grain","Signals":"pulse","Cosmos":"orbit","Life":"pulse","Earth":"facet","Civilization":"strings"};
+/* short label for the booster title (the Series eyebrow already says "Makers") so it never wraps */
+function setShort(s){ return s.replace(/^Makers of /,''); }
+var SET_COLOR={"Makers of Hawaii":"#c9a24b","Makers of Thailand":"#b0563f","Time":"#2f8f9d","Navigation":"#5b8fb0","Materials":"#b07d3f","Signals":"#8f7bc0","Cosmos":"#7b86c9","Life":"#7d9b5b","Earth":"#6f7f86","Civilization":"#b0894a"};
+var SET_MOTIF={"Makers of Hawaii":"wave","Makers of Thailand":"strings","Time":"scroll","Navigation":"grid","Materials":"grain","Signals":"pulse","Cosmos":"orbit","Life":"pulse","Earth":"facet","Civilization":"strings"};
 var SET_BLURB={
-  "Hawaii":"Real island makers, and the crafts they keep alive.",
-  "Thailand":"Real Thai makers: silk, celadon, and looms in the hills.",
+  "Makers of Hawaii":"Real island makers, and the crafts they keep alive.",
+  "Makers of Thailand":"Real Thai makers: silk, celadon, and looms in the hills.",
   "Time":"How humans learned to slice a day into perfect pieces.",
   "Navigation":"Finding your way, from stars to satellites.",
   "Materials":"The stuff everything is made of, and why it holds.",
@@ -1646,12 +1654,12 @@ var SET_BLURB={
   "Civilization":"The inventions that let strangers build things together."
 };
 var CAT_SET={
-  "Hawaiian gold":"Hawaii","Hawaiian jewelry":"Hawaii","Black coral":"Hawaii","Shell lei":"Hawaii",
-  "Koa wood":"Hawaii","Koa rings":"Hawaii","Koa jewelry":"Hawaii","Sunrise shells":"Hawaii",
-  "ʻUkulele":"Hawaii","Surfboards":"Hawaii",
-  "Thai silk":"Thailand","Celadon":"Thailand","Karen weaving":"Thailand",
-  "Natural dye":"Thailand","Mulberry paper":"Thailand","Studio ceramics":"Thailand",
-  "Bamboo craft":"Thailand","Bronzeware":"Thailand","Benjarong":"Thailand","Royal crafts":"Thailand",
+  "Hawaiian gold":"Makers of Hawaii","Hawaiian jewelry":"Makers of Hawaii","Black coral":"Makers of Hawaii","Shell lei":"Makers of Hawaii",
+  "Koa wood":"Makers of Hawaii","Koa rings":"Makers of Hawaii","Koa jewelry":"Makers of Hawaii","Sunrise shells":"Makers of Hawaii",
+  "ʻUkulele":"Makers of Hawaii","Surfboards":"Makers of Hawaii",
+  "Thai silk":"Makers of Thailand","Celadon":"Makers of Thailand","Karen weaving":"Makers of Thailand",
+  "Natural dye":"Makers of Thailand","Mulberry paper":"Makers of Thailand","Studio ceramics":"Makers of Thailand",
+  "Bamboo craft":"Makers of Thailand","Bronzeware":"Makers of Thailand","Benjarong":"Makers of Thailand","Royal crafts":"Makers of Thailand",
   "Time":"Time","Navigation":"Navigation","Materials":"Materials",
   "Computing":"Signals","Physics":"Signals","Energy":"Signals",
   "Astronomy":"Cosmos","Space":"Cosmos","Life":"Life","Medicine":"Life",
@@ -1802,7 +1810,7 @@ function tokenFlow(){
        '<div class="part">'+
          '<div class="plabel">Booster · '+PACK_SIZE+' cards</div>'+
          '<div class="pseries"><span>'+SET_SERIES[s]+' Series</span></div>'+
-         '<div class="pname">'+s+'</div>'+
+         '<div class="pname">'+setShort(s)+'</div>'+
          '<p class="pblurb">'+SET_BLURB[s]+'</p>'+
          '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div>'+
        '</div>'+
@@ -1830,7 +1838,7 @@ function renderCollection(){
   h+='<div class="seriestabs">';
   for(i=0;i<SERIES.length;i++){ var sr=SERIES[i], srSets=setsOf(sr), srOwned=0;
     for(var j=0;j<srSets.length;j++) srOwned+=ownedInSet(srSets[j]);
-    h+='<button class="seriestab'+(sr===activeSeries?' on':'')+'" data-series="'+sr+'">'+sr+' Series <span class="srct">'+srSets.length+' set'+(srSets.length===1?'':'s')+' · '+srOwned+' cards</span></button>';
+    h+='<button class="seriestab'+(sr===activeSeries?' on':'')+'" data-series="'+sr+'"><span class="srcn">'+sr+'<span class="ssw"> Series</span></span> <span class="srct">'+srSets.length+' set'+(srSets.length===1?'':'s')+' · '+srOwned+' card'+(srOwned===1?'':'s')+'</span></button>';
   }
   h+='</div><div class="settabs">';
   var srList=setsOf(activeSeries);
