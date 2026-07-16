@@ -129,7 +129,7 @@
         <div class="row" style="margin-top:8px">
           <button class="btn small" id="borderBtn">Wall border</button>
           <button class="btn small" id="clearBtn">Clear</button>
-          <button class="btn small" id="randomBtn">🎲 Surprise me</button>
+          <button class="btn small" id="randomBtn">🎲 RNG room</button>
         </div>
         <div class="row" style="margin-top:8px">
           <label>Template <select id="tmplSel"></select></label>
@@ -159,7 +159,7 @@
   </div>
 
   <div class="foot">
-    Left-click / drag to paint · right-click to erase · Fireball melts ice &amp; lights braziers · Levitate carries crates ·
+    Left-click / drag to paint · right-click to erase · 🎲 RNG rolls a random room and a solver verifies it's beatable · Fireball melts ice &amp; lights braziers · Levitate carries crates ·
     Summon conjures a block (fills 🕳️ pits, weighs plates) · Scry freezes 👻 hazards · 🟫🟧🟨 ledges rise 1–3 steps (jump climbs one step).<br>
     <b>Mage Dungeon Generator</b> — design, play &amp; share mage dungeons.
   </div>
@@ -299,31 +299,63 @@ function share(){ const err=validateAll(); const code=encodeLevel();
 function validateRoom(g){ let s=0,go=0; for(const r of g)for(const ch of r){if(ch==='@')s++;if(ch==='M'||ch==='X')go++;}
   if(s!==1)return 'needs exactly one 🧙 Start'; if(go<1)return 'needs a goal (💎/🔼)'; return null; }
 function validateAll(){ for(let k=0;k<rooms.length;k++){const e=validateRoom(rooms[k]); if(e)return 'Room '+(k+1)+' '+e;} return null; }
-function checkRoom(g){
-  const h=g.length,w=g[0].length; let start=null,goals=[],brz=0,plt=0,keys=0,locks=0,doors=0;
+// ---- SOLVER: simulates the game rules as iterative reachability ----
+// walls/braziers block; ledges climbable 1 step up (any drop); ice/pits/crates clear once the
+// mage can stand next to them (Fireball / Summon / Levitate); every plate is pressable from an
+// adjacent cell (Summon conjures a block onto it); doors open when all braziers lit AND all
+// plates pressed; reaching any key opens all locks.
+function solveRoom(g){
+  const h=g.length,w=g[0].length;
+  let start=null; const goals=[],brzs=[],plts=[],keysA=[],doorsA=[],locksA=[];
   for(let i=0;i<h;i++)for(let j=0;j<w;j++){const ch=g[i][j];
     if(ch==='@')start=[i,j]; else if(ch==='M'||ch==='X')goals.push([i,j]);
-    else if(ch==='b')brz++; else if(ch==='p')plt++; else if(ch==='K')keys++;
-    else if(ch==='L')locks++; else if(ch==='D')doors++; }
-  if(!start)return{ok:false,why:'no 🧙 Start'}; if(!goals.length)return{ok:false,why:'no goal'};
-  // optimistic flood; ledges are traversable via jumps, so only walls/braziers block
-  const seen=Array.from({length:h},()=>Array(w).fill(false)); const st=[start]; seen[start[0]][start[1]]=true;
-  const pass=(i,j)=>{const ch=g[i][j]; return ch!=='#'&&ch!=='b';};
-  while(st.length){const [i,j]=st.pop(); for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){const ni=i+di,nj=j+dj;
-    if(ni<0||nj<0||ni>=h||nj>=w||seen[ni][nj])continue; if(pass(ni,nj)){seen[ni][nj]=true;st.push([ni,nj]);}}}
-  if(!goals.some(([i,j])=>seen[i][j]))return{ok:false,why:'the goal is walled off from the start'};
-  const warn=[];
-  if(doors&&!brz&&!plt)warn.push('a 🚪 door can never open (no braziers or plates)');
-  if(locks&&!keys)warn.push('a 🔒 lock has no 🗝️ key');
+    else if(ch==='b')brzs.push([i,j]); else if(ch==='p')plts.push([i,j]);
+    else if(ch==='K')keysA.push([i,j]); else if(ch==='D')doorsA.push([i,j]); else if(ch==='L')locksA.push([i,j]); }
+  if(!start)return{solvable:false,why:'no 🧙 Start'};
+  if(!goals.length)return{solvable:false,why:'no goal (💎/🔼)'};
+  const hgt=(i,j)=>({'1':1,'2':2,'3':3}[g[i][j]]||0);
+  const K=(i,j)=>i+','+j; const removed=new Set();
+  let doorsOpen=doorsA.length===0, locksOpen=locksA.length===0, seen=null, changed=true;
+  while(changed){ changed=false;
+    seen=Array.from({length:h},()=>Array(w).fill(false));
+    const q=[start]; seen[start[0]][start[1]]=true;
+    const passable=(i,j)=>{const ch=g[i][j];
+      if(ch==='#'||ch==='b')return false;
+      if(ch==='D')return doorsOpen; if(ch==='L')return locksOpen;
+      if(ch==='I'||ch==='o'||ch==='c')return removed.has(K(i,j));
+      return true; };
+    while(q.length){const [i,j]=q.pop();
+      for(const[di,dj]of[[1,0],[-1,0],[0,1],[0,-1]]){const ni=i+di,nj=j+dj;
+        if(ni<0||nj<0||ni>=h||nj>=w||seen[ni][nj])continue;
+        if(!passable(ni,nj))continue;
+        if(hgt(ni,nj)-hgt(i,j)>1)continue;                    // jump clears exactly 1 step
+        seen[ni][nj]=true; q.push([ni,nj]); } }
+    const adjReach=(i,j)=>[[1,0],[-1,0],[0,1],[0,-1]].some(([di,dj])=>{const ni=i+di,nj=j+dj;
+      return ni>=0&&nj>=0&&ni<h&&nj<w&&seen[ni][nj];});
+    for(let i=0;i<h;i++)for(let j=0;j<w;j++){const ch=g[i][j];
+      if((ch==='I'||ch==='o'||ch==='c')&&!removed.has(K(i,j))&&adjReach(i,j)){removed.add(K(i,j));changed=true;} }
+    if(!locksOpen&&keysA.some(([i,j])=>seen[i][j])){locksOpen=true;changed=true;}
+    if(!doorsOpen){ const allB=brzs.every(([i,j])=>adjReach(i,j));
+      const allP=plts.every(([i,j])=>seen[i][j]||adjReach(i,j));
+      if(allB&&allP){doorsOpen=true;changed=true;} }
+  }
+  const ok=goals.some(([i,j])=>seen[i][j]);
+  return{solvable:ok, why: ok?null:
+    (doorsA.length&&!doorsOpen?'a 🚪 door can never open (a brazier or plate is out of reach)':
+     locksA.length&&!locksOpen?'a 🔒 lock can never open (no reachable 🗝️ key)':
+     'the goal is unreachable (walls or too-high ledges — the mage jumps 1 step at a time)')};
+}
+function checkRoom(g){
+  const res=solveRoom(g);
+  if(!res.solvable)return{ok:false,why:res.why};
+  const warn=[]; let keys=0,locks=0;
+  for(const r of g)for(const ch of r){if(ch==='K')keys++;if(ch==='L')locks++;}
   if(keys&&!locks)warn.push('a 🗝️ key opens nothing');
-  // height sanity: a 3-ledge with no 1/2 neighbours anywhere suggests an unclimbable wall (jump = 1 step)
-  let has3=false,has12=false; for(const r of g)for(const ch of r){if(ch==='3')has3=true;if(ch==='1'||ch==='2')has12=true;}
-  if(has3&&!has12)warn.push('🟨 3-high ledges exist but no 🟫/🟧 steps — the mage jumps only 1 step at a time');
   return{ok:true,warn};
 }
 function checkAll(){ for(let k=0;k<rooms.length;k++){const r=checkRoom(rooms[k]);
-  if(!r.ok)return{ok:false,msg:'✗ Room '+(k+1)+': '+r.why}; if(r.warn&&r.warn.length)return{ok:true,msg:'✓ Room '+(k+1)+' reachable — ⚠ '+r.warn.join('; ')}; }
-  return{ok:true,msg:'✓ Looks solvable — every room\'s goal is reachable. (Heuristic: play-test to be sure.)'}; }
+  if(!r.ok)return{ok:false,msg:'✗ Room '+(k+1)+': '+r.why}; if(r.warn&&r.warn.length)return{ok:true,msg:'✓ Room '+(k+1)+' solvable — ⚠ '+r.warn.join('; ')}; }
+  return{ok:true,msg:'✓ Solvable — a solver simulated doors, keys, ice, pits, plates and ledge jumps in every room.'}; }
 
 // ===================== LIBRARY =====================
 const LKEY='wpgg_lib', UKEY='wpgg_up';
@@ -373,12 +405,49 @@ const TEMPLATES={
 };
 function buildTmplSel(){ const s=$('tmplSel'); s.innerHTML=''; Object.keys(TEMPLATES).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);}); }
 function loadTemplate(name){ const t=TEMPLATES[name]; if(!t)return; rooms=[t.map(s=>s.split(''))]; roomIdx=0; syncFromRoom(); buildTabs(); buildGridUI(); }
-function surprise(){ const w=W,h=H; let g=blank(w,h); let seed=(w*7+h*13+rooms.length*3);
-  const rr=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
-  const cell=()=>[1+((rr()*(h-2))|0),1+((rr()*(w-2))|0)];
-  const put=(ch,n)=>{for(let k=0;k<n;k++){const[i,j]=cell();if(g[i][j]==='.')g[i][j]=ch;}};
-  put('b',2);put('p',1);put('c',1);put('I',Math.max(2,(w*h/14)|0));put('H',1);put('o',2);put('1',3);put('2',2);
-  g[1][1]='@'; g[h-2][w-2]='M'; rooms[roomIdx]=g; syncFromRoom(); buildGridUI(); $('msg').textContent='Surprise room — tweak, Check, then Play.'; }
+// ---- RNG room: constrained-random generation, then solver-verified; retries until solvable ----
+function rngRoom(){
+  const R=Math.random, ri=(a,b)=>a+Math.floor(R()*(b-a+1));
+  for(let attempt=1;attempt<=80;attempt++){
+    const w=ri(9,14), h=ri(8,12), g=blank(w,h);
+    // start + goal in opposite corners
+    const corners=[[1,1],[1,w-2],[h-2,1],[h-2,w-2]];
+    const si=ri(0,3); const [sy,sx]=corners[si], [gy,gx]=corners[(si+2)%4];
+    // a gate line between them: runed doors, locks, or none
+    const gateType=['door','door','lock','ledge','none'][ri(0,4)];
+    if(gateType==='door'||gateType==='lock'){
+      const ch=gateType==='door'?'D':'L';
+      if(R()<0.5){ const gr=ri(3,h-4); for(let j=1;j<w-1;j++)g[gr][j]=ch; }
+      else { const gc=ri(3,w-4); for(let i=1;i<h-1;i++)g[i][gc]=ch; }
+    } else if(gateType==='ledge'){ // a 2-high rampart with a 1-step somewhere = a climb gate
+      const gr=ri(3,h-4); for(let j=1;j<w-1;j++)g[gr][j]='2'; g[gr][ri(1,w-2)]='1';
+    }
+    // wall stubs for shape
+    for(let s=0,n=ri(2,5);s<n;s++){ const i=ri(2,h-3),j=ri(2,w-3),len=ri(2,4),vert=R()<0.5;
+      for(let k=0;k<len;k++){ const ii=vert?i+k:i, jj=vert?j:j+k; if(ii<h-1&&jj<w-1&&g[ii][jj]==='.')g[ii][jj]='#'; } }
+    // a decorative staircase clump
+    if(R()<0.6){ const i=ri(2,h-3),j=ri(2,w-4);
+      if(g[i][j]==='.'&&g[i][j+1]==='.'){ g[i][j]='1'; g[i][j+1]='2'; if(R()<0.4&&j+2<w-1&&g[i][j+2]==='.')g[i][j+2]='3'; } }
+    // sprinkle obstacles + toys
+    const sprinkle=(ch,n)=>{ for(let k=0;k<n;k++){ const i=ri(1,h-2),j=ri(1,w-2);
+      if(g[i][j]==='.'&&!(i===sy&&j===sx)&&!(i===gy&&j===gx))g[i][j]=ch; } };
+    sprinkle('I',ri(1,4)); sprinkle('o',ri(0,3)); sprinkle('H',ri(0,2)); sprinkle('c',ri(0,2));
+    if(gateType==='door'){ sprinkle('b',ri(1,2)); if(R()<0.5)sprinkle('p',1); }
+    if(gateType==='lock') sprinkle('K',1);
+    g[sy][sx]='@'; g[gy][gx]='M';
+    // required enablers must have landed
+    const flat=g.flat();
+    if(gateType==='lock'&&!flat.includes('K'))continue;
+    if(gateType==='door'&&!flat.includes('b')&&!flat.includes('p'))continue;
+    if(!solveRoom(g).solvable)continue;                 // the guarantee: solver-verified
+    rooms[roomIdx]=g; syncFromRoom(); buildGridUI();
+    const gateName={door:'runed-door gate',lock:'lock-and-key gate',ledge:'rampart climb',none:'open maze'}[gateType];
+    $('msg').textContent='🎲 Rolled a '+w+'×'+h+' '+gateName+' room — solver-verified solvable (attempt '+attempt+'). Tweak it or ▶ Play.';
+    return true;
+  }
+  $('msg').textContent='⚠ The dice failed 80 times in a row (astonishing). Roll again.';
+  return false;
+}
 
 // ===================== TEXTURES (procedural, N64-chunky) =====================
 function makeTex(px,draw){ const cv=document.createElement('canvas'); cv.width=cv.height=px; const c=cv.getContext('2d');
@@ -674,7 +743,7 @@ function init(){ buildPalette(); buildTmplSel();
   $('saveBtn').onclick=saveCurrent; $('libBtn').onclick=()=>openLib('mine');
   $('libMineTab').onclick=()=>openLib('mine'); $('libFeatTab').onclick=()=>openLib('feat'); $('libClose').onclick=()=>$('libPanel').classList.remove('show');
   $('backBtn').onclick=backToEditor; $('mEdit').onclick=backToEditor;
-  $('resizeBtn').onclick=()=>resize(+$('wIn').value,+$('hIn').value); $('clearBtn').onclick=clearInterior; $('borderBtn').onclick=sealBorder; $('randomBtn').onclick=surprise;
+  $('resizeBtn').onclick=()=>resize(+$('wIn').value,+$('hIn').value); $('clearBtn').onclick=clearInterior; $('borderBtn').onclick=sealBorder; $('randomBtn').onclick=rngRoom;
   $('loadTmplBtn').onclick=()=>loadTemplate($('tmplSel').value);
   $('importBtn').onclick=()=>{try{loadCode($('codeIn').value);$('msg').textContent='Imported.';}catch(e){$('msg').textContent='⚠ Could not read that code.';}};
   $('exportBtn').onclick=()=>{$('codeIn').value=encodeLevel();$('msg').textContent='Dungeon code shown below.';};
@@ -693,6 +762,7 @@ window.DBG={ play:playLevel, back:backToEditor, encode:encodeLevel, loadCode, ch
   aimAt:(x,z)=>{camYaw=Math.atan2(-(x-player.pos.x),-(z-player.pos.z));}, faceAt:(x,z)=>{heading=Math.atan2(x-player.pos.x,z-player.pos.z);},
   tp:(x,z)=>{player.pos.set(x,0,z);player.py=groundHeight(x,z);player.vy=0;wiz.position.set(x,player.py,z);},
   cellWorld:(j,i)=>cellWorld(j,i), fireball:castFireball, levitate, summon, scry,
+  solve:(rowsArr)=>solveRoom(rowsArr.map(s=>s.split(''))), rng:rngRoom, grid:()=>rooms[roomIdx].map(r=>r.join('')),
   saveCurrentSilent:(name)=>{const a=lib();a.unshift({name,code:encodeLevel(),rooms:rooms.length});saveLib(a);return a.length;},
 };
 })();
