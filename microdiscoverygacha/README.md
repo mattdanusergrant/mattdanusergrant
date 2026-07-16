@@ -29,14 +29,20 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
 ## Series → Sets
 
 The collection is organized in two levels: a **Series** groups **Sets**, and every card belongs to
-one set (derived from its `cat` via the `CAT_SET` map in the script). **Target: 20 cards per set**
-(the binder shows progress toward 20; sets fill over time).
+one set (derived from its `cat` via the `CAT_SET` map in the script). **A set holds exactly 18
+cards** — in the binder it displays as **two 3×3 pages side by side**, like an open card binder.
 
 - **Makers Series** — sets full of real makers, each card linking back to them with a verified
   **Visit ↗** button: `Makers of Hawaii` · `Makers of Thailand` (Makers of Japan, Italy, etc. can
   follow).
-- **Encyclopedia Series** — how-the-world-works concept sets: `Time` · `Navigation` · `Materials` ·
-  `Signals` · `Cosmos` · `Life & Medicine` · `Earth & Elements` · `Civilization`.
+- **Science Series** — `Time` · `Materials`
+- **Technology Series** — `Navigation` · `Signals`
+- **Nature Series** — `Life & Medicine` · `Earth & Elements`
+- **Cosmos Series** — `Cosmos`
+- **History Series** — `Civilization`
+
+Series names are single words; new sets launch into an existing series (or open a new one) over
+time, like TCG blocks.
 
 ## Growing the collection
 
@@ -59,6 +65,6 @@ Rules: accurate facts, a real live `url` for maker cards, keep it bite-sized. If
 `cat`, map it in `CAT_SET` so the card lands in a set. Motifs:
 `scroll · wave · grain · facet · strings · orbit · grid · pulse`.
 
-**Filling every set to 20** (currently: Makers of Hawaii 17, Makers of Thailand 10, Materials 8, Time 7, Signals 7,
-Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 75) is an ongoing
+**Filling every set to 18** (currently: Makers of Hawaii 17, Makers of Thailand 10, Materials 8, Time 7, Signals 7,
+Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 75; Hawaii is 1 short of full) is an ongoing
 content effort, done in batches via the `/add-card` skill.
