@@ -9,3 +9,9 @@ NEWSLETTER.md
 Thumbs.db
 node_modules/
 *.log
+
+# Generated QA font bundle (regenerate with tools/qa-fonts/refresh.sh) — kept
+# out of the deployed static site; large and reproducible.
+tools/qa-fonts/fonts.css
+tools/qa-fonts/fonts.local.css
+tools/qa-fonts/*.woff2
