@@ -468,7 +468,7 @@
   var WATER_OUT=1000, WATER_PER_TILE=180;          // each tower's output; each coast/lake tile feeding a road adds some
   var WATERUSE={res:1,com:1,ind:2,fac:2,tower:3,bank:1,port:1};   // water drawn per building level
   var waterGen=0, waterUse=0, waterOK=true;        // city-wide water budget
-  var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0, elecExportRate=0;
+  var matStock=0, goodsStock=0, matHealthy=true, goodsHealthy=true, CAPRES=99999, exportRate=0, elecExportRate=0, rawExportRate=0;
   var railConn, connectedRailCount=0, railToWorld=false, trains=[], railList=[];
   var congestion=0, trafficDemand=0, trafficCap=0;
   var auraMap=null, obsBuilt=false;                    // landmark growth aura + Observatory city-wide lift
@@ -491,6 +491,7 @@
   //      🎛️ Tuning panel (Settings, shown with ?dev), a `mdg-tune` localStorage blob, or ?tune={"k":v}. ----
   var TUNE_DEFAULTS={
     exportPrice:4, intRate:0.01, serviceRate:0.06, serviceFree:400, resYield:2.4,   // core money economy
+    rawPrice:2,                                                                      // raw-resource export price (< finished Goods)
     tradeRate:2, tradeSpend:0.30,                                                    // two-way trade barter
     elecTier:6, elecGoodsIn:1.2, elecOilIn:0.8, elecPrice:3,                         // Electronics recipe
     adjBonus:0.20, adjCap:5                                                          // Factory adjacency
@@ -552,6 +553,7 @@
     if(POL.ft)upkeep+=popTarget*0.010;                           // fare-free transit subsidy
     income+=exportRate*EXPORT_PRICE*(1+PORT_BOOST*ports)*tradePremium*exportMult*EVMOD.exportM; // Ports + Green Logistics tech lift export revenue; a trade partner short on Goods pays a premium
     income+=elecExportRate*EXPORT_PRICE*TUNE.elecPrice*(1+PORT_BOOST*ports)*exportMult*EVMOD.exportM; // Electronics are an advanced export — elecPrice× the price of raw Goods
+    income+=rawExportRate*TUNE.rawPrice*(1+PORT_BOOST*ports)*exportMult*EVMOD.exportM;                // raw surplus sells cheap — the specialisation income for a region that can't make Goods
     if(banks&&treasury>0)income+=banks*Math.min(treasury*BANK_RATE,BANK_CAP);   // Banks earn interest on your reserves
     var interest=treasury<0?(-treasury*INT_RATE):0;
     serviceCost=Math.round(Math.max(0,popTarget-SERVICE_FREE)*SERVICE_RATE);    // public services grow with population — the money sink
@@ -1158,6 +1160,7 @@
   function elecUnlocked(){return maxMS>=ELEC_TIER;}           // advanced factory recipe gate
   var matWanted=false, terrBonus=0, matStock=0;              // matStock kept as ore+stone (legacy blocker compat)
   var tradePremium=1, tradeGoodsIn=0, tradeImp={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};
+  var rawExport={lumber:0,grain:0,ore:0,stone:0,oil:0,fish:0};   // raw units shipped out per tick (specialisation income)
   var econ={res:{},goods:{make:0,imp:0,sell:0,need:0,exp:0,stock:0,facs:0,shops:0},elec:{make:0,exp:0,use:0,stock:0}};
   var elecStock=0;                                          // advanced good: Electronics (Goods + Oil → Electronics, the nested chain)
   var throughputNow=0, throughputAvg=0, throughputBest=0;   // ENDGAME SCORE: sustained finished-output/tick (Goods + 3×Electronics), +best-ever
@@ -1227,6 +1230,11 @@
     if(railToWorld){var xcap=Math.min(connectedRailCount*1.2,60);
       if(goodsStock>0.01){exportRate=Math.min(goodsStock,xcap);goodsStock-=exportRate;}
       if(elecStock>0.01){var ecap=Math.min(connectedRailCount*0.6,30);elecExportRate=Math.min(elecStock,ecap);elecStock-=elecExportRate;}}
+    // ---- raw-resource export: sell SURPLUS raw for income (specialisation — how a region with no Goods still earns) ----
+    rawExportRate=0;RESIDS.forEach(function(id){rawExport[id]=0;});
+    if(railToWorld){var rcap=Math.min(connectedRailCount*1.5,50);
+      for(var rx=0;rx<RESIDS.length&&rawExportRate<rcap;rx++){var rid=RESIDS[rx],surp=STOCK[rid]-8;   // keep a small working buffer, ship the rest
+        if(surp>0.01){var rex=Math.min(surp,rcap-rawExportRate);STOCK[rid]-=rex;rawExport[rid]=rex;rawExportRate+=rex;}}}
     RESIDS.forEach(function(id){STOCK[id]=Math.max(0,Math.min(STOCK[id],CAPRES));});
     goodsStock=Math.max(0,Math.min(goodsStock,CAPRES));elecStock=Math.max(0,Math.min(elecStock,CAPRES));
     // ---- flags + legacy compat ----
@@ -1240,7 +1248,7 @@
     throughputAvg=throughputAvg*0.9+throughputNow*0.1;
     if(throughputAvg>throughputBest)throughputBest=throughputAvg;
     // ---- flow snapshot for the Economy panel ----
-    RESIDS.forEach(function(id){var e=econ.res[id];e.make=make[id];e.imp=tradeImp[id];e.need=need[id];e.stock=STOCK[id];e.sup=SUP[id];});
+    RESIDS.forEach(function(id){var e=econ.res[id];e.make=make[id];e.imp=tradeImp[id];e.need=need[id];e.stock=STOCK[id];e.sup=SUP[id];e.rawExp=rawExport[id];});
     econ.res.grain.food=foodAvail;                                       // grain panel notes fish-as-food
     econ.goods.facs=facs;econ.goods.shops=shops;econ.goods.make=goodsMade;econ.goods.imp=tradeGoodsIn;econ.goods.sell=sold;econ.goods.need=needG;econ.goods.exp=exportRate;econ.goods.stock=goodsStock;econ.goods.sup=SUP.goods;econ.goods.tradeOut=tradeGoodsOut;econ.goods.elecUse=elecMade*TUNE.elecGoodsIn;
     econ.elec.make=elecMade;econ.elec.exp=elecExportRate;econ.elec.stock=elecStock;econ.elec.cap=elecCap;
@@ -1290,7 +1298,7 @@
   var popEl=document.getElementById('pop'),popShown=0,popTarget=0;
   function updatePop(){var p=0;for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;
     if(g.t==='res')p+=g.lvl*g.lvl*45;else if(g.t==='tower')p+=g.lvl*g.lvl*135;else if(g.t==='com')p+=g.lvl*22;else if(g.t==='ind')p+=g.lvl*16;else if(g.t==='fac')p+=g.lvl*18;else if(g.t==='park')p+=8;else if(LMARK[g.t])p+=60;}
-    p+=Math.round(exportRate*35+elecExportRate*95);       // trade income from rail exports sustains extra population (Electronics worth more)
+    p+=Math.round(exportRate*35+elecExportRate*95+rawExportRate*10);   // rail exports (finished + raw) sustain extra population
     popTarget=p;}
   var reslowEl=document.getElementById('reslow'),reswStat=document.getElementById('rstat-res'),goodsEl=document.getElementById('goods'),expEl=document.getElementById('exp');
   var pwrEl=document.getElementById('pwr'),pwrStat=document.getElementById('pwrstat'),watEl=document.getElementById('wat'),watStat=document.getElementById('watstat');
@@ -1651,7 +1659,7 @@
       ioModal.hidden=false;return;
     } else if(kind==='tune'){
       // live balance tuning — Save writes a compact mdg-tune override and reloads; Defaults clears it
-      var META=[['sec','Economy'],['exportPrice','Export price (₵/Goods)',1],['intRate','Debt interest / tick',0.005],['serviceRate','Service cost / extra pop',0.01],['serviceFree','Free-service population',50],['resYield','Extractor yield / level',0.2],
+      var META=[['sec','Economy'],['exportPrice','Export price (₵/Goods)',1],['intRate','Debt interest / tick',0.005],['serviceRate','Service cost / extra pop',0.01],['serviceFree','Free-service population',50],['resYield','Extractor yield / level',0.2],['rawPrice','Raw export price (₵/unit)',0.5],
         ['sec','Trade (two-way barter)'],['tradeRate','Raw units bought per Goods',0.5],['tradeSpend','Goods reserve spent / tick',0.05],
         ['sec','Electronics'],['elecTier','Unlock tier (0–8)',1],['elecGoodsIn','Goods in / Electronics',0.1],['elecOilIn','Oil in / Electronics',0.1],['elecPrice','Electronics price × Goods',0.5],
         ['sec','Adjacency'],['adjBonus','Factory bonus / adjacent Works',0.05],['adjCap','Max adjacent Works counted',1]];
@@ -1691,16 +1699,17 @@
       // one block per raw resource in play: extractors produce + rail imports → consumers draw
       var resBlocks='';
       RESIDS.forEach(function(id){var r=e.res[id],m=RESMETA[id];
-        if(r.make<0.05&&r.need<0.05&&r.stock<0.5&&r.imp<0.05)return;    // skip resources not in play
+        if(r.make<0.05&&r.need<0.05&&r.stock<0.5&&r.imp<0.05&&(r.rawExp||0)<0.05)return;    // skip resources not in play
         var rows=flowRow('Extractors produce',r.make,true);
         if(r.imp>0.05)rows+=flowRow('Imported by rail',r.imp,true);
         if(r.need>0.05)rows+=flowRow(m.use,r.need,false);
-        var net=r.make+r.imp-r.need;
+        if(r.rawExp>0.05)rows+=flowRow('Exported raw',r.rawExp,false);
+        var net=r.make+r.imp-r.need-(r.rawExp||0);
         var absent=!prof.has[id]&&(id==='ore'||id==='fish'?!prof.has[id]:prof.absent.indexOf(id)>=0);
         var hint=r.sup<0.999
           ?(r.make<0.05?('No '+RESNAME[id]+' extracted — '+(prof.has[id]?'site a Works on '+m.src:'not on this map, <b>import it by rail</b>')+'.')
             :'Short on '+RESNAME[id]+' — add a Works on '+m.src+', or trade for it.')
-          :(net>3?RESNAME[id]+' surplus — a partner short on it will trade for yours.':'');
+          :(r.rawExp>0.05?RESNAME[id]+' surplus sells abroad for income.':(net>3?RESNAME[id]+' surplus — a partner short on it will trade for yours.':''));
         var supLbl=r.sup<0.999?' · ⚠ '+Math.round(r.sup*100)+'%':'';
         resBlocks+=block(RESICON[id]+' '+RESNAME[id],m.c,rows,net,'stock '+Math.round(r.stock)+supLbl,hint);
       });
@@ -2531,24 +2540,25 @@
     var c0=Math.max(1,CC-half), c1=Math.min(cols-2,CC+half), c, placed=0, maxOff=1;
     var prof=regionProfile(WOX,WOY);
     var canGoods=!!prof.has.ore&&!!prof.has.stone;                     // only regions with BOTH inputs run the Ore+Stone→Goods chain
-    var want={res:Math.round(TARGET*(canGoods?0.46:0.62)),com:Math.max(1,Math.round(TARGET*0.16)),ind:Math.max(1,Math.round(TARGET*0.16)),fac:canGoods?Math.max(1,Math.round(TARGET*0.22)):0};
+    // goods regions diversify (homes/shops/factories); a trade-dependent region is an EXTRACTION town —
+    // fewer homes (less service burden), no factories, its Works sell the specialty resource abroad.
+    var want={res:Math.round(TARGET*(canGoods?0.50:0.40)),com:Math.max(1,Math.round(TARGET*0.16)),fac:canGoods?Math.max(1,Math.round(TARGET*0.24)):0};
     var cnt={res:0,com:0,ind:0,fac:0};
-    function pick(c,r){
-      var g=grid[idx(c,r)],res=extractorOutput(c,r,g);
-      if(res&&cnt.ind<want.ind)return 'ind';                          // a productive cell → a Works (never waste one on housing)
-      var order=canGoods?['res','fac','com']:['res','com'],best='res',gap=-1;   // else fill the biggest remaining need
+    function quotasFull(){return cnt.res>=want.res&&cnt.com>=want.com&&cnt.fac>=want.fac;}
+    function pick(){                                                   // the block lays homes/shops/(factories); ALL Works are sourced onto resource terrain below
+      var order=canGoods?['res','fac','com']:['res','com'],best=null,gap=0;
       for(var i=0;i<order.length;i++){var k=order[i],gp=want[k]-cnt[k];if(gp>gap){gap=gp;best=k;}}
-      return best;
+      return best;                                                     // null once every quota is met → skip the cell
     }
     // On a horizontal freeway arm, set the streets BACK one row (buildings abut the freeway, streets
     // beyond) so no road runs alongside it; the city joins the freeway only at a few punched ramps.
     var hArm=(HWDIR==='W'||HWDIR==='E');                               // freeway runs E–W → set streets back off it
-    for(var off=1;off<Math.max(rows,cols)&&placed<TARGET;off++){
+    for(var off=1;off<Math.max(rows,cols)&&!quotasFull();off++){
       var street = hArm ? (off%2===0) : (off%2===1);
       for(var s=0;s<2;s++){var r=CR+(s?-1:1)*off; if(r<1||r>rows-2)continue;
         if(street){for(c=c0;c<=c1;c++)placeAt(c,r,'road',0);continue;}
-        for(c=c0;c<=c1&&placed<TARGET;c++){var g=grid[idx(c,r)];if(g.t!=='empty'||noBuild(g.terr))continue;
-          var t=pick(c,r);placeAt(c,r,t,3);cnt[t]++;placed++;if(off>maxOff)maxOff=off;}
+        for(c=c0;c<=c1&&!quotasFull();c++){var g=grid[idx(c,r)];if(g.t!=='empty'||noBuild(g.terr))continue;
+          var t=pick();if(!t)continue;placeAt(c,r,t,3);cnt[t]++;placed++;if(off>maxOff)maxOff=off;}
       }
     }
     if(hArm){                                                          // punch discrete perpendicular on/off-ramps through to the setback street
@@ -2576,9 +2586,10 @@
       for(var k=0;k<cands.length&&have<needUnits;k++){placeAt(cands[k][0],cands[k][1],'ind',3);have+=3*RES_YIELD;}
     }
     var facLv=cnt.fac*3;
-    if(canGoods){sourceResource('ore',facLv*1.5*1.15);sourceResource('stone',facLv*1.5*1.15);}   // feed the Factories (+ a little headroom)
-    sourceResource('grain',cnt.res*3*0.4+4);                                                       // feed the population
-    sourceResource('lumber',placed*3*0.2+4);                                                       // construction lumber
+    if(canGoods){sourceResource('ore',facLv*1.5*1.2);sourceResource('stone',facLv*1.5*1.2);}      // feed the Factories (+ a little headroom)
+    else{sourceResource(prof.near,220);if(prof.med)sourceResource(prof.med,90);}                   // extraction town: a big exportable surplus of the specialty
+    sourceResource('grain',cnt.res*3*0.4+6);                                                       // feed the population
+    sourceResource('lumber',(cnt.res+cnt.com)*3*0.2+6);                                            // construction lumber
     // ---- infrastructure: power + water sized to the ACTUAL placed buildings (incl. sourced Works) ----
     var cR=0,cC=0,cI=0,cF=0;for(var gi=0;gi<grid.length;gi++){var gg=grid[gi];if(!gg||!gg.lvl)continue;if(gg.t==='res')cR++;else if(gg.t==='com')cC++;else if(gg.t==='ind')cI++;else if(gg.t==='fac')cF++;}
     var ur=Math.min(rows-3,CR+maxOff+1);
@@ -2588,12 +2599,18 @@
     for(var pc=c0;pc<=c1&&made<nPow;pc+=4){if(plantFits(pc,ur)){layPlant(pc,ur);made++;}}   // enough 3×3 stations (step past the footprint + gap)
     if(!made)for(var pf=c0;pf<=c1;pf++){if(plantFits(pf,ur)){layPlant(pf,ur);made++;break;}}
     for(var wm=0,wc=c0+1;wc<=c1&&wm<nWat;wc+=4){if(placeAt(wc,ur+2>rows-2?ur:ur+2,'water',0))wm++;}   // enough water towers
-    for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail spur: a short line joining the corridor, so exports flow
+    for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail: a spur off the freeway EXTENDED into the city, so real export volume flows
       var hc=hi%cols,hr=(hi/cols)|0,hnn=nbs(hc,hr),done=false;
       for(var d=0;d<6;d++){var a=hnn[d][0],bq=hnn[d][1];
         if(!inB(a,bq)||grid[idx(a,bq)].t!=='empty'||noBuild(grid[idx(a,bq)].terr))continue;
         var far=nbs(a,bq).filter(function(n2){return inB(n2[0],n2[1])&&grid[idx(n2[0],n2[1])].t==='empty'&&!noBuild(grid[idx(n2[0],n2[1])].terr)&&!isHwy(n2[0],n2[1])&&!touchesHwy(n2[0],n2[1]);});
-        if(far.length){placeAt(a,bq,'rail',0);placeAt(far[0][0],far[0][1],'rail',0);done=true;break;}}
+        if(far.length){placeAt(a,bq,'rail',0);var rc=[far[0][0],far[0][1]];placeAt(rc[0],rc[1],'rail',0);   // spur established off the corridor
+          var maxLen=Math.min(16,half+3);                                                                    // …then run track deeper in so export capacity scales with the city
+          for(var rl=0;rl<maxLen;rl++){var rnn=nbs(rc[0],rc[1]),nxt=null;
+            for(var rk=0;rk<6;rk++){var na=rnn[rk][0],nb2=rnn[rk][1];var ng=inB(na,nb2)?grid[idx(na,nb2)]:null;
+              if(ng&&!ng.rail&&(ng.t==='empty'||ng.t==='road')&&!isHwy(na,nb2)&&!noBuild(ng.terr)){nxt=[na,nb2];break;}}
+            if(!nxt)break;placeAt(nxt[0],nxt[1],'rail',0);rc=nxt;}
+          done=true;break;}}
       if(done)break;}
   }
 
@@ -2672,7 +2689,7 @@
     tune:function(){return {live:TUNE,def:TUNE_DEFAULTS,rate:TRADE_RATE,elecTier:ELEC_TIER,resYield:RES_YIELD};},
     stats:function(){var cnt={};for(var i=0;i<grid.length;i++){var g=grid[i];if(g&&g.t&&g.t!=='empty'&&g.t!=='highway'){cnt[g.t]=(cnt[g.t]||0)+1;}}
       return {tier:maxMS,tierName:(MS[maxMS]?MS[maxMS].l:'Outpost'),pop:Math.round(popTarget),cash:Math.round(treasury),net:Math.round(netRate),insolvent:!!insolvent,service:Math.round(serviceCost),
-        tpAvg:+throughputAvg.toFixed(2),tpBest:+throughputBest.toFixed(2),goods:+goodsStock.toFixed(1),elec:+elecStock.toFixed(1),expGoods:+exportRate.toFixed(1),expElec:+elecExportRate.toFixed(1),
+        tpAvg:+throughputAvg.toFixed(2),tpBest:+throughputBest.toFixed(2),goods:+goodsStock.toFixed(1),elec:+elecStock.toFixed(1),expGoods:+exportRate.toFixed(1),expElec:+elecExportRate.toFixed(1),expRaw:+rawExportRate.toFixed(1),
         powerGen:powerGen,powerUse:powerUse,powerOK:!!powerOK,waterGen:waterGen,waterUse:waterUse,waterOK:!!waterOK,
         congestion:+congestion.toFixed(3),trafDemand:+trafficDemand.toFixed(1),trafCap:+trafficCap.toFixed(1),
         stock:{lumber:+STOCK.lumber.toFixed(1),grain:+STOCK.grain.toFixed(1),ore:+STOCK.ore.toFixed(1),stone:+STOCK.stone.toFixed(1),oil:+STOCK.oil.toFixed(1),fish:+STOCK.fish.toFixed(1)},
