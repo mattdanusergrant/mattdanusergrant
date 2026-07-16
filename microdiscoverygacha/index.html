@@ -58,6 +58,23 @@ a{color:inherit;text-decoration:none}
 @media(max-width:440px){.btn{padding:6px 9px;letter-spacing:.02em}.wordmark span.full{display:none}}
 
 .view{max-width:1040px;margin:0 auto;padding:22px clamp(14px,4vw,28px) 70px}
+.chead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px 18px;flex-wrap:wrap}
+.chl{min-width:0}
+.openpack{position:relative;flex:none;margin-top:8px;display:inline-flex;align-items:center;gap:9px;
+  font-family:var(--label);font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-size:12px;color:var(--bg);
+  background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:12px 18px;cursor:pointer;
+  box-shadow:0 16px 36px -14px color-mix(in srgb,var(--gold) 70%,#000)}
+.openpack .opct{display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 8px;border-radius:999px;
+  background:rgba(0,0,0,.2);font-size:11.5px;letter-spacing:.04em}
+.openpack::before{content:"";position:absolute;inset:-6px;border-radius:999px;border:2px solid color-mix(in srgb,var(--gold) 60%,transparent);
+  animation:fabring 2.6s ease-out infinite;pointer-events:none}
+@keyframes fabring{0%{transform:scale(.9);opacity:.9}70%{transform:scale(1.15);opacity:0}100%{transform:scale(1.15);opacity:0}}
+.openpack:hover,.openpack:focus-visible{filter:brightness(1.06)}
+.openpack:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.openpack.zero{color:var(--muted);background:var(--bg2);border-color:var(--line2);box-shadow:var(--shadow)}
+.openpack.zero::before{animation:none;opacity:0}
+.openpack.zero .opct{background:color-mix(in srgb,var(--ink) 10%,transparent)}
+@media(prefers-reduced-motion:reduce){.openpack::before{animation:none;opacity:0}}
 .vhead{font-family:var(--display);font-weight:500;font-size:clamp(27px,5.5vw,40px);letter-spacing:-.01em;margin:6px 0 0;text-wrap:balance}
 .vsub{color:var(--muted);font-family:var(--label);font-size:12.5px;letter-spacing:.02em;margin-top:8px;line-height:1.6}
 .banner{margin:18px 0 4px;padding:14px 16px;border-radius:12px;border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);
@@ -104,22 +121,6 @@ a{color:inherit;text-decoration:none}
   background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:9px 4px;cursor:pointer}
 .rip:hover,.rip:focus-visible{filter:brightness(1.07)}
 @media(max-width:460px){.pblurb{-webkit-line-clamp:3;font-size:11.5px}.pbody{gap:6px}}
-/* the pack button — small, floating, unmissable */
-.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;
-  display:flex;align-items:center;gap:9px;font-family:var(--label);font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-size:12px;
-  color:var(--bg);background:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:13px 18px;cursor:pointer;
-  box-shadow:0 16px 36px -12px rgba(0,0,0,.65)}
-.fab .fct{display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 8px;border-radius:999px;
-  background:rgba(0,0,0,.18);font-size:11.5px;letter-spacing:.04em}
-.fab::before{content:"";position:absolute;inset:-6px;border-radius:999px;border:2px solid color-mix(in srgb,var(--gold) 60%,transparent);
-  animation:fabring 2.6s ease-out infinite;pointer-events:none}
-@keyframes fabring{0%{transform:scale(.9);opacity:.9}70%{transform:scale(1.16);opacity:0}100%{transform:scale(1.16);opacity:0}}
-.fab:hover,.fab:focus-visible{filter:brightness(1.06)}
-.fab:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
-.fab.zero{color:var(--muted);background:var(--bg2);border-color:var(--line2);box-shadow:var(--shadow)}
-.fab.zero::before{animation:none;opacity:0}
-.fab.zero .fct{background:color-mix(in srgb,var(--ink) 10%,transparent)}
-@media(prefers-reduced-motion:reduce){.fab::before{animation:none;opacity:0}}
 
 /* token → booster choice */
 .pk-choice{padding:8px 4px}
@@ -263,15 +264,24 @@ a{color:inherit;text-decoration:none}
 .cardfoot{margin-top:auto;padding:14px 17px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .tap{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
 .tap .ic{font-size:14px;color:var(--accent)}
-.back .body{padding:16px 18px 6px;overflow:auto;flex:1;min-height:0}
-.back .name{font-family:var(--display);font-weight:500;font-size:clamp(19px,4.2vw,24px);line-height:1.06;letter-spacing:-.01em;margin:0 0 12px;color:var(--ink)}
-.prose{font-family:var(--body);font-size:15.5px;line-height:1.55;color:var(--ink-soft);margin:0}
-.points{margin:16px 0 0;padding:0;border-top:1px solid var(--line)}
-.points li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line)}
-.points li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:9px}
-.points li span{font-size:14px;line-height:1.45;color:var(--muted)}
-.connects{margin:15px 0 0;font-family:var(--label);font-size:12px;letter-spacing:.01em;color:var(--ink-soft);border-top:1px dashed var(--line2);padding-top:12px}
-.connects b{text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--accent);margin-right:9px;font-size:10px}
+/* back body scales via --bs so every depth level fits without scrolling (set by fitCard JS) */
+.back .body{--bs:1;padding:15px 17px 4px;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column}
+.back .name{font-family:var(--display);font-weight:500;font-size:calc(clamp(18px,4vw,23px)*var(--bs));line-height:1.06;letter-spacing:-.01em;margin:0 0 calc(11px*var(--bs));color:var(--ink)}
+.prose{font-family:var(--body);font-size:calc(15.5px*var(--bs));line-height:1.5;color:var(--ink-soft);margin:0}
+.points{margin:calc(13px*var(--bs)) 0 0;padding:0;border-top:1px solid var(--line)}
+.points li{list-style:none;display:grid;grid-template-columns:auto 1fr;gap:calc(11px*var(--bs));align-items:start;padding:calc(8px*var(--bs)) 0;border-bottom:1px solid var(--line)}
+.points li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:calc(8px*var(--bs))}
+.points li span{font-size:calc(13.8px*var(--bs));line-height:1.42;color:var(--muted)}
+.connects{margin:calc(13px*var(--bs)) 0 0;font-family:var(--label);font-size:calc(12px*var(--bs));letter-spacing:.01em;color:var(--ink-soft);border-top:1px dashed var(--line2);padding-top:calc(11px*var(--bs))}
+.connects b{text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--accent);margin-right:9px;font-size:calc(10px*var(--bs))}
+/* depth-level UI */
+.lvl{flex:none;display:flex;align-items:center;gap:9px;padding:9px 18px;border-top:1px solid var(--line)}
+.lvl .dots{letter-spacing:2px;font-size:10px;white-space:nowrap}
+.lvl .dots b{color:var(--accent);font-weight:400}
+.lvl .dots i{color:var(--line2);font-style:normal}
+.lvltxt{font-family:var(--label);font-weight:600;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lvchip{font-family:var(--label);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px;color:var(--accent);
+  border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);border-radius:999px;padding:3px 8px;background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .visit{padding:10px 18px 16px;flex:none}
 .visit a{display:inline-flex;align-items:center;gap:.5em;font-family:var(--label);font-weight:700;letter-spacing:.03em;font-size:12.5px;text-transform:uppercase;
   color:var(--bg);background:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:10px 17px}
@@ -287,7 +297,6 @@ a{color:inherit;text-decoration:none}
   </div>
 </div>
 <main id="view"></main>
-<button class="fab" id="fab" aria-label="Open a pack"></button>
 <button class="close" id="closeov" aria-label="Close">✕</button>
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
@@ -768,20 +777,33 @@ var view=document.getElementById('view'), overlay=document.getElementById('overl
 function miniHTML(c, o){
   o=o||{};
   if(o.locked) return '<div class="mini locked" aria-hidden="true"><span class="q">?</span></div>';
+  var meta=o.lvl?'Lv '+o.lvl+' · '+pad(c._n)+'/'+pad(c._of):c.set+' · '+pad(c._n)+'/'+pad(c._of);
   return '<div class="mini'+(o.foil?' foil':'')+'" data-id="'+c.id+'" tabindex="0" role="button" aria-label="'+c.title+'" style="--accent:'+c.accent+'">'+
     (o.isNew?'<span class="newbadge">New</span>':'')+(o.foil?'<span class="ministar">✦</span>':'')+
     '<div class="miniart">'+motif(c.motif,c.accent)+'</div>'+
-    '<div class="mininame">'+c.title+'</div><div class="mininum">'+c.set+' · '+pad(c._n)+'/'+pad(c._of)+'</div></div>';
+    '<div class="mininame">'+c.title+'</div><div class="mininum">'+meta+'</div></div>';
 }
-function faceHTML(c, foil){
+/* a card's depth level = copies owned (each dupe unlocks one more fact, then the thread) */
+function cardDepth(c, copies){
+  var F=(c.facts?c.facts.length:0), max=1+F+(c.connects?1:0);
+  copies=Math.max(1,copies||1);
+  var lvl=Math.min(copies,max);
+  return {lvl:lvl, max:max, facts:Math.min(lvl-1,F), connects:!!c.connects&&(lvl>=2+F)};
+}
+function faceHTML(c, foil, copies){
+  var d=cardDepth(c,copies!=null?copies:((S.coll[c.id]&&S.coll[c.id].n)||1));
+  var dots=''; for(var k=0;k<d.max;k++) dots+=k<d.lvl?'<b>●</b>':'<i>○</i>';
+  var lvtag='<span class="lvchip" title="Depth level">Lv '+d.lvl+'</span>';
   var top='<div class="cardtop"><span class="type">'+c.cat+'</span><span class="setmark"><span class="setname">'+c.set+'</span><span class="num">'+pad(c._n)+' / '+pad(c._of)+'</span></span></div>';
   var front='<div class="face front">'+top+'<div class="art">'+motif(c.motif,c.accent)+'</div>'+
     '<h2 class="name">'+c.title+'</h2><p class="flavor">'+c.hook+'</p>'+(c.where?'<div class="where">'+c.where+'</div>':'')+
-    '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div><span class="foiltag">✦ Foil</span></div></div>';
-  var points=''; if(c.facts&&c.facts.length){ points='<ul class="points">'; for(var i=0;i<c.facts.length;i++) points+='<li><span>'+c.facts[i]+'</span></li>'; points+='</ul>'; }
-  var connects=c.connects?'<div class="connects"><b>Connects to</b>'+c.connects+'</div>':'';
+    '<div class="cardfoot"><div class="tap"><span class="ic">⤺</span>Tap to flip</div>'+lvtag+'<span class="foiltag">✦ Foil</span></div></div>';
+  var points=''; if(d.facts>0){ points='<ul class="points">'; for(var i=0;i<d.facts;i++) points+='<li><span>'+c.facts[i]+'</span></li>'; points+='</ul>'; }
+  var connects=d.connects?'<div class="connects"><b>Connects to</b>'+c.connects+'</div>':'';
+  var lvline=d.lvl<d.max?'+1 copy goes deeper':'Fully studied';
+  var lvfoot='<div class="lvl"><span class="dots">'+dots+'</span><span class="lvltxt">Lv '+d.lvl+' · '+lvline+'</span></div>';
   var visit=c.url?'<div class="visit"><a href="'+c.url+'" target="_blank" rel="noopener noreferrer">'+(c.link||('Visit '+c.title))+' ↗</a></div>':'';
-  var back='<div class="face back">'+top+'<div class="body"><h3 class="name">'+c.title+'</h3><p class="prose">'+c.back+'</p>'+points+connects+'</div>'+visit+'</div>';
+  var back='<div class="face back">'+top+'<div class="body"><h3 class="name">'+c.title+'</h3><p class="prose">'+c.back+'</p>'+points+connects+'</div>'+lvfoot+visit+'</div>';
   return '<div class="card'+(foil?' foil':'')+'" tabindex="0" role="button" aria-label="'+c.title+' — tap to flip" style="--accent:'+c.accent+'"><div class="flipper">'+front+back+'</div></div>';
 }
 
@@ -808,9 +830,11 @@ function tokenFlow(){
   openOverlay(h);
 }
 function renderCollection(){
-  var h='<div class="view"><div class="vhead">Your Binder</div>';
   var totalOwned=Object.keys(S.coll).length, t=S.tokens;
-  h+='<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day)'+(S.sparks?' · ✧ '+S.sparks+'/100':'')+' · tap a card to read it</div>';
+  var op='<button class="openpack'+(t<1?' zero':'')+'" data-openpack aria-label="'+(t<1?'No Pack Tokens — a new one arrives tomorrow':'Open a pack ('+t+' token'+(t===1?'':'s')+' left)')+'">'
+    +'<span class="opct">✦ '+t+'</span><span class="oplb">'+(t<1?'+1 tomorrow':'Open a pack')+'</span></button>';
+  var h='<div class="view"><div class="chead"><div class="chl"><div class="vhead">Your Binder</div>'+
+    '<div class="vsub">'+totalOwned+' / '+CARDS.length+' cards · '+t+' Pack Token'+(t===1?'':'s')+' (+1 every day)'+(S.sparks?' · ✧ '+S.sparks+'/100':'')+' · tap a card to read it</div></div>'+op+'</div>';
   var msg=MSG,msgN=MSGN; MSG=null;
   if(msg==="welcome") h+='<div class="banner"><b>Welcome!</b> You start with <b>3 Pack Tokens</b> — hit the gold <b>✦ Open a pack</b> button to rip your first booster: we deal three packs, you keep one.</div>';
   else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — the gold button awaits.</div>';
@@ -836,22 +860,23 @@ function renderCollection(){
     h+='<div class="bpage">';
     for(i=p*9;i<p*9+9;i++){
       if(i<setCards.length){ var c=setCards[i], rec=S.coll[c.id];
-        h+=rec?miniHTML(c,{foil:rec.foil}):miniHTML(c,{locked:true});
+        h+=rec?miniHTML(c,{foil:rec.foil,lvl:cardDepth(c,rec.n).lvl}):miniHTML(c,{locked:true});
       } else h+='<div class="mini locked" aria-hidden="true"><span class="q">+</span></div>';
     }
     h+='<span class="bpno">Page '+(p+1)+'</span></div>';
   }
   h+='</div></div>'; view.innerHTML=h;
 }
-var fab=document.getElementById('fab');
-function updateFab(){ var t=S.tokens;
-  fab.classList.toggle('zero',t<1);
-  fab.innerHTML='<span class="fct">✦ '+t+'</span><span class="flb">'+(t<1?'+1 tomorrow':'Open a pack')+'</span>';
-  fab.setAttribute('aria-label',t<1?'No Pack Tokens — a new one arrives tomorrow':'Open a pack ('+t+' token'+(t===1?'':'s')+' left)');
+/* no scrolling on cards, ever: shrink each back's body until it fits its box */
+function fitCard(card){ var b=card.querySelector('.back .body'); if(!b) return;
+  var bs=1; b.style.setProperty('--bs',bs); var g=0;
+  while(b.scrollHeight>b.clientHeight+1 && bs>0.68 && g++<40){ bs-=0.03; b.style.setProperty('--bs',bs); }
 }
-function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); document.body.style.overflow='hidden'; sheet.scrollTop=0; }
+function fitCards(){ var cs=sheet.querySelectorAll('.card'),i; for(i=0;i<cs.length;i++) fitCard(cs[i]); }
+function openOverlay(html){ sheet.innerHTML=html; overlay.classList.add('on'); closeBtn.classList.add('on'); document.body.style.overflow='hidden'; sheet.scrollTop=0;
+  fitCards(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitCards); }
 function closeOverlay(){ overlay.classList.remove('on','reveal'); closeBtn.classList.remove('on'); sheet.innerHTML=''; document.body.style.overflow='';
-  renderCollection(); updateFab(); }
+  renderCollection(); }
 
 /* opening a pack = the 3 full cards in a close row; flick left-right, tap to flip */
 function packFlow(setName){
@@ -879,15 +904,11 @@ function showCardModal(id){ var c=cardById(id); if(!c) return; var foil=S.coll[i
 
 /* ===== events ===== */
 document.getElementById('home').addEventListener('click',function(){ renderCollection(); window.scrollTo(0,0); });
-fab.addEventListener('click',function(){
-  if(S.tokens<1){ MSG="notokens"; renderCollection(); window.scrollTo(0,0); return; }
-  tokenFlow();
-});
 closeBtn.addEventListener('click',closeOverlay);
 overlay.addEventListener('click',function(e){ if(e.target===overlay) closeOverlay(); });
 
 view.addEventListener('click',function(e){
-
+  var op=e.target.closest('[data-openpack]'); if(op){ if(S.tokens<1){ MSG="notokens"; renderCollection(); window.scrollTo(0,0); } else tokenFlow(); return; }
   var sr=e.target.closest('[data-series]'); if(sr){ activeSet=setsOf(sr.getAttribute('data-series'))[0]; renderCollection(); return; }
   var st=e.target.closest('[data-set]'); if(st){ activeSet=st.getAttribute('data-set'); renderCollection(); return; }
   var mn=e.target.closest('.mini[data-id]'); if(mn){ showCardModal(mn.getAttribute('data-id')); return; }
@@ -908,7 +929,7 @@ document.getElementById('theme').addEventListener('click',function(){
   try{localStorage.setItem('mdg-mag-theme',nxt);}catch(e){}
 });
 
-load(); initEconomy(); renderCollection(); updateFab();
+load(); initEconomy(); renderCollection();
 
 </script>
 </body>

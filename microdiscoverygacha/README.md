@@ -22,10 +22,17 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
   any unopened packs convert 1:1 into tokens.
 - **Sparks (dupe pity).** Every duplicate pulled melts into a **✧ spark = 1/100 Pack Token**;
   at 100 sparks a token is granted automatically (foil-upgrades on owned cards count too).
+- **Depth levels.** A duplicate also **levels the card up** — each extra copy reveals one more
+  fact on the back, and the final copy unlocks the "Connects to" thread. **Level = copies owned**,
+  capped at `1 + facts + (connects?1:0)`. The back shows filled dots + `Lv N`, the binder mini
+  shows the level, and the card fills in as you re-pull it (Lv 1 = the story alone).
+- **No scrolling on cards, ever.** Each card back auto-fits its box: a `--bs` scale on the back
+  body is stepped down (by `fitCard`) until the content fits without a scrollbar, at every level.
 - **The binder IS the landing page.** There are no separate views: you land on your collection
-  (series tabs → set tabs → the card grid), and a small floating gold **✦ Open a pack** button
-  (bottom-right, with your token count) is always in reach. Owned cards show their art, unowned
-  show a locked slot, foils get a holo star. Tap a card to read it and flip for the back.
+  (series tabs → set tabs → the card grid), with a gold **✦ Open a pack** button in the header
+  opposite the "Your Binder" title (token count included; wraps under the title on phones). Owned
+  cards show their art, unowned show a locked slot, foils get a holo star. Tap a card to read it
+  and flip for the back.
 - **Two themes** (dark / light), remembered; otherwise follows the device.
 
 ## Series → Sets
