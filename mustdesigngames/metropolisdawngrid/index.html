@@ -2553,13 +2553,17 @@
     // On a horizontal freeway arm, set the streets BACK one row (buildings abut the freeway, streets
     // beyond) so no road runs alongside it; the city joins the freeway only at a few punched ramps.
     var hArm=(HWDIR==='W'||HWDIR==='E');                               // freeway runs E–W → set streets back off it
-    for(var off=1;off<Math.max(rows,cols)&&!quotasFull();off++){
-      var street = hArm ? (off%2===0) : (off%2===1);
+    for(var off=1;off<Math.max(rows,cols)&&!quotasFull();off++){       // BUILDINGS: fill the quotas on building rows, outward from the centre
+      if(hArm?(off%2===0):(off%2===1))continue;                        // (street rows are laid separately below so the grid always exists)
       for(var s=0;s<2;s++){var r=CR+(s?-1:1)*off; if(r<1||r>rows-2)continue;
-        if(street){for(c=c0;c<=c1;c++)placeAt(c,r,'road',0);continue;}
         for(c=c0;c<=c1&&!quotasFull();c++){var g=grid[idx(c,r)];if(g.t!=='empty'||noBuild(g.terr))continue;
           var t=pick();if(!t)continue;placeAt(c,r,t,3);cnt[t]++;placed++;if(off>maxOff)maxOff=off;}
       }
+    }
+    for(var so=1;so<=maxOff+2;so++){                                   // STREETS: every street row across the built area — laid regardless of quotas, so roads ALWAYS reach the freeway
+      if(!(hArm?(so%2===0):(so%2===1)))continue;
+      for(var ss=0;ss<2;ss++){var srr=CR+(ss?-1:1)*so; if(srr<1||srr>rows-2)continue;
+        for(c=c0;c<=c1;c++)placeAt(c,srr,'road',0);}
     }
     if(hArm){                                                          // punch discrete perpendicular on/off-ramps through to the setback street
       for(var s2=-1;s2<=1;s2+=2){var fr=HWGR+s2, st=HWGR+2*s2;
@@ -2599,6 +2603,17 @@
     for(var pc=c0;pc<=c1&&made<nPow;pc+=4){if(plantFits(pc,ur)){layPlant(pc,ur);made++;}}   // enough 3×3 stations (step past the footprint + gap)
     if(!made)for(var pf=c0;pf<=c1;pf++){if(plantFits(pf,ur)){layPlant(pf,ur);made++;break;}}
     for(var wm=0,wc=c0+1;wc<=c1&&wm<nWat;wc+=4){if(placeAt(wc,ur+2>rows-2?ur:ur+2,'water',0))wm++;}   // enough water towers
+    // ---- transit: a dense city outruns its roads → provision stops so it doesn't gridlock (once Transit is unlocked) ----
+    if(tier>=TIER_UNLOCK.transit){
+      var trips=0,roadN=0;
+      for(var ti=0;ti<grid.length;ti++){var tg=grid[ti];if(!tg)continue;if(tg.t==='road')roadN++;else if(tg.lvl&&TRIPW[tg.t])trips+=TRIPW[tg.t]*tg.lvl;}
+      var gap=Math.max(0,trips*1.7-roadN*0.6);                        // ×1.7: buildings grow past lvl 3 as the city charters tiers — size ahead of it
+      var nStops=Math.min(28,Math.ceil(gap/TRANSIT_CAP)), stopsMade=0;
+      for(var to=1;to<=maxOff+3&&stopsMade<nStops;to++)for(var tss=0;tss<2&&stopsMade<nStops;tss++){
+        var tr=CR+(tss?-1:1)*to;if(tr<1||tr>rows-2)continue;
+        for(c=c0;c<=c1&&stopsMade<nStops;c++){var eg=grid[idx(c,tr)];if(eg&&eg.t==='empty'&&!eg.rail&&!noBuild(eg.terr)){placeAt(c,tr,'transit',1);stopsMade++;}}
+      }
+    }
     for(var hi=0;hi<grid.length;hi++){if(grid[hi].t!=='highway')continue;  // rail: a spur off the freeway EXTENDED into the city, so real export volume flows
       var hc=hi%cols,hr=(hi/cols)|0,hnn=nbs(hc,hr),done=false;
       for(var d=0;d<6;d++){var a=hnn[d][0],bq=hnn[d][1];
@@ -2683,6 +2698,7 @@
     recipe:function(c,r,v){var g=inB(c,r)?grid[idx(c,r)]:null;if(g&&g.t==='fac'){if(v!==undefined)g.recipe=v;return g.recipe||'goods';}return null;},
     facmult:function(c,r){return facAdjMult(c,r);},setMs:function(n){maxMS=n;MAXLVL=densCap();syncTech();},
     profileAt:function(lat,lon){var ox=Math.round(lon*137)+9973,oy=Math.round(lat*151)+7919;var p=regionProfile(ox,oy);return {near:p.near,med:p.med,far:p.far,has:p.has,canGoods:!!p.has.ore&&!!p.has.stone};},
+    road:function(){var tot=0,con=0,touch=0,transit=0;for(var i=0;i<grid.length;i++){var g=grid[i];if(!g)continue;if(g.t==='transit')transit++;if(g.t==='road'){tot++;if(connected&&connected[i])con++;if(touchesHwy(i%cols,(i/cols)|0))touch++;}}return {roads:tot,connected:con,touchHwy:touch,transit:transit,dir:HWDIR,gc:HWGC,gr:HWGR};},
     goods:function(v){if(v!==undefined)goodsStock=v;return goodsStock;},
     state:function(){return {ms:maxMS,cash:treasury,goods:goodsStock,elec:elecStock,tpBest:throughputBest,tpAvg:throughputAvg};},
     undo:function(){doUndo();},undoDepth:function(){return undoStack.length;},
