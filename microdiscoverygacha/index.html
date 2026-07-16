@@ -261,6 +261,25 @@ a{color:inherit;text-decoration:none}
 .sf-slot .card{width:min(88vw,360px);height:min(74dvh,600px)}
 @media(prefers-reduced-motion:reduce){.sf-slot{animation:none}}
 
+/* first-run onboarding */
+.overlay.intro .sheet{max-width:440px}
+.ob{display:flex;flex-direction:column;align-items:center;text-align:center}
+.ob-step{display:flex;flex-direction:column;align-items:center;gap:14px;animation:rise .45s ease both}
+.ob-step[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){.ob-step{animation:none}}
+.ob-kicker{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:10.5px;color:var(--gold)}
+.ob-h{font-family:var(--display);font-weight:500;font-size:clamp(23px,5.4vw,32px);line-height:1.05;letter-spacing:-.01em;margin:0;color:var(--ink);text-wrap:balance}
+.ob-card{width:min(74vw,270px)}
+.ob-card .card{width:100%;height:min(56dvh,460px)}
+.ob-hint{font-family:var(--label);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);max-width:280px}
+.ob-list{list-style:none;padding:0;margin:4px 0 2px;text-align:left;display:flex;flex-direction:column;gap:13px;max-width:340px;
+  font-family:var(--body);font-size:15.5px;line-height:1.4;color:var(--ink-soft)}
+.ob-list li{padding-left:2px}
+.ob-list b{color:var(--ink);font-weight:600}
+.ob-skip{background:none;border:0;color:var(--muted);font-family:var(--label);font-weight:600;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;cursor:pointer;padding:6px 10px}
+.ob-skip:hover{color:var(--ink)}
+
 /* ======= the collectible card (front/back flip) ======= */
 .card{width:min(90vw,360px);height:min(80svh,620px);perspective:1700px;cursor:pointer;position:relative;
   touch-action:pan-y;-webkit-tap-highlight-color:transparent}
@@ -782,13 +801,14 @@ var SKEY='mdg-collection-v1', S, MSG=null, MSGN=0;
 function load(){ try{S=JSON.parse(localStorage.getItem(SKEY));}catch(e){S=null;} if(!S)S={}; if(!S.coll)S.coll={};
   if(typeof S.tokens!=='number') S.tokens=Array.isArray(S.packs)?S.packs.length:0; /* migrate: old unopened packs become tokens */
   if(typeof S.sparks!=='number') S.sparks=0;
+  if(typeof S.onboarded!=='boolean') S.onboarded=!!S.started; /* existing players skip the new intro */
   delete S.packs; }
 function save(){ try{localStorage.setItem(SKEY,JSON.stringify(S));}catch(e){} }
 function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function daysBetween(a,b){ var pa=a.split('-'),pb=b.split('-'); return Math.round((new Date(+pb[0],+pb[1]-1,+pb[2])-new Date(+pa[0],+pa[1]-1,+pa[2]))/86400000); }
 function initEconomy(){
   var today=ymd(new Date());
-  if(!S.started){ S.started=true; S.tokens=3; S.lastDaily=today; MSG="welcome"; save(); return; }
+  if(!S.started){ S.started=true; S.tokens=3; S.lastDaily=today; save(); return; }
   if(S.lastDaily!==today){
     var missed=Math.max(0,daysBetween(S.lastDaily,today)), grant=Math.min(missed,7);
     S.tokens+=grant;
@@ -890,6 +910,7 @@ function renderCollection(){
   else if(msg==="daily") h+='<div class="banner"><b>Daily Pack Token'+(msgN>1?'s':'')+'!</b> +'+msgN+' token'+(msgN>1?'s':'')+' added — the gold button awaits.</div>';
   else if(msg==="notokens") h+='<div class="banner"><b>No Pack Tokens left.</b> A fresh one arrives tomorrow — duplicates you pull also drip ✧ sparks toward free tokens (100 ✧ = 1 token).</div>';
   else if(msg==="sparks") h+='<div class="banner"><b>✧ 100 sparks!</b> Your duplicates just melted into <b>+'+msgN+' Pack Token'+(msgN>1?'s':'')+'</b> ('+S.sparks+'/100 toward the next).</div>';
+  else if(msg==="firstbinder") h+='<div class="banner"><b>This is your binder.</b> Every card you own lives here — tap any card to read it and flip for the full story. Open more packs anytime with the gold button, and come back tomorrow for a fresh token. First goal: <b>complete a set</b> (18 cards).</div>';
   var activeSeries=SET_SERIES[activeSet], i, s;
   h+='<div class="seriestabs">';
   for(i=0;i<SERIES.length;i++){ var sr=SERIES[i], srSets=setsOf(sr), srOwned=0;
@@ -955,6 +976,47 @@ function packFlow(setName){
 }
 function showCardModal(id){ var c=cardById(id); if(!c) return; var foil=S.coll[id]&&S.coll[id].foil;
   openOverlay('<div class="cardwrap">'+faceHTML(c,foil)+'</div>'); }
+
+/* First-run onboarding: wonder-first, then a guided first pack, landing on a non-empty binder */
+function runOnboarding(){
+  var starter=['gps-einstein','atomic-clocks','why-sky-blue','measuring-time','time-relative'].filter(function(id){return cardById(id);})[0]||CARDS[0].id;
+  var c=cardById(starter);
+  if(!S.coll[starter]){ S.coll[starter]={n:1,foil:false}; save(); } /* a welcome gift, so the binder isn't empty */
+  var h='<div class="ob"><div class="ob-step" data-step="1">'+
+      '<div class="ob-kicker">Welcome to Micro Discovery Gacha</div>'+
+      '<h2 class="ob-h">Collect how the world works.</h2>'+
+      '<div class="ob-card">'+faceHTML(c,false)+'</div>'+
+      '<div class="ob-hint">Tap the card to flip it — every card teaches one real thing.</div>'+
+      '<button class="done" data-goto="2">Next</button>'+
+    '</div>'+
+    '<div class="ob-step" data-step="2" hidden>'+
+      '<div class="ob-kicker">How the game works</div>'+
+      '<h2 class="ob-h">Open packs. Fill your binder.</h2>'+
+      '<ul class="ob-list">'+
+        '<li><b>✦ Pack Tokens</b> — you have three. A fresh one arrives every day.</li>'+
+        '<li><b>Boosters</b> — spend a token, we deal three packs, you keep one (3 cards).</li>'+
+        '<li><b>Level up</b> — pull a card you already own and it goes a level deeper.</li>'+
+      '</ul>'+
+      '<button class="done" id="ob-start">Open my first pack →</button>'+
+      '<button class="ob-skip" id="ob-skip">Skip intro</button>'+
+    '</div></div>';
+  overlay.classList.add('intro');
+  openOverlay(h);
+  closeBtn.classList.remove('on'); /* no X during intro — Next / Skip drive it */
+  sheet.querySelector('[data-goto="2"]').addEventListener('click',function(){
+    sheet.querySelector('[data-step="1"]').hidden=true;
+    sheet.querySelector('[data-step="2"]').hidden=false; sheet.scrollTop=0;
+  });
+  document.getElementById('ob-skip').addEventListener('click',function(){ finishOnboarding(false); });
+  document.getElementById('ob-start').addEventListener('click',function(){ finishOnboarding(true); });
+}
+function finishOnboarding(openPack){
+  S.onboarded=true; save();
+  overlay.classList.remove('intro');
+  MSG="firstbinder";
+  if(openPack && S.tokens>0){ tokenFlow(); }   /* straight into the real pick-1-of-3; firstbinder shows after Done */
+  else { closeOverlay(); }
+}
 
 /* Scroll Mode — an endless feed of your owned cards, one random card per screen */
 function scrollMode(){
@@ -1039,7 +1101,7 @@ unlockBtn.addEventListener('click',function(){
   save(); disarmUnlock(); closeMenu(); renderCollection();
 });
 
-load(); initEconomy(); renderCollection();
+load(); initEconomy(); renderCollection(); if(!S.onboarded) runOnboarding();
 
 </script>
 </body>

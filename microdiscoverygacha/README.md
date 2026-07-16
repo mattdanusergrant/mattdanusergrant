@@ -17,7 +17,11 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
 - **Booster packs.** A pack contains **3 random cards from its set**, and each slot has a low
   (~1-in-12) chance to be **foil** — so an all-foil pack is possible but insanely rare. Foil cards
   wear a holo **✦ Foil** pill in the card's bottom-right corner.
-- **New player** starts with **0 packs and 3 Pack Tokens**.
+- **Onboarding (first run).** New players get a short **wonder-first** intro: a curated starter
+  card to flip and read, then a one-screen rules explainer, then a **guided first pack** — so you
+  land on a binder that already has cards (the starter gift + your first 3), not an empty grid.
+  Skippable; runs once (`S.onboarded`), and existing players never see it.
+- **New player** starts with **0 packs and 3 Pack Tokens** (plus the starter card gift).
 - **Daily token.** You get **+1 token each day** (up to 7 accrue if you're away). Old saves migrate:
   any unopened packs convert 1:1 into tokens.
 - **Sparks (dupe pity).** Every duplicate pulled melts into a **✧ spark = 1/100 Pack Token**;
