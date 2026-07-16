@@ -362,6 +362,7 @@ a{color:inherit;text-decoration:none}
   <div class="menu-sep">Debug</div>
   <button class="menu-row" id="dbg-packs" role="menuitem"><span>+10 Pack Tokens</span><span class="menu-plus">＋</span></button>
   <button class="menu-row danger" id="dbg-unlock" role="menuitem"><span>Unlock All Cards</span></button>
+  <button class="menu-row danger" id="dbg-reset" role="menuitem"><span>Reset</span></button>
 </div>
 <main id="view"></main>
 <button class="close" id="closeov" aria-label="Close">✕</button>
@@ -1078,9 +1079,10 @@ function curTheme(){ return root.getAttribute('data-theme')||(window.matchMedia(
 var gear=document.getElementById('gear'), menu=document.getElementById('settings'), themeVal=document.getElementById('theme-val');
 function syncTheme(){ themeVal.textContent=curTheme()==='dark'?'Dark':'Light'; }
 syncTheme();
-var menuOpen=false;
-function openMenu(){ menuOpen=true; menu.hidden=false; gear.setAttribute('aria-expanded','true'); disarmUnlock(); }
-function closeMenu(){ menuOpen=false; menu.hidden=true; gear.setAttribute('aria-expanded','false'); disarmUnlock(); }
+var menuOpen=false, dangerBtns=[];
+function disarmDanger(){ dangerBtns.forEach(function(b){ if(b._disarm) b._disarm(); }); }
+function openMenu(){ menuOpen=true; menu.hidden=false; gear.setAttribute('aria-expanded','true'); disarmDanger(); }
+function closeMenu(){ menuOpen=false; menu.hidden=true; gear.setAttribute('aria-expanded','false'); disarmDanger(); }
 gear.addEventListener('click',function(e){ e.stopPropagation(); menuOpen?closeMenu():openMenu(); });
 menu.addEventListener('click',function(e){ e.stopPropagation(); });
 document.addEventListener('click',function(){ if(menuOpen) closeMenu(); });
@@ -1093,12 +1095,23 @@ document.getElementById('set-theme').addEventListener('click',function(){
 document.getElementById('dbg-packs').addEventListener('click',function(){
   S.tokens+=10; save(); renderCollection(); closeMenu();
 });
-var unlockBtn=document.getElementById('dbg-unlock'), armed=false;
-function disarmUnlock(){ armed=false; unlockBtn.classList.remove('armed'); unlockBtn.firstChild.textContent='Unlock All Cards'; }
-unlockBtn.addEventListener('click',function(){
-  if(!armed){ armed=true; unlockBtn.classList.add('armed'); unlockBtn.firstChild.textContent='Tap again to confirm — unlock all '+CARDS.length; return; }
+/* danger buttons take two taps: first arms (shows confirm label), second fires */
+function armButton(btn, label, confirmLabel, onConfirm){
+  btn._disarm=function(){ btn._armed=false; btn.classList.remove('armed'); btn.firstChild.textContent=label; };
+  btn.addEventListener('click',function(){
+    if(!btn._armed){ btn._armed=true; btn.classList.add('armed'); btn.firstChild.textContent=confirmLabel; return; }
+    btn._disarm(); closeMenu(); onConfirm();
+  });
+  dangerBtns.push(btn);
+}
+armButton(document.getElementById('dbg-unlock'),'Unlock All Cards','Tap again to confirm — unlock all '+CARDS.length,function(){
   CARDS.forEach(function(c){ if(!S.coll[c.id]) S.coll[c.id]={n:1,foil:false}; });
-  save(); disarmUnlock(); closeMenu(); renderCollection();
+  save(); renderCollection();
+});
+armButton(document.getElementById('dbg-reset'),'Reset','Tap again to confirm — wipe everything',function(){
+  try{ localStorage.removeItem(SKEY); }catch(e){}
+  MSG=null; MSGN=0; activeSet=SETS[0];
+  load(); initEconomy(); renderCollection(); runOnboarding();
 });
 
 load(); initEconomy(); renderCollection(); if(!S.onboarded) runOnboarding();
