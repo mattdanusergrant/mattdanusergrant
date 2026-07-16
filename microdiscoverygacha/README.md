@@ -1,7 +1,7 @@
 # Micro Discovery Gacha
 
 **A no-ads collectible card game about how the world works.** Spend a **Pack Token** every day,
-pull knowledge cards from sets like **Makers of Hawaii**, **Time**, and **Cosmos**, chase rare
+pull knowledge cards from sets like **Hawaii**, **Time**, and **Cosmos**, chase rare
 **foils**, and fill your **binder**. Each card teaches one thing — how it works, how it's made, or
 who makes it — and flips over for the full story (maker cards link straight back to the maker).
 
@@ -59,16 +59,16 @@ one set (derived from its `cat` via the `CAT_SET` map in the script). **A set ho
 cards** — in the binder it displays as **two 3×3 pages side by side**, like an open card binder.
 
 - **Makers Series** — sets full of real makers, each card linking back to them with a verified
-  **Visit ↗** button: `Makers of Hawaii` · `Makers of Thailand` (Makers of Japan, Italy, etc. can
-  follow).
+  **Visit ↗** button: `Hawaii` · `Thailand` (Japan, Italy, etc. can follow).
 - **Science Series** — `Time` · `Materials`
 - **Technology Series** — `Navigation` · `Signals`
-- **Nature Series** — `Life & Medicine` · `Earth & Elements`
+- **Nature Series** — `Life` · `Earth`
 - **Cosmos Series** — `Cosmos`
 - **History Series** — `Civilization`
 
-Series names are single words; new sets launch into an existing series (or open a new one) over
-time, like TCG blocks.
+Both Series and Set names are single words — the booster tile shows the Series as an eyebrow
+(e.g. "Makers Series") above the Set title (e.g. "Hawaii"), so a pack name never wraps. New sets
+launch into an existing series (or open a new one) over time, like TCG blocks.
 
 ## Growing the collection
 
@@ -105,6 +105,6 @@ sourced details and a live `url`. If you add a new `cat`, map it in `CAT_SET`. M
 *(Legacy `back` + `facts` fields still render as a fallback if a card has no `article`, but new
 cards should use `article`.)*
 
-**Filling every set to 18** (currently: Makers of Hawaii 17, Makers of Thailand 10, Materials 8, Time 7, Signals 7,
-Navigation 6, Life & Medicine 5, Earth & Elements 4, Cosmos 3, Civilization 8 = 75; Hawaii is 1 short of full) is an ongoing
+**Filling every set to 18** (currently: Hawaii 17, Thailand 10, Materials 8, Time 7, Signals 7,
+Navigation 6, Life 5, Earth 4, Cosmos 3, Civilization 8 = 75; Hawaii is 1 short of full) is an ongoing
 content effort, done in batches via the `/add-card` skill.

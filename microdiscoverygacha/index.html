@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Micro Discovery Gacha · collect how the world works</title>
-<meta name="description" content="A no-ads collectible card game about how the world works. Open a booster pack every day, pull cards from sets like Makers of Hawaii, Time, and Cosmos, chase foils, and fill your binder." />
+<meta name="description" content="A no-ads collectible card game about how the world works. Open a booster pack every day, pull cards from sets like Hawaii, Time, and Cosmos, chase foils, and fill your binder." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#0d1413" />
 <meta property="og:type" content="website" />
@@ -132,13 +132,16 @@ a{color:inherit;text-decoration:none}
 .crimp.b{border-bottom:0;border-top:1px solid color-mix(in srgb,var(--accent) 45%,var(--line2))}
 .part{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;padding:13px 13px 13px}
 .plabel{flex:none;font-family:var(--label);font-weight:700;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-.pname{flex:none;margin-top:6px;font-family:var(--display);font-weight:600;font-size:clamp(16px,4.8vw,23px);line-height:1.03;color:var(--ink);text-wrap:balance;
+.pseries{flex:none;margin-top:7px;font-family:var(--label);font-weight:700;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);opacity:.9;
+  display:flex;align-items:center;gap:6px;white-space:nowrap}
+.pseries::before{content:"";flex:none;width:14px;height:1.5px;background:var(--accent);opacity:.8}
+.pseries span{overflow:hidden;text-overflow:ellipsis}
+.pname{flex:none;margin-top:3px;font-family:var(--display);font-weight:600;font-size:clamp(17px,5vw,24px);line-height:1.02;color:var(--ink);text-wrap:balance;
   text-shadow:0 1px 10px color-mix(in srgb,var(--bg2) 70%,transparent)}
-.pblurb{flex:none;margin:9px 0 0;font-family:var(--body);font-size:12.5px;line-height:1.34;color:var(--ink-soft);
-  overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
-.pstats{flex:none;margin-top:auto;padding-top:8px;font-family:var(--label);font-weight:700;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);opacity:.85}
+.pblurb{flex:none;margin:9px 0 0;font-family:var(--body);font-size:12.5px;line-height:1.34;color:var(--ink-soft)}
+.pstats{flex:none;margin-top:auto;padding-top:10px;font-family:var(--label);font-weight:700;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);opacity:.85}
 .pk-slot{min-width:0}
-@media(max-width:460px){.pblurb{font-size:11px;-webkit-line-clamp:2}.part{padding:10px}}
+@media(max-width:460px){.pblurb{font-size:11px}.part{padding:10px}}
 
 /* token → booster choice */
 .pk-choice{padding:8px 4px}
@@ -1620,39 +1623,39 @@ var CARDS = [
 
 /* ===== series > sets ===== */
 var SERIES=["Makers","Science","Technology","Nature","Cosmos","History"];
-var SET_SERIES={"Makers of Hawaii":"Makers","Makers of Thailand":"Makers",
+var SET_SERIES={"Hawaii":"Makers","Thailand":"Makers",
   "Time":"Science","Materials":"Science",
   "Signals":"Technology","Navigation":"Technology",
-  "Life & Medicine":"Nature","Earth & Elements":"Nature",
+  "Life":"Nature","Earth":"Nature",
   "Cosmos":"Cosmos",
   "Civilization":"History"};
-var SETS=["Makers of Hawaii","Makers of Thailand","Time","Navigation","Materials","Signals","Cosmos","Life & Medicine","Earth & Elements","Civilization"];
+var SETS=["Hawaii","Thailand","Time","Navigation","Materials","Signals","Cosmos","Life","Earth","Civilization"];
 function setsOf(sr){ return SETS.filter(function(s){return SET_SERIES[s]===sr;}); }
-var SET_COLOR={"Makers of Hawaii":"#c9a24b","Makers of Thailand":"#b0563f","Time":"#2f8f9d","Navigation":"#5b8fb0","Materials":"#b07d3f","Signals":"#8f7bc0","Cosmos":"#7b86c9","Life & Medicine":"#7d9b5b","Earth & Elements":"#6f7f86","Civilization":"#b0894a"};
-var SET_MOTIF={"Makers of Hawaii":"wave","Makers of Thailand":"strings","Time":"scroll","Navigation":"grid","Materials":"grain","Signals":"pulse","Cosmos":"orbit","Life & Medicine":"pulse","Earth & Elements":"facet","Civilization":"strings"};
+var SET_COLOR={"Hawaii":"#c9a24b","Thailand":"#b0563f","Time":"#2f8f9d","Navigation":"#5b8fb0","Materials":"#b07d3f","Signals":"#8f7bc0","Cosmos":"#7b86c9","Life":"#7d9b5b","Earth":"#6f7f86","Civilization":"#b0894a"};
+var SET_MOTIF={"Hawaii":"wave","Thailand":"strings","Time":"scroll","Navigation":"grid","Materials":"grain","Signals":"pulse","Cosmos":"orbit","Life":"pulse","Earth":"facet","Civilization":"strings"};
 var SET_BLURB={
-  "Makers of Hawaii":"Real island makers, and the crafts they keep alive.",
-  "Makers of Thailand":"Real Thai makers: silk, celadon, and looms in the hills.",
+  "Hawaii":"Real island makers, and the crafts they keep alive.",
+  "Thailand":"Real Thai makers: silk, celadon, and looms in the hills.",
   "Time":"How humans learned to slice a day into perfect pieces.",
   "Navigation":"Finding your way, from stars to satellites.",
   "Materials":"The stuff everything is made of, and why it holds.",
   "Signals":"Electricity, computing, and messages that move the world.",
   "Cosmos":"The clockwork overhead: planets, light, and deep space.",
-  "Life & Medicine":"Bodies, cells, and the science of staying alive.",
-  "Earth & Elements":"Rock, water, weather: the planet's raw ingredients.",
+  "Life":"Bodies, cells, and the science of staying alive.",
+  "Earth":"Rock, water, weather: the planet's raw ingredients.",
   "Civilization":"The inventions that let strangers build things together."
 };
 var CAT_SET={
-  "Hawaiian gold":"Makers of Hawaii","Hawaiian jewelry":"Makers of Hawaii","Black coral":"Makers of Hawaii","Shell lei":"Makers of Hawaii",
-  "Koa wood":"Makers of Hawaii","Koa rings":"Makers of Hawaii","Koa jewelry":"Makers of Hawaii","Sunrise shells":"Makers of Hawaii",
-  "ʻUkulele":"Makers of Hawaii","Surfboards":"Makers of Hawaii",
-  "Thai silk":"Makers of Thailand","Celadon":"Makers of Thailand","Karen weaving":"Makers of Thailand",
-  "Natural dye":"Makers of Thailand","Mulberry paper":"Makers of Thailand","Studio ceramics":"Makers of Thailand",
-  "Bamboo craft":"Makers of Thailand","Bronzeware":"Makers of Thailand","Benjarong":"Makers of Thailand","Royal crafts":"Makers of Thailand",
+  "Hawaiian gold":"Hawaii","Hawaiian jewelry":"Hawaii","Black coral":"Hawaii","Shell lei":"Hawaii",
+  "Koa wood":"Hawaii","Koa rings":"Hawaii","Koa jewelry":"Hawaii","Sunrise shells":"Hawaii",
+  "ʻUkulele":"Hawaii","Surfboards":"Hawaii",
+  "Thai silk":"Thailand","Celadon":"Thailand","Karen weaving":"Thailand",
+  "Natural dye":"Thailand","Mulberry paper":"Thailand","Studio ceramics":"Thailand",
+  "Bamboo craft":"Thailand","Bronzeware":"Thailand","Benjarong":"Thailand","Royal crafts":"Thailand",
   "Time":"Time","Navigation":"Navigation","Materials":"Materials",
   "Computing":"Signals","Physics":"Signals","Energy":"Signals",
-  "Astronomy":"Cosmos","Space":"Cosmos","Life":"Life & Medicine","Medicine":"Life & Medicine",
-  "Chemistry":"Earth & Elements","Earth":"Earth & Elements","Climate":"Earth & Elements","Geology":"Earth & Elements",
+  "Astronomy":"Cosmos","Space":"Cosmos","Life":"Life","Medicine":"Life",
+  "Chemistry":"Earth","Earth":"Earth","Climate":"Earth","Geology":"Earth",
   "Human history":"Civilization","Agriculture":"Civilization","Economics":"Civilization","Mathematics":"Civilization",
   "Architecture":"Civilization","Flight":"Civilization","Engineering":"Civilization"
 };
@@ -1798,6 +1801,7 @@ function tokenFlow(){
        '<div class="crimp"></div>'+
        '<div class="part">'+
          '<div class="plabel">Booster · '+PACK_SIZE+' cards</div>'+
+         '<div class="pseries"><span>'+SET_SERIES[s]+' Series</span></div>'+
          '<div class="pname">'+s+'</div>'+
          '<p class="pblurb">'+SET_BLURB[s]+'</p>'+
          '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div>'+
