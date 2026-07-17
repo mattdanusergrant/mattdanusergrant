@@ -19,8 +19,16 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
   fill the rest with repeats — which just feed sparks/levels), and each slot has a low (~1-in-12)
   chance to be **foil** — so an all-foil pack is possible but insanely rare. Foil cards wear a holo
   **✦ Foil** pill in the card's bottom-right corner. Opening a pack plays as a **vertical
-  scroll-feed** (one card per screen, tap to flip, swipe up) ending on a summary card. The two
+  scroll-feed** (one card per screen, tap to flip, swipe up). The two
   choice buttons get random flavor labels each time (Rip This/Rip That, Rip Left/Rip Right, …).
+- **Infinite ripping.** The feed ends on a **"Rip another pack?"** slot: if you still hold tokens,
+  **keep scrolling past it to open the next pack** (a random set), appended to the same feed — so
+  you can rip through your tokens in one continuous scroll. You snap onto that slot first (with a
+  bobbing ⌄ and an **I'm done** button) so the next pull is always a deliberate extra scroll, never
+  a surprise. When your tokens run out the slot becomes the final **Done** summary.
+- **Affordance cues (subtle).** The forward page arrow gently pulses whenever another page can be
+  turned, and a small bobbing **⌄** appears at the bottom of any vertical feed while another card
+  sits below the fold — both honour `prefers-reduced-motion`.
 - **Onboarding (first run).** New players get a short **wonder-first** intro: a curated starter
   card to flip and read, then a one-screen rules explainer, then a **guided first pack** — so you
   land on a binder that already has cards (the starter gift + your first 3), not an empty grid.
