@@ -130,18 +130,15 @@ a{color:inherit;text-decoration:none}
 .crimp{flex:none;height:13px;z-index:1;border-bottom:1px solid color-mix(in srgb,var(--accent) 45%,var(--line2));
   background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--accent) 62%,var(--bg2)) 0 3px,color-mix(in srgb,var(--accent) 20%,var(--bg2)) 3px 7px)}
 .crimp.b{border-bottom:0;border-top:1px solid color-mix(in srgb,var(--accent) 45%,var(--line2))}
-.part{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;padding:13px 13px 13px}
-.plabel{flex:none;font-family:var(--label);font-weight:700;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-.pseries{flex:none;margin-top:7px;font-family:var(--label);font-weight:700;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);opacity:.9;
-  display:flex;align-items:center;gap:6px;white-space:nowrap}
-.pseries::before{content:"";flex:none;width:14px;height:1.5px;background:var(--accent);opacity:.8}
-.pseries span{overflow:hidden;text-overflow:ellipsis}
-.pname{flex:none;margin-top:3px;font-family:var(--display);font-weight:600;font-size:clamp(17px,5vw,24px);line-height:1.02;color:var(--ink);text-wrap:balance;
+.part{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;padding:24px 13px 13px}
+/* the set's Series, tucked into the pack's top-right corner (e.g. "NATURE") */
+.pcorner{position:absolute;top:11px;right:14px;z-index:2;max-width:60%;text-align:right;font-family:var(--label);font-weight:700;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 6px color-mix(in srgb,var(--bg2) 70%,transparent)}
+.pname{flex:none;margin-top:2px;font-family:var(--display);font-weight:600;font-size:clamp(17px,5vw,24px);line-height:1.02;color:var(--ink);text-wrap:balance;
   text-shadow:0 1px 10px color-mix(in srgb,var(--bg2) 70%,transparent)}
 .pblurb{flex:none;margin:9px 0 0;font-family:var(--body);font-size:12.5px;line-height:1.34;color:var(--ink-soft)}
 .pstats{flex:none;margin-top:auto;padding-top:10px;font-family:var(--label);font-weight:700;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);opacity:.85}
 .pk-slot{min-width:0}
-@media(max-width:460px){.pblurb{font-size:11px}.part{padding:10px}}
+@media(max-width:460px){.pblurb{font-size:11px}.part{padding:22px 10px 10px}}
 
 /* token → booster choice */
 .pk-choice{padding:8px 4px}
@@ -1827,8 +1824,7 @@ function tokenFlow(){
        '<div class="pbg">'+motif(SET_MOTIF[s],SET_COLOR[s])+'</div>'+
        '<div class="crimp"></div>'+
        '<div class="part">'+
-         '<div class="plabel">Booster · '+PACK_SIZE+' cards</div>'+
-         '<div class="pseries"><span>'+SET_SERIES[s]+' Series</span></div>'+
+         '<div class="pcorner">'+SET_SERIES[s]+'</div>'+
          '<div class="pname">'+setShort(s)+'</div>'+
          '<p class="pblurb">'+SET_BLURB[s]+'</p>'+
          '<div class="pstats">You own '+owned+' / '+TARGET+(foils?' · '+foils+' ✦':'')+'</div>'+
