@@ -1928,63 +1928,44 @@ function wireCue(feed, cue){
   return upd;
 }
 function packFlow(setName){
-  var totals={cards:0,nw:0,dup:0}, cooling=false;
-  function tally(res){ totals.cards+=res.length; res.forEach(function(r){ if(r.isNew) totals.nw++; else totals.dup++; }); }
-  var first=openPack(setName); tally(first);
-  var anyFoil=first.some(function(r){return r.foil;});
+  var res=openPack(setName), anyFoil=res.some(function(r){return r.foil;});
+  var newN=res.filter(function(r){return r.isNew;}).length, dups=res.length-newN;
+  var more=S.tokens>0;
   var h='<div class="sf-top">'+setName+' Booster'+(anyFoil?' · ✦ foil pull!':'')+' &nbsp;·&nbsp; swipe ‹ › to read · swipe up for next</div>'+
-        '<div class="sf-feed" id="prfeed">'+packSlots(first)+'</div>'+
-        '<div class="sf-cue" id="prcue" aria-hidden="true"><span class="cuelbl">scroll</span><span class="cuechev">⌄</span></div>';
+        '<div class="sf-feed" id="prfeed">'+packSlots(res);
+  if(more){
+    h+='<div class="sf-slot pr-arm" id="prend"><div class="pr-armcard">'+
+       '<div class="pr-armh">Rip another pack?</div>'+
+       '<div class="pr-armchev" aria-hidden="true">⌄</div>'+
+       '<div class="pr-arms">Keep scrolling to choose your next · ✦ '+S.tokens+' left</div>'+
+       '<button class="done" id="revealdone">I’m done</button></div></div>';
+  } else {
+    var summary=newN+' new'+(dups?' · '+dups+' duplicate'+(dups>1?'s':'')+' (+'+dups+' ✧, '+S.sparks+'/100)':'');
+    h+='<div class="sf-slot pr-end2" id="prend"><div class="pr-endcard">'+
+       '<div class="pr-endh">'+res.length+' cards added to your binder</div>'+
+       '<div class="pr-ends">'+summary+'</div>'+
+       '<button class="done" id="revealdone">Done</button></div></div>';
+  }
+  h+='</div><div class="sf-cue" id="prcue" aria-hidden="true"><span class="cuelbl">scroll</span><span class="cuechev">⌄</span></div>';
   overlay.classList.add('scrollmode');
   openOverlay(h);
-  var feed=document.getElementById('prfeed'), updCue=wireCue(feed,document.getElementById('prcue'));
+  var feed=document.getElementById('prfeed');
+  wireCue(feed, document.getElementById('prcue'));
+  document.getElementById('revealdone').addEventListener('click',closeOverlay);
 
-  function endHTML(){
-    if(S.tokens>0){
-      return '<div class="sf-slot pr-arm" id="prend"><div class="pr-armcard">'+
-        '<div class="pr-armh">Rip another pack?</div>'+
-        '<div class="pr-armchev" aria-hidden="true">⌄</div>'+
-        '<div class="pr-arms">Keep scrolling to open one · ✦ '+S.tokens+' left</div>'+
-        '<button class="done" id="revealdone">I’m done</button></div></div>';
-    }
-    return '<div class="sf-slot pr-end2" id="prend"><div class="pr-endcard">'+
-      '<div class="pr-endh">'+totals.cards+' cards added to your binder</div>'+
-      '<div class="pr-ends">'+totals.nw+' new'+(totals.dup?' · '+totals.dup+' duplicate'+(totals.dup>1?'s':''):'')+' · ✦ 0 left</div>'+
-      '<button class="done" id="revealdone">Done</button></div></div>';
+  /* keep scrolling past the arm slot → the normal 1-of-2 pick for the next pack (spends a token on choose) */
+  if(more){
+    var cooling=false, atEnd=false;
+    var chkEnd=function(){ atEnd = feed.scrollHeight-(feed.scrollTop+feed.clientHeight) <= 6; };
+    var goChoose=function(){ if(cooling) return; cooling=true; overlay.classList.remove('scrollmode'); tokenFlow(); };
+    feed.addEventListener('scroll', chkEnd, {passive:true});
+    feed.addEventListener('wheel', function(e){ if(atEnd && e.deltaY>8) goChoose(); }, {passive:true});
+    var ty=null;
+    feed.addEventListener('touchstart', function(e){ ty=e.touches[0].clientY; chkEnd(); }, {passive:true});
+    feed.addEventListener('touchmove', function(e){ if(ty==null) return; if(atEnd && (ty-e.touches[0].clientY)>30){ goChoose(); ty=null; } }, {passive:true});
+    feed.addEventListener('touchend', function(){ ty=null; }, {passive:true});
+    chkEnd();
   }
-  function mountEnd(){
-    var old=document.getElementById('prend'); if(old) old.remove();
-    feed.insertAdjacentHTML('beforeend', endHTML());
-    document.getElementById('revealdone').addEventListener('click',closeOverlay);
-    updCue();
-  }
-  function openAnother(){
-    if(cooling || S.tokens<1) return; cooling=true;
-    S.tokens--; save();
-    var set=SETS[Math.floor(Math.random()*SETS.length)];
-    var res=openPack(set); tally(res);
-    var end=document.getElementById('prend'); if(end) end.remove();
-    var start=feed.querySelectorAll('.sf-slot').length;
-    feed.insertAdjacentHTML('beforeend', packSlots(res));
-    var slots=feed.querySelectorAll('.sf-slot');
-    for(var i=start;i<slots.length;i++){ var cd=slots[i].querySelector('.card'); if(cd) fitCard(cd); }
-    mountEnd();
-    if(slots[start]) slots[start].scrollIntoView({behavior:'smooth',block:'center'});
-    setTimeout(function(){ cooling=false; },800);
-  }
-
-  mountEnd();
-
-  /* keep scrolling past the end opens the next pack — they’re snapped on the arm slot, so it’s deliberate */
-  var atEnd=false;
-  function chkEnd(){ atEnd = feed.scrollHeight-(feed.scrollTop+feed.clientHeight) <= 6; }
-  feed.addEventListener('scroll', chkEnd, {passive:true});
-  feed.addEventListener('wheel', function(e){ if(atEnd && e.deltaY>8) openAnother(); }, {passive:true});
-  var ty=null;
-  feed.addEventListener('touchstart', function(e){ ty=e.touches[0].clientY; chkEnd(); }, {passive:true});
-  feed.addEventListener('touchmove', function(e){ if(ty==null) return; if(atEnd && (ty-e.touches[0].clientY)>30){ openAnother(); ty=null; } }, {passive:true});
-  feed.addEventListener('touchend', function(){ ty=null; }, {passive:true});
-  chkEnd();
 }
 function showCardModal(id){ var c=cardById(id); if(!c) return; var foil=S.coll[id]&&S.coll[id].foil;
   openOverlay('<div class="cardwrap">'+faceHTML(c,foil)+'</div>'); }

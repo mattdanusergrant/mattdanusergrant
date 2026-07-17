@@ -22,10 +22,11 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
   scroll-feed** (one card per screen, tap to flip, swipe up). The two
   choice buttons get random flavor labels each time (Rip This/Rip That, Rip Left/Rip Right, …).
 - **Infinite ripping.** The feed ends on a **"Rip another pack?"** slot: if you still hold tokens,
-  **keep scrolling past it to open the next pack** (a random set), appended to the same feed — so
-  you can rip through your tokens in one continuous scroll. You snap onto that slot first (with a
-  bobbing ⌄ and an **I'm done** button) so the next pull is always a deliberate extra scroll, never
-  a surprise. When your tokens run out the slot becomes the final **Done** summary.
+  **keep scrolling past it** and you drop straight into the normal **1-of-2 pack pick** for your
+  next pull — choose one, rip it, land on a fresh feed, repeat — so you can chain packs without
+  returning to the binder. You snap onto that slot first (with a bobbing ⌄ and an **I'm done**
+  button) so continuing is always a deliberate extra scroll, never a surprise, and no token is
+  spent until you actually pick. When your tokens run out the slot becomes the final **Done** summary.
 - **Affordance cues (subtle).** The forward page arrow gently pulses whenever another page can be
   turned, and a small bobbing **⌄** appears at the bottom of any vertical feed while another card
   sits below the fold — both honour `prefers-reduced-motion`.
