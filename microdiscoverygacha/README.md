@@ -39,15 +39,21 @@ in the browser (`localStorage`, key `mdg-collection-v1`).
   any unopened packs convert 1:1 into tokens.
 - **Sparks (dupe pity).** Every duplicate pulled melts into a **✧ spark = 1/100 Pack Token**;
   at 100 sparks a token is granted automatically (foil-upgrades on owned cards count too).
-- **Cards are swipeable flip-books.** A card is a stack of pages: **cover → the idea → each key
-  point → "going deeper" (the thread + maker link)**. **Swipe/tap right to page forward, left to
-  page back** (arrow keys too); the card physically flips around on each turn via a two-face
-  alternating buffer, so it can hold any number of pages. In the feeds, **up/down changes cards,
-  left/right changes page** (level). A dot indicator shows your position, with ghost dots for pages
-  still locked.
-- **Depth levels = unlocked pages.** A duplicate **unlocks the next page** — copy 2 reveals key
-  point 1, copy 3 key point 2, …, the last copy the "going deeper" page. **Level = copies owned**,
-  capped at `1 + facts + (connects||url ? 1 : 0)` content pages. The binder mini still shows `Lv N`.
+- **Cards are swipeable flip-books.** Every card is: a **front cover** → **inner pages** (the
+  magazine article, one paragraph per page — starts at 1 and grows as you collect duplicates) → a
+  **back cover**. **Swipe/tap right to page forward, left to page back** (arrow keys too); the card
+  physically flips around on each turn via a two-face alternating buffer, so it can hold any number
+  of pages. In the feeds, **up/down changes cards, left/right changes page**. A dot indicator shows
+  your position, with ghost dots for inner pages still locked and the back-cover dot always lit.
+- **The back cover is the link hub.** Front and back covers are always present; only the inner
+  article pages are dupe-gated. The back cover holds the maker's **Visit ↗** link (maker cards) and
+  a **"Connects to"** list of related cards: a card you **own** links straight to it; one you
+  **don't** shows **"???"** and tapping it drops you into **pack opening** to go hunt it. The graph
+  lives in the `LINKS` map (`id → [related ids]`) near the `CARDS` array; a card may also carry its
+  own `links:[...]`, which wins. Grown over time like the feed.
+- **Depth levels = unlocked inner pages.** A duplicate **unlocks the next inner page** — copy 2
+  reveals article page 2, copy 3 page 3, …. **Level = copies owned**, capped at the number of
+  article paragraphs (front/back covers don't need copies). The binder mini still shows `Lv N`.
 - **No scrolling on cards, ever.** Each page auto-fits its face: a `--ps` scale is stepped down (by
   `fitFace`) until the page fits without a scrollbar, on every page and card size.
 - **The binder IS the landing page.** There are no separate views: you land on your collection
@@ -97,14 +103,16 @@ set is derived from `cat`. Each card:
     "Paragraph 3 — goes deeper.",
     "Paragraph 4 — lands a resonant conclusion."
   ],
-  connects:"A → B → C",              // OPTIONAL thread (shown on the going-deeper page)
+  links:["koaloha","kanilea"],       // OPTIONAL back-cover "Connects to" cards (or add to the LINKS map)
   url:"https://kamakahawaii.com/", link:"Visit Kamaka"   // maker cards only; must be real & live
 }
 ```
 
-**Card = a swipeable mini-magazine article.** Each card is a stack of pages: a **cover** (art +
-title + hook), then **one `article` paragraph per page** (page 1 is a headline + drop-cap lede),
-ending on a **going-deeper page** (the `connects` thread and/or the maker's **Visit ↗** link).
+**Card = front cover → article pages → back cover.** Each card is: a **front cover** (art + title +
+hook), then **one `article` paragraph per page** (page 1 is a headline + drop-cap lede, unlocked by
+duplicates), then a **back cover** — the link hub carrying the maker's **Visit ↗** link and the
+`links` "Connects to" cards (owned → direct link, unowned → **???** → pack opening). Card-to-card
+links come from either the card's own `links:[...]` or the central `LINKS` map, keyed by id.
 Copies owned unlock the pages one at a time (level = copies).
 
 Rules for `article`: **4 paragraphs** is the house standard; each must be **self-contained** (a

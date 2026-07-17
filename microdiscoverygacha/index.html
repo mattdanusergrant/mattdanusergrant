@@ -351,6 +351,19 @@ a{color:inherit;text-decoration:none}
 .cvisit{align-self:flex-start;display:inline-flex;align-items:center;gap:.5em;margin-top:4px;font-family:var(--label);font-weight:700;letter-spacing:.03em;
   font-size:calc(12.5px*var(--ps));text-transform:uppercase;color:var(--bg);background:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:10px 17px}
 .cvisit:hover{filter:brightness(1.08)}
+/* back cover — the "connects to" link hub */
+.cbody.back{gap:calc(9px*var(--ps))}
+.clinks{display:flex;flex-direction:column;gap:calc(7px*var(--ps));width:100%}
+.clinks-h{font-family:var(--label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:calc(9px*var(--ps));color:var(--accent);opacity:.85;margin-bottom:calc(1px*var(--ps))}
+.clink{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  padding:calc(8px*var(--ps)) calc(12px*var(--ps));border-radius:11px;border:1px solid color-mix(in srgb,var(--accent) 34%,var(--line2));
+  background:color-mix(in srgb,var(--accent) 9%,transparent);color:var(--ink);font-family:var(--display);font-weight:500;font-size:calc(15px*var(--ps));line-height:1.1}
+.clink:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.clink .cls{font-family:var(--label);font-weight:700;letter-spacing:.09em;text-transform:uppercase;font-size:calc(8px*var(--ps));color:var(--muted)}
+.clink.locked{border-style:dashed;border-color:var(--line2);background:none;color:var(--muted)}
+.clink.locked .clt{letter-spacing:.28em}
+.clink.locked:hover{border-color:var(--gold);color:var(--ink-soft)}
+.backend{font-family:var(--body);font-size:calc(14px*var(--ps));color:var(--muted);text-align:center;margin:auto 0}
 /* foot: page indicator + swipe affordance (present on every page) */
 .cfoot{margin-top:auto;flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 18px calc(14px)}
 .parrow{font-family:var(--label);font-size:19px;line-height:1;color:var(--accent);width:18px;text-align:center;flex:none;user-select:none}
@@ -1702,6 +1715,41 @@ var CAT_SET={
   "Human history":"Civilization","Agriculture":"Civilization","Economics":"Civilization","Mathematics":"Civilization",
   "Architecture":"Civilization","Flight":"Civilization","Engineering":"Civilization"
 };
+/* Back-cover "Connects to" graph: card id -> related card ids (owned link direct; unowned show ??? -> pack).
+   A card may also carry its own `links:[...]`; that takes precedence. Grown over time like the feed. */
+var LINKS={
+  "kamaka":["koaloha","kanilea","koolau"],"koaloha":["kamaka","kanilea","koolau"],
+  "kanilea":["kamaka","koaloha","koolau"],"koolau":["kamaka","koaloha","kanilea"],
+  "pyzel":["tokoro","aipa"],"tokoro":["pyzel","aipa"],"aipa":["pyzel","tokoro"],
+  "martin-macarthur":["pono-woodworks","nakoa"],"pono-woodworks":["martin-macarthur","nakoa"],"nakoa":["martin-macarthur","pono-woodworks"],
+  "philip-rickard":["na-hoku","maui-divers"],"na-hoku":["philip-rickard","maui-divers"],"maui-divers":["philip-rickard","na-hoku"],
+  "niihau-heritage":["kauai-curators","flotsam"],"kauai-curators":["niihau-heritage","monica-shore"],
+  "flotsam":["monica-shore","niihau-heritage"],"monica-shore":["flotsam","kauai-curators"],
+  "sig-zane":["martin-macarthur","kamaka"],
+  "jim-thompson":["siam-celadon","studio-naenna"],"siam-celadon":["prempracha","thai-benjarong"],
+  "sop-moei-arts":["studio-naenna","patapian"],"studio-naenna":["jim-thompson","sop-moei-arts"],
+  "doi-tung":["sop-moei-arts","arts-of-the-kingdom"],"prempracha":["siam-celadon","thai-benjarong"],
+  "patapian":["sop-moei-arts","siam-bronze"],"siam-bronze":["thai-benjarong","patapian"],
+  "thai-benjarong":["siam-celadon","prempracha","arts-of-the-kingdom"],"arts-of-the-kingdom":["thai-benjarong","doi-tung"],
+  "gps-einstein":["atomic-clocks","time-relative","satellites"],"atomic-clocks":["gps-einstein","network-time","measuring-time"],
+  "time-relative":["gps-einstein","atomic-clocks"],"measuring-time":["longitude","atomic-clocks","time-trade"],
+  "longitude":["measuring-time","compass"],"time-trade":["measuring-time","network-time"],
+  "network-time":["atomic-clocks","internet","time-trade"],
+  "polynesian-nav":["compass","maps"],"roman-roads":["roman-concrete","maps"],"compass":["longitude","maps","polynesian-nav"],
+  "maps":["compass","satellites"],"satellites":["gps-einstein","self-driving","rockets"],"self-driving":["ai","satellites"],
+  "stone-tools":["bronze"],"bronze":["stone-tools","iron"],"iron":["bronze","steel"],"steel":["iron","arches","carbon-fiber"],
+  "roman-concrete":["roman-roads","arches"],"aluminum":["steel","flight"],"carbon-fiber":["steel","graphene"],"graphene":["carbon-fiber","semiconductors"],
+  "semiconductors":["electricity","fiber-optics","ai"],"quantum":["semiconductors","lasers"],"lasers":["fiber-optics","quantum"],
+  "fiber-optics":["lasers","internet","semiconductors"],"internet":["fiber-optics","network-time","ai"],
+  "ai":["semiconductors","self-driving","internet"],"electricity":["semiconductors"],
+  "how-far-stars":["telescopes"],"rockets":["satellites","telescopes"],"telescopes":["how-far-stars","lasers"],
+  "evolution":["dna"],"dna":["evolution","vaccines"],"vaccines":["antibiotics","germ-theory"],
+  "antibiotics":["germ-theory","vaccines"],"germ-theory":["vaccines","antibiotics"],
+  "periodic-table":["iron","aluminum"],"plate-tectonics":["deep-time"],"carbon-cycle":["deep-time"],"deep-time":["plate-tectonics","evolution"],
+  "writing":["zero","money","agriculture"],"agriculture":["writing","money"],"money":["writing","zero"],"zero":["writing","money"],
+  "arches":["roman-concrete","steel"],"flight":["jet-engine","aluminum"],"jet-engine":["flight","containerization"],"containerization":["steel","roman-roads"]
+};
+function cardLinks(c){ return (c.links&&c.links.length)?c.links:(LINKS[c.id]||[]); }
 var TARGET=18, FOIL_P=0.08;
 (function(){ var count={},i; for(i=0;i<CARDS.length;i++){var s=CAT_SET[CARDS[i].cat]||"Micro";CARDS[i].set=s;count[s]=(count[s]||0)+1;CARDS[i]._n=count[s];} for(i=0;i<CARDS.length;i++){CARDS[i]._of=count[CARDS[i].set];} })();
 function pad(n){ n=String(n); return n.length<2?'0'+n:n; }
@@ -1766,21 +1814,23 @@ function miniHTML(c, o){
 }
 /* a card's depth level = copies owned (each dupe unlocks one more fact, then the thread) */
 function cardDepth(c, copies){
-  var F=(c.facts?c.facts.length:0), max=1+F+(c.connects?1:0);
+  /* level = how many of the dupe-gated inner pages are unlocked (front + back covers are always there) */
+  var max=(c.article&&c.article.length)?c.article.length:(1+(c.facts?c.facts.length:0));
   copies=Math.max(1,copies||1);
-  var lvl=Math.min(copies,max);
-  return {lvl:lvl, max:max, facts:Math.min(lvl-1,F), connects:!!c.connects&&(lvl>=2+F)};
+  return {lvl:Math.min(copies,max), max:max};
 }
 /* a card is a swipeable flip-book: page 0 = cover, then story / each fact / a "going deeper" page,
    unlocked one at a time by copies owned (level). Swipe/arrow left-right pages through them. */
 function cardPageList(c, copies){
   copies=Math.max(1,copies||1);
-  var items=[], i;
-  if(c.article&&c.article.length){ for(i=0;i<c.article.length;i++) items.push({k:'art',i:i}); }  /* magazine-article pages */
-  else { items.push({k:'story'}); var F=(c.facts?c.facts.length:0); for(i=0;i<F;i++) items.push({k:'fact',i:i}); }
-  if(c.connects||c.url) items.push({k:'more'});
-  var maxContent=items.length, unlocked=Math.min(copies,maxContent);
-  return { pages:[{k:'front'}].concat(items.slice(0,unlocked)), unlocked:unlocked, maxContent:maxContent };
+  var art=[], i;
+  if(c.article&&c.article.length){ for(i=0;i<c.article.length;i++) art.push({k:'art',i:i}); }  /* magazine-article pages */
+  else { art.push({k:'story'}); var F=(c.facts?c.facts.length:0); for(i=0;i<F;i++) art.push({k:'fact',i:i}); }
+  var artN=art.length, unlockedArt=Math.min(copies,artN);
+  /* front cover (always) + inner pages (grow with dupes, ≥1) + back cover / link hub (always) */
+  var pages=[{k:'front'}].concat(art.slice(0,unlockedArt));
+  pages.push({k:'back'});
+  return { pages:pages, artN:artN, unlockedArt:unlockedArt, maxContent:artN };
 }
 function cardPageInner(c, foil, info, page){
   var pg=info.pages[page];
@@ -1798,17 +1848,30 @@ function cardPageInner(c, foil, info, page){
     body='<div class="cbody"><div class="ckicker">The idea</div><p class="prose">'+c.back+'</p></div>';
   } else if(pg.k==='fact'){
     body='<div class="cbody"><div class="ckicker">Key point '+(pg.i+1)+' / '+c.facts.length+'</div><p class="cfact">'+c.facts[pg.i]+'</p></div>';
-  } else {
-    var conn=c.connects?'<div class="connects"><b>Connects to</b>'+c.connects+'</div>':'';
+  } else { /* back cover — the link hub: maker link + "connects to" cards (owned link direct, unowned show ??? → packs) */
+    var chips='';
+    cardLinks(c).forEach(function(id){ var t=cardById(id); if(!t) return;
+      if(S.coll[id]) chips+='<button class="clink" data-open="'+id+'" style="--accent:'+t.accent+'"><span class="clt">'+t.title+'</span><span class="cls">'+t.set+' ↗</span></button>';
+      else chips+='<button class="clink locked" data-getcard="'+id+'" aria-label="Undiscovered card — open packs to find it"><span class="clt">???</span><span class="cls">Undiscovered · tap to hunt</span></button>';
+    });
+    var linksBlock=chips?'<div class="clinks"><div class="clinks-h">Connects to</div>'+chips+'</div>':'';
     var visit=c.url?'<a class="cvisit" href="'+c.url+'" target="_blank" rel="noopener noreferrer">'+(c.link||('Visit '+c.title))+' ↗</a>':'';
-    body='<div class="cbody"><div class="ckicker">Going deeper</div>'+conn+visit+'</div>';
+    var inner=linksBlock+visit;
+    if(!inner) inner='<p class="backend">You’ve read the whole card. ✦</p>';
+    body='<div class="cbody back"><div class="ckicker">Back cover</div>'+inner+'</div>';
   }
   var last=info.pages.length-1, dots='';
-  for(var j=0;j<=info.maxContent;j++){ var cls=j===page?'on':(j<=info.unlocked?'':'lock'); dots+='<span'+(cls?' class="'+cls+'"':'')+'></span>'; }
-  var lockedAhead=last<info.maxContent;
+  /* dot rail: front + every inner page (locked ones ghosted) + back cover (always lit) */
+  for(var j=0;j<=info.artN+1;j++){
+    var cls;
+    if(j===0) cls=(page===0)?'on':'';                          /* front */
+    else if(j===info.artN+1) cls=(page===last)?'on':'';        /* back cover — always reachable */
+    else cls=(j<=info.unlockedArt)?(page===j?'on':''):'lock';  /* inner page j (locked beyond copies) */
+    dots+='<span'+(cls?' class="'+cls+'"':'')+'></span>';
+  }
   var foot='<div class="cfoot"><span class="parrow'+(page>0?'':' off')+'" aria-hidden="true">‹</span>'+
     '<span class="pdots">'+dots+'</span>'+
-    '<span class="parrow'+(page<last?' can':(lockedAhead?' lock':' off'))+'" aria-hidden="true">›</span></div>';
+    '<span class="parrow'+(page<last?' can':' off')+'" aria-hidden="true">›</span></div>';
   return top+body+foot;
 }
 function faceHTML(c, foil, copies){
@@ -2059,6 +2122,8 @@ view.addEventListener('click',function(e){
 view.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ var mn=e.target.closest('.mini[data-id]'); if(mn){ e.preventDefault(); showCardModal(mn.getAttribute('data-id')); } } });
 sheet.addEventListener('click',function(e){ if(e.target.closest('a')) return;
   var ch=e.target.closest('[data-choose]'); if(ch){ S.tokens=Math.max(0,S.tokens-1); save(); packFlow(ch.getAttribute('data-choose')); return; }
+  var lo=e.target.closest('[data-open]'); if(lo){ overlay.classList.remove('scrollmode'); showCardModal(lo.getAttribute('data-open')); return; }
+  var lg=e.target.closest('[data-getcard]'); if(lg){ overlay.classList.remove('scrollmode'); if(S.tokens>0){ tokenFlow(); } else { MSG='notokens'; closeOverlay(); } return; }
   var card=e.target.closest('.card'); if(card){ if(card._noclick){ card._noclick=false; return; }
     var r=card.getBoundingClientRect(); flipCard(card,(e.clientX-r.left)>r.width/2?1:-1); } });
 /* horizontal swipe pages the card (vertical swipes pass through to the feed) */
