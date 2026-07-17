@@ -182,7 +182,7 @@ a{color:inherit;text-decoration:none}
   font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);opacity:.8}
 
 /* mini card */
-.mini{position:relative;aspect-ratio:3/4;border-radius:12px;overflow:hidden;border:1px solid var(--line2);cursor:pointer;
+.mini{position:relative;aspect-ratio:63/88;border-radius:12px;overflow:hidden;border:1px solid var(--line2);cursor:pointer;
   background:linear-gradient(165deg,var(--plate),var(--bg2));box-shadow:0 14px 30px -22px rgba(0,0,0,.8);--accent:var(--gold);
   display:flex;flex-direction:column;transition:transform .15s}
 .mini:hover{transform:translateY(-3px)}
@@ -233,7 +233,7 @@ a{color:inherit;text-decoration:none}
   padding:6px calc(50% - var(--prw)/2);scrollbar-width:none}
 .pr-row::-webkit-scrollbar{display:none}
 .pr-slot{flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;scroll-snap-align:center}
-.pr-slot .card{width:var(--prw);height:min(66dvh,560px);touch-action:pan-x pan-y;animation:rise .5s ease both}
+.pr-slot .card{width:min(var(--prw),calc(66dvh * 63 / 88));aspect-ratio:63/88;touch-action:pan-x pan-y;animation:rise .5s ease both}
 .pr-slot:nth-child(2) .card{animation-delay:.12s}.pr-slot:nth-child(3) .card{animation-delay:.24s}
 @media(prefers-reduced-motion:reduce){.pr-slot .card{animation:none}}
 @media(min-width:1140px){.pr-row{--prw:330px;justify-content:center;overflow-x:visible;padding:6px 24px}}
@@ -254,11 +254,11 @@ a{color:inherit;text-decoration:none}
 .sf-feed{flex:1;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior-y:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .sf-feed::-webkit-scrollbar{display:none}
 .sf-slot{height:100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;padding:4px 16px 16px;animation:rise .5s ease both}
-.sf-slot .card{width:min(88vw,360px);height:min(74dvh,600px)}
+.sf-slot .card{width:min(88vw,360px,calc(74dvh * 63 / 88));aspect-ratio:63/88}
 @media(prefers-reduced-motion:reduce){.sf-slot{animation:none}}
 /* pack reveal reuses the scroll feed: badge above each card, a Done card at the end */
 .pr-slot2{flex-direction:column;gap:11px;padding-top:8px}
-.pr-slot2 .card{height:min(66dvh,540px)}
+.pr-slot2 .card{width:min(88vw,360px,calc(66dvh * 63 / 88));aspect-ratio:63/88}
 .pr-end2 .pr-endcard{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:340px;padding:26px 22px;text-align:center;
   border:1px solid var(--line2);border-radius:18px;background:linear-gradient(168deg,var(--plate),var(--bg2));box-shadow:var(--shadow)}
 .pr-endh{font-family:var(--display);font-weight:500;font-size:clamp(20px,4.4vw,26px);color:var(--ink)}
@@ -274,7 +274,7 @@ a{color:inherit;text-decoration:none}
 .ob-kicker{font-family:var(--label);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:10.5px;color:var(--gold)}
 .ob-h{font-family:var(--display);font-weight:500;font-size:clamp(23px,5.4vw,32px);line-height:1.05;letter-spacing:-.01em;margin:0;color:var(--ink);text-wrap:balance}
 .ob-card{width:min(74vw,270px)}
-.ob-card .card{width:100%;height:min(56dvh,460px)}
+.ob-card .card{width:min(100%,calc(56dvh * 63 / 88));aspect-ratio:63/88}
 .ob-hint{font-family:var(--label);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);max-width:280px}
 .ob-list{list-style:none;padding:0;margin:4px 0 2px;text-align:left;display:flex;flex-direction:column;gap:13px;max-width:340px;
   font-family:var(--body);font-size:15.5px;line-height:1.4;color:var(--ink-soft)}
@@ -285,7 +285,7 @@ a{color:inherit;text-decoration:none}
 .ob-skip:hover{color:var(--ink)}
 
 /* ======= the collectible card (a swipeable multi-page flip-book) ======= */
-.card{width:min(90vw,360px);height:min(80svh,620px);perspective:1700px;cursor:pointer;position:relative;
+.card{width:min(90vw,360px,calc(80svh * 63 / 88));aspect-ratio:63/88;perspective:1700px;cursor:pointer;position:relative;
   touch-action:pan-y;-webkit-tap-highlight-color:transparent}
 .card:focus-visible{outline:2px solid var(--gold);outline-offset:4px;border-radius:22px}
 .flipper{position:relative;width:100%;height:100%;transition:transform .58s cubic-bezier(.2,.72,.2,1);transform-style:preserve-3d;transform:rotateY(var(--rot,0deg))}
