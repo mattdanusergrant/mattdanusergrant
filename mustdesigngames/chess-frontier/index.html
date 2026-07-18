@@ -27,11 +27,11 @@
   .rname{font-weight:700; font-size:15px;}
   .sub{color:var(--muted); font-size:11px; margin-top:1px;}
   .xpwrap{height:7px; background:#0e1218; border-radius:6px; margin-top:7px; overflow:hidden; border:1px solid #0a0d12;}
-  .xpbar{height:100%; width:0%; background:linear-gradient(90deg,var(--gold),var(--gold2)); transition:width .2s;}
+  .xpbar{height:100%; width:100%; background:linear-gradient(90deg,var(--blue),var(--blueh)); transition:width .2s;}
   #stats{text-align:right; font-size:12px; color:var(--muted); line-height:1.5;}
   #stats b{color:var(--ink);}
 
-  /* orders */
+  /* command bar */
   #orders{bottom:0; padding:10px 10px calc(10px + env(safe-area-inset-bottom)); display:flex; gap:7px;
     justify-content:center; flex-wrap:wrap;}
   .obtn{pointer-events:auto; background:var(--panel2); border:1px solid var(--line); color:var(--ink);
@@ -43,7 +43,8 @@
   .obtn:active{transform:translateY(1px);}
 
   #hint{position:fixed; left:50%; top:64px; transform:translateX(-50%); z-index:5; pointer-events:none;
-    font-size:12px; color:var(--muted); background:rgba(20,23,29,.7); padding:4px 10px; border-radius:8px;}
+    font-size:12px; color:var(--muted); background:rgba(20,23,29,.7); padding:4px 10px; border-radius:8px;
+    max-width:92vw; text-align:center;}
 
   /* toasts */
   #toasts{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:8; pointer-events:none;
@@ -61,16 +62,8 @@
   .modal h1{margin:0 0 4px; font-size:26px; letter-spacing:.5px;}
   .modal h1 .fr{color:var(--gold);}
   .modal p{color:var(--muted); font-size:13.5px; line-height:1.55; margin:8px 0;}
-  .choices{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
-  .choice{flex:1 1 150px; background:var(--panel2); border:1px solid var(--line); border-radius:14px;
-    padding:14px; cursor:pointer; text-align:center; transition:.12s;}
-  .choice:hover{border-color:var(--gold); background:#262a20;}
-  .choice .cg{font-size:34px; color:var(--gold2);}
-  .choice .cn{font-weight:700; margin-top:4px;}
-  .choice .cd{color:var(--muted); font-size:11.5px; margin-top:4px; line-height:1.4;}
   .btn{display:inline-block; background:var(--gold); color:#20170a; border:none; font-weight:800;
     font-size:15px; padding:12px 22px; border-radius:12px; cursor:pointer; margin-top:12px;}
-  .btn.ghost{background:transparent; color:var(--gold2); border:1px solid var(--gold);}
   .kbd{font-size:12px; color:var(--muted);}
   .kbd b{color:var(--ink);}
   .end-big{font-size:30px; font-weight:800; margin:0 0 6px;}
@@ -84,18 +77,18 @@
 
 <div class="hud" id="top">
   <div class="card" id="rankcard">
-    <div class="rankrow"><span class="glyph" id="hglyph">♟</span>
-      <div><div class="rname" id="hrank">Pawn</div><div class="sub" id="hsub">a lone piece on the frontier</div></div>
+    <div class="rankrow"><span class="glyph" id="hglyph">⚔</span>
+      <div><div class="rname" id="hrank">Your squad</div><div class="sub" id="hsub">tap a piece to plan its move</div></div>
     </div>
     <div class="xpwrap"><div class="xpbar" id="xpbar"></div></div>
   </div>
   <div class="card" id="stats">
-    <div>Captures <b id="scap">0</b></div>
-    <div>Squad <b id="ssquad">0</b></div>
+    <div>Squad <b id="ssquad">4</b>/4</div>
+    <div>Crushed <b id="scap">0</b>/6</div>
     <div>Turn <b id="sturn">1</b></div>
   </div>
 </div>
-<div id="hint">Your move — tap a square (dots move · rings capture) · tap yourself to wait</div>
+<div id="hint">Plan each piece — tap it, tap its target — then Go. Every other squad moves after you.</div>
 
 <div class="hud" id="orders"></div>
 <div id="toasts"></div>
@@ -104,27 +97,15 @@
 <div class="overlay" id="title">
   <div class="modal">
     <h1>Chess <span class="fr">Frontier</span></h1>
-    <p><b>You are a single pawn</b> on an endless checkerboard. Hunt weaker wild pieces, earn
-    <b>promotions</b> that rewrite how you move (pawn → knight / bishop / rook → queen), and gather
-    a <b>squad</b>. When you reach the crown, an enemy commander rides out of the frontier — capture
-    the enemy <b>Queen</b> to win.</p>
-    <p class="kbd">It's <b>turn-based</b>: you move, then the whole world takes one move, then it's you
-    again — no clock, take your time. Solo, <b>tap a square to move</b> (dots move, rings capture; tap
-    yourself to wait). Once you have a <b>squad</b>, you <b>plan every piece</b> — tap a piece, tap its
-    target, repeat — then hit <b>Go</b> and they <b>all move at once</b>. Red-tinted squares are
-    <b>threatened</b> — end a piece off them and nothing can capture it that turn.</p>
-    <p class="kbd">A prototype — one screen, one goal: <i>is turn-based chess-piece hunting fun?</i></p>
-    <button class="btn" id="startbtn">Enter the frontier ▸</button>
-  </div>
-</div>
-
-<!-- promotion -->
-<div class="overlay" id="promo" style="display:none">
-  <div class="modal">
-    <h1>Promotion</h1>
-    <p id="promotext">You've earned your rank. Choose what to <b>become</b> — each piece plays
-    completely differently.</p>
-    <div class="choices" id="promochoices"></div>
+    <p>You command a <b>squad of four</b> — a <b>Pawn, Rook, Bishop &amp; Knight</b> — dropped onto an
+    endless checkerboard <b>swarming with rival squads</b>, all roaming, all fighting each other, all
+    coming for you. <b>Crush 6 rival squads</b> to hold the frontier; you lose if your four are wiped out.</p>
+    <p class="kbd">It's <b>turn-based</b> and you command every piece. <b>Plan each of your pieces</b> —
+    tap a piece, tap its target — then hit <b>Go</b> and they <b>all move at once</b>; then every other
+    squad takes its move. Real chess moves (rooks slide lines, knights jump, bishops the diagonals).
+    Red-tinted squares are <b>threatened</b> — end a piece off them and nothing can capture it that turn.
+    No clock; take your time.</p>
+    <button class="btn" id="startbtn">Take the frontier ▸</button>
   </div>
 </div>
 
@@ -141,526 +122,285 @@
 "use strict";
 /* ============================================================================
    Chess Frontier — thin-slice prototype
-   Self-contained, vanilla JS + canvas. TURN-BASED chess: you move one piece,
-   then the whole world takes one move, then it's you again. Capture = kill,
-   using real chess geometry. No clock.
+   Turn-based squad battlefield. You command a 4-piece squad (Pawn/Rook/Bishop/
+   Knight) via plan-and-commit; the board is full of rival 4-piece squads, all
+   fighting each other and you. Real chess geometry, capture = kill, no clock.
    ========================================================================== */
 
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 let W=0,H=0,DPR=1;
 function resize(){
-  DPR = Math.min(2, window.devicePixelRatio||1);
-  W = window.innerWidth; H = window.innerHeight;
-  cv.width = W*DPR; cv.height = H*DPR; cv.style.width=W+'px'; cv.style.height=H+'px';
+  DPR=Math.min(2, window.devicePixelRatio||1);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+'px'; cv.style.height=H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
 }
 window.addEventListener('resize', resize); resize();
 
-const TILE = 56;                 // pixels per square
-const SLIDE = 8;                 // your slider range cap (nod to the 8x8 origin) — a reach advantage
-const ENEMY_SLIDE = 5;           // wild/enemy sliders reach less far — keeps threat lines readable
-const VIS = 7;                   // spawn radius in squares
-const AGGRO = 5;                 // wild aggression radius (pawns don't swarm from across the board)
+const TILE=56;
+const SLIDE=7;            // slider range cap for everyone (fair squads; nod to the 8x8 origin)
+const VIS=9;              // spawn radius
+const AGGRO=6;            // enemy engages a target within this range
+const PLAYER='you';
+const SQUAD_COMP=['pawn','rook','bishop','knight'];
+const PLAYER_COLOR='#5b9bf0';
+const PALETTE=['#ef5350','#66bb6a','#ab47bc','#ff9800','#26c6da','#ec407a','#8d6e63','#ffd54f'];
+const START_ENEMY=5, MIN_ENEMY=4, TARGET=6;
 
-// piece definitions --------------------------------------------------------
-const DEF = {
-  pawn:  {name:'Pawn',   glyph:'♟', val:1, cd:0.60, blurb:'one step, captures on the diagonal — fragile'},
-  knight:{name:'Knight', glyph:'♞', val:3, cd:1.00, blurb:'L-jumps over anything — the flanker'},
-  bishop:{name:'Bishop', glyph:'♝', val:3, cd:1.05, blurb:'slides the diagonals — the sniper'},
-  rook:  {name:'Rook',   glyph:'♜', val:5, cd:1.15, blurb:'slides ranks & files — the line-holder'},
-  queen: {name:'Queen',  glyph:'♛', val:9, cd:1.40, blurb:'rook + bishop — the apex'},
+const DEF={
+  pawn:  {name:'Pawn',   glyph:'♟', val:1, blurb:'one step; captures on the diagonal'},
+  knight:{name:'Knight', glyph:'♞', val:3, blurb:'L-jumps over anything — the flanker'},
+  bishop:{name:'Bishop', glyph:'♝', val:3, blurb:'slides the diagonals — the sniper'},
+  rook:  {name:'Rook',   glyph:'♜', val:5, blurb:'slides ranks & files — the line-holder'},
 };
-const ORTH = [[1,0],[-1,0],[0,1],[0,-1]];
-const DIAG = [[1,1],[1,-1],[-1,1],[-1,-1]];
-const LMOV = [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
-
-const PROMO1_XP = 2;   // pawn -> minor (2 captures — reach the payoff fast; pawn stage is the danger gate)
-const QUEEN_XP  = 10;  // minor/rook -> queen (reachable pace for a thin slice, not a grind)
-const slideRange = p => p.team==='blue' ? SLIDE : ENEMY_SLIDE;
+const ORTH=[[1,0],[-1,0],[0,1],[0,-1]];
+const DIAG=[[1,1],[1,-1],[-1,1],[-1,-1]];
+const LMOV=[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
 
 // state --------------------------------------------------------------------
 let S;
 function newState(){
   return {
-    phase:'title',            // title | play | promo | end
+    phase:'title',            // title | play | end
     sub:'idle',               // idle (your turn) | playerAnim | enemyAnim
     turn:1, lastSpawnTurn:0,
     pieces:[], occ:new Map(),
-    hero:null, squad:[],
-    xp:0, captures:0,
     camX:0, camY:0,
-    sel:null, plan:new Map(),  // selected piece id; planned moves pieceId -> {x,y} (commit = all at once)
-    frontierDir:{x:0,y:-1},
-    voids:new Set(), keeps:[],
-    nextId:1, finaleDone:false,
+    sel:null, plan:new Map(),  // selected piece id; planned moves id -> {x,y}
     heroMoves:[], threat:new Set(),
-    slotIdx:0,
+    voids:new Set(),
+    nextId:1, nextTeam:1,
+    teamColor:{}, enemyTeams:new Set(),
+    crushed:0,
   };
 }
 const key=(x,y)=>x+','+y;
 const cheb=(ax,ay,bx,by)=>Math.max(Math.abs(ax-bx),Math.abs(ay-by));
 const isVoid=(x,y)=>S.voids.has(key(x,y));
 const byId=id=>S.pieces.find(p=>p.id===id && !p.dead);
-
-function mkPiece(type,team,x,y,opt={}){
-  const d=DEF[type];
-  return Object.assign({
-    id:S.nextId++, type, team, x, y, hero:false, squad:false,
-    anim:null, facing:{x:0,y:-1}, dead:false,
-    anchorX:x, anchorY:y, slotX:0, slotY:0,
-  }, opt);
+function mkPiece(type,team,x,y){
+  return {id:S.nextId++, type, team, x, y, anim:null, facing:{x:0,y:-1}, dead:false};
 }
-
-// occupancy ----------------------------------------------------------------
-function rebuildOcc(){
-  S.occ.clear();
-  for(const p of S.pieces) if(!p.dead) S.occ.set(key(p.x,p.y), p);
-}
+function rebuildOcc(){ S.occ.clear(); for(const p of S.pieces) if(!p.dead) S.occ.set(key(p.x,p.y), p); }
 const at=(x,y)=>S.occ.get(key(x,y));
-// wild + red are one hostile bloc (they don't fight each other); only YOU (blue) fight them.
-const ENEMYSIDE=t=>t==='wild'||t==='red';
-const hostile=(a,b)=>a && b && a.team!==b.team && !(ENEMYSIDE(a.team)&&ENEMYSIDE(b.team));
+const hostile=(a,b)=>a && b && a.team!==b.team;         // every squad fights every other squad
+const myPieces=()=>S.pieces.filter(p=>!p.dead && p.team===PLAYER);
+function playerCentroid(){ let n=0,cx=0,cy=0; for(const p of S.pieces){ if(!p.dead&&p.team===PLAYER){ cx+=p.x; cy+=p.y; n++; } } return n?{x:cx/n,y:cy/n}:{x:S.camX,y:S.camY}; }
 
-// legal moves --------------------------------------------------------------
+// geometry -----------------------------------------------------------------
 function legalMoves(p){
   const out=[];
-  const push=(x,y,cap)=>{ if(!isVoid(x,y)) out.push({x,y,capture:cap}); };
   if(p.type==='pawn'){
     for(const[dx,dy]of ORTH){ const x=p.x+dx,y=p.y+dy; if(isVoid(x,y))continue; if(!at(x,y)) out.push({x,y,capture:false}); }
     for(const[dx,dy]of DIAG){ const x=p.x+dx,y=p.y+dy; const t=at(x,y); if(t&&hostile(p,t)&&!isVoid(x,y)) out.push({x,y,capture:true}); }
   } else if(p.type==='knight'){
     for(const[dx,dy]of LMOV){ const x=p.x+dx,y=p.y+dy; if(isVoid(x,y))continue; const t=at(x,y); if(!t) out.push({x,y,capture:false}); else if(hostile(p,t)) out.push({x,y,capture:true}); }
   } else {
-    const dirs = p.type==='bishop'?DIAG : p.type==='rook'?ORTH : ORTH.concat(DIAG);
-    const rng=slideRange(p);
-    for(const[dx,dy]of dirs){
-      for(let i=1;i<=rng;i++){
-        const x=p.x+dx*i,y=p.y+dy*i; if(isVoid(x,y))break;
-        const t=at(x,y);
-        if(!t){ out.push({x,y,capture:false}); }
-        else { if(hostile(p,t)) out.push({x,y,capture:true}); break; }
-      }
-    }
+    const dirs=p.type==='bishop'?DIAG:p.type==='rook'?ORTH:ORTH.concat(DIAG);
+    for(const[dx,dy]of dirs){ for(let i=1;i<=SLIDE;i++){ const x=p.x+dx*i,y=p.y+dy*i; if(isVoid(x,y))break;
+      const t=at(x,y); if(!t){ out.push({x,y,capture:false}); } else { if(hostile(p,t)) out.push({x,y,capture:true}); break; } } }
   }
   return out;
 }
-// squares a piece THREATENS (where it could capture) — for the danger overlay.
-// Turn-based & conservative: sliders threaten their FULL range THROUGH other pieces (only voids
-// block), because in a single world-tick another piece can move and unblock the line. This makes
-// the rule the player relies on exact: end your move off a red square and nothing can capture you
-// that turn — even if a blocker steps aside. (Actual captures still stop at the first piece.)
-function threatSquares(p, into){
+// conservative threat: sliders drawn THROUGH blockers to full range (blockers are transient in a
+// world-tick), so "end off a red square = safe this turn" is exact.
+function threatSquares(p,into){
   if(p.type==='pawn'){ for(const[dx,dy]of DIAG){ const x=p.x+dx,y=p.y+dy; if(!isVoid(x,y)) into.add(key(x,y)); } return; }
   if(p.type==='knight'){ for(const[dx,dy]of LMOV){ const x=p.x+dx,y=p.y+dy; if(!isVoid(x,y)) into.add(key(x,y)); } return; }
-  const dirs = p.type==='bishop'?DIAG : p.type==='rook'?ORTH : ORTH.concat(DIAG);
-  const rng=slideRange(p);
-  for(const[dx,dy]of dirs){
-    for(let i=1;i<=rng;i++){ const x=p.x+dx*i,y=p.y+dy*i; if(isVoid(x,y))break;
-      into.add(key(x,y)); }   // note: do NOT stop at occupied squares — blockers are transient
-  }
+  const dirs=p.type==='bishop'?DIAG:p.type==='rook'?ORTH:ORTH.concat(DIAG);
+  for(const[dx,dy]of dirs){ for(let i=1;i<=SLIDE;i++){ const x=p.x+dx*i,y=p.y+dy*i; if(isVoid(x,y))break; into.add(key(x,y)); } }
+}
+function plannableMoves(p){
+  const taken=new Set(); for(const [id,d] of S.plan){ if(id!==p.id) taken.add(key(d.x,d.y)); }
+  return legalMoves(p).filter(m=>!taken.has(key(m.x,m.y)));   // two of your pieces can't target one square
 }
 
 // movement / capture -------------------------------------------------------
-function travelDur(p,mv){
-  const dist=cheb(p.x,p.y,mv.x,mv.y);
-  if(p.type==='knight') return 0.16;
-  return Math.min(0.28, 0.07 + dist*0.028);
-}
-function doMove(p, mv){
-  const target = at(mv.x,mv.y);
-  p.anim = {fx:p.x, fy:p.y, tx:mv.x, ty:mv.y, t:0, dur:travelDur(p,mv)};
-  p.facing = {x:Math.sign(mv.x-p.x), y:Math.sign(mv.y-p.y)};
-  p.x=mv.x; p.y=mv.y;
-  rebuildOcc();
-  if(target && hostile(p,target)) capture(p, target, mv.x, mv.y);
+function travelDur(p,d){ const dist=cheb(p.x,p.y,d.x,d.y); if(p.type==='knight') return 0.16; return Math.min(0.28,0.07+dist*0.028); }
+function doMove(p,mv){
+  const target=at(mv.x,mv.y);
+  p.anim={fx:p.x,fy:p.y,tx:mv.x,ty:mv.y,t:0,dur:travelDur(p,mv)};
+  p.facing={x:Math.sign(mv.x-p.x),y:Math.sign(mv.y-p.y)};
+  p.x=mv.x; p.y=mv.y; rebuildOcc();
+  if(target && hostile(p,target)) capture(p,target,mv.x,mv.y);
 }
 let flashes=[];
-function capture(by, victim, x, y){
-  victim.dead=true;
-  flashes.push({x,y,t:0,team:victim.team});
-  // rank XP only from the hero's own captures (the promotion arc is "you")
-  if(by.hero){ S.xp += DEF[victim.type].val; S.captures++; updateHUD(); }
-  if(victim.hero){ endGame(false,'Your piece was captured. On the frontier, that means demotion — begin again as a pawn.'); return; }
-  if(victim.squad){ S.squad = S.squad.filter(id=>id!==victim.id); updateHUD(); }
-  if(victim.commander){ if(by.team==='blue') endGame(true,'You captured the enemy Queen. The frontier is yours — for now.'); return; }
-}
+function capture(by,victim,x,y){ victim.dead=true; flashes.push({x,y,t:0}); }   // eliminations tallied in finishTurn
 
-// AI helpers ---------------------------------------------------------------
-function nearestHostile(p, radius){
-  let best=null, bd=1e9;
-  for(const q of S.pieces){ if(q.dead||!hostile(p,q))continue; const d=cheb(p.x,p.y,q.x,q.y);
-    if(d<=radius && d<bd){ bd=d; best=q; } }
-  return best;
-}
-function bestCapture(moves){
-  let best=null,bv=-1; for(const m of moves){ if(!m.capture)continue; const t=at(m.x,m.y);
-    const v=t?DEF[t.type].val:0; if(v>bv){bv=v;best=m;} } return best;
-}
-function stepToward(p, moves, tx, ty, avoidThreat){
-  let pool=moves;
-  if(avoidThreat){ const safe=moves.filter(m=>!S.threat.has(key(m.x,m.y))); if(safe.length) pool=safe; }
-  let best=null,bd=1e9; for(const m of pool){ const d=cheb(m.x,m.y,tx,ty); if(d<bd){bd=d;best=m;} }
-  if(best && bd < cheb(p.x,p.y,tx,ty)) doMove(p,best);   // else stay put this turn
-}
-function wildAI(p){
-  const moves=legalMoves(p); if(!moves.length) return;
-  const cap=bestCapture(moves); if(cap){ doMove(p,cap); return; }
-  const tgt=nearestHostile(p,AGGRO);
-  if(tgt){ stepToward(p,moves,tgt.x,tgt.y); return; }
-  if(Math.random()<0.25) doMove(p, moves[(Math.random()*moves.length)|0]);   // idle wilds mostly hold
-}
-function redAI(p){
-  const moves=legalMoves(p); if(!moves.length) return;
-  // prefer capturing the hero, then any capture, then hunt hero
-  const heroCap=moves.find(m=>{const t=at(m.x,m.y);return t&&t.hero;});
-  if(heroCap){ doMove(p,heroCap); return; }
-  const cap=bestCapture(moves); if(cap){ doMove(p,cap); return; }
-  const h=S.hero; if(h&&!h.dead) stepToward(p,moves,h.x,h.y);
-}
-// Player command — you plan each of your pieces, then commit; they all resolve at once.
-// (Squad is directly commanded, not AI-driven — that's the whole mechanic.)
-function plannableMoves(p){
-  const taken=new Set(); for(const [id,d] of S.plan){ if(id!==p.id) taken.add(key(d.x,d.y)); }
-  return legalMoves(p).filter(m=>!taken.has(key(m.x,m.y)));   // no two of your pieces onto one square
-}
+// your command: plan every piece, then all resolve at once (snapshot resolution) ----
 function commitPlan(){
   rebuildOcc();
-  const snap=S.occ;                       // resolve everything against the pre-move snapshot
+  const snap=S.occ;
   const acts=[];
-  for(const [id,d] of S.plan){ const p=byId(id); if(!p) continue;
-    const v=snap.get(key(d.x,d.y));
-    acts.push({p, d, victim:(v && hostile(p,v))?v:null});
-  }
-  // 1) move every planned piece simultaneously (positions taken from the snapshot)
+  for(const [id,d] of S.plan){ const p=byId(id); if(!p) continue; const v=snap.get(key(d.x,d.y)); acts.push({p,d,victim:(v&&hostile(p,v))?v:null}); }
   for(const a of acts){
-    a.p.anim={fx:a.p.x, fy:a.p.y, tx:a.d.x, ty:a.d.y, t:0, dur:travelDur(a.p,a.d)};
-    a.p.facing={x:Math.sign(a.d.x-a.p.x), y:Math.sign(a.d.y-a.p.y)};
+    a.p.anim={fx:a.p.x,fy:a.p.y,tx:a.d.x,ty:a.d.y,t:0,dur:travelDur(a.p,a.d)};
+    a.p.facing={x:Math.sign(a.d.x-a.p.x),y:Math.sign(a.d.y-a.p.y)};
     a.p.x=a.d.x; a.p.y=a.d.y;
-    if(a.p===S.hero){ S.frontierDir={x:a.p.facing.x||S.frontierDir.x, y:a.p.facing.y||S.frontierDir.y};
-      if(S.frontierDir.x===0&&S.frontierDir.y===0) S.frontierDir={x:0,y:-1}; }
   }
   rebuildOcc();
-  // 2) resolve captures (each victim was an enemy at snapshot; destinations are unique)
-  for(const a of acts){ if(a.victim && !a.victim.dead){ capture(a.p, a.victim, a.d.x, a.d.y); if(S.phase!=='play') break; } }
+  for(const a of acts){ if(a.victim && !a.victim.dead) capture(a.p,a.victim,a.d.x,a.d.y); }
   S.plan.clear(); S.sel=null; S.heroMoves=[]; buildPlanBar();
-  if(S.phase!=='play') return;            // a capture won the game
-  S.sub='playerAnim';                     // → your pieces animate, then the world moves
+  S.sub='playerAnim';
+}
+
+// enemy AI (every non-player piece) ----------------------------------------
+function nearestHostile(p,radius){ let best=null,bd=1e9; for(const q of S.pieces){ if(q.dead||!hostile(p,q))continue; const d=cheb(p.x,p.y,q.x,q.y); if(d<=radius&&d<bd){bd=d;best=q;} } return best; }
+function bestCapture(moves){ let best=null,bv=-1; for(const m of moves){ if(!m.capture)continue; const t=at(m.x,m.y); const v=t?DEF[t.type].val:0; if(v>bv){bv=v;best=m;} } return best; }
+function stepToward(p,moves,tx,ty){ let best=null,bd=1e9; for(const m of moves){ const d=cheb(m.x,m.y,tx,ty); if(d<bd){bd=d;best=m;} } if(best && bd<cheb(p.x,p.y,tx,ty)) doMove(p,best); }
+function enemyAI(p){
+  const moves=legalMoves(p); if(!moves.length) return;
+  const cap=bestCapture(moves); if(cap){ doMove(p,cap); return; }   // take a kill
+  const tgt=nearestHostile(p,60);                                   // else seek the nearest fight (any squad)
+  if(tgt) stepToward(p,moves,tgt.x,tgt.y);
 }
 
 // spawning -----------------------------------------------------------------
-function freeSquareNear(cx,cy,minR,maxR,tries=40){
-  for(let i=0;i<tries;i++){
-    const a=Math.random()*Math.PI*2, r=minR+Math.random()*(maxR-minR);
+function freeSquareNear(cx,cy,minR,maxR,tries=50){
+  for(let i=0;i<tries;i++){ const a=Math.random()*Math.PI*2, r=minR+Math.random()*(maxR-minR);
     const x=Math.round(cx+Math.cos(a)*r), y=Math.round(cy+Math.sin(a)*r);
-    if(!isVoid(x,y) && !at(x,y)) return {x,y};
-  }
+    if(!isVoid(x,y)&&!at(x,y)) return {x,y}; }
   return null;
 }
-const WILD_KINDS=['pawn','pawn','pawn','pawn','knight','knight','bishop','rook'];
-function spawnWild(x,y){
-  const type=WILD_KINDS[(Math.random()*WILD_KINDS.length)|0];
-  S.pieces.push(mkPiece(type,'wild',x,y));
+function spawnSquad(team,cx,cy,color){
+  S.enemyTeams.add(team); S.teamColor[team]=color;
+  for(const type of SQUAD_COMP){ const sp=freeSquareNear(cx,cy,0,3); if(sp){ S.pieces.push(mkPiece(type,team,sp.x,sp.y)); rebuildOcc(); } }
 }
-function addRecruit(){
-  const sp=freeSquareNear(S.hero.x,S.hero.y,1,2) || freeSquareNear(S.hero.x,S.hero.y,2,4);
-  if(!sp) return;
-  const slots=[[-1,1],[1,1],[0,2],[-1,-1],[1,-1]];
-  const sl=slots[S.slotIdx%slots.length]; S.slotIdx++;
-  const p=mkPiece('pawn','blue',sp.x,sp.y,{squad:true,slotX:sl[0],slotY:sl[1]});
-  S.pieces.push(p); S.squad.push(p.id);
-  rebuildOcc(); updateHUD();
-  toast('A pawn joins your squad');
-}
-
-// frontier: keep the wild population alive ahead of the player (called every couple of turns)
-function frontierSpawn(){
-  let wilds=0; for(const p of S.pieces) if(!p.dead&&p.team==='wild') wilds++;
-  if(wilds>=9) return;
-  const d=S.frontierDir;
-  const sp=freeSquareNear(S.hero.x+d.x*VIS, S.hero.y+d.y*VIS, 2, VIS);
-  if(!sp) return;
-  // ramp: only pawns until you've earned your first promotion, then the full mix
-  if(S.hero.type==='pawn') S.pieces.push(mkPiece('pawn','wild',sp.x,sp.y));
-  else spawnWild(sp.x,sp.y);
-}
-
-// promotion / finale -------------------------------------------------------
-function checkPromotion(){
-  if(S.phase!=='play') return;
-  const h=S.hero;
-  if(h.type==='pawn' && S.xp>=PROMO1_XP){ openPromo('minor'); }
-  else if((h.type==='knight'||h.type==='bishop'||h.type==='rook') && S.xp>=QUEEN_XP){ openPromo('queen'); }
-}
-function openPromo(kind){
-  S.phase='promo';
-  const box=document.getElementById('promochoices');
-  const txt=document.getElementById('promotext');
-  box.innerHTML='';
-  const make=(type,label)=>{
-    const d=DEF[type];
-    const el=document.createElement('div'); el.className='choice';
-    el.innerHTML=`<div class="cg">${d.glyph}</div><div class="cn">${label||d.name}</div><div class="cd">${d.blurb}</div>`;
-    el.onclick=()=>promoteTo(type);
-    box.appendChild(el);
-  };
-  if(kind==='minor'){
-    txt.innerHTML="You've survived long enough to <b>promote</b>. Choose your line — each is a different game:";
-    make('knight'); make('bishop'); make('rook');
-  } else {
-    txt.innerHTML="You've mastered the frontier. Take the crown — the <b>Queen</b> commands both ranks, files, and diagonals.";
-    make('queen','Ascend to Queen');
-  }
-  document.getElementById('promo').style.display='flex';
-}
-function promoteTo(type){
-  const first = S.hero.type==='pawn';
-  S.hero.type=type;
-  document.getElementById('promo').style.display='none';
-  S.phase='play';
-  updateHUD();
-  toast('Promoted to '+DEF[type].name+'!');
-  if(first) addRecruit();                 // first promotion grants a squadmate
-  if(type==='queen'){ addRecruit(); startFinale(); }
-  refreshTurn();
-}
-function startFinale(){
-  if(S.finaleDone) return; S.finaleDone=true;
-  const d=S.frontierDir;
-  const cx=S.hero.x+d.x*6, cy=S.hero.y+d.y*6;
-  const cs=freeSquareNear(cx,cy,0,2)||{x:cx,y:cy};
-  const cmd=mkPiece('queen','red',cs.x,cs.y,{commander:true}); S.pieces.push(cmd);
-  for(let i=0;i<3;i++){ const sp=freeSquareNear(cx,cy,1,3); if(sp) S.pieces.push(mkPiece('pawn','red',sp.x,sp.y)); }
-  rebuildOcc();
-  toast('⚔  An enemy commander rides out of the frontier — capture the enemy Queen!');
+function maintainSquads(){
+  if(S.crushed>=TARGET || S.enemyTeams.size>=MIN_ENEMY) return;
+  const c=playerCentroid(), a=Math.random()*Math.PI*2, r=VIS+6+Math.random()*6;
+  const team='e'+(S.nextTeam++);
+  spawnSquad(team, Math.round(c.x+Math.cos(a)*r), Math.round(c.y+Math.sin(a)*r), PALETTE[S.nextTeam%PALETTE.length]);
+  toast('A fresh squad rides onto the frontier');
 }
 
 // turn machine -------------------------------------------------------------
-// A turn = you move (or wait) → the whole world takes one move → your move again.
 let last=0;
-function anyAnim(){ for(const p of S.pieces){ if(!p.dead && p.anim) return true; } return false; }
+function anyAnim(){ for(const p of S.pieces){ if(!p.dead&&p.anim) return true; } return false; }
 function refreshTurn(){
-  S.sel=null; S.plan.clear();
-  // solo (no squad) → show the hero's moves for instant tap-to-move.
-  // with a squad → nothing highlighted until you select a piece to plan.
-  S.heroMoves = (S.phase==='play' && S.sub==='idle' && S.squad.length===0) ? legalMoves(S.hero) : [];
+  S.sel=null; S.plan.clear(); S.heroMoves=[];
   computeThreat(); updateHUD(); buildPlanBar();
-  const hint=document.getElementById('hint');
-  if(hint) hint.textContent = S.squad.length===0
-    ? 'Your move — tap a square · tap yourself to wait'
-    : 'Plan each piece (tap it, tap its target), then Go — they all move at once';
 }
 function worldTick(){
   rebuildOcc();
-  // the world moves after you — wilds, then the enemy (your pieces are player-commanded, not AI)
-  const order=S.pieces.filter(p=>!p.dead && p.team!=='blue').sort((a,b)=>a.id-b.id);
-  for(const p of order){ if(p.dead) continue;
-    if(p.team==='wild') wildAI(p);
-    else if(p.team==='red') redAI(p);
-    if(S.phase!=='play') return;   // a capture ended the game mid-tick
-  }
+  const order=S.pieces.filter(p=>!p.dead && p.team!==PLAYER).sort((a,b)=>a.id-b.id);
+  for(const p of order){ if(p.dead) continue; enemyAI(p); if(S.phase!=='play') return; }
 }
 function finishTurn(){
-  if(S.pieces.some(p=>p.dead)) S.pieces=S.pieces.filter(p=>!p.dead);
-  if(S.phase!=='play') return;
+  S.pieces=S.pieces.filter(p=>!p.dead);
+  const alive={}; for(const p of S.pieces) alive[p.team]=(alive[p.team]||0)+1;
+  if(!alive[PLAYER]){ endGame(false,'Your squad was wiped out on the frontier.'); return; }
+  for(const t of [...S.enemyTeams]){ if(!alive[t]){ S.enemyTeams.delete(t); delete S.teamColor[t]; S.crushed++; toast('Rival squad crushed — '+S.crushed+'/'+TARGET); } }
+  if(S.crushed>=TARGET){ endGame(true,'You outlasted the frontier — '+S.crushed+' rival squads crushed.'); return; }
   S.turn++;
-  for(const k of S.keeps){ if(!k.claimed && S.hero.x===k.x && S.hero.y===k.y){ k.claimed=true; toast('Keep claimed — reinforcements!'); addRecruit(); } }
-  if(!S.finaleDone && S.turn - S.lastSpawnTurn >= 2){ S.lastSpawnTurn=S.turn; frontierSpawn(); }
-  S.sub='idle';
-  refreshTurn();
-  checkPromotion();       // may open the promotion modal (pauses input until chosen)
+  if(S.turn-S.lastSpawnTurn>=2){ S.lastSpawnTurn=S.turn; maintainSquads(); }
+  S.sub='idle'; refreshTurn();
 }
 function update(dt){
   for(const p of S.pieces){ if(p.dead)continue; if(p.anim){ p.anim.t+=dt; if(p.anim.t>=p.anim.dur) p.anim=null; } }
   if(S.sub==='playerAnim' && !anyAnim()){ worldTick(); S.sub='enemyAnim'; }
   else if(S.sub==='enemyAnim' && !anyAnim()){ finishTurn(); }
   for(const f of flashes) f.t+=dt; flashes=flashes.filter(f=>f.t<0.4);
-  const k=Math.min(1,dt*6);
-  S.camX += (S.hero.x - S.camX)*k; S.camY += (S.hero.y - S.camY)*k;
+  const c=playerCentroid(), k=Math.min(1,dt*6);
+  S.camX+=(c.x-S.camX)*k; S.camY+=(c.y-S.camY)*k;
 }
 function computeThreat(){
   S.threat.clear();
-  const hx=S.camX, hy=S.camY, R=Math.ceil(Math.max(W,H)/TILE/2)+2;
-  for(const p of S.pieces){ if(p.dead)continue; if(!hostile(p,S.hero))continue;
-    if(cheb(p.x,p.y,hx,hy)>R+SLIDE) continue;
-    threatSquares(p, S.threat);
-  }
+  const c=playerCentroid(), R=Math.ceil(Math.max(W,H)/TILE/2)+2;
+  for(const p of S.pieces){ if(p.dead||p.team===PLAYER)continue; if(cheb(p.x,p.y,c.x,c.y)>R+SLIDE)continue; threatSquares(p,S.threat); }
 }
 
 // rendering ----------------------------------------------------------------
-function sx(x){ return (x - S.camX)*TILE + W/2; }
-function sy(y){ return (y - S.camY)*TILE + H/2; }
+function sx(x){ return (x-S.camX)*TILE + W/2; }
+function sy(y){ return (y-S.camY)*TILE + H/2; }
+function contrastGlyph(hex){ const n=parseInt(hex.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255; return (0.299*r+0.587*g+0.114*b)>145?'#141821':'#f2f5fa'; }
 function drawBoard(){
   ctx.fillStyle='#14171d'; ctx.fillRect(0,0,W,H);
-  const x0=Math.floor(S.camX - W/(2*TILE))-1, x1=Math.ceil(S.camX + W/(2*TILE))+1;
-  const y0=Math.floor(S.camY - H/(2*TILE))-1, y1=Math.ceil(S.camY + H/(2*TILE))+1;
+  const x0=Math.floor(S.camX-W/(2*TILE))-1, x1=Math.ceil(S.camX+W/(2*TILE))+1;
+  const y0=Math.floor(S.camY-H/(2*TILE))-1, y1=Math.ceil(S.camY+H/(2*TILE))+1;
   for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
     const px=sx(x)-TILE/2, py=sy(y)-TILE/2;
-    if(isVoid(x,y)){ ctx.fillStyle='#0a0c10'; ctx.fillRect(px,py,TILE,TILE);
-      ctx.strokeStyle='#05070a'; ctx.strokeRect(px+.5,py+.5,TILE-1,TILE-1); continue; }
-    const light=((x+y)&1)===0;
-    ctx.fillStyle = light ? '#39414f' : '#2c3340';
-    ctx.fillRect(px,py,TILE,TILE);
+    if(isVoid(x,y)){ ctx.fillStyle='#0a0c10'; ctx.fillRect(px,py,TILE,TILE); ctx.strokeStyle='#05070a'; ctx.strokeRect(px+.5,py+.5,TILE-1,TILE-1); continue; }
+    ctx.fillStyle=((x+y)&1)===0?'#39414f':'#2c3340'; ctx.fillRect(px,py,TILE,TILE);
     if(S.threat.has(key(x,y))){ ctx.fillStyle='rgba(239,83,80,.20)'; ctx.fillRect(px,py,TILE,TILE); }
   }
-  // keeps
-  for(const kp of S.keeps){ const px=sx(kp.x), py=sy(kp.y);
-    ctx.fillStyle=kp.claimed?'#4a5568':'#e5b567'; ctx.font='700 26px serif';
-    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('⌂',px,py+1); }
-  // hero legal move markers
   for(const m of S.heroMoves){ const px=sx(m.x), py=sy(m.y);
-    if(m.capture){ ctx.strokeStyle='rgba(240,201,135,.95)'; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.arc(px,py,TILE*0.42,0,7); ctx.stroke(); }
+    if(m.capture){ ctx.strokeStyle='rgba(240,201,135,.95)'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(px,py,TILE*0.42,0,7); ctx.stroke(); }
     else { ctx.fillStyle='rgba(240,201,135,.55)'; ctx.beginPath(); ctx.arc(px,py,6,0,7); ctx.fill(); }
   }
 }
-function pieceScreenPos(p){
-  let gx=p.x, gy=p.y;
-  if(p.anim){ const t=Math.min(1,p.anim.t/p.anim.dur); const e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
-    gx=p.anim.fx+(p.anim.tx-p.anim.fx)*e; gy=p.anim.fy+(p.anim.ty-p.anim.fy)*e; }
-  return {px:(gx-S.camX)*TILE+W/2, py:(gy-S.camY)*TILE+H/2};
+function pieceScreenPos(p){ let gx=p.x,gy=p.y; if(p.anim){ const t=Math.min(1,p.anim.t/p.anim.dur), e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; gx=p.anim.fx+(p.anim.tx-p.anim.fx)*e; gy=p.anim.fy+(p.anim.ty-p.anim.fy)*e; } return {px:(gx-S.camX)*TILE+W/2, py:(gy-S.camY)*TILE+H/2}; }
+function drawPlan(){
+  for(const [id,d] of S.plan){ const p=byId(id); if(!p)continue; const a=pieceScreenPos(p), bx=sx(d.x), by=sy(d.y);
+    ctx.strokeStyle='rgba(123,180,255,.95)'; ctx.lineWidth=3; ctx.setLineDash([7,5]); ctx.beginPath(); ctx.moveTo(a.px,a.py); ctx.lineTo(bx,by); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(123,180,255,.95)'; ctx.beginPath(); ctx.arc(bx,by,7,0,7); ctx.fill(); }
+  if(S.sel!=null){ const p=byId(S.sel); if(p){ const a=pieceScreenPos(p); ctx.strokeStyle='#f0c987'; ctx.lineWidth=3; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.arc(a.px,a.py,TILE*0.47,0,7); ctx.stroke(); ctx.setLineDash([]); } }
 }
 function drawPiece(p){
-  const {px,py}=pieceScreenPos(p);
-  const r=TILE*0.40;
-  const col = p.team==='blue' ? (p.hero?'#5b9bf0':'#4d7fd0')
-            : p.team==='red' ? '#ef5350' : '#8b97a8';
-  // body
-  ctx.beginPath(); ctx.arc(px,py,r,0,7);
-  ctx.fillStyle=col; ctx.fill();
+  const {px,py}=pieceScreenPos(p), r=TILE*0.40, col=S.teamColor[p.team]||'#8b97a8';
+  ctx.beginPath(); ctx.arc(px,py,r,0,7); ctx.fillStyle=col; ctx.fill();
   ctx.lineWidth=2; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.stroke();
-  if(p.hero){ ctx.lineWidth=3; ctx.strokeStyle='#f0c987'; ctx.beginPath(); ctx.arc(px,py,r+3,0,7); ctx.stroke(); }
-  if(p.commander){ ctx.lineWidth=3; ctx.strokeStyle='#ffd9d7'; ctx.beginPath(); ctx.arc(px,py,r+3,0,7); ctx.stroke(); }
-  // glyph
-  ctx.fillStyle = p.team==='wild' ? '#1a1d24' : '#0e1420';
-  ctx.font='700 '+Math.round(TILE*0.5)+'px "Segoe UI Symbol","Apple Symbols",serif';
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(DEF[p.type].glyph, px, py+1);
+  if(p.team===PLAYER){ ctx.lineWidth=3; ctx.strokeStyle='#f0c987'; ctx.beginPath(); ctx.arc(px,py,r+3,0,7); ctx.stroke(); }
+  ctx.fillStyle=contrastGlyph(col); ctx.font='700 '+Math.round(TILE*0.5)+'px "Segoe UI Symbol","Apple Symbols",serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(DEF[p.type].glyph, px, py+1);
 }
-function drawFlashes(){
-  for(const f of flashes){ const px=sx(f.x), py=sy(f.y); const a=1-f.t/0.4;
-    ctx.strokeStyle=`rgba(240,201,135,${a})`; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.arc(px,py,TILE*(0.3+f.t*1.4),0,7); ctx.stroke(); }
-}
-function drawPlan(){
-  // dashed arrows from each planned piece to its target; a ring on the selected piece
-  for(const [id,d] of S.plan){ const p=byId(id); if(!p) continue;
-    const a=pieceScreenPos(p), bx=sx(d.x), by=sy(d.y);
-    ctx.strokeStyle='rgba(123,180,255,.95)'; ctx.lineWidth=3; ctx.setLineDash([7,5]);
-    ctx.beginPath(); ctx.moveTo(a.px,a.py); ctx.lineTo(bx,by); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='rgba(123,180,255,.95)'; ctx.beginPath(); ctx.arc(bx,by,7,0,7); ctx.fill();
-  }
-  if(S.sel!=null){ const p=byId(S.sel); if(p){ const a=pieceScreenPos(p);
-    ctx.strokeStyle='#f0c987'; ctx.lineWidth=3; ctx.setLineDash([5,4]);
-    ctx.beginPath(); ctx.arc(a.px,a.py,TILE*0.47,0,7); ctx.stroke(); ctx.setLineDash([]); } }
-}
-function render(){
-  drawBoard();
-  drawPlan();
-  const sorted=[...S.pieces].sort((a,b)=>a.y-b.y);
-  for(const p of sorted) if(!p.dead) drawPiece(p);
-  drawFlashes();
-}
+function drawFlashes(){ for(const f of flashes){ const px=sx(f.x), py=sy(f.y), a=1-f.t/0.4; ctx.strokeStyle=`rgba(240,201,135,${a})`; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(px,py,TILE*(0.3+f.t*1.4),0,7); ctx.stroke(); } }
+function render(){ drawBoard(); drawPlan(); const s=[...S.pieces].sort((a,b)=>a.y-b.y); for(const p of s) if(!p.dead) drawPiece(p); drawFlashes(); }
+function frame(ts){ const dt=Math.min(0.05,(ts-last)/1000||0); last=ts; if(S&&S.phase==='play') update(dt); if(S) render(); requestAnimationFrame(frame); }
 
-// main loop
-function frame(ts){
-  const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
-  if(S && S.phase==='play') update(dt);
-  if(S) render();
-  requestAnimationFrame(frame);
-}
-
-// input --------------------------------------------------------------------
-// SOLO (no squad): tap a target = the hero moves now; tap yourself = wait.
-function playerMove(mv){
-  doMove(S.hero,mv);
-  S.frontierDir={x:S.hero.facing.x||S.frontierDir.x, y:S.hero.facing.y||S.frontierDir.y};
-  if(S.frontierDir.x===0&&S.frontierDir.y===0) S.frontierDir={x:0,y:-1};
-  S.heroMoves=[];
-  if(S.phase!=='play') return;   // your capture ended the game
-  S.sub='playerAnim';            // → world takes its turn
-}
+// input — plan mode: tap a piece, tap its target; press Go to resolve all at once -----
 cv.addEventListener('pointerdown', e=>{
-  if(S.phase!=='play' || S.sub!=='idle') return;   // wait for moves to finish resolving
+  if(!S || S.phase!=='play' || S.sub!=='idle') return;
   const r=cv.getBoundingClientRect();
-  const wx=Math.round((e.clientX-r.left - W/2)/TILE + S.camX);
-  const wy=Math.round((e.clientY-r.top  - H/2)/TILE + S.camY);
-
-  if(S.squad.length===0){                          // SOLO — instant move
-    if(wx===S.hero.x && wy===S.hero.y){ S.heroMoves=[]; S.sub='playerAnim'; return; }  // wait
-    const mv=S.heroMoves.find(m=>m.x===wx&&m.y===wy);
-    if(mv) playerMove(mv);
-    return;
-  }
-
-  // SQUAD — plan mode: assign each piece a move, then press Go (they all resolve at once).
-  const fp=S.pieces.find(q=>!q.dead && q.team==='blue' && q.x===wx && q.y===wy);
-  if(fp){                                           // tapped one of your pieces
-    if(S.sel===fp.id){ if(S.plan.has(fp.id)) S.plan.delete(fp.id); S.sel=null; S.heroMoves=[]; buildPlanBar(); }
-    else { S.sel=fp.id; S.heroMoves=plannableMoves(fp); }   // select it, show its options
-    return;
-  }
-  if(S.sel!=null){                                  // tapped a target for the selected piece
-    const mv=S.heroMoves.find(m=>m.x===wx&&m.y===wy);
-    if(mv){ S.plan.set(S.sel,{x:wx,y:wy}); S.sel=null; S.heroMoves=[]; buildPlanBar(); return; }
-  }
-  S.sel=null; S.heroMoves=[];                       // tapped empty space → deselect
+  const wx=Math.round((e.clientX-r.left-W/2)/TILE + S.camX);
+  const wy=Math.round((e.clientY-r.top -H/2)/TILE + S.camY);
+  const fp=S.pieces.find(q=>!q.dead && q.team===PLAYER && q.x===wx && q.y===wy);
+  if(fp){ if(S.sel===fp.id){ if(S.plan.has(fp.id)) S.plan.delete(fp.id); S.sel=null; S.heroMoves=[]; updateHUD(); buildPlanBar(); }
+    else { S.sel=fp.id; S.heroMoves=plannableMoves(fp); updateHUD(); } return; }
+  if(S.sel!=null){ const mv=S.heroMoves.find(m=>m.x===wx&&m.y===wy); if(mv){ S.plan.set(S.sel,{x:wx,y:wy}); S.sel=null; S.heroMoves=[]; updateHUD(); buildPlanBar(); return; } }
+  S.sel=null; S.heroMoves=[]; updateHUD();
 });
 
 // HUD ----------------------------------------------------------------------
-// Plan bar — only once you have a squad. Go commits every planned move at once.
 function buildPlanBar(){
   const box=document.getElementById('orders'); if(!box) return; box.innerHTML='';
-  if(!S || S.phase!=='play' || S.squad.length===0){ box.style.display='none'; return; }
+  if(!S || S.phase!=='play'){ box.style.display='none'; return; }
   box.style.display='flex';
   const n=S.plan.size;
   const go=document.createElement('div'); go.className='obtn go';
-  go.innerHTML='Go ▸<small>'+(n? n+' planned · all move at once' : 'no moves — everyone waits')+'</small>';
+  go.innerHTML='Go ▸<small>'+(n? n+' planned · all move at once' : 'no orders — hold position')+'</small>';
   go.onclick=()=>{ if(S.phase==='play'&&S.sub==='idle') commitPlan(); };
   const clr=document.createElement('div'); clr.className='obtn';
   clr.innerHTML='Clear<small>reset your orders</small>';
-  clr.onclick=()=>{ S.plan.clear(); S.sel=null; S.heroMoves=[]; buildPlanBar(); };
+  clr.onclick=()=>{ S.plan.clear(); S.sel=null; S.heroMoves=[]; updateHUD(); buildPlanBar(); };
   box.appendChild(go); box.appendChild(clr);
 }
 function updateHUD(){
-  const h=S.hero; const d=DEF[h.type];
-  document.getElementById('hglyph').textContent=d.glyph;
-  document.getElementById('hrank').textContent=d.name;
-  document.getElementById('hsub').textContent=d.blurb;
-  document.getElementById('scap').textContent=S.captures;
-  document.getElementById('ssquad').textContent=S.squad.length;
+  const living=myPieces().length;
+  const sel=S.sel!=null?byId(S.sel):null;
+  if(sel){ const d=DEF[sel.type]; document.getElementById('hglyph').textContent=d.glyph; document.getElementById('hrank').textContent=d.name; document.getElementById('hsub').textContent=d.blurb; }
+  else { document.getElementById('hglyph').textContent='⚔'; document.getElementById('hrank').textContent='Your squad'; document.getElementById('hsub').textContent='tap a piece to plan its move'; }
+  document.getElementById('ssquad').textContent=living;
+  document.getElementById('scap').textContent=S.crushed;
   document.getElementById('sturn').textContent=S.turn;
-  // xp bar toward next milestone
-  let cur=S.xp, need=PROMO1_XP;
-  if(h.type!=='pawn' && h.type!=='queen') need=QUEEN_XP;
-  if(h.type==='queen') need=cur=1;
-  document.getElementById('xpbar').style.width=Math.min(100,(cur/need)*100)+'%';
+  document.getElementById('xpbar').style.width=Math.min(100,(living/4)*100)+'%';
 }
-let toastTimer=null;
-function toast(msg){
-  const box=document.getElementById('toasts');
-  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
-  box.appendChild(el);
-  setTimeout(()=>{ el.style.transition='opacity .4s'; el.style.opacity='0'; setTimeout(()=>el.remove(),400); }, 1700);
-}
+function toast(msg){ const box=document.getElementById('toasts'); const el=document.createElement('div'); el.className='toast'; el.textContent=msg; box.appendChild(el); setTimeout(()=>{ el.style.transition='opacity .4s'; el.style.opacity='0'; setTimeout(()=>el.remove(),400); },1600); }
 
 // lifecycle ----------------------------------------------------------------
 function startGame(){
   S=newState();
-  // world: hero + starter wilds + a couple keeps + some voids
-  S.hero=mkPiece('pawn','blue',0,0,{hero:true}); S.pieces.push(S.hero);
-  // voids for shape
-  const voidSeeds=[[-6,-4],[7,3],[-8,6],[10,-6],[4,9],[-3,-9]];
-  for(const[vx,vy]of voidSeeds){ for(let i=0;i<3;i++){ const x=vx+((Math.random()*3)|0)-1, y=vy+((Math.random()*3)|0)-1; S.voids.add(key(x,y)); } }
-  S.voids.delete(key(0,0));
-  // keeps
-  S.keeps=[{x:5,y:-5,claimed:false},{x:-6,y:2,claimed:false}];
-  for(const kp of S.keeps) S.voids.delete(key(kp.x,kp.y));
-  // starter ring — pawns only, kept at arm's length: the pawn stage must be survivable.
-  // Tougher pieces (knights/bishops/rooks) arrive later via frontier spawns, once you've promoted.
-  for(let i=0;i<6;i++){ const sp=freeSquareNear(0,0,4,VIS); if(sp) S.pieces.push(mkPiece('pawn','wild',sp.x,sp.y)); }
+  S.teamColor[PLAYER]=PLAYER_COLOR;
+  // terrain
+  for(const[vx,vy]of [[-7,-4],[8,3],[-9,6],[11,-6],[4,10],[-4,-10]]){ for(let i=0;i<3;i++){ S.voids.add(key(vx+((Math.random()*3)|0)-1, vy+((Math.random()*3)|0)-1)); } }
+  // your squad at origin (P/R/B/N), clustered
+  const home=[['rook',-1,0],['bishop',1,0],['knight',0,-1],['pawn',0,1]];
+  for(const[t,dx,dy]of home){ S.voids.delete(key(dx,dy)); S.pieces.push(mkPiece(t,PLAYER,dx,dy)); }
+  // rival squads spread around you
+  for(let i=0;i<START_ENEMY;i++){ const a=(i/START_ENEMY)*Math.PI*2 + Math.random()*0.5, r=9+Math.random()*6;
+    spawnSquad('e'+(S.nextTeam++), Math.round(Math.cos(a)*r), Math.round(Math.sin(a)*r), PALETTE[i%PALETTE.length]); }
   rebuildOcc();
-  buildPlanBar();
   document.getElementById('title').style.display='none';
   document.getElementById('end').style.display='none';
   S.phase='play'; S.sub='idle';
@@ -669,15 +409,12 @@ function startGame(){
 function endGame(win,msg){
   S.phase='end';
   const m=document.getElementById('endmodal'); m.className='modal '+(win?'win':'lose');
-  document.getElementById('endbig').textContent = win?'Victory':'Captured';
-  document.getElementById('endtext').textContent = msg + (win
-    ? '  You went from a lone pawn to a queen with an army and took the field.'
-    : '  Reach the crown and capture the enemy Queen to win.');
+  document.getElementById('endbig').textContent=win?'Frontier held':'Squad lost';
+  document.getElementById('endtext').textContent=msg;
   document.getElementById('end').style.display='flex';
 }
 document.getElementById('startbtn').onclick=startGame;
 document.getElementById('againbtn').onclick=startGame;
-
 requestAnimationFrame(frame);
 </script>
 </body>
