@@ -38,6 +38,8 @@
     font-size:12.5px; font-weight:600; padding:9px 13px; border-radius:11px; cursor:pointer; user-select:none;}
   .obtn small{display:block; color:var(--muted); font-weight:500; font-size:10px; margin-top:1px;}
   .obtn.on{border-color:var(--gold); background:#2b2a22; color:var(--gold2);}
+  .obtn.go{border-color:var(--gold); background:var(--gold); color:#20170a; font-weight:800;}
+  .obtn.go small{color:#5a4a24;}
   .obtn:active{transform:translateY(1px);}
 
   #hint{position:fixed; left:50%; top:64px; transform:translateX(-50%); z-index:5; pointer-events:none;
@@ -106,10 +108,11 @@
     <b>promotions</b> that rewrite how you move (pawn → knight / bishop / rook → queen), and gather
     a <b>squad</b>. When you reach the crown, an enemy commander rides out of the frontier — capture
     the enemy <b>Queen</b> to win.</p>
-    <p class="kbd">It's <b>turn-based</b>: you move one piece, then every enemy takes a move, then it's
-    you again — no clock, take your time. <b>Tap a highlighted square</b> (dots move, rings capture);
-    <b>tap your own piece to wait</b> a turn. Red-tinted squares are <b>threatened</b> — end your move
-    off them and nothing can capture you that turn. Command your squad with the buttons at the bottom.</p>
+    <p class="kbd">It's <b>turn-based</b>: you move, then the whole world takes one move, then it's you
+    again — no clock, take your time. Solo, <b>tap a square to move</b> (dots move, rings capture; tap
+    yourself to wait). Once you have a <b>squad</b>, you <b>plan every piece</b> — tap a piece, tap its
+    target, repeat — then hit <b>Go</b> and they <b>all move at once</b>. Red-tinted squares are
+    <b>threatened</b> — end a piece off them and nothing can capture it that turn.</p>
     <p class="kbd">A prototype — one screen, one goal: <i>is turn-based chess-piece hunting fun?</i></p>
     <button class="btn" id="startbtn">Enter the frontier ▸</button>
   </div>
@@ -181,13 +184,13 @@ let S;
 function newState(){
   return {
     phase:'title',            // title | play | promo | end
-    sub:'idle',               // idle (your move) | heroMove | enemyMove
+    sub:'idle',               // idle (your turn) | playerAnim | enemyAnim
     turn:1, lastSpawnTurn:0,
     pieces:[], occ:new Map(),
     hero:null, squad:[],
     xp:0, captures:0,
     camX:0, camY:0,
-    order:'follow', focusId:null,
+    sel:null, plan:new Map(),  // selected piece id; planned moves pieceId -> {x,y} (commit = all at once)
     frontierDir:{x:0,y:-1},
     voids:new Set(), keeps:[],
     nextId:1, finaleDone:false,
@@ -315,21 +318,34 @@ function redAI(p){
   const cap=bestCapture(moves); if(cap){ doMove(p,cap); return; }
   const h=S.hero; if(h&&!h.dead) stepToward(p,moves,h.x,h.y);
 }
-function squadAI(p){
-  const moves=legalMoves(p); if(!moves.length) return;
-  const cap=bestCapture(moves); if(cap){ doMove(p,cap); return; }
-  const h=S.hero; if(!h) return;
-  const ord=S.order;
-  if(ord==='focus' && S.focusId){ const fe=byId(S.focusId); if(fe){ stepToward(p,moves,fe.x,fe.y,true); return; } }
-  let tx,ty;
-  if(ord==='hold'){ tx=p.anchorX; ty=p.anchorY; }
-  else if(ord==='advance'){ tx=h.x+S.frontierDir.x*3; ty=h.y+S.frontierDir.y*3; }
-  else if(ord==='screen'){ const e=nearestHostile(h,VIS+3);
-    if(e){ tx=Math.round((h.x+e.x)/2); ty=Math.round((h.y+e.y)/2); } else { tx=h.x+p.slotX; ty=h.y+p.slotY; } }
-  else { tx=h.x+p.slotX; ty=h.y+p.slotY; }            // follow
-  // near the goal on a safe square → hold; if standing in threat, sidestep to safety
-  if(cheb(p.x,p.y,tx,ty)<=1){ if(S.threat.has(key(p.x,p.y))) stepToward(p,moves,tx,ty,true); return; }
-  stepToward(p,moves,tx,ty,true);
+// Player command — you plan each of your pieces, then commit; they all resolve at once.
+// (Squad is directly commanded, not AI-driven — that's the whole mechanic.)
+function plannableMoves(p){
+  const taken=new Set(); for(const [id,d] of S.plan){ if(id!==p.id) taken.add(key(d.x,d.y)); }
+  return legalMoves(p).filter(m=>!taken.has(key(m.x,m.y)));   // no two of your pieces onto one square
+}
+function commitPlan(){
+  rebuildOcc();
+  const snap=S.occ;                       // resolve everything against the pre-move snapshot
+  const acts=[];
+  for(const [id,d] of S.plan){ const p=byId(id); if(!p) continue;
+    const v=snap.get(key(d.x,d.y));
+    acts.push({p, d, victim:(v && hostile(p,v))?v:null});
+  }
+  // 1) move every planned piece simultaneously (positions taken from the snapshot)
+  for(const a of acts){
+    a.p.anim={fx:a.p.x, fy:a.p.y, tx:a.d.x, ty:a.d.y, t:0, dur:travelDur(a.p,a.d)};
+    a.p.facing={x:Math.sign(a.d.x-a.p.x), y:Math.sign(a.d.y-a.p.y)};
+    a.p.x=a.d.x; a.p.y=a.d.y;
+    if(a.p===S.hero){ S.frontierDir={x:a.p.facing.x||S.frontierDir.x, y:a.p.facing.y||S.frontierDir.y};
+      if(S.frontierDir.x===0&&S.frontierDir.y===0) S.frontierDir={x:0,y:-1}; }
+  }
+  rebuildOcc();
+  // 2) resolve captures (each victim was an enemy at snapshot; destinations are unique)
+  for(const a of acts){ if(a.victim && !a.victim.dead){ capture(a.p, a.victim, a.d.x, a.d.y); if(S.phase!=='play') break; } }
+  S.plan.clear(); S.sel=null; S.heroMoves=[]; buildPlanBar();
+  if(S.phase!=='play') return;            // a capture won the game
+  S.sub='playerAnim';                     // → your pieces animate, then the world moves
 }
 
 // spawning -----------------------------------------------------------------
@@ -424,16 +440,22 @@ function startFinale(){
 let last=0;
 function anyAnim(){ for(const p of S.pieces){ if(!p.dead && p.anim) return true; } return false; }
 function refreshTurn(){
-  S.heroMoves = (S.phase==='play' && S.sub==='idle') ? legalMoves(S.hero) : [];
-  computeThreat(); updateHUD();
+  S.sel=null; S.plan.clear();
+  // solo (no squad) → show the hero's moves for instant tap-to-move.
+  // with a squad → nothing highlighted until you select a piece to plan.
+  S.heroMoves = (S.phase==='play' && S.sub==='idle' && S.squad.length===0) ? legalMoves(S.hero) : [];
+  computeThreat(); updateHUD(); buildPlanBar();
+  const hint=document.getElementById('hint');
+  if(hint) hint.textContent = S.squad.length===0
+    ? 'Your move — tap a square · tap yourself to wait'
+    : 'Plan each piece (tap it, tap its target), then Go — they all move at once';
 }
 function worldTick(){
   rebuildOcc();
-  // deterministic order: your squad reacts, then wilds, then the enemy — by id within each
-  const order=S.pieces.filter(p=>!p.dead && !p.hero).sort((a,b)=>a.id-b.id);
+  // the world moves after you — wilds, then the enemy (your pieces are player-commanded, not AI)
+  const order=S.pieces.filter(p=>!p.dead && p.team!=='blue').sort((a,b)=>a.id-b.id);
   for(const p of order){ if(p.dead) continue;
-    if(p.team==='blue' && p.squad) squadAI(p);
-    else if(p.team==='wild') wildAI(p);
+    if(p.team==='wild') wildAI(p);
     else if(p.team==='red') redAI(p);
     if(S.phase!=='play') return;   // a capture ended the game mid-tick
   }
@@ -450,8 +472,8 @@ function finishTurn(){
 }
 function update(dt){
   for(const p of S.pieces){ if(p.dead)continue; if(p.anim){ p.anim.t+=dt; if(p.anim.t>=p.anim.dur) p.anim=null; } }
-  if(S.sub==='heroMove' && !S.hero.anim){ worldTick(); S.sub='enemyMove'; }
-  else if(S.sub==='enemyMove' && !anyAnim()){ finishTurn(); }
+  if(S.sub==='playerAnim' && !anyAnim()){ worldTick(); S.sub='enemyAnim'; }
+  else if(S.sub==='enemyAnim' && !anyAnim()){ finishTurn(); }
   for(const f of flashes) f.t+=dt; flashes=flashes.filter(f=>f.t<0.4);
   const k=Math.min(1,dt*6);
   S.camX += (S.hero.x - S.camX)*k; S.camY += (S.hero.y - S.camY)*k;
@@ -520,8 +542,21 @@ function drawFlashes(){
     ctx.strokeStyle=`rgba(240,201,135,${a})`; ctx.lineWidth=3;
     ctx.beginPath(); ctx.arc(px,py,TILE*(0.3+f.t*1.4),0,7); ctx.stroke(); }
 }
+function drawPlan(){
+  // dashed arrows from each planned piece to its target; a ring on the selected piece
+  for(const [id,d] of S.plan){ const p=byId(id); if(!p) continue;
+    const a=pieceScreenPos(p), bx=sx(d.x), by=sy(d.y);
+    ctx.strokeStyle='rgba(123,180,255,.95)'; ctx.lineWidth=3; ctx.setLineDash([7,5]);
+    ctx.beginPath(); ctx.moveTo(a.px,a.py); ctx.lineTo(bx,by); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(123,180,255,.95)'; ctx.beginPath(); ctx.arc(bx,by,7,0,7); ctx.fill();
+  }
+  if(S.sel!=null){ const p=byId(S.sel); if(p){ const a=pieceScreenPos(p);
+    ctx.strokeStyle='#f0c987'; ctx.lineWidth=3; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.arc(a.px,a.py,TILE*0.47,0,7); ctx.stroke(); ctx.setLineDash([]); } }
+}
 function render(){
   drawBoard();
+  drawPlan();
   const sorted=[...S.pieces].sort((a,b)=>a.y-b.y);
   for(const p of sorted) if(!p.dead) drawPiece(p);
   drawFlashes();
@@ -536,41 +571,56 @@ function frame(ts){
 }
 
 // input --------------------------------------------------------------------
+// SOLO (no squad): tap a target = the hero moves now; tap yourself = wait.
 function playerMove(mv){
   doMove(S.hero,mv);
   S.frontierDir={x:S.hero.facing.x||S.frontierDir.x, y:S.hero.facing.y||S.frontierDir.y};
   if(S.frontierDir.x===0&&S.frontierDir.y===0) S.frontierDir={x:0,y:-1};
   S.heroMoves=[];
   if(S.phase!=='play') return;   // your capture ended the game
-  S.sub='heroMove';              // → world takes its turn
+  S.sub='playerAnim';            // → world takes its turn
 }
 cv.addEventListener('pointerdown', e=>{
-  if(S.phase!=='play' || S.sub!=='idle') return;   // wait for the world to finish its move
+  if(S.phase!=='play' || S.sub!=='idle') return;   // wait for moves to finish resolving
   const r=cv.getBoundingClientRect();
   const wx=Math.round((e.clientX-r.left - W/2)/TILE + S.camX);
   const wy=Math.round((e.clientY-r.top  - H/2)/TILE + S.camY);
-  if(wx===S.hero.x && wy===S.hero.y){ S.heroMoves=[]; S.sub='heroMove'; return; }   // tap yourself = wait a turn
-  const mv=S.heroMoves.find(m=>m.x===wx&&m.y===wy);
-  if(mv){ playerMove(mv); }
-  else if(S.order==='focus'){ const t=at(wx,wy); if(t&&hostile(S.hero,t)){ S.focusId=t.id; toast('Squad focus set'); } }
+
+  if(S.squad.length===0){                          // SOLO — instant move
+    if(wx===S.hero.x && wy===S.hero.y){ S.heroMoves=[]; S.sub='playerAnim'; return; }  // wait
+    const mv=S.heroMoves.find(m=>m.x===wx&&m.y===wy);
+    if(mv) playerMove(mv);
+    return;
+  }
+
+  // SQUAD — plan mode: assign each piece a move, then press Go (they all resolve at once).
+  const fp=S.pieces.find(q=>!q.dead && q.team==='blue' && q.x===wx && q.y===wy);
+  if(fp){                                           // tapped one of your pieces
+    if(S.sel===fp.id){ if(S.plan.has(fp.id)) S.plan.delete(fp.id); S.sel=null; S.heroMoves=[]; buildPlanBar(); }
+    else { S.sel=fp.id; S.heroMoves=plannableMoves(fp); }   // select it, show its options
+    return;
+  }
+  if(S.sel!=null){                                  // tapped a target for the selected piece
+    const mv=S.heroMoves.find(m=>m.x===wx&&m.y===wy);
+    if(mv){ S.plan.set(S.sel,{x:wx,y:wy}); S.sel=null; S.heroMoves=[]; buildPlanBar(); return; }
+  }
+  S.sel=null; S.heroMoves=[];                       // tapped empty space → deselect
 });
 
 // HUD ----------------------------------------------------------------------
-const ORDERS=[
-  ['follow','Follow','stay in formation'],
-  ['hold','Hold','guard current ground'],
-  ['advance','Advance','push the frontier'],
-  ['screen','Screen','shield the hero'],
-  ['focus','Focus','tap an enemy to target'],
-];
-function buildOrders(){
-  const box=document.getElementById('orders'); box.innerHTML='';
-  for(const[id,label,desc]of ORDERS){
-    const b=document.createElement('div'); b.className='obtn'+(S.order===id?' on':''); b.dataset.id=id;
-    b.innerHTML=label+'<small>'+desc+'</small>';
-    b.onclick=()=>{ S.order=id; if(id!=='focus') S.focusId=null; buildOrders(); };
-    box.appendChild(b);
-  }
+// Plan bar — only once you have a squad. Go commits every planned move at once.
+function buildPlanBar(){
+  const box=document.getElementById('orders'); if(!box) return; box.innerHTML='';
+  if(!S || S.phase!=='play' || S.squad.length===0){ box.style.display='none'; return; }
+  box.style.display='flex';
+  const n=S.plan.size;
+  const go=document.createElement('div'); go.className='obtn go';
+  go.innerHTML='Go ▸<small>'+(n? n+' planned · all move at once' : 'no moves — everyone waits')+'</small>';
+  go.onclick=()=>{ if(S.phase==='play'&&S.sub==='idle') commitPlan(); };
+  const clr=document.createElement('div'); clr.className='obtn';
+  clr.innerHTML='Clear<small>reset your orders</small>';
+  clr.onclick=()=>{ S.plan.clear(); S.sel=null; S.heroMoves=[]; buildPlanBar(); };
+  box.appendChild(go); box.appendChild(clr);
 }
 function updateHUD(){
   const h=S.hero; const d=DEF[h.type];
@@ -610,7 +660,7 @@ function startGame(){
   // Tougher pieces (knights/bishops/rooks) arrive later via frontier spawns, once you've promoted.
   for(let i=0;i<6;i++){ const sp=freeSquareNear(0,0,4,VIS); if(sp) S.pieces.push(mkPiece('pawn','wild',sp.x,sp.y)); }
   rebuildOcc();
-  buildOrders();
+  buildPlanBar();
   document.getElementById('title').style.display='none';
   document.getElementById('end').style.display='none';
   S.phase='play'; S.sub='idle';
