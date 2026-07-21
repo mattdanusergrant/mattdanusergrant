@@ -290,6 +290,11 @@
   </section>
 
   <section>
+    <h2 data-t="s_meals">Meals</h2>
+    <div class="det" id="meals"></div>
+  </section>
+
+  <section>
     <h2 data-t="s_cats">Cats</h2>
     <div class="cats" id="cats"></div>
     <div class="note cats-note" data-t="cats_note"></div>
@@ -329,6 +334,7 @@ const T = {
   s_quiet:{en:"Quiet Times", es:"Horas de Silencio"},
   s_assist:{en:"Assist Areas", es:"Áreas de Apoyo"},
   s_cats:{en:"Cats", es:"Gatos"},
+  s_meals:{en:"Meals", es:"Comidas"},
   s_laundry:{en:"Laundry Details", es:"Detalles de Lavandería"},
   s_dishes:{en:"Dishes Details", es:"Detalles de Platos"},
   cats_note:{en:"Feeding the grey cat outside leaves dishes out there. <b>Both nannies:</b> bring any empty dishes inside to the sink to soak or wash.", es:"Alimentar al gato gris afuera deja platos sucios ahí. <b>Las dos niñeras:</b> traer los platos vacíos adentro al fregadero para remojar o lavar."},
@@ -410,6 +416,15 @@ const DISHES = [
   ]},
 ];
 
+const MEALS = [
+  {label:{en:"Variety", es:"Variedad"}, items:[
+    {en:"<b>Less cheese, more peanut butter</b>. More variety overall", es:"<b>Menos queso, más crema de cacahuate</b>. Más variedad en general"},
+  ]},
+  {label:{en:"Leftovers", es:"Sobras"}, items:[
+    {en:"<b>Don't save so many leftovers.</b> Never use Tupperware for little bits. Anything you do save must go in the fridge", es:"<b>No guardar tantas sobras.</b> Nunca usar Tupperware para poquitos. Lo que sí se guarde debe ir al refrigerador"},
+  ]},
+];
+
 const CATS = [
   {sw:"#2b2b2b", name:{en:"Black cat", es:"Gato negro"}, where:{en:"Indoor / outdoor", es:"Adentro y afuera"}, note:{en:"May have fresh wet food whenever he wishes. His leftovers can then be put outside for the grey cat.", es:"Puede comer comida húmeda fresca cuando quiera. Sus sobras luego se pueden poner afuera para el gato gris."}},
   {sw:"#9ca3af", name:{en:"Grey cat", es:"Gato gris"}, where:{en:"Outdoor only", es:"Solo afuera"}, note:{en:"Eats outside, including the black cat's leftovers.", es:"Come afuera, incluidas las sobras del gato negro."}},
@@ -417,6 +432,7 @@ const CATS = [
 
 const RULES = [
   {key:true, en:"<b>Fragrance-free household</b>: we have eczema. Use only the unscented products we provide; no scented sprays, candles, plug-ins, perfume, or scented detergent/lotion.", es:"<b>Hogar sin fragancia</b>: tenemos eczema. Usar solo los productos sin aroma que proveemos; nada de aerosoles con aroma, velas, difusores, perfume, ni detergente/loción con aroma."},
+  {en:"<b>Wash hands</b>: on arrival and again whenever coming back inside.", es:"<b>Lavarse las manos</b>: al llegar y cada vez que se vuelve a entrar."},
   {en:"<b>Kids first, always</b>: house tasks happen only once the children are safe and settled.", es:"<b>Primero los niños, siempre</b>: las tareas de la casa solo cuando los niños estén seguros y tranquilos."},
   {en:"<b>Respect the quiet times</b>: work quietly during the 8–9am and 12–3pm windows (below).", es:"<b>Respetar las horas de silencio</b>: trabajar en silencio de 8–9am y 12–3pm (abajo)."},
   {en:"<b>Follow the labels</b>: put everything back in its labeled spot.", es:"<b>Seguir las etiquetas</b>: regresar todo a su lugar etiquetado."},
@@ -477,6 +493,7 @@ function render(){
   };
   renderDetails("laundry", LAUNDRY);
   renderDetails("dishes", DISHES);
+  renderDetails("meals", MEALS);
 
   document.getElementById("cats").innerHTML = CATS.map(c=>`
     <div class="cat">
