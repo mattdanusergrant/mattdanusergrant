@@ -1,0 +1,1448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>House of Knives — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ MDG house tokens + faction hues ============ */
+:root{
+  --bg:#FBF8F2; --paper:#FFFFFF; --ink:#15161C; --ink2:#2A2A2A; --muted:#6A6A6A;
+  --line:#E5E0D2; --line2:#CBC4B2; --accent:#1A1A1A; --codebg:#F4F0E6;
+  --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+  --shadow-hover:0 18px 48px rgba(15,16,28,.10);
+  --W:#a8893c; --U:#4e6f96; --B:#5c4a63; --R:#a84e35; --G:#5f7345;
+  --Wbg:#f3ecd9; --Ubg:#e4ebf3; --Bbg:#eae4ee; --Rbg:#f5e4de; --Gbg:#e7ecdd;
+  --hurt:#a83232; --good:#3f7245; --focus:#4e6f96;
+  --back1:#e8e0cc; --back2:#d6ccae;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink2:#CAC5BC; --muted:#8A857B;
+  --line:#2C2924; --line2:#3C3830; --accent:#EDE8DF; --codebg:#252219;
+  --shadow:0 1px 0 rgba(0,0,0,.2),0 14px 36px rgba(0,0,0,.35);
+  --shadow-hover:0 18px 48px rgba(0,0,0,.5);
+  --W:#c9ab5e; --U:#7d9cc0; --B:#a08aab; --R:#c97a5e; --G:#8ba06a;
+  --Wbg:#2a2617; --Ubg:#1a2129; --Bbg:#241f28; --Rbg:#2a1c16; --Gbg:#1e2317;
+  --hurt:#d96a6a; --good:#7fae86; --focus:#7d9cc0;
+  --back1:#26221a; --back2:#332e22;
+}}
+:root[data-theme="dark"]{
+  --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink2:#CAC5BC; --muted:#8A857B;
+  --line:#2C2924; --line2:#3C3830; --accent:#EDE8DF; --codebg:#252219;
+  --shadow:0 1px 0 rgba(0,0,0,.2),0 14px 36px rgba(0,0,0,.35);
+  --shadow-hover:0 18px 48px rgba(0,0,0,.5);
+  --W:#c9ab5e; --U:#7d9cc0; --B:#a08aab; --R:#c97a5e; --G:#8ba06a;
+  --Wbg:#2a2617; --Ubg:#1a2129; --Bbg:#241f28; --Rbg:#2a1c16; --Gbg:#1e2317;
+  --hurt:#d96a6a; --good:#7fae86; --focus:#7d9cc0;
+  --back1:#26221a; --back2:#332e22;
+}
+:root[data-theme="light"]{
+  --bg:#FBF8F2; --paper:#FFFFFF; --ink:#15161C; --ink2:#2A2A2A; --muted:#6A6A6A;
+  --line:#E5E0D2; --line2:#CBC4B2; --accent:#1A1A1A; --codebg:#F4F0E6;
+  --shadow:0 1px 0 rgba(0,0,0,.02),0 14px 36px rgba(15,16,28,.06);
+  --shadow-hover:0 18px 48px rgba(15,16,28,.10);
+  --W:#a8893c; --U:#4e6f96; --B:#5c4a63; --R:#a84e35; --G:#5f7345;
+  --Wbg:#f3ecd9; --Ubg:#e4ebf3; --Bbg:#eae4ee; --Rbg:#f5e4de; --Gbg:#e7ecdd;
+  --hurt:#a83232; --good:#3f7245; --focus:#4e6f96;
+  --back1:#e8e0cc; --back2:#d6ccae;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--bg); color:var(--ink); font:16px/1.5 'Inter',system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; min-height:100dvh}
+h1,h2,h3,.disp{font-family:'Fraunces',Georgia,serif; font-weight:500; letter-spacing:-0.01em; margin:0}
+button{font:inherit; color:inherit; background:none; border:none; cursor:pointer; padding:0}
+.num{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* ============ App chrome ============ */
+#app{max-width:900px; margin:0 auto; padding:10px 10px 140px}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 2px 10px}
+.brand{font-family:'Fraunces',Georgia,serif; font-size:20px; font-weight:600; letter-spacing:-0.01em}
+.brand em{font-style:italic; color:var(--ink2); font-weight:400}
+.topbtns{display:flex; gap:6px}
+.chip{border:1px solid var(--line2); border-radius:999px; padding:5px 12px; font-size:13px; font-weight:500; background:var(--paper); box-shadow:var(--shadow)}
+.chip:active{transform:translateY(1px)}
+.chip.primary{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.chip:disabled{opacity:.4; cursor:default}
+.eyebrow{font-size:11.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); font-weight:500}
+
+/* ============ Board ============ */
+.board{display:flex; flex-direction:column; gap:6px}
+.brow{display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
+.rowlabel{display:flex; align-items:center; justify-content:space-between; padding:2px 4px}
+.rowlabel .eyebrow{font-size:10.5px}
+.midline{height:0; border-top:2px dashed var(--line2); margin:4px 8px; position:relative}
+.cell{background:var(--paper); border:1px solid var(--line); border-radius:12px; min-height:78px; padding:6px; position:relative; box-shadow:var(--shadow); cursor:pointer; transition:border-color .15s, box-shadow .15s}
+.cell.room{border-style:solid; background:linear-gradient(180deg,var(--paper),var(--codebg))}
+.cell.enemy{opacity:.98}
+.cell.hot{border-color:var(--focus); box-shadow:0 0 0 2px var(--focus), var(--shadow)}
+.cell.pick{border-color:var(--good); box-shadow:0 0 0 2px var(--good), var(--shadow); animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 4px var(--good), var(--shadow)}}
+.cellname{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:500}
+.cellname .zonehint{display:block; letter-spacing:0; text-transform:none; opacity:.8; font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.stack{display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; align-items:flex-start}
+
+/* mini card */
+.mini{width:52px; min-height:40px; border-radius:7px; border:1px solid var(--line2); background:var(--paper); position:relative; padding:3px 4px 2px; font-size:10px; line-height:1.15; overflow:hidden; flex:0 0 auto}
+.mini .mn{font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:9.5px; letter-spacing:0; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.mini .ph{position:absolute; right:3px; bottom:1px; font-weight:600; font-size:10px}
+.mini .cost{position:absolute; left:3px; bottom:1px; color:var(--muted); font-size:9px}
+.mini.W{border-color:var(--W); background:var(--Wbg)} .mini.U{border-color:var(--U); background:var(--Ubg)}
+.mini.B{border-color:var(--B); background:var(--Bbg)} .mini.R{border-color:var(--R); background:var(--Rbg)}
+.mini.G{border-color:var(--G); background:var(--Gbg)}
+.mini.dn{background:repeating-linear-gradient(45deg,var(--back1),var(--back1) 4px,var(--back2) 4px,var(--back2) 8px); border-color:var(--line2)}
+.mini.dn .mn{visibility:hidden}
+.mini.tapped{transform:rotate(8deg); opacity:.55}
+.mini.leader{border-width:2px}
+.mini.leader::before{content:"♛"; position:absolute; top:0; right:3px; font-size:9px}
+.mini.hurt .ph{color:var(--hurt)}
+.mini.plotcard::before{content:"◉"; position:absolute; top:1px; right:3px; font-size:8px; color:var(--muted)}
+
+/* ============ Hand tray ============ */
+.tray{position:fixed; left:0; right:0; bottom:0; background:var(--paper); border-top:1px solid var(--line); box-shadow:0 -8px 30px rgba(0,0,0,.08); z-index:30}
+.tray-inner{max-width:900px; margin:0 auto; padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
+.tray-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px}
+.handrow{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px}
+.hcard{flex:0 0 92px; border-radius:10px; border:1.5px solid var(--line2); background:var(--paper); padding:6px; font-size:11px; cursor:pointer; text-align:left}
+.hcard .hn{font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:12px; line-height:1.1; display:block; min-height:26px}
+.hcard .ht{color:var(--muted); font-size:10px}
+.hcard .hb{display:flex; justify-content:space-between; margin-top:3px; font-weight:600; font-size:11px}
+.hcard.W{border-color:var(--W)} .hcard.U{border-color:var(--U)} .hcard.B{border-color:var(--B)} .hcard.R{border-color:var(--R)} .hcard.G{border-color:var(--G)}
+.hcard.sel{outline:2px solid var(--focus)}
+
+/* ============ Sheets & modals ============ */
+.scrim{position:fixed; inset:0; background:rgba(10,9,6,.45); z-index:40; display:flex; align-items:flex-end; justify-content:center}
+@media(min-width:640px){.scrim{align-items:center}}
+.sheet{background:var(--paper); border:1px solid var(--line); border-radius:16px 16px 0 0; width:100%; max-width:640px; max-height:86dvh; overflow-y:auto; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); box-shadow:var(--shadow-hover)}
+@media(min-width:640px){.sheet{border-radius:16px}}
+.sheet h3{font-size:20px; margin-bottom:2px}
+.sheet .sub{color:var(--muted); font-size:13px; margin:0 0 12px}
+.acts{display:flex; flex-direction:column; gap:8px; margin-top:10px}
+.act{border:1px solid var(--line2); border-radius:10px; padding:10px 12px; text-align:left; background:var(--paper); font-size:14px}
+.act b{font-weight:600}
+.act small{display:block; color:var(--muted); font-size:12px}
+.act:not(:disabled):hover{border-color:var(--ink); box-shadow:var(--shadow)}
+.act:disabled{opacity:.45; cursor:default}
+.act.danger{border-color:var(--hurt)}
+.bigcard{border:2px solid var(--line2); border-radius:14px; padding:12px; margin:8px 0; background:var(--paper)}
+.bigcard.W{border-color:var(--W); background:var(--Wbg)} .bigcard.U{border-color:var(--U); background:var(--Ubg)}
+.bigcard.B{border-color:var(--B); background:var(--Bbg)} .bigcard.R{border-color:var(--R); background:var(--Rbg)}
+.bigcard.G{border-color:var(--G); background:var(--Gbg)}
+.bigcard .bch{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+.bigcard .bcn{font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:18px}
+.bigcard .bct{font-size:12px; color:var(--muted); margin:2px 0 6px}
+.bigcard .bcx{font-size:13px}
+.bigcard .bcf{font-size:12px; font-style:italic; color:var(--muted); margin-top:6px}
+.bigcard .bcs{font-weight:600; font-size:15px; margin-top:6px}
+.klist{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px}
+.kw{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; border:1px solid var(--line2); border-radius:999px; padding:1px 8px; font-weight:600}
+
+/* payment bar / prompt bar */
+.promptbar{position:fixed; left:0; right:0; bottom:0; z-index:50; background:var(--ink); color:var(--bg)}
+.promptbar .pin{max-width:900px; margin:0 auto; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:14px}
+.promptbar .chip{background:var(--bg); color:var(--ink); border-color:var(--bg)}
+.promptbar .chip.ghost{background:transparent; color:var(--bg); border-color:var(--bg)}
+
+/* log */
+.logwrap{margin-top:14px; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:10px 12px}
+.logwrap h3{font-size:14px}
+#log{list-style:none; margin:6px 0 0; padding:0; font-size:12.5px; color:var(--ink2); max-height:180px; overflow-y:auto}
+#log li{padding:2px 0; border-bottom:1px dashed var(--line)}
+#log li.hl{font-weight:600}
+
+/* overlays */
+.full{position:fixed; inset:0; z-index:60; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:20px}
+.fullin{max-width:480px; width:100%; text-align:center}
+.fullin h1{font-size:clamp(34px,7vw,52px); line-height:1.05}
+.fullin p{color:var(--ink2)}
+.deckpick{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin:14px 0; text-align:left}
+.dopt{border:2px solid var(--line2); border-radius:12px; padding:12px; background:var(--paper); cursor:pointer}
+.dopt h3{font-size:16px}
+.dopt p{font-size:11.5px; color:var(--muted); margin:4px 0 0}
+.dopt.sel{outline:3px solid var(--focus)}
+.roomopt{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0}
+.spacer{height:10px}
+.statusline{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:13px; color:var(--ink2); padding:4px 2px}
+.statusline b{font-weight:600}
+.pill{border:1px solid var(--line2); border-radius:999px; padding:1px 9px; font-size:12px}
+.pill.lost{color:var(--hurt); border-color:var(--hurt)}
+.helpbody{font-size:14px; line-height:1.55}
+.helpbody h4{font-family:'Fraunces',Georgia,serif; margin:14px 0 4px; font-size:16px}
+.helpbody p{margin:6px 0}
+.helpbody .kw{margin-right:4px}
+kbd.gold{font-family:inherit; border:1px solid var(--line2); border-radius:5px; padding:0 5px; background:var(--codebg); font-size:12px}
+.toast{position:fixed; top:14px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); border-radius:999px; padding:8px 18px; font-size:13.5px; z-index:80; box-shadow:var(--shadow-hover); max-width:88vw; text-align:center}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="overlays"></div>
+<script>
+'use strict';
+/* =====================================================================
+   House of Knives — playable prototype (hotseat, pass-and-play)
+   Rules: see ../rules.md. Engine implements rules v0.1 exactly;
+   deviations are listed in ../decision-log.md (§ prototype).
+   ===================================================================== */
+
+/* ---------- card data (injected at end of file; engine boots via KC_INIT) ---------- */
+let CARDS = [];   // set by KC_INIT
+let DECKS = {};   // color -> [30 ids]
+const COLORS = {W:'White',U:'Blue',B:'Black',R:'Red',G:'Green'};
+const ROOMS = ['Crypt','Keep','Gatehouse'];           // index 0,1,2 = player's left,center,right
+const ZONE_OF_ROOM = ['discard pile','deck','hand'];
+const BREACH_TEXT = [
+  'Crypt falls: entire discard pile is exiled!',
+  'Keep falls: top 3 cards of the deck are discarded!',
+  'Gatehouse falls: a random card is discarded from hand!'
+];
+const byId = {}; // cid -> card def
+
+/* ---------- state ---------- */
+let S = null;            // game state (serializable)
+let UNDO = [];           // snapshot stack
+let VIEW = {sheet:null, picking:null, flow:null, toast:null}; // transient ui (not undone)
+
+function freshPlayer(name, color){
+  return { name, color, deck:[], hand:[], discard:[], exile:[],
+    rooms:[[],[],[]], fields:[[],[],[]],
+    leader:null, mustered:false, overgrowUsed:0, lost:false };
+}
+function newGame(c0, c1){
+  S = { seed: Math.floor(Math.random()*1e9), turn:1, active:0, phase:'setup', pendingFx:[],
+        players:[freshPlayer('Player 1', c0), freshPlayer('Player 2', c1)],
+        inst:{}, nextI:1, log:[], winner:null, setupStage:0 };
+  for (const [pi, col] of [[0,c0],[1,c1]]){
+    const p = S.players[pi];
+    const list = (DECKS[col]||[]).slice();
+    shuffle(list);
+    p.deck = list.map(cid => makeInst(cid, pi));
+    // leader instance (not in deck)
+    const ldef = CARDS.find(c => c.color===col && c.type==='leader');
+    p.leader = makeInst(ldef.id, pi);
+    for(let k=0;k<5;k++) p.hand.push(p.deck.pop());
+  }
+  logLine(`A new siege begins — ${COLORS[c0]} vs ${COLORS[c1]}.`, true);
+}
+function makeInst(cid, owner){
+  const id = 'i'+(S.nextI++);
+  S.inst[id] = { id, cid, owner, faceup:true, tapped:false, dmg:0, arrived:-1, buffs:[] };
+  return id;
+}
+function I(id){ return S.inst[id]; }
+function D(id){ return byId[I(id).cid]; }
+function P(){ return S.players[S.active]; }
+function OPP(){ return S.players[1-S.active]; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
+function logLine(t, hl){ S.log.push({t, hl:!!hl, turn:S.turn}); }
+function snapshot(){ UNDO.push(JSON.stringify(S)); if (UNDO.length>80) UNDO.shift(); }
+function undo(){ if(!UNDO.length) return toast('Nothing to undo'); S = JSON.parse(UNDO.pop()); VIEW={sheet:null,picking:null,flow:null}; render(); }
+
+/* ---------- derived stats (statics + turn buffs) ---------- */
+function whereIs(iid){ // -> {pi, zone:'room'|'field'|'hand'|'deck'|'discard'|'exile', idx}
+  for (let pi=0;pi<2;pi++){ const p=S.players[pi];
+    for(let r=0;r<3;r++){ if(p.rooms[r].includes(iid)) return {pi,zone:'room',idx:r};
+                          if(p.fields[r].includes(iid)) return {pi,zone:'field',idx:r}; }
+    if(p.hand.includes(iid)) return {pi,zone:'hand',idx:-1};
+    if(p.deck.includes(iid)) return {pi,zone:'deck',idx:-1};
+    if(p.discard.includes(iid)) return {pi,zone:'discard',idx:-1};
+    if(p.exile.includes(iid)) return {pi,zone:'exile',idx:-1};
+  }
+  return null;
+}
+function condOK(cond, iid, ctx){
+  if(!cond) return true;
+  const w = whereIs(iid); if(!w) return false;
+  if(cond.startsWith('in_room')){ const want = cond.split(':')[1];
+    if(w.zone!=='room') return false;
+    return (want==='any') || (ROOMS[w.idx]===want);
+  }
+  if(cond==='on_battlefield') return w.zone==='field';
+  if(cond==='defending') return !!(ctx && ctx.defending);
+  return true;
+}
+function stats(iid, ctx){
+  const d = D(iid), inst = I(iid);
+  let p = d.power||0, h = d.health||0;
+  if (inst.faceup && d.effects) for(const e of d.effects){
+    if(e.trigger==='static' && e.op==='buff'){
+      if((e.target==='self'||!e.target) && condOK(e.condition, iid, ctx)){ p+=e.p||0; h+=e.h||0; }
+    }
+  }
+  // auras from faceup friendly cards: same-space, same-room, and global scopes
+  const w = whereIs(iid);
+  if(w && (w.zone==='field'||w.zone==='room') && isUnit(iid) && inst.faceup){
+    const own=S.players[inst.owner];
+    const srcs=[];
+    for(let z=0;z<3;z++){ srcs.push(...own.fields[z], ...own.rooms[z]); }
+    for(const oid of srcs){ if(!I(oid).faceup) continue; const od=D(oid); if(!od.effects) continue;
+      const ow=whereIs(oid);
+      for(const e of od.effects){
+        if(e.trigger!=='static' || e.op!=='buff') continue;
+        if(e.target==='units_in_lane'){ if(oid!==iid && ow.zone==='field' && w.zone==='field' && ow.idx===w.idx){ p+=e.p||0; h+=e.h||0; } }
+        else if(e.target==='units_in_room'){ if(oid!==iid && ow.zone==='room' && w.zone==='room' && ow.idx===w.idx){ p+=e.p||0; h+=e.h||0; } }
+        else if(e.target==='all_friendly_units'){ if(condOK(e.condition, oid) && condOK(e.condition, iid)){ p+=e.p||0; h+=e.h||0; } }
+      } }
+  }
+  for(const b of inst.buffs){ p+=b.p||0; h+=b.h||0; }
+  return {p:Math.max(0,p), h};
+}
+function hp(iid){ const s=stats(iid); return s.h - I(iid).dmg; }
+function hasKw(iid, kw){ const d=D(iid); return I(iid).faceup && (d.keywords||[]).includes(kw); }
+function isUnit(iid){ const t=D(iid).type; return t==='unit'||t==='leader'; }
+function canDefend(iid, breach){ // untapped OR bulwark; faceup irrelevant in rooms post-reveal
+  if(!isUnit(iid)) return false;
+  return !I(iid).tapped || hasKw(iid,'bulwark');
+}
+
+/* ---------- mana: pay-as-you-go ---------- */
+function manaSources(pi){ // untapped castle cards + leader-in-castle
+  const p=S.players[pi]; const out=[];
+  for(let r=0;r<3;r++) for(const iid of p.rooms[r]){
+    if(!I(iid).tapped) out.push(iid);
+  }
+  return out;
+}
+function sourceColor(iid){ // what colored pip this taps for; null = gold only
+  if(!I(iid).faceup) return null;
+  if(D(iid).type==='leader') return '*';
+  return D(iid).color;
+}
+function canColorFor(iid, cost){ // could this source cover a colored pip (revealing if facedown)?
+  if(I(iid).faceup){ const c=sourceColor(iid); return c==='*'||c===cost.color; }
+  return D(iid).type==='leader' || D(iid).color===cost.color; // reveal rides on the tap [OP]
+}
+function canAfford(pi, cost, extraTapped){ // greedy check: colored first
+  const srcs = manaSources(pi).filter(x=>!(extraTapped||[]).includes(x));
+  const col = S.players[pi].color;
+  let colored = cost.colored||0, generic = cost.generic||0;
+  let colSrc = srcs.filter(x=>{const c=sourceColor(x); return c==='*'||c===cardColorNeeded(cost, pi);}).length;
+  // colored pips are of the card's own color — computed by caller via cost.color
+  if(colSrc < colored) return false;
+  return srcs.length >= colored + generic;
+}
+function cardColorNeeded(cost, pi){ return cost.color; } // set when initiating payment
+
+/* ---------- turn engine ---------- */
+function beginTurn(){
+  const p = P();
+  p.mustered=false; p.overgrowUsed=0;
+  for(const iid of Object.keys(S.inst)){ const inst=S.inst[iid];
+    if(inst.owner===S.active){ inst.tapped=false; }
+    inst.buffs = inst.buffs.filter(b=>b.duration!=='turn' || inst.owner!==S.active);
+  }
+  // clear all turn buffs owned by active player's cards (fresh turn)
+  S.phase='main';
+  // draw (P1 skips very first draw)
+  if(!(S.turn===1 && S.active===0)){
+    if(!draw(S.active,1)) return; // deck-out loss handled
+  }
+  logLine(`— Turn ${S.turn}, ${p.name} (${COLORS[p.color]}) —`, true);
+}
+function draw(pi, n){
+  const p=S.players[pi];
+  for(let k=0;k<n;k++){
+    if(!p.deck.length){ // fatigue: escalating wounds on the Leader instead of instant loss
+      p.fatigue=(p.fatigue||0)+1;
+      I(p.leader).dmg += p.fatigue;
+      logLine(`${p.name}'s deck is empty — their Leader suffers ${p.fatigue} fatigue.`, true);
+      reapDead();
+      if(S.phase==='over') return false;
+      continue;
+    }
+    p.hand.push(p.deck.pop());
+  }
+  return true;
+}
+function endTurn(){
+  S.raided=null;
+  for(const iid of Object.keys(S.inst)){ S.inst[iid].buffs = S.inst[iid].buffs.filter(b=>b.duration!=='turn'); }
+  UNDO=[]; // undo never crosses the pass screen (no hotseat peeking)
+  S.active = 1-S.active;
+  if(S.active===0) S.turn++;
+  VIEW.sheet=null; VIEW.flow=null;
+  showPass(()=>{ beginTurn(); render(); });
+}
+function eliminate(pi, why){
+  S.players[pi].lost = true; S.winner = 1-pi;
+  logLine(`☠ ${why}. ${S.players[1-pi].name} rules the field!`, true);
+  S.phase='over';
+}
+
+/* ---------- basic actions ---------- */
+function muster(hidx, room, facedown){
+  snapshot();
+  const p=P(); const iid = p.hand[hidx];
+  const d = D(iid);
+  if(p.mustered && !hasOvergrowDef(d)) { UNDO.pop(); return toast('Already placed a card this turn'); }
+  if(p.mustered && hasOvergrowDef(d) && p.overgrowUsed>=1){ UNDO.pop(); return toast('Only one Overgrow placement per turn'); }
+  if(p.mustered) p.overgrowUsed++;
+  p.hand.splice(hidx,1);
+  I(iid).faceup = !facedown;
+  p.rooms[room].push(iid);
+  if(p.mustered) logLine(`${p.name} lets another card take root in the ${ROOMS[room]} (Overgrow).`);
+  else logLine(`${p.name} places a card ${facedown?'facedown':`(${d.name})`} in the ${ROOMS[room]}.`);
+  p.mustered = true;
+  VIEW.sheet=null; render();
+}
+function hasOvergrowDef(d){ return (d.keywords||[]).includes('overgrow'); }
+</script>
+<script>
+/* ================= payment flow =================
+   VIEW.picking = {kind:'pay', cost:{generic,colored,color}, tapped:[], onDone(tappedList), label}
+   Player taps highlighted castle sources until paid. */
+function startPayment(cost, label, onDone, exclude){
+  // exclude: cards that may not finance this cost (the card paying for itself; reserved tribute)
+  const ex = exclude||[];
+  const srcs = manaSources(S.active).filter(s=>!ex.includes(s));
+  const colOK = srcs.filter(s=>canColorFor(s, cost));
+  const total = (cost.generic||0)+(cost.colored||0);
+  if(srcs.length < total || colOK.length < (cost.colored||0)){ if(UNDO.length) UNDO.pop(); return toast('Not enough untapped castle cards to pay '+costStr(cost)); }
+  if(total===0){ onDone([]); return; }
+  VIEW.picking = {kind:'pay', cost, tapped:[], onDone, label, exclude:ex};
+  VIEW.sheet=null; render();
+}
+function payProgress(){
+  const pk=VIEW.picking; const cost=pk.cost;
+  const colorTaps=pk.tapped.filter(iid=>canColorFor(iid,cost));
+  const colored = Math.min(cost.colored||0, colorTaps.length);
+  const generic = pk.tapped.length - colored;
+  return {colored, generic, needC:(cost.colored||0)-colored, needG:(cost.generic||0)-generic};
+}
+function clickPaySource(iid){
+  const pk=VIEW.picking;
+  if((pk.exclude||[]).includes(iid)) return toast('That card cannot finance this cost');
+  const idx = pk.tapped.indexOf(iid);
+  if(idx>=0){ pk.tapped.splice(idx,1); render(); return; }
+  pk.tapped.push(iid);
+  const pr = payProgress();
+  if(pr.needC<=0 && pr.needG<=0 && pk.tapped.length >= (pk.cost.generic||0)+(pk.cost.colored||0)){
+    // allocate colored pips: faceup color-sources first; reveal facedown ones only as needed [OP: reveal rides the tap]
+    let need = pk.cost.colored||0;
+    const faceupCap = pk.tapped.filter(t=>I(t).faceup && canColorFor(t,pk.cost));
+    const downCap   = pk.tapped.filter(t=>!I(t).faceup && canColorFor(t,pk.cost));
+    need -= Math.min(need, faceupCap.length);
+    for(const t of downCap){ if(need<=0) break;
+      I(t).faceup=true; need--;
+      logLine(`${P().name} reveals ${D(t).name} as it taps for ${pk.cost.color}.`); }
+    for(const t of pk.tapped){ I(t).tapped = true; }
+    const done = pk.onDone; VIEW.picking=null;
+    done(pk.tapped);
+  }
+  render();
+}
+function costStr(c){ const parts=[]; if(c.generic) parts.push(c.generic); if(c.colored) parts.push(c.color.repeat(c.colored)); return parts.join('+')||'0'; }
+function fullCost(d){ return {generic:d.cost.generic||0, colored:d.cost.colored||0, color:d.color}; }
+
+/* ================= deploy ================= */
+function deployFromHand(hidx, fieldIdx){
+  const p=P(); const iid=p.hand[hidx]; const d=D(iid);
+  snapshot();
+  startPayment(fullCost(d), `Deploy ${d.name}`, ()=>{
+    p.hand.splice(p.hand.indexOf(iid),1);
+    I(iid).faceup=true; I(iid).arrived=S.turn*2+S.active;
+    p.fields[fieldIdx].push(iid);
+    logLine(`${p.name} deploys ${d.name} to the ${['left','center','right'][fieldIdx]} field.`);
+    fireTrigger(iid,'arrival', ()=>render());
+  });
+}
+function deployFromCastle(iid){
+  const p=P(); const w=whereIs(iid); const d=D(iid);
+  snapshot();
+  // a card cannot tap to finance its own deployment
+  startPayment(fullCost(d), `Deploy ${d.name}`, ()=>{
+    p.rooms[w.idx].splice(p.rooms[w.idx].indexOf(iid),1);
+    I(iid).faceup=true; I(iid).arrived=S.turn*2+S.active;
+    p.fields[w.idx].push(iid);
+    logLine(`${p.name} marches ${d.name} out of the ${ROOMS[w.idx]}.`);
+    fireTrigger(iid,'arrival', ()=>render());
+  }, [iid]);
+}
+
+/* ================= tap actions ================= */
+function tapForManaSolo(iid, reveal){
+  // outside payment: tapping for mana alone is pointless (no floating mana), but
+  // reveal-with-tap is how you flip a card faceup. We allow it as "tap: reveal".
+  snapshot();
+  I(iid).tapped=true;
+  if(reveal && !I(iid).faceup){ I(iid).faceup=true; logLine(`${P().name} reveals ${D(iid).name} in the ${ROOMS[whereIs(iid).idx]}.`); }
+  else logLine(`${P().name} taps a card in the ${ROOMS[whereIs(iid).idx]}.`);
+  VIEW.sheet=null; render();
+}
+function castleMove(iid, toRoom){
+  snapshot();
+  const w=whereIs(iid); const p=P();
+  I(iid).tapped=true;
+  p.rooms[w.idx].splice(p.rooms[w.idx].indexOf(iid),1);
+  p.rooms[toRoom].push(iid);
+  logLine(`${p.name} moves a ${I(iid).faceup?D(iid).name:'facedown card'} from the ${ROOMS[w.idx]} to the ${ROOMS[toRoom]}.`);
+  VIEW.sheet=null; render();
+}
+function fieldMove(iid, toIdx){
+  snapshot();
+  const w=whereIs(iid); const p=P();
+  I(iid).tapped=true;
+  p.fields[w.idx].splice(p.fields[w.idx].indexOf(iid),1);
+  p.fields[toIdx].push(iid);
+  logLine(`${D(iid).name} repositions to the ${['left','center','right'][toIdx]} field.`);
+  VIEW.sheet=null; render();
+}
+function retreat(iid){
+  snapshot();
+  const w=whereIs(iid); const p=P();
+  I(iid).tapped=true;
+  p.fields[w.idx].splice(p.fields[w.idx].indexOf(iid),1);
+  p.rooms[w.idx].push(iid); I(iid).faceup=true;
+  logLine(`${D(iid).name} falls back into the ${ROOMS[w.idx]}.`);
+  VIEW.sheet=null; render();
+}
+
+/* ================= raids =================
+   Flow object drives multi-step combat UI.
+   flow = {type:'raid', lane, raiders:[], stage, clash:{defenders, assign:{rid:target}}, ...} */
+function canRaidFrom(lane){
+  if(S.raided && S.raided[lane]) return false;
+  return P().fields[lane].some(iid=>raidEligible(iid, lane));
+}
+function raidEligible(iid, lane){
+  if(I(iid).tapped) return false;
+  const arrivedThisTurn = I(iid).arrived === S.turn*2+S.active;
+  if(arrivedThisTurn && !hasKw(iid,'frenzy')) return false;
+  return isUnit(iid);
+}
+function startRaid(lane){
+  VIEW.flow = {type:'raid', lane, raiders:[], flankers:[], stage:'select'};
+  VIEW.sheet=null; render();
+}
+function toggleRaider(iid){
+  const f=VIEW.flow; const w=whereIs(iid);
+  const arr = (w.idx===f.lane)?f.raiders:f.flankers;
+  const i=arr.indexOf(iid);
+  if(i>=0) arr.splice(i,1); else arr.push(iid);
+  render();
+}
+function launchRaid(){
+  const f=VIEW.flow;
+  const party=[...f.raiders, ...f.flankers];
+  if(!party.length) return toast('Choose at least one raider');
+  snapshot();
+  S.raided = S.raided||{}; S.raided[f.lane]=true;
+  const p=P(), o=OPP();
+  for(const iid of f.flankers){ // flank: move into lane as part of the attack
+    const w=whereIs(iid);
+    p.fields[w.idx].splice(p.fields[w.idx].indexOf(iid),1);
+    p.fields[f.lane].push(iid);
+  }
+  const oppLanePre = 2-f.lane;
+  for(const iid of party){ I(iid).tapped=true; fireTriggerSync(iid,'raid',{auto:true, oppLane:oppLanePre}); }
+  const laneNames=['left','center','right'];
+  logLine(`⚔ ${p.name} raids from the ${laneNames[f.lane]} field with ${party.length} unit(s)!`, true);
+  const oppLane = 2-f.lane;
+  const defenders = o.fields[oppLane].filter(iid=>canDefend(iid));
+  const bystanders = o.fields[oppLane].filter(iid=>isUnit(iid) && !canDefend(iid));
+  f.party=party; f.oppLane=oppLane; f.defenders=defenders; f.bystanders=bystanders;
+  if(defenders.length===0 && bystanders.length===0){
+    logLine(`The ${laneNames[oppLane]} approach is undefended — the raiders pour through!`);
+    startBreach(party, oppLane, f.lane);
+    return;
+  }
+  // living bodies block the lane even tapped: there is always a clash if units are present
+  f.stage='assign'; f.assign={};
+  autoAssign(f);
+  render();
+}
+function autoAssign(f){
+  // greedy: spread raiders across defenders (biggest raider onto killable defender), then extras gang the biggest defender
+  f.assign={};
+  const rs=[...f.party].sort((a,b)=>stats(b).p-stats(a).p);
+  const ds=[...f.defenders].sort((a,b)=>hp(b)-hp(a));
+  let di=0;
+  for(const r of rs){
+    if(ds.length){ f.assign[r]=ds[di%ds.length]; di++; }
+    else if(f.bystanders.length){ f.assign[r]=f.bystanders[0]; }
+    else f.assign[r]=null;
+  }
+}
+function validAssignment(f){
+  // every defender must be engaged before tapped targets / unassigned allowed
+  const engaged=new Set(Object.values(f.assign).filter(Boolean));
+  const allDef=f.defenders.every(d=>engaged.has(d));
+  if(allDef) return true;
+  // if not all defenders engaged: no raider may target bystander or be unassigned — unless party smaller than defenders
+  for(const r of f.party){ const t=f.assign[r];
+    if(!t || f.bystanders.includes(t)) return false; }
+  return true;
+}
+function resolveClash(){
+  const f=VIEW.flow;
+  if(!validAssignment(f)) return toast('Every defender must be engaged before hitting tapped units');
+  const p=P(), o=OPP();
+  // simultaneous: raiders hit targets; each defender hits one raider (auto-choice for flow)
+  const dmgMap={};
+  for(const r of f.party){ const t=f.assign[r]; if(t) dmgMap[t]=(dmgMap[t]||0)+stats(r).p; }
+  for(const d of f.defenders){
+    const target=pickDefStrike(d, f.party);
+    if(target) dmgMap[target]=(dmgMap[target]||0)+stats(d,{defending:true}).p;
+  }
+  applyDamageMap(dmgMap);
+  const laneNames=['left','center','right'];
+  logLine(`Steel meets steel in the ${laneNames[f.oppLane]} lane.`);
+  reapDead();
+  if(S.phase==='over'){ VIEW.flow=null; render(); return; }
+  // breakthrough only if NO living enemy unit remains in the lane — tapped bodies still block
+  const survivorsD = o.fields[f.oppLane].filter(isUnit);
+  const survivorsR = f.party.filter(iid=>alive(iid));
+  if(survivorsD.length===0 && survivorsR.length){
+    logLine(`The lane is cleared — ${survivorsR.length} raider(s) storm the castle!`, true);
+    startBreach(survivorsR, f.oppLane, f.lane);
+  } else {
+    logLine(survivorsR.length? 'The raid is repelled — bodies still hold the lane.' : 'The raiding party is annihilated.');
+    VIEW.flow=null; flushPending();
+  }
+}
+function pickDefStrike(d, party){
+  const alive_=party.filter(alive); if(!alive_.length) return null;
+  const power=stats(d,{defending:true}).p;
+  const killable=alive_.filter(r=>hp(r)<=power).sort((a,b)=>stats(b).p-stats(a).p);
+  if(killable.length) return killable[0];
+  return alive_.sort((a,b)=>stats(b).p-stats(a).p)[0];
+}
+function applyDamageMap(m){ for(const [iid,n] of Object.entries(m)){ I(iid).dmg+=n; } }
+function alive(iid){ const w=whereIs(iid); return w && (w.zone==='field'||w.zone==='room') && hp(iid)>0; }
+function reapDead(){
+  // defender's dead are gathered first: if both Leaders would fall at once, the attacker's falls last
+  for(const pi of [1-S.active, S.active]){ const p=S.players[pi];
+    for(let z=0;z<3;z++){
+      for(const arr of [p.rooms[z], p.fields[z]]){
+        for(const iid of [...arr]){
+          if(isUnit(iid) && hp(iid)<=0){
+            arr.splice(arr.indexOf(iid),1);
+            const d=D(iid);
+            logLine(`${d.name} is slain.`);
+            fireTriggerSync(iid,'demise',{auto:true});
+            if(d.type==='leader'){ eliminate(pi, `${d.name}, Leader of ${p.name}, has fallen`); return; }
+            p.discard.push(iid); I(iid).dmg=0; I(iid).tapped=false; I(iid).buffs=[];
+          }
+        }
+      }
+    }
+  }
+}
+
+/* ================= breach ================= */
+function startBreach(raiders, roomIdx, homeLane){
+  const o=S.players[1-S.active];
+  const room=o.rooms[roomIdx];
+  logLine(`🏰 The ${ROOMS[roomIdx]} of ${o.name} is breached!`, true);
+  if(room.length===0){ // an empty room cannot fall — nothing to sack
+    logLine('…but the room stands empty. Nothing to sack.');
+    finishBreach(roomIdx, homeLane, raiders); return;
+  }
+  // 1. reveal everything
+  for(const iid of room){ if(!I(iid).faceup){ I(iid).faceup=true; logLine(`Revealed: ${D(iid).name}.`); } }
+  // 2. traps MAY spring (owner's choice; prototype steward: hold vs chaff parties)
+  const partyPower = raiders.reduce((a,r)=>a+stats(r).p,0);
+  for(const iid of [...room]){
+    const d=D(iid);
+    if(d.type==='plot' && d.trap){
+      if(partyPower<3 && raiders.length<2){ logLine(`${d.name} lies in wait — not worth springing on this rabble.`); continue; }
+      logLine(`⚠ Trap! ${d.name} springs!`, true);
+      runEffects(iid, (d.effects||[]).filter(e=>e.trigger==='trap'), {raiders, roomIdx, roomOwner:1-S.active, auto:true});
+      room.splice(room.indexOf(iid),1); o.discard.push(iid);
+      reapDead(); if(S.phase==='over'){ VIEW.flow=null; render(); return; }
+    }
+  }
+  const liveRaiders = raiders.filter(alive);
+  if(!liveRaiders.length){ logLine('The raiders perish among the traps.'); finishBreach(roomIdx, homeLane, raiders); return; }
+  // 3. garrison clash — enters whenever units are present, so raiders can also
+  // slaughter defenseless (tapped) occupants, the tapped Leader above all
+  const garrison = room.filter(iid=>isUnit(iid) && canDefend(iid));
+  const helpless = room.filter(iid=>isUnit(iid) && !canDefend(iid));
+  if(garrison.length || helpless.length){
+    VIEW.flow={type:'garrison', roomIdx, homeLane, party:liveRaiders, defenders:garrison,
+      bystanders: room.filter(iid=>isUnit(iid)&&!canDefend(iid)), assign:{}, stage:'assign', raidersAll:raiders};
+    autoAssign(VIEW.flow);
+    render(); return;
+  }
+  roomFalls(roomIdx, homeLane, liveRaiders, raiders);
+}
+function resolveGarrison(){
+  const f=VIEW.flow;
+  if(!validAssignment(f)) return toast('Every garrison defender must be engaged first');
+  const o=S.players[1-S.active];
+  const dmgMap={};
+  for(const r of f.party){ const t=f.assign[r]; if(t) dmgMap[t]=(dmgMap[t]||0)+stats(r).p; }
+  for(const d of f.defenders){ const t=pickDefStrike(d,f.party); if(t) dmgMap[t]=(dmgMap[t]||0)+stats(d,{defending:true}).p; }
+  applyDamageMap(dmgMap);
+  logLine(`The garrison of the ${ROOMS[f.roomIdx]} fights in the halls.`);
+  reapDead(); if(S.phase==='over'){ VIEW.flow=null; render(); return; }
+  const survG=o.rooms[f.roomIdx].filter(iid=>isUnit(iid)&&canDefend(iid));
+  const survR=f.party.filter(alive);
+  if(!survG.length && survR.length) roomFalls(f.roomIdx, f.homeLane, survR, f.raidersAll);
+  else { logLine(survR.length?'The garrison holds! The raid is repelled — but the room lies exposed.':'The raiders die in the halls.');
+         finishBreach(f.roomIdx, f.homeLane, f.raidersAll); }
+}
+function roomFalls(roomIdx, homeLane, survivors, allRaiders){
+  const o=S.players[1-S.active];
+  logLine('💥 '+BREACH_TEXT[roomIdx], true);
+  if(roomIdx===0){ // crypt: exile all discard
+    o.exile.push(...o.discard); o.discard=[];
+  } else if(roomIdx===1){ // keep: mill 3
+    for(let k=0;k<3;k++){ if(o.deck.length) o.discard.push(o.deck.pop()); }
+    if(!o.deck.length){} // deck-out only on draw
+  } else { // gatehouse: random discard
+    if(o.hand.length){ const j=Math.floor(Math.random()*o.hand.length);
+      const c=o.hand.splice(j,1)[0]; o.discard.push(c);
+      logLine(`${o.name} discards ${D(c).name}.`); }
+  }
+  // breach riders on surviving raiders
+  for(const r of survivors){ fireTriggerSync(r,'breached',{roomIdx, roomOwner:1-S.active, auto:true}); }
+  reapDead();
+  finishBreach(roomIdx, homeLane, allRaiders);
+}
+function finishBreach(roomIdx, homeLane, raiders){
+  // survivors were never moved in the data model — they simply stand tapped at home
+  VIEW.flow=null;
+  if(S.phase!=='over') logLine('The raiders slip back to their lines.');
+  flushPending();
+}
+function flushPending(){
+  if(S.phase==='over' || !S.pendingFx || !S.pendingFx.length){ render(); return; }
+  const fx=S.pendingFx.shift();
+  runEffects(fx.iid, [fx.e], {}, ()=>flushPending());
+}
+
+/* ================= sneak ================= */
+function canSneak(iid){ return hasKw(iid,'sneak') && !I(iid).tapped && whereIs(iid).zone==='field'
+  && !(I(iid).arrived===S.turn*2+S.active && !hasKw(iid,'frenzy')); }
+function startSneak(iid){
+  VIEW.flow={type:'sneakpick', unit:iid}; VIEW.sheet=null; render();
+}
+function sneakInto(iid, roomIdx){
+  snapshot();
+  I(iid).tapped=true;
+  logLine(`🗡 ${D(iid).name} slips past the walls into the ${ROOMS[roomIdx]}!`, true);
+  VIEW.flow=null;
+  startBreach([iid], roomIdx, null);
+}
+
+/* ================= plots ================= */
+function roomCount(iid){ const w=whereIs(iid); return S.players[w.pi].rooms[w.idx].length-1; } // others
+function canSpring(iid){
+  const d=D(iid); if(d.type!=='plot'||d.trap) return false;
+  const w=whereIs(iid); if(!w||w.zone!=='room'||w.pi!==S.active) return false;
+  if((d.scheme||0) > roomCount(iid)) return false;
+  const roomMates=S.players[w.pi].rooms[w.idx].filter(x=>x!==iid && !I(x).tapped).length;
+  if((d.tribute||0) > roomMates) return false;
+  return true;
+}
+function springPlot(iid){
+  const d=D(iid); const w=whereIs(iid); const p=P();
+  snapshot();
+  // reserve tribute up front (facedown workers first) — a card is mana OR tribute, never both
+  const reserved=p.rooms[w.idx].filter(x=>x!==iid&&!I(x).tapped)
+    .sort((a,b)=>(I(a).faceup?1:0)-(I(b).faceup?1:0)).slice(0, d.tribute||0);
+  if(reserved.length < (d.tribute||0)){ UNDO.pop(); return toast('Not enough untapped cards in the room for Tribute'); }
+  startPayment(fullCost(d), `Spring ${d.name}`, ()=>{
+    for(const t of reserved){ I(t).tapped=true; }
+    if(d.tribute) logLine(`${d.tribute} conspirator(s) tap in tribute.`);
+    I(iid).faceup=true;
+    logLine(`◉ ${p.name} springs the plot: ${d.name}!`, true);
+    p.rooms[w.idx].splice(p.rooms[w.idx].indexOf(iid),1);
+    runEffects(iid, (d.effects||[]).filter(e=>e.trigger==='sprung'), {roomIdx:w.idx, roomOwner:I(iid).owner}, ()=>{
+      p.discard.push(iid);
+      reapDead(); render();
+    });
+  }, [iid, ...reserved]);
+}
+
+/* ================= effects interpreter ================= */
+function fireTrigger(iid, trig, done, ctx){
+  const es=(D(iid).effects||[]).filter(e=>e.trigger===trig);
+  if(!es.length){ if(done) done(); return; }
+  runEffects(iid, es, ctx||{}, done);
+}
+function fireTriggerSync(iid, trig, ctx){ fireTrigger(iid, trig, null, ctx); }
+function scaleN(e, iid, ctx){
+  if(e.n==='count_room'){ const w=ctx.roomIdx!==undefined?{pi:I(iid).owner, idx:ctx.roomIdx}:whereIs(iid);
+    return S.players[I(iid).owner].rooms[w.idx?w.idx:0].length; }
+  return e.n||0;
+}
+function runEffects(iid, effects, ctx, done){
+  const owner=I(iid).owner; const p=S.players[owner], o=S.players[1-owner];
+  const queue=[...effects];
+  const step=()=>{
+    if(!queue.length){ if(done) done(); else render(); return; }
+    const e=queue.shift();
+    const n = (typeof e.n==='string')? evalScale(e.n, iid, ctx) : (e.n||0);
+    switch(e.op){
+      case 'buff': {
+        if(e.duration==='static') break; // statics handled in stats()
+        applyToTargets(e, iid, ctx, t=>{ I(t).buffs.push({p:e.p||0,h:e.h||0,duration:'turn'}); }, step); return; }
+      case 'damage': applyToTargets(e, iid, ctx, t=>{ I(t).dmg+=n; logLine(`${D(iid).name} deals ${n} to ${D(t).name}.`); reapDead(); }, step); return;
+      case 'heal': applyToTargets(e, iid, ctx, t=>{ I(t).dmg=Math.max(0,I(t).dmg-n); logLine(`${D(t).name} is healed ${n}.`); }, step); return;
+      case 'draw': draw(owner,n); logLine(`${p.name} draws ${n}.`); break;
+      case 'mill': { const who=(e.who==='self')?p:o; for(let k=0;k<n;k++) if(who.deck.length) who.discard.push(who.deck.pop());
+        logLine(`${who.name}'s deck loses its top ${n}.`); break; }
+      case 'discard_random': { const who=(e.who==='self')?p:o; for(let k=0;k<n;k++){ if(!who.hand.length) break;
+        const j=Math.floor(Math.random()*who.hand.length); const c=who.hand.splice(j,1)[0]; who.discard.push(c);
+        logLine(`${who.name} discards ${D(c).name}.`);} break; }
+      case 'exile_discard': { const who=(e.who==='self')?p:o;
+        if(e.n==='all'||n>=who.discard.length){ who.exile.push(...who.discard); who.discard=[]; logLine(`${who.name}'s discard pile is exiled.`); }
+        else { for(let k=0;k<n;k++) if(who.discard.length) who.exile.push(who.discard.pop()); logLine(`${n} card(s) exiled from ${who.name}'s discard.`);} break; }
+      case 'recover': { const pool=p.discard.filter(c=>e.filter==='any'||D(c).type===(e.filter==='unit'?'unit':'plot'));
+        if(!pool.length){ logLine('Nothing to recover.'); break; }
+        if(ctx.auto){ // combat-time: auto-pick the highest-cost card(s), no UI
+          const best=[...pool].sort((a,b)=>(D(b).cost.generic+D(b).cost.colored)-(D(a).cost.generic+D(a).cost.colored)).slice(0,n||1);
+          for(const c of best){ p.discard.splice(p.discard.indexOf(c),1);
+            if(e.to==='hand') p.hand.push(c); else { I(c).faceup=true; p.rooms[1].push(c); }
+            logLine(`${p.name} recovers ${D(c).name}.`); }
+          break; }
+        // choose up to n via picker
+        pickFromList(pool, Math.min(n||1,pool.length), `Recover from your discard`, chosen=>{
+          for(const c of chosen){ p.discard.splice(p.discard.indexOf(c),1);
+            if(e.to==='hand'){ p.hand.push(c); }
+            else { I(c).faceup=true; p.rooms[1].push(c); }
+            logLine(`${p.name} recovers ${D(c).name} to ${e.to==='hand'?'hand':'the Keep'}.`); }
+          step(); });
+        return; }
+      case 'untap': { pickTargets('friendly_tapped', n, iid, ctx, ts=>{ for(const t of ts){ I(t).tapped=false; logLine(`${D(t).name} untaps.`);} step(); }); return; }
+      case 'foresee': { if(ctx.auto){ S.pendingFx.push({iid, e}); logLine(`${D(iid).name} will foresee once the dust settles.`); break; }
+        foreseeUI(owner, n, step); return; }
+      case 'peek': { const cands=[]; for(let r=0;r<3;r++) for(const c of o.rooms[r]) if(!I(c).faceup) cands.push(c);
+        if(!cands.length){ logLine('No facedown cards to spy on.'); break; }
+        pickFromList(cands, Math.min(n||1,cands.length), 'Spy on facedown cards', chosen=>{
+          VIEW.reveal={cards:chosen.map(c=>byId[I(c).cid]), title:'Your spies report:'};
+          logLine(`${p.name} peeks at ${chosen.length} facedown card(s).`); step(); }); return; }
+      case 'summon': { const pool=p.hand.filter(c=>D(c).type==='unit' && (!e.maxCost || (D(c).cost.generic+D(c).cost.colored)<=e.maxCost));
+        if(!pool.length){ logLine('No unit to summon.'); break; }
+        pickFromList(pool, 1, 'Summon a unit for free', chosen=>{
+          const c=chosen[0]; p.hand.splice(p.hand.indexOf(c),1); I(c).faceup=true;
+          if(e.to==='lane'){ I(c).arrived=S.turn*2+S.active; p.fields[1].push(c); }
+          else p.rooms[ctx.roomIdx!==undefined?ctx.roomIdx:1].push(c);
+          logLine(`${D(c).name} answers the call!`); step(); }); return; }
+      case 'move_free': break; // niche; skipped in v1 engine (validator strips)
+      default: break;
+    }
+    step();
+  };
+  step();
+}
+function evalScale(expr, iid, ctx){
+  const w = ctx.roomIdx!==undefined ? {pi:I(iid).owner, idx:ctx.roomIdx} : whereIs(iid);
+  const roomLen = (w && w.idx!==undefined && w.idx>=0 && S.players[w.pi||I(iid).owner].rooms[w.idx]) ? S.players[w.pi||I(iid).owner].rooms[w.idx].length : 0;
+  if(expr==='count_room') return roomLen;
+  if(expr==='count_room_half') return Math.ceil(roomLen/2);
+  return 0;
+}
+/* target application: immediate for group targets, picker for chosen ones */
+function applyToTargets(e, iid, ctx, fn, done){
+  const owner=I(iid).owner; const o=S.players[1-owner]; const p=S.players[owner];
+  const t=e.target;
+  const run=(list)=>{ for(const x of list) fn(x); done(); };
+  if(t==='self') return run([iid]);
+  if(t==='raiders' && ctx.raiders) return run(ctx.raiders.filter(alive));
+  if(t==='units_in_room' && ctx.roomIdx!==undefined){
+    const ro = ctx.roomOwner!==undefined ? S.players[ctx.roomOwner] : o;
+    return run(ro.rooms[ctx.roomIdx].filter(isUnit)); }
+  if(t==='all_friendly_units'){ const l=[]; for(let z=0;z<3;z++){ l.push(...p.fields[z].filter(isUnit), ...p.rooms[z].filter(x=>isUnit(x)&&I(x).faceup)); } return run(l); }
+  if(t==='units_in_lane'){ // choose one enemy battlefield space
+    VIEW.picking={kind:'lane', owner:1-owner, label:`${D(iid).name}: choose an enemy battlefield space`, onPick:(idx)=>{
+      VIEW.picking=null; run(o.fields[idx].filter(isUnit)); }};
+    render(); return; }
+  if(t==='enemy_leader'){ const li=o.leader; const w=whereIs(li);
+    if(w && I(li).faceup) return run([li]); logLine('The enemy Leader is hidden.'); return done(); }
+  // chosen unit targets
+  if(ctx.auto){
+    const cands=[];
+    for(let pi=0;pi<2;pi++){ const pp=S.players[pi];
+      for(let z=0;z<3;z++) for(const c of [...pp.fields[z], ...pp.rooms[z]]){
+        if(!isUnit(c)||!I(c).faceup) continue;
+        if(t==='friendly_unit'&&pi===owner) cands.push(c);
+        if(t==='enemy_unit'&&pi!==owner) cands.push(c);
+      } }
+    if(!cands.length){ logLine('No legal target.'); return done(); }
+    let pickIid;
+    if(t==='friendly_unit') pickIid=cands.sort((a,b)=>I(b).dmg-I(a).dmg)[0]; // most wounded ally
+    else { const laneC=(ctx.oppLane!==undefined)?cands.filter(c=>{const cw=whereIs(c); return cw.zone==='field'&&cw.idx===ctx.oppLane;}):[];
+      const poolC=laneC.length?laneC:cands;
+      pickIid=poolC.sort((a,b)=>hp(a)-hp(b))[0]; } // weakest enemy, prefer the contested lane
+    return run([pickIid]);
+  }
+  pickTargets(t, 1, iid, ctx, ts=>{ run(ts); });
+}
+function pickTargets(kind, n, srcIid, ctx, cb){
+  const owner=I(srcIid).owner;
+  const cands=[];
+  for(let pi=0;pi<2;pi++){ const pp=S.players[pi];
+    for(let z=0;z<3;z++){
+      for(const c of [...pp.fields[z], ...pp.rooms[z]]){
+        if(!isUnit(c)) continue;
+        if(!I(c).faceup) continue; // facedown untargetable
+        if(kind==='friendly_unit' && pi===owner) cands.push(c);
+        if(kind==='enemy_unit' && pi!==owner) cands.push(c);
+        if(kind==='friendly_tapped' && pi===owner && I(c).tapped) cands.push(c);
+      } } }
+  if(!cands.length){ logLine('No legal target.'); cb([]); return; }
+  pickFromList(cands, Math.min(n,cands.length), 'Choose target', cb);
+}
+function pickFromList(cands, n, title, cb){
+  VIEW.picking={kind:'list', cands, n, title, chosen:[], onDone:cb};
+  render();
+}
+function foreseeUI(pi, n, done){
+  const p=S.players[pi];
+  const top=p.deck.slice(-n).reverse(); // top of deck = end of array
+  VIEW.picking={kind:'foresee', cards:top, decided:[], n, onDone:(arr)=>{
+    // arr = [{iid, where:'top'|'bottom'}] in chosen order
+    for(const c of top) p.deck.splice(p.deck.indexOf(c),1);
+    const tops=arr.filter(x=>x.where==='top').map(x=>x.iid);
+    const bots=arr.filter(x=>x.where==='bottom').map(x=>x.iid);
+    for(const c of [...tops].reverse()) p.deck.push(c);      // first chosen = topmost
+    for(const c of bots) p.deck.unshift(c);
+    logLine(`${p.name} foresees ${n}.`);
+    VIEW.picking=null; done(); }};
+  render();
+}
+</script>
+<script>
+/* ================= rendering ================= */
+const app=document.getElementById('app');
+const overlays=document.getElementById('overlays');
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function toast(msg){ VIEW.toast=msg; render(); setTimeout(()=>{ if(VIEW.toast===msg){ VIEW.toast=null; render(); } }, 2200); }
+
+function miniHTML(iid, opts){
+  const inst=I(iid); const d=D(iid);
+  const mine = inst.owner===S.active;
+  const showFace = inst.faceup || (mine && !(opts&&opts.hideOwn));
+  const cls=['mini'];
+  if(!inst.faceup && !showFace){ cls.push('dn'); }
+  else if(!inst.faceup && showFace){ cls.push('dn'); } // own facedown still shows back in grid; peek via sheet
+  else cls.push(d.color);
+  if(inst.tapped) cls.push('tapped');
+  if(d.type==='leader') cls.push('leader');
+  if(d.type==='plot' && inst.faceup) cls.push('plotcard');
+  const st = isUnit(iid)? stats(iid):null;
+  const hurt = st && inst.dmg>0;
+  if(hurt) cls.push('hurt');
+  const ph = st? `<span class="ph num">${st.p}/${Math.max(0,st.h-inst.dmg)}</span>`:'';
+  const nm = inst.faceup? esc(d.name) : (mine? '🂠' : '');
+  return `<div class="${cls.join(' ')}" data-i="${iid}">
+    <span class="mn">${inst.faceup?esc(d.name):''}</span>${inst.faceup?ph:''}
+    ${inst.faceup?`<span class="cost num">${costStr(fullCost(d))}</span>`:''}
+  </div>`;
+}
+function cellHTML(pi, zone, idx){
+  const p=S.players[pi];
+  const arr = zone==='room'? p.rooms[idx] : p.fields[idx];
+  const mine = pi===S.active;
+  const labels = zone==='room' ? ROOMS : ['Field','Field','Field'];
+  const zh = zone==='room' ? `<span class="zonehint">→ ${ZONE_OF_ROOM[idx]}${idx===1?` (${p.deck.length})`:idx===0?` (${p.discard.length})`:` (${p.hand.length})`}</span>`:'';
+  const hot = cellIsHot(pi, zone, idx) ? ' hot':'';
+  const pick = cellIsPick(pi, zone, idx) ? ' pick':'';
+  return `<div class="cell ${zone==='room'?'room':''} ${mine?'':'enemy'}${hot}${pick}" data-cell="${pi}:${zone}:${idx}">
+    <div class="cellname"><span>${labels[idx]}</span> ${zh}</div>
+    <div class="stack">${arr.map(iid=>miniHTML(iid)).join('')||'<span style="color:var(--muted);font-size:10px">—</span>'}</div>
+  </div>`;
+}
+function cellIsHot(pi, zone, idx){
+  const f=VIEW.flow;
+  if(f && f.type==='raid' && f.stage==='select' && pi===S.active && zone==='field') return idx===f.lane || Math.abs(idx-f.lane)===1;
+  return false;
+}
+function cellIsPick(pi, zone, idx){
+  const pk=VIEW.picking;
+  if(pk && pk.kind==='lane' && pi===pk.owner && zone==='field') return true;
+  const f=VIEW.flow;
+  if(f && f.type==='sneakpick' && pi!==S.active && zone==='room') return true;
+  return false;
+}
+function boardHTML(){
+  const me=S.active, op=1-S.active;
+  // opponent rows are mirrored: their rooms render right-to-left from my perspective
+  const oppOrder=[2,1,0];
+  return `<div class="board">
+    <div class="rowlabel"><span class="eyebrow">${esc(S.players[op].name)} — ${COLORS[S.players[op].color]} castle</span>
+      <span class="eyebrow num">hand ${S.players[op].hand.length} · deck ${S.players[op].deck.length}</span></div>
+    <div class="brow">${oppOrder.map(i=>cellHTML(op,'room',i)).join('')}</div>
+    <div class="brow">${oppOrder.map(i=>cellHTML(op,'field',i)).join('')}</div>
+    <div class="midline"></div>
+    <div class="brow">${[0,1,2].map(i=>cellHTML(me,'field',i)).join('')}</div>
+    <div class="brow">${[0,1,2].map(i=>cellHTML(me,'room',i)).join('')}</div>
+    <div class="rowlabel"><span class="eyebrow">Your castle — ${COLORS[S.players[me].color]}</span>
+      <span class="eyebrow">crypt · keep · gatehouse</span></div>
+  </div>`;
+}
+function statusHTML(){
+  const p=P();
+  return `<div class="statusline">
+    <b class="num">Turn ${S.turn}</b>
+    <span class="pill">${esc(p.name)}</span>
+    <span>${p.mustered? 'castle card placed':'castle card available'}</span>
+    <span class="num">hand ${p.hand.length}</span>
+  </div>`;
+}
+function trayHTML(){
+  const p=P();
+  return `<div class="tray"><div class="tray-inner">
+    <div class="tray-head">
+      <span class="eyebrow">Your hand — tap a card</span>
+      <span style="display:flex;gap:6px">
+        <button class="chip" id="btnUndo">Undo</button>
+        <button class="chip primary" id="btnEnd">End turn</button>
+      </span>
+    </div>
+    <div class="handrow">${p.hand.map((iid,ix)=>{
+      const d=D(iid);
+      return `<button class="hcard ${d.color}" data-h="${ix}">
+        <span class="hn">${esc(d.name)}</span>
+        <span class="ht">${d.type}${d.trap?' · trap':''}</span>
+        <span class="hb"><span class="num">${costStr(fullCost(d))}</span>${isUnitDef(d)?`<span class="num">${d.power}/${d.health}</span>`:''}</span>
+      </button>`; }).join('')||'<span style="color:var(--muted);font-size:13px;padding:8px">No cards in hand</span>'}</div>
+  </div></div>`;
+}
+function isUnitDef(d){ return d.type==='unit'||d.type==='leader'; }
+function logHTML(){
+  const items=S.log.slice(-40).map(l=>`<li class="${l.hl?'hl':''}">${esc(l.t)}</li>`).reverse().join('');
+  return `<div class="logwrap"><h3 class="disp">Chronicle</h3><ul id="log">${items}</ul></div>`;
+}
+
+function render(){
+  if(!S){ renderSetup(); return; }
+  if(S.phase==='setup'){ renderLeaderSetup(); return; }
+  if(S.phase==='over'){ renderGame(); renderVictory(); return; }
+  renderGame();
+}
+function renderGame(){
+  app.innerHTML = `
+    <div class="topbar">
+      <span class="brand">House <em>of</em> Knives</span>
+      <span class="topbtns">
+        <button class="chip" id="btnHelp">Rules</button>
+        <button class="chip" id="btnTheme">◐</button>
+      </span>
+    </div>
+    ${statusHTML()}
+    ${boardHTML()}
+    ${raidBarHTML()}
+    ${logHTML()}
+    <div class="spacer"></div>
+    ${S.phase==='main'?trayHTML():''}`;
+  overlays.innerHTML = sheetHTML() + flowHTML() + pickingHTML() + revealHTML() + (VIEW.toast?`<div class="toast">${esc(VIEW.toast)}</div>`:'');
+  wire();
+}
+function raidBarHTML(){
+  if(S.phase!=='main') return '';
+  const names=['left','center','right'];
+  const btns=[0,1,2].map(i=>{
+    const used=S.raided&&S.raided[i];
+    const can=canRaidFrom(i);
+    return `<button class="chip" data-raid="${i}" ${(!can||used)?'disabled':''}>${used?'✓ raided':'⚔ raid'} ${names[i]}</button>`;
+  }).join('');
+  const sneaks=[];
+  for(let z=0;z<3;z++) for(const iid of P().fields[z]) if(canSneak(iid)) sneaks.push(iid);
+  const sneakBtn = sneaks.length? `<button class="chip" id="btnSneak">🗡 Sneak (${sneaks.length})</button>`:'';
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;justify-content:center">${btns}${sneakBtn}</div>`;
+}
+
+/* ---------- sheets: card/cell inspection & actions ---------- */
+function openCell(pi, zone, idx){
+  VIEW.sheet={kind:'cell', pi, zone, idx}; render();
+}
+function bigCardHTML(iid, showFace){
+  const inst=I(iid); const d=D(iid);
+  if(!showFace) return `<div class="bigcard"><div class="bch"><span class="bcn">Facedown card</span></div>
+    <div class="bcx">Taps for 1 Gold. Hidden from your enemy${inst.owner===S.active?'':' — and from you'}.</div></div>`;
+  const st=isUnit(iid)?stats(iid):null;
+  return `<div class="bigcard ${d.color}">
+    <div class="bch"><span class="bcn">${esc(d.name)}</span><span class="num" style="font-weight:600">${costStr(fullCost(d))}</span></div>
+    <div class="bct">${COLORS[d.color]} ${d.type}${d.trap?' — TRAP':''}${d.scheme?` · Scheme ${d.scheme}`:''}${d.tribute?` · Tribute ${d.tribute}`:''}</div>
+    ${(d.keywords&&d.keywords.length)?`<div class="klist">${d.keywords.map(k=>`<span class="kw">${k}</span>`).join('')}</div>`:''}
+    <div class="bcx">${esc(d.text||'')}</div>
+    ${st?`<div class="bcs num">${st.p} power · ${Math.max(0,st.h-inst.dmg)}/${st.h} health${inst.tapped?' · tapped':''}</div>`:''}
+    ${d.flavor?`<div class="bcf">${esc(d.flavor)}</div>`:''}
+  </div>`;
+}
+function sheetHTML(){
+  const sh=VIEW.sheet; if(!sh) return '';
+  if(sh.kind==='cell'){
+    const p=S.players[sh.pi];
+    const arr = sh.zone==='room'? p.rooms[sh.idx] : p.fields[sh.idx];
+    const mine = sh.pi===S.active;
+    const title = sh.zone==='room'? `${ROOMS[sh.idx]} — ${mine?'your':esc(p.name)+"'s"} castle` : `${['Left','Center','Right'][sh.idx]} field — ${mine?'yours':esc(p.name)}`;
+    const sub = sh.zone==='room'? `Breached: ${BREACH_TEXT[sh.idx].split(': ')[1]}` : 'Lane-locked: this space clashes straight across the midline.';
+    const cards = arr.length? arr.map(iid=>{
+      const showFace = I(iid).faceup || mine;
+      return `<div data-insp="${iid}">${bigCardHTML(iid, showFace)}
+        ${mine && S.phase==='main' ? actionRowHTML(iid, sh) : ''}</div>`;
+    }).join('') : '<p class="sub">Empty.</p>';
+    return `<div class="scrim" data-close="1"><div class="sheet">
+      <h3 class="disp">${title}</h3><p class="sub">${sub}</p>${cards}
+      ${mine&&sh.zone==='room'&&!P().mustered&&P().hand.length?`<button class="act" id="fromHandHere"><b>Place a card from hand here</b><small>Your one free castle placement this turn</small></button>`:''}
+    </div></div>`;
+  }
+  if(sh.kind==='hand'){
+    const p=P(); const iid=p.hand[sh.hidx]; if(!iid){ VIEW.sheet=null; return ''; }
+    const d=D(iid);
+    const acts=[];
+    if(!p.mustered || hasOvergrowDef(d))
+      acts.push(`<button class="act" data-a="muster"><b>Place into your castle</b><small>${p.mustered?'Overgrow — an extra placement':'Your one free placement'} · choose room &amp; facing</small></button>`);
+    if(isUnitDef(d))
+      acts.push(`<button class="act" data-a="deploy"><b>Deploy to the battlefield</b><small>Pay ${costStr(fullCost(d))} by tapping castle cards</small></button>`);
+    return `<div class="scrim" data-close="1"><div class="sheet">
+      ${bigCardHTML(iid,true)}<div class="acts">${acts.join('')}</div>
+    </div></div>`;
+  }
+  if(sh.kind==='musterWhere'){
+    const facedown = sh.facedown;
+    return `<div class="scrim" data-close="1"><div class="sheet">
+      <h3 class="disp">Place ${facedown===undefined?'':facedown?'facedown':'faceup'} — choose a room</h3>
+      <div class="roomopt">${[0,1,2].map(r=>`<button class="act" data-room="${r}"><b>${ROOMS[r]}</b><small>→ ${ZONE_OF_ROOM[r]}</small></button>`).join('')}</div>
+      <div class="acts">
+        <button class="act" data-face="down"><b>Facedown</b><small>Hidden worker — taps for 1 Gold, untargetable</small></button>
+        <button class="act" data-face="up"><b>Faceup</b><small>Taps for its color, abilities live — but visible &amp; targetable</small></button>
+      </div>
+    </div></div>`;
+  }
+  if(sh.kind==='deployWhere'){
+    return `<div class="scrim" data-close="1"><div class="sheet">
+      <h3 class="disp">Deploy to which field?</h3>
+      <div class="roomopt">${[0,1,2].map(r=>`<button class="act" data-fld="${r}"><b>${['Left','Center','Right'][r]}</b><small>lane ${r===1?'faces their Keep':r===0?'faces their Gatehouse':'faces their Crypt'}</small></button>`).join('')}</div>
+    </div></div>`;
+  }
+  if(sh.kind==='moveWhere'){
+    const w=whereIs(sh.iid);
+    const opts = w.zone==='room'
+      ? [0,1,2].filter(r=>Math.abs(r-w.idx)===1).map(r=>`<button class="act" data-mv="${r}"><b>${ROOMS[r]}</b><small>adjacent room</small></button>`)
+      : [0,1,2].filter(r=>Math.abs(r-w.idx)===1).map(r=>`<button class="act" data-mv="${r}"><b>${['Left','Center','Right'][r]} field</b><small>reposition</small></button>`)
+        .concat([`<button class="act" data-mv="retreat"><b>Retreat into the ${ROOMS[w.idx]}</b><small>falls back faceup into your castle</small></button>`]);
+    return `<div class="scrim" data-close="1"><div class="sheet">
+      <h3 class="disp">Move where?</h3><p class="sub">Moving taps this card — that is its action for the turn.</p>
+      <div class="acts">${opts.join('')}</div></div></div>`;
+  }
+  if(sh.kind==='help') return helpSheet();
+  return '';
+}
+function actionRowHTML(iid, sh){
+  const inst=I(iid); const d=D(iid);
+  if(inst.tapped) return `<p class="sub">Tapped — no action left this turn.${hasKw(iid,'bulwark')?' (Bulwark: still defends.)':''}</p>`;
+  const acts=[];
+  if(sh.zone==='room'){
+    if(!inst.faceup) acts.push(`<button class="act" data-act="reveal" data-i="${iid}"><b>Tap &amp; reveal</b><small>Flip faceup (rides on a tap) — abilities live, taps for its color</small></button>`);
+    acts.push(`<button class="act" data-act="move" data-i="${iid}"><b>Move to an adjacent room</b><small>Uses its tap</small></button>`);
+    if(isUnit(iid)) acts.push(`<button class="act" data-act="deployC" data-i="${iid}"><b>Deploy to the ${['left','center','right'][sh.idx]} field</b><small>Pay ${costStr(fullCost(d))} — marches out of its own column</small></button>`);
+    if(canSpring(iid)) acts.push(`<button class="act" data-act="spring" data-i="${iid}"><b>◉ Spring this plot</b><small>Pay ${costStr(fullCost(d))}${d.tribute?` + tap ${d.tribute} roommate(s)`:''}</small></button>`);
+    else if(d.type==='plot'&&!d.trap&&inst.owner===S.active&&(d.scheme||0)>roomCount(iid))
+      acts.push(`<p class="sub">Scheme ${d.scheme}: needs ${d.scheme} other cards in this room (has ${roomCount(iid)}).</p>`);
+  } else {
+    acts.push(`<button class="act" data-act="move" data-i="${iid}"><b>Reposition / retreat</b><small>Uses its tap — no attack</small></button>`);
+    if(canSneak(iid)) acts.push(`<button class="act" data-act="sneak" data-i="${iid}"><b>🗡 Sneak into a room</b><small>Bypass the battlefield entirely</small></button>`);
+  }
+  return `<div class="acts">${acts.join('')}</div>`;
+}
+
+/* ---------- flow modals ---------- */
+function flowHTML(){
+  const f=VIEW.flow; if(!f) return '';
+  if(f.type==='raid' && f.stage==='select'){
+    const lanes=['left','center','right'];
+    const elig = P().fields[f.lane].filter(iid=>raidEligible(iid,f.lane));
+    const flankSrc = [0,1,2].filter(i=>Math.abs(i-f.lane)===1)
+      .flatMap(i=>P().fields[i].filter(iid=>raidEligible(iid,i)));
+    const row=(iid,arr)=>{ const on=arr.includes(iid); const st=stats(iid);
+      return `<button class="act" data-tr="${iid}" style="${on?'outline:2px solid var(--good)':''}"><b>${esc(D(iid).name)}</b> <span class="num">${st.p}/${hp(iid)}</span><small>${arr===VIEW.flow.flankers?'flanks in from the adjacent field':'in the raiding lane'}${on?' — joining':''}</small></button>`; };
+    return `<div class="scrim"><div class="sheet">
+      <h3 class="disp">Raid — ${lanes[f.lane]} lane</h3>
+      <p class="sub">Choose raiders. They tap to attack; flankers move &amp; attack as one action. The clash crosses the midline into ${esc(OPP().name)}'s ${lanes[2-f.lane]} field, behind which stands their ${ROOMS[2-f.lane]}.</p>
+      ${elig.map(iid=>row(iid,f.raiders)).join('')}
+      ${flankSrc.map(iid=>row(iid,f.flankers)).join('')}
+      <div class="acts">
+        <button class="act" id="goRaid"><b>⚔ Launch the raid (${f.raiders.length+f.flankers.length})</b></button>
+        <button class="act" id="cancelFlow"><b>Cancel</b></button>
+      </div></div></div>`;
+  }
+  if((f.type==='raid'&&f.stage==='assign') || f.type==='garrison'){
+    const isG=f.type==='garrison';
+    const tgt=(r)=>{ const cur=f.assign[r];
+      const opts=[...f.defenders, ...f.bystanders].map(d=>{
+        const st=stats(d,{defending:true});
+        return `<button class="chip" data-as="${r}:${d}" style="${cur===d?'background:var(--ink);color:var(--bg)':''}">${esc(D(d).name)} ${st.p}/${hp(d)}${f.bystanders.includes(d)?' (tapped)':''}</button>`; }).join('');
+      return `<div style="margin:8px 0;padding:8px;border:1px solid var(--line);border-radius:10px">
+        <b>${esc(D(r).name)}</b> <span class="num">${stats(r).p}/${hp(r)}</span> strikes →<br>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">${opts||'<span class="sub">no targets</span>'}</div></div>`; };
+    return `<div class="scrim"><div class="sheet">
+      <h3 class="disp">${isG?`Garrison clash — the ${ROOMS[f.roomIdx]}`:'The lane clash'}</h3>
+      <p class="sub">Assign each raider a target. Every ${isG?'garrison defender':'defender'} must be engaged before tapped bystanders may be struck. Defenders strike back simultaneously.</p>
+      ${f.party.filter(alive).map(tgt).join('')}
+      <div class="acts">
+        <button class="act" id="autoAsn"><b>Auto-assign</b></button>
+        <button class="act" id="fight"><b>⚔ Fight!</b></button>
+      </div></div></div>`;
+  }
+  if(f.type==='sneakpick'){
+    return `<div class="scrim"><div class="sheet">
+      <h3 class="disp">🗡 Sneak — choose a room to infiltrate</h3>
+      <p class="sub">${esc(D(f.unit).name)} slips past the battlefield. Tap a glowing enemy room on the board, or cancel.</p>
+      <div class="roomopt">${[0,1,2].map(r=>`<button class="act" data-sn="${r}"><b>${ROOMS[r]}</b><small>${esc(OPP().name)}'s ${ZONE_OF_ROOM[r]}</small></button>`).join('')}</div>
+      <div class="acts"><button class="act" id="cancelFlow"><b>Cancel</b></button></div></div></div>`;
+  }
+  return '';
+}
+/* ---------- pickers ---------- */
+function pickingHTML(){
+  const pk=VIEW.picking; if(!pk) return '';
+  if(pk.kind==='pay'){
+    const pr=payProgress();
+    return `<div class="promptbar"><div class="pin">
+      <span>${esc(pk.label)} — tap castle cards to pay <b class="num">${costStr(pk.cost)}</b>
+        <span class="num">(need ${Math.max(0,pr.needC)} ${pk.cost.color} + ${Math.max(0,pr.needG)} gold)</span></span>
+      <button class="chip ghost" id="cancelPay">Cancel</button>
+    </div></div>`;
+  }
+  if(pk.kind==='lane'){
+    return `<div class="promptbar"><div class="pin"><span>${esc(pk.label)} — tap a glowing field</span></div></div>`;
+  }
+  if(pk.kind==='list'){
+    return `<div class="scrim"><div class="sheet">
+      <h3 class="disp">${esc(pk.title)}</h3><p class="sub">Choose ${pk.n}.</p>
+      <div class="acts">${pk.cands.map(iid=>{
+        const d=D(iid); const on=pk.chosen.includes(iid);
+        return `<button class="act" data-pl="${iid}" style="${on?'outline:2px solid var(--good)':''}"><b>${esc(d.name)}</b><small>${COLORS[d.color]} ${d.type}${isUnitDef(d)?` · ${d.power}/${d.health}`:''} — ${whereIs(iid)?whereLabel(iid):''}</small></button>`; }).join('')}
+        <button class="act" id="pickDone" ${pk.chosen.length!==pk.n?'disabled':''}><b>Confirm</b></button>
+      </div></div></div>`;
+  }
+  if(pk.kind==='foresee'){
+    const remaining=pk.cards.filter(c=>!pk.decided.some(x=>x.iid===c));
+    return `<div class="scrim"><div class="sheet">
+      <h3 class="disp">Foresee ${pk.n}</h3><p class="sub">Top of your deck, in order. Send each card to the top (drawn first, in the order you choose) or the bottom.</p>
+      <div class="acts">${remaining.map(iid=>{
+        const d=D(iid);
+        return `<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px">
+          <b style="flex:1">${esc(d.name)}</b>
+          <button class="chip" data-fs="${iid}:top">Top</button>
+          <button class="chip" data-fs="${iid}:bottom">Bottom</button></div>`; }).join('')}
+      </div></div></div>`;
+  }
+  return '';
+}
+function whereLabel(iid){ const w=whereIs(iid); if(!w) return '';
+  const who=w.pi===S.active?'your':'their';
+  if(w.zone==='room') return `${who} ${ROOMS[w.idx]}`;
+  if(w.zone==='field') return `${who} ${['left','center','right'][w.idx]} field`;
+  return `${who} ${w.zone}`; }
+function revealHTML(){
+  const r=VIEW.reveal; if(!r) return '';
+  return `<div class="scrim" data-closerev="1"><div class="sheet">
+    <h3 class="disp">${esc(r.title)}</h3>
+    ${r.cards.map(d=>`<div class="bigcard ${d.color}"><div class="bch"><span class="bcn">${esc(d.name)}</span><span class="num">${costStr({generic:d.cost.generic,colored:d.cost.colored,color:d.color})}</span></div>
+      <div class="bct">${COLORS[d.color]} ${d.type}</div><div class="bcx">${esc(d.text||'')}</div></div>`).join('')}
+    <div class="acts"><button class="act" data-closerev="1"><b>Close</b></button></div></div></div>`;
+}
+
+/* ---------- overlays: pass, setup, victory, help ---------- */
+let passCb=null;
+function showPass(cb){
+  passCb=cb;
+  const nxt=S.players[1-S.active===0?0:S.active]; // after endTurn active already switched
+  overlays.innerHTML=`<div class="full"><div class="fullin">
+    <p class="eyebrow">Pass the device</p>
+    <h1 class="disp">${esc(S.players[S.active].name)}</h1>
+    <p>${COLORS[S.players[S.active].color]} — turn ${S.turn}. No peeking, ${esc(S.players[1-S.active].name)}.</p>
+    <button class="chip primary" id="passGo" style="font-size:16px;padding:10px 26px">Begin turn</button>
+  </div></div>`;
+  document.getElementById('passGo').onclick=()=>{ const cb2=passCb; passCb=null; cb2(); };
+  app.innerHTML='';
+}
+function renderSetup(){
+  const opts=Object.keys(DECKS);
+  VIEW.setup=VIEW.setup||{p0:null,p1:null};
+  const pick=(slot)=>opts.map(c=>{
+    const l=CARDS.find(x=>x.color===c&&x.type==='leader');
+    return `<div class="dopt ${VIEW.setup[slot]===c?'sel':''}" data-dk="${slot}:${c}">
+      <h3 class="disp" style="color:var(--${c})">${COLORS[c]}</h3>
+      <p>${l?esc(l.name):''}</p><p>${esc(FACTION_BLURB[c]||'')}</p></div>`; }).join('');
+  app.innerHTML=`<div class="topbar"><span class="brand">House <em>of</em> Knives</span>
+    <button class="chip" id="btnTheme">◐</button></div>
+    <div style="max-width:640px;margin:0 auto">
+    <p class="eyebrow">A prototype · hotseat for two</p>
+    <h1 class="disp" style="font-size:clamp(30px,6vw,44px);line-height:1.1">Two castles. Three rooms each.<br>One Leader must fall.</h1>
+    <p style="color:var(--ink2)">Every card can be a worker, a soldier, or a conspirator. Tap is tempo. Crowded rooms breed incredible plots.</p>
+    <h3 class="disp" style="margin-top:18px">Player 1 — choose a castle</h3>
+    <div class="deckpick">${pick('p0')}</div>
+    <h3 class="disp">Player 2 — choose a castle</h3>
+    <div class="deckpick">${pick('p1')}</div>
+    <button class="chip primary" id="btnStart" style="font-size:16px;padding:10px 26px" ${(VIEW.setup.p0&&VIEW.setup.p1)?'':'disabled'}>Raise the banners</button>
+    <div class="spacer"></div></div>`;
+  overlays.innerHTML='';
+  app.querySelectorAll('[data-dk]').forEach(el=>el.onclick=()=>{ const [s,c]=el.dataset.dk.split(':'); VIEW.setup[s]=c; renderSetup(); });
+  const bs=document.getElementById('btnStart');
+  if(bs) bs.onclick=()=>{ newGame(VIEW.setup.p0, VIEW.setup.p1); S.phase='setup'; S.setupStage=0; render(); };
+  wireTheme();
+}
+function renderLeaderSetup(){
+  const pi=S.setupStage; const p=S.players[pi];
+  const l=p.leader; const d=D(l);
+  app.innerHTML=`<div class="topbar"><span class="brand">House <em>of</em> Knives</span></div>
+    <div style="max-width:560px;margin:0 auto">
+    <p class="eyebrow">${esc(p.name)} — place your Leader</p>
+    <h1 class="disp" style="font-size:30px">${esc(d.name)}</h1>
+    ${bigCardHTML(l,true)}
+    <p style="color:var(--ink2);font-size:14px">Choose a room and a facing. Faceup: taps for any color, abilities live, but visible. Facedown: hidden among the workers (taps for 1 Gold) — until a breach reveals all.</p>
+    <div class="roomopt">${[0,1,2].map(r=>`<button class="act" data-lr="${r}" style="${S._lr===r?'outline:2px solid var(--focus)':''}"><b>${ROOMS[r]}</b><small>→ ${ZONE_OF_ROOM[r]}</small></button>`).join('')}</div>
+    <div class="acts">
+      <button class="act" data-lf="up" style="${S._lf==='up'?'outline:2px solid var(--focus)':''}"><b>Faceup</b><small>Any-color mana; a visible target</small></button>
+      <button class="act" data-lf="down" style="${S._lf==='down'?'outline:2px solid var(--focus)':''}"><b>Facedown</b><small>Hidden; taps for 1 Gold only</small></button>
+    </div>
+    <div class="spacer"></div>
+    <button class="chip primary" id="lgo" style="font-size:16px;padding:10px 26px" ${(S._lr!==undefined&&S._lf)?'':'disabled'}>Take the throne</button>
+    <div class="spacer"></div></div>`;
+  overlays.innerHTML='';
+  app.querySelectorAll('[data-lr]').forEach(el=>el.onclick=()=>{ S._lr=+el.dataset.lr; render(); });
+  app.querySelectorAll('[data-lf]').forEach(el=>el.onclick=()=>{ S._lf=el.dataset.lf; render(); });
+  const g=document.getElementById('lgo');
+  if(g) g.onclick=()=>{
+    I(l).faceup = S._lf==='up';
+    p.rooms[S._lr].push(l);
+    logLine(`${p.name} seats their Leader in the ${ROOMS[S._lr]}${S._lf==='down'?' (hidden)':''}.`);
+    delete S._lr; delete S._lf;
+    if(S.setupStage===0){ S.setupStage=1;
+      overlays.innerHTML=`<div class="full"><div class="fullin"><p class="eyebrow">Pass the device</p>
+        <h1 class="disp">${esc(S.players[1].name)}</h1><p>Place your Leader in secret.</p>
+        <button class="chip primary" id="passGo" style="font-size:16px;padding:10px 26px">Ready</button></div></div>`;
+      app.innerHTML='';
+      document.getElementById('passGo').onclick=()=>render();
+    } else { S.phase='main'; showPass(()=>{ beginTurn(); render(); }); }
+  };
+}
+function renderVictory(){
+  const w=S.players[S.winner];
+  overlays.innerHTML=`<div class="full" style="background:color-mix(in srgb, var(--bg) 88%, transparent)"><div class="fullin">
+    <p class="eyebrow">The siege is over</p>
+    <h1 class="disp">${esc(w.name)} triumphs</h1>
+    <p>${COLORS[w.color]} rules the field. ${S.turn} turns of scheming and steel.</p>
+    <button class="chip primary" id="again" style="font-size:16px;padding:10px 26px">Play again</button>
+  </div></div>`;
+  document.getElementById('again').onclick=()=>{ S=null; UNDO=[]; VIEW={setup:VIEW.setup}; render(); };
+}
+function helpSheet(){
+  return `<div class="scrim" data-close="1"><div class="sheet helpbody">
+    <h3 class="disp">How to play</h3>
+    <p class="sub">Kill the enemy Leader. Protect your own.</p>
+    <h4>Your turn</h4>
+    <p>Untap, draw, then place <b>one</b> card from hand into a room — faceup or facedown. Facedown cards tap for 1 <kbd class="gold">Gold</kbd>; faceup cards tap for their color and have abilities live. Every card gets <b>one tap per turn</b>: mana, a move, or an attack.</p>
+    <h4>The castle</h4>
+    <p>Three rooms, each wired to a hidden zone. If a room is <b>breached</b> and falls: <b>Crypt</b> → your whole discard pile is exiled; <b>Keep</b> → top 3 of your deck discarded; <b>Gatehouse</b> → random card ripped from your hand. Everything in a breached room is revealed.</p>
+    <h4>War</h4>
+    <p>Deploy units by paying costs (tap castle cards for the mana). Lanes are locked: each field clashes straight across. One raid per field per turn. <b>Tapped cards can't defend.</b> Clear every defender and the survivors storm the room behind — traps spring, the garrison fights, and if the room falls its penalty hits. Units can't raid the turn they arrive (Mustering).</p>
+    <h4>Plots</h4>
+    <p>Plots hide among your workers and tap for Gold like anything else. Spring one by paying its cost with enough cards gathered in its room (<span class="kw">Scheme N</span>). <span class="kw">Trap</span> plots spring free when their room is breached. Plots are always consumed.</p>
+    <h4>The five signatures</h4>
+    <p><span class="kw" style="border-color:var(--W)">Bulwark</span> White: defends while tapped. <span class="kw" style="border-color:var(--U)">Foresee</span> Blue: sees &amp; orders the deck. <span class="kw" style="border-color:var(--B)">Sneak</span> Black: infiltrates rooms directly. <span class="kw" style="border-color:var(--R)">Frenzy</span> Red: raids the turn it arrives. <span class="kw" style="border-color:var(--G)">Overgrow</span> Green: extra castle placements.</p>
+    <div class="acts"><button class="act" data-close="1"><b>Close</b></button></div>
+  </div></div>`;
+}
+
+/* ---------- wiring ---------- */
+function wire(){
+  wireTheme();
+  const q=(s,fn)=>{ const el=document.getElementById(s); if(el) el.onclick=fn; };
+  q('btnEnd', ()=>{ snapshot(); logLine(`${P().name} ends the turn.`); endTurn(); });
+  q('btnUndo', undo);
+  q('btnHelp', ()=>{ VIEW.sheet={kind:'help'}; render(); });
+  q('btnSneak', ()=>{ const sneaks=[]; for(let z=0;z<3;z++) for(const iid of P().fields[z]) if(canSneak(iid)) sneaks.push(iid);
+    if(sneaks.length===1) startSneak(sneaks[0]);
+    else pickFromList(sneaks,1,'Which unit sneaks?',(ch)=>{ VIEW.picking=null; if(ch.length) startSneak(ch[0]); else render(); }); });
+  app.querySelectorAll('[data-raid]').forEach(el=>el.onclick=()=>startRaid(+el.dataset.raid));
+  // cells
+  app.querySelectorAll('[data-cell]').forEach(el=>el.onclick=(ev)=>{
+    const [pi,zone,idx]=el.dataset.cell.split(':'); const PI=+pi, IDX=+idx;
+    const pk=VIEW.picking;
+    if(pk&&pk.kind==='pay'){ // pay by tapping own castle cards: click cell -> tap first eligible, or specific mini
+      if(PI===S.active&&zone==='room'){
+        const mini=ev.target.closest('.mini');
+        let iid=mini?mini.dataset.i:null;
+        if(!iid||I(iid).tapped||pk.tapped.includes(iid)) iid=S.players[PI].rooms[IDX].find(x=>!I(x).tapped&&!pk.tapped.includes(x));
+        if(iid) clickPaySource(iid);
+      }
+      return;
+    }
+    if(pk&&pk.kind==='lane'){ if(PI===pk.owner&&zone==='field'){ const cb=pk.onPick; cb(IDX); } return; }
+    const f=VIEW.flow;
+    if(f&&f.type==='sneakpick'){ if(PI!==S.active&&zone==='room') sneakInto(f.unit, IDX); return; }
+    openCell(PI, zone, IDX);
+  });
+  // hand
+  app.querySelectorAll('[data-h]').forEach(el=>el.onclick=()=>{ VIEW.sheet={kind:'hand',hidx:+el.dataset.h}; render(); });
+  // overlays (sheets)
+  overlays.querySelectorAll('[data-close]').forEach(el=>el.onclick=(ev)=>{ if(ev.target===el||el.tagName==='BUTTON'){ VIEW.sheet=null; render(); } });
+  overlays.querySelectorAll('[data-closerev]').forEach(el=>el.onclick=(ev)=>{ if(ev.target===el||el.tagName==='BUTTON'){ VIEW.reveal=null;
+    // resume any pending flow render
+    render(); } });
+  const sh=VIEW.sheet;
+  overlays.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>{
+    const act=el.dataset.act, iid=el.dataset.i;
+    if(act==='reveal') tapForManaSolo(iid,true);
+    if(act==='move'){ VIEW.sheet={kind:'moveWhere', iid}; render(); }
+    if(act==='deployC') deployFromCastle(iid);
+    if(act==='spring') springPlot(iid);
+    if(act==='sneak') startSneak(iid);
+  });
+  overlays.querySelectorAll('[data-a]').forEach(el=>el.onclick=()=>{
+    const a=el.dataset.a; const hidx=sh.hidx;
+    if(a==='muster'){ VIEW.sheet={kind:'musterWhere', hidx, room:null, facedown:undefined}; render(); }
+    if(a==='deploy'){ VIEW.sheet={kind:'deployWhere', hidx}; render(); }
+  });
+  overlays.querySelectorAll('[data-room]').forEach(el=>el.onclick=()=>{ sh.room=+el.dataset.room; tryMuster(); });
+  overlays.querySelectorAll('[data-face]').forEach(el=>el.onclick=()=>{ sh.facedown=el.dataset.face==='down'; tryMuster(); });
+  function tryMuster(){ if(sh.room!==null&&sh.room!==undefined&&sh.facedown!==undefined) muster(sh.hidx, sh.room, sh.facedown); else render(); }
+  overlays.querySelectorAll('[data-fld]').forEach(el=>el.onclick=()=>deployFromHand(sh.hidx,+el.dataset.fld));
+  overlays.querySelectorAll('[data-mv]').forEach(el=>el.onclick=()=>{
+    const v=el.dataset.mv; const iid=sh.iid; const w=whereIs(iid);
+    if(v==='retreat') retreat(iid);
+    else if(w.zone==='room') castleMove(iid,+v);
+    else fieldMove(iid,+v);
+  });
+  // from-hand-here shortcut in room sheet
+  q('fromHandHere', ()=>{ VIEW.sheet={kind:'hand', hidx:0}; render(); });
+  // flow buttons
+  overlays.querySelectorAll('[data-tr]').forEach(el=>el.onclick=()=>toggleRaider(el.dataset.tr));
+  q('goRaid', launchRaid);
+  q('cancelFlow', ()=>{ VIEW.flow=null; render(); });
+  overlays.querySelectorAll('[data-as]').forEach(el=>el.onclick=()=>{ const [r,d]=el.dataset.as.split(':'); VIEW.flow.assign[r]=d; render(); });
+  q('autoAsn', ()=>{ autoAssign(VIEW.flow); render(); });
+  q('fight', ()=>{ VIEW.flow.type==='garrison'? resolveGarrison() : resolveClash(); });
+  overlays.querySelectorAll('[data-sn]').forEach(el=>el.onclick=()=>sneakInto(VIEW.flow.unit, +el.dataset.sn));
+  q('cancelPay', ()=>{ const pk=VIEW.picking; for(const t of pk.tapped){} VIEW.picking=null; UNDO.length&&undo(); });
+  // list picker
+  overlays.querySelectorAll('[data-pl]').forEach(el=>el.onclick=()=>{ const pk=VIEW.picking; const iid=el.dataset.pl;
+    const i=pk.chosen.indexOf(iid); if(i>=0) pk.chosen.splice(i,1); else { pk.chosen.push(iid); if(pk.chosen.length>pk.n) pk.chosen.shift(); } render(); });
+  q('pickDone', ()=>{ const pk=VIEW.picking; VIEW.picking=null; pk.onDone(pk.chosen); });
+  overlays.querySelectorAll('[data-fs]').forEach(el=>el.onclick=()=>{ const [iid,where]=el.dataset.fs.split(':');
+    const pk=VIEW.picking; pk.decided.push({iid,where});
+    if(pk.decided.length===pk.cards.length){ pk.onDone(pk.decided); } else render(); });
+}
+function wireTheme(){
+  const b=document.getElementById('btnTheme');
+  if(b) b.onclick=()=>{ const r=document.documentElement;
+    const cur=r.dataset.theme|| (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+    r.dataset.theme = cur==='dark'?'light':'dark'; };
+}
+const FACTION_BLURB={W:'The shield-wall. Garrisons that defend even tapped.',U:'The spymaster. Sees the deck, exposes schemes.',B:'The underworld. Sneaks past walls; raises the dead.',R:'The torch. Strikes the turn it arrives.',G:'The wild growth. Out-builds the one-card law.'};
+
+/* ---------- boot ---------- */
+window.KC_INIT = function(cards, decks){
+  CARDS = cards; DECKS = decks;
+  for(const c of CARDS) byId[c.id]=c;
+  render();
+};
+</script>
+<script>
+/* ===== CARD SET — forged by design-forge 2026-07-23, adjudicated (see ../decision-log.md) ===== */
+KC_INIT([{"id":"W00","name":"High Castellan Berralt the Unbroken","color":"W","type":"leader","cost":{"generic":4,"colored":2},"power":5,"health":7,"keywords":["bulwark"],"text":"Bulwark (may defend while tapped). Units garrisoned in Berralt's room get +0/+1.","flavor":"Three sieges broke against him; he never once drew back from the wall.","effects":[{"trigger":"static","op":"buff","target":"units_in_room","p":0,"h":1,"duration":"static"}]},{"id":"W01","name":"Wall Sentry","color":"W","type":"unit","cost":{"generic":0,"colored":1},"power":0,"health":3,"keywords":["bulwark"],"text":"Bulwark (may defend while tapped).","flavor":"She hauls stone by day and holds the parapet by night.","effects":[]},{"id":"W02","name":"Shieldwright","color":"W","type":"unit","cost":{"generic":1,"colored":1},"power":1,"health":3,"keywords":[],"text":"Arrival: heal 2 damage from a friendly unit.","flavor":"A dent hammered out is a life hammered back in.","effects":[{"trigger":"arrival","op":"heal","target":"friendly_unit","n":2}]},{"id":"W03","name":"Gatehouse Yeoman","color":"W","type":"unit","cost":{"generic":1,"colored":1},"power":2,"health":3,"keywords":[],"text":"","flavor":"No title, no banner \u2014 just the first spear the enemy meets.","effects":[]},{"id":"W04","name":"Chaplain of the High Keep","color":"W","type":"unit","cost":{"generic":2,"colored":1},"power":2,"health":3,"keywords":[],"text":"Arrival: heal 1 damage from each friendly unit.","flavor":"Her litany carries from the crypt to the battlements.","effects":[{"trigger":"arrival","op":"heal","target":"all_friendly_units","n":1}]},{"id":"W05","name":"Oathbound Halberdier","color":"W","type":"unit","cost":{"generic":2,"colored":1},"power":2,"health":4,"keywords":["bulwark"],"text":"Bulwark (may defend while tapped).","flavor":"His oath does not sleep, so neither does his watch.","effects":[]},{"id":"W06","name":"Banner Sergeant of the Pale Tower","color":"W","type":"unit","cost":{"generic":3,"colored":1},"power":2,"health":4,"keywords":[],"text":"Friendly units get +0/+1.","flavor":"Where the pale banner flies, the line does not bend.","effects":[{"trigger":"static","op":"buff","target":"all_friendly_units","p":0,"h":1,"duration":"static"}]},{"id":"W07","name":"Hearth Guard","color":"W","type":"unit","cost":{"generic":2,"colored":1},"power":2,"health":3,"keywords":[],"text":"While Hearth Guard is garrisoned in any room, it gets +0/+2.","flavor":"Between these walls she is worth three of herself.","effects":[{"trigger":"static","op":"buff","target":"self","p":0,"h":2,"duration":"static","condition":"in_room:any"}]},{"id":"W08","name":"Warden of the Inner Ward","color":"W","type":"unit","cost":{"generic":3,"colored":2},"power":4,"health":6,"keywords":["bulwark"],"text":"Bulwark (may defend while tapped).","flavor":"The last door of the castle is a man, and the man is shut.","effects":[]},{"id":"W09","name":"Stone Colossus of the Old Wall","color":"W","type":"unit","cost":{"generic":4,"colored":2},"power":5,"health":8,"keywords":[],"text":"","flavor":"The founders carved him from the wall itself; when the horn sounds, the wall walks.","effects":[]},{"id":"W10","name":"Scalding Murder-Holes","color":"W","type":"plot","cost":{"generic":1,"colored":1},"trap":true,"keywords":[],"text":"Trap \u2014 when this room is breached: raiders get -2/-0 until end of turn.","flavor":"The ceiling above the threshold weeps boiling welcome.","effects":[{"trigger":"trap","op":"buff","target":"raiders","p":-2,"h":0,"duration":"turn"}]},{"id":"W11","name":"Sound the Rally-Bell","color":"W","type":"plot","cost":{"generic":1,"colored":1},"scheme":2,"keywords":[],"text":"Scheme 2. Untap up to 3 of your cards.","flavor":"One peal, and every idle hand remembers its post.","effects":[{"trigger":"sprung","op":"untap","n":3}]},{"id":"W12","name":"The Vigil Unbroken","color":"W","type":"plot","cost":{"generic":2,"colored":2},"scheme":4,"keywords":[],"text":"Scheme 4. Heal 3 damage from each friendly unit, then untap up to 2 of your cards.","flavor":"On the hundredth night of the siege, the garrison sang \u2014 and the walls sang back.","effects":[{"trigger":"sprung","op":"heal","target":"all_friendly_units","n":3},{"trigger":"sprung","op":"untap","n":2}]},{"id":"W13","name":"Hidden Reserves","color":"W","type":"plot","cost":{"generic":1,"colored":1},"scheme":2,"keywords":[],"text":"Scheme 2. Put a unit with cost 3 or less from your hand into one of your rooms without paying its cost.","flavor":"The cellar door opens, and the enemy's count is suddenly wrong.","effects":[{"trigger":"sprung","op":"summon","from":"hand","to":"room","filter":"unit","maxCost":3}]},{"id":"U00","name":"Aldrys the Owl-Crowned","color":"U","type":"leader","cost":{"generic":4,"colored":2},"power":4,"health":8,"keywords":[],"text":"Raid \u2014 Foresee 2 (look at the top 2 cards of your deck; return them in any order to the top or bottom). Breached \u2014 your opponent puts the top 2 cards of their deck into their discard pile.","flavor":"The crown listens; the owls tell it everything.","effects":[{"trigger":"raid","op":"foresee","n":2},{"trigger":"breached","op":"mill","who":"opponent","n":2}]},{"id":"U01","name":"Lantern Page","color":"U","type":"unit","cost":{"generic":0,"colored":1},"power":1,"health":1,"keywords":[],"text":"Arrival \u2014 Foresee 1 (look at the top card of your deck; return it to the top or bottom).","flavor":"Small light, long shadows, longer memory.","effects":[{"trigger":"arrival","op":"foresee","n":1}]},{"id":"U02","name":"Wall-Ear Steward","color":"U","type":"unit","cost":{"generic":1,"colored":1},"power":1,"health":3,"keywords":[],"text":"Arrival \u2014 look at 2 enemy facedown cards.","flavor":"Every stone in this castle reports to him.","effects":[{"trigger":"arrival","op":"peek","n":2}]},{"id":"U03","name":"Dove-Cote Courier","color":"U","type":"unit","cost":{"generic":1,"colored":1},"power":2,"health":2,"keywords":[],"text":"Demise \u2014 draw a card.","flavor":"Kill the messenger; the message still flies.","effects":[{"trigger":"demise","op":"draw","n":1}]},{"id":"U04","name":"Postern Spy","color":"U","type":"unit","cost":{"generic":2,"colored":1},"power":2,"health":3,"keywords":[],"text":"Breached \u2014 draw a card.","flavor":"She leaves every fallen room with a letter that isn't hers.","effects":[{"trigger":"breached","op":"draw","n":1}]},{"id":"U05","name":"Spire Skirmisher","color":"U","type":"unit","cost":{"generic":2,"colored":1},"power":3,"health":2,"keywords":[],"text":"Raid \u2014 your opponent puts the top card of their deck into their discard pile.","flavor":"He never takes the gate; he takes the ledgers.","effects":[{"trigger":"raid","op":"mill","who":"opponent","n":1}]},{"id":"U06","name":"Court Chronicler","color":"U","type":"unit","cost":{"generic":2,"colored":1},"power":2,"health":4,"keywords":[],"text":"Arrival \u2014 draw a card.","flavor":"History is written by whoever holds the quill tonight.","effects":[{"trigger":"arrival","op":"draw","n":1}]},{"id":"U07","name":"Keep-Breaker Engineer","color":"U","type":"unit","cost":{"generic":2,"colored":2},"power":3,"health":3,"keywords":[],"text":"Breached \u2014 your opponent puts the top 3 cards of their deck into their discard pile.","flavor":"Walls fall in stones; dynasties fall in pages.","effects":[{"trigger":"breached","op":"mill","who":"opponent","n":3}]},{"id":"U08","name":"Warden of the Hidden Stair","color":"U","type":"unit","cost":{"generic":2,"colored":2},"power":3,"health":5,"keywords":[],"text":"Arrival \u2014 Foresee 2. (Look at the top 2 cards of your deck; put each on top or bottom.)","flavor":"The castle has more doors than its builders remember.","effects":[{"trigger":"arrival","op":"foresee","n":2}]},{"id":"U09","name":"Leviathan of the Old Moat","color":"U","type":"unit","cost":{"generic":4,"colored":2},"power":4,"health":7,"keywords":[],"text":"Arrival \u2014 your opponent puts the top 3 cards of their deck into their discard pile.","flavor":"Its wake pulls loose stones \u2014 and secrets \u2014 from the enemy Keep.","effects":[{"trigger":"arrival","op":"mill","who":"opponent","n":3}]},{"id":"U10","name":"Council of Owls","color":"U","type":"plot","cost":{"generic":2,"colored":1},"scheme":2,"keywords":[],"text":"Scheme 2. Sprung \u2014 Foresee 4 (look at the top 4 cards of your deck; return them in any order to the top or bottom), then draw 2 cards.","flavor":"They convene at midnight and adjourn knowing everything.","effects":[{"trigger":"sprung","op":"foresee","n":4},{"trigger":"sprung","op":"draw","n":2}]},{"id":"U11","name":"Mirror Gallery","color":"U","type":"plot","cost":{"generic":1,"colored":1},"trap":true,"keywords":[],"text":"Trap \u2014 when this room is breached: draw 2 cards.","flavor":"They stabbed their own reflections until the reflections stabbed back.","effects":[{"trigger":"trap","op":"draw","n":2}]},{"id":"U12","name":"Night of a Thousand Whispers","color":"U","type":"plot","cost":{"generic":2,"colored":1},"scheme":4,"tribute":2,"keywords":[],"text":"Scheme 4, Tribute 2. Sprung \u2014 your opponent discards the top X cards of their deck, where X is the number of other cards sharing this Plot's room.","flavor":"By dawn the enemy's plans were common knowledge in every tavern.","effects":[{"trigger":"sprung","op":"mill","who":"opponent","n":"count_room"}]},{"id":"U13","name":"Intercepted Missives","color":"U","type":"plot","cost":{"generic":1,"colored":1},"scheme":2,"keywords":[],"text":"Scheme 2. Sprung \u2014 your opponent discards 2 random cards from their hand.","flavor":"Sealed with wax, opened with patience.","effects":[{"trigger":"sprung","op":"discard_random","who":"opponent","n":2}]},{"id":"B00","name":"Vespera, Knife of the Undercroft","color":"B","type":"leader","cost":{"generic":4,"colored":2},"power":7,"health":5,"keywords":["sneak"],"text":"Sneak. When Vespera joins a lane raid, she gets +2/+0 until end of turn. Taps for any color.","flavor":"The castle has a hundred doors; she was shown none and has used them all.","effects":[{"trigger":"raid","op":"buff","target":"self","p":2,"h":0,"duration":"turn"}]},{"id":"B01","name":"Cellar Rat","color":"B","type":"unit","cost":{"generic":0,"colored":1},"power":2,"health":1,"keywords":[],"text":"When Cellar Rat dies, put the top card of your deck into your discard pile.","flavor":"Small enough to be ignored; hungry enough not to be.","effects":[{"trigger":"demise","op":"mill","who":"self","n":1}]},{"id":"B02","name":"Wallcreep Assassin","color":"B","type":"unit","cost":{"generic":1,"colored":1},"power":3,"health":1,"keywords":["sneak"],"text":"Sneak.","flavor":"The mortar remembers every hand that climbs it. So does she.","effects":[]},{"id":"B03","name":"Grave Whisperer","color":"B","type":"unit","cost":{"generic":1,"colored":1},"power":1,"health":2,"keywords":[],"text":"Arrival: return a unit from your discard pile to your hand.","flavor":"The dead make poor conversation but excellent informants.","effects":[{"trigger":"arrival","op":"recover","filter":"unit","to":"hand","n":1}]},{"id":"B04","name":"Shroud Stalker","color":"B","type":"unit","cost":{"generic":2,"colored":1},"power":3,"health":2,"keywords":["sneak"],"text":"Sneak. When Shroud Stalker breaches a room, draw a card.","flavor":"It entered with the fog and left with the plans.","effects":[{"trigger":"breached","op":"draw","n":1}]},{"id":"B05","name":"Carrion Butcher","color":"B","type":"unit","cost":{"generic":2,"colored":1},"power":4,"health":4,"keywords":[],"text":"Arrival: discard a random card from your hand.","flavor":"He pays his debts in meat, and he is always in debt.","effects":[{"trigger":"arrival","op":"discard_random","who":"self","n":1}]},{"id":"B06","name":"Twilight Garroter","color":"B","type":"unit","cost":{"generic":3,"colored":1},"power":3,"health":2,"keywords":["sneak"],"text":"Sneak. When Twilight Garroter joins a lane raid, deal 2 damage to a revealed enemy unit.","flavor":"One thread of silk, drawn once across the lamplight.","effects":[{"trigger":"raid","op":"damage","target":"enemy_unit","n":2}]},{"id":"B07","name":"Ossuary Shambler","color":"B","type":"unit","cost":{"generic":3,"colored":2},"power":5,"health":4,"keywords":[],"text":"When Ossuary Shambler dies, return a unit from your discard pile to your hand.","flavor":"Every bone in it once swore an oath to someone.","effects":[{"trigger":"demise","op":"recover","filter":"unit","to":"hand","n":1}]},{"id":"B08","name":"Crypt Warden","color":"B","type":"unit","cost":{"generic":1,"colored":1},"power":1,"health":3,"keywords":[],"text":"While Crypt Warden is in the Crypt, it gets +2/+0.","flavor":"None guard the dead so jealously as those who plan to use them.","effects":[{"trigger":"static","op":"buff","target":"self","p":2,"h":0,"duration":"static","condition":"in_room:Crypt"}]},{"id":"B09","name":"Charnel Colossus","color":"B","type":"unit","cost":{"generic":4,"colored":2},"power":7,"health":6,"keywords":[],"text":"Arrival: put the top 3 cards of your deck into your discard pile.","flavor":"Built of every soldier the keep could no longer feed.","effects":[{"trigger":"arrival","op":"mill","who":"self","n":3}]},{"id":"B10","name":"Oubliette Snare","color":"B","type":"plot","cost":{"generic":1,"colored":1},"trap":true,"keywords":[],"text":"Trap \u2014 when this room is breached: deal 2 damage to each raider.","flavor":"The floor of the undercroft opens for guests it never invited.","effects":[{"trigger":"trap","op":"damage","target":"raiders","n":2}]},{"id":"B11","name":"Midnight Disinterment","color":"B","type":"plot","cost":{"generic":1,"colored":1},"scheme":2,"keywords":[],"text":"Scheme 2. Spring: return a unit from your discard pile to this room, faceup.","flavor":"Shovels by candlelight; oaths by dawn.","effects":[{"trigger":"sprung","op":"recover","filter":"unit","to":"room","n":1}]},{"id":"B12","name":"Feast of Poisoned Chalices","color":"B","type":"plot","cost":{"generic":2,"colored":1},"scheme":4,"tribute":2,"keywords":[],"text":"Scheme 4, Tribute 2. Spring: deal damage to each unit in one battlefield space equal to the number of cards in this room.","flavor":"Every cup was raised; not every cup was lowered.","effects":[{"trigger":"sprung","op":"damage","target":"units_in_lane","n":"count_room"}]},{"id":"B13","name":"Pact of the Pale Candle","color":"B","type":"plot","cost":{"generic":1,"colored":1},"keywords":[],"text":"Spring: draw 2 cards, then discard a random card from your hand.","flavor":"It burns knowledge for wax and memory for wick.","effects":[{"trigger":"sprung","op":"draw","n":2},{"trigger":"sprung","op":"discard_random","who":"self","n":1}]},{"id":"R00","name":"Vessa Emberhand, the Gatebreaker","color":"R","type":"leader","cost":{"generic":3,"colored":2},"power":6,"health":4,"keywords":["frenzy"],"text":"Frenzy. Raid: deal 1 damage to target enemy unit.","flavor":"She has never once knocked.","effects":[{"trigger":"raid","op":"damage","target":"enemy_unit","n":1}]},{"id":"R01","name":"Ember Whelp","color":"R","type":"unit","cost":{"generic":0,"colored":1},"power":2,"health":1,"keywords":[],"text":"\u2014","flavor":"Small, furious, and already on fire.","effects":[]},{"id":"R02","name":"Gatecrash Zealot","color":"R","type":"unit","cost":{"generic":1,"colored":1},"power":3,"health":1,"keywords":["frenzy"],"text":"Frenzy.","flavor":"Doors are a suggestion.","effects":[]},{"id":"R03","name":"Powder Sapper","color":"R","type":"unit","cost":{"generic":1,"colored":1},"power":2,"health":1,"keywords":[],"text":"Demise: deal 2 damage to target enemy unit.","flavor":"His last words are always the loudest.","effects":[{"trigger":"demise","op":"damage","target":"enemy_unit","n":2}]},{"id":"R04","name":"Siege Ram Crew","color":"R","type":"unit","cost":{"generic":2,"colored":1},"power":4,"health":2,"keywords":[],"text":"Breached: the room's owner puts the top 2 cards of their deck into their discard pile.","flavor":"The ram remembers every wall it has eaten.","effects":[{"trigger":"breached","op":"mill","who":"opponent","n":2}]},{"id":"R05","name":"Flame Herald","color":"R","type":"unit","cost":{"generic":2,"colored":1},"power":2,"health":2,"keywords":[],"text":"Arrival: deal 2 damage to target enemy unit.","flavor":"Her proclamations arrive pre-lit.","effects":[{"trigger":"arrival","op":"damage","target":"enemy_unit","n":2}]},{"id":"R06","name":"Bloodpennant Bearer","color":"R","type":"unit","cost":{"generic":2,"colored":2},"power":3,"health":3,"keywords":[],"text":"While Bloodpennant Bearer is faceup on the battlefield, your units on the battlefield get +1/+0.","flavor":"The banner is red so it never needs washing.","effects":[{"trigger":"static","op":"buff","target":"all_friendly_units","p":1,"h":0,"duration":"static","condition":"on_battlefield"}]},{"id":"R07","name":"Cinder Berserker","color":"R","type":"unit","cost":{"generic":3,"colored":1},"power":5,"health":2,"keywords":["frenzy"],"text":"Frenzy.","flavor":"Armor slows the burning down.","effects":[]},{"id":"R08","name":"Redoubt Breaker","color":"R","type":"unit","cost":{"generic":3,"colored":2},"power":6,"health":3,"keywords":[],"text":"Breached: the room's owner discards 1 random card from their hand.","flavor":"First the wall, then the will.","effects":[{"trigger":"breached","op":"discard_random","who":"opponent","n":1}]},{"id":"R09","name":"Cragfall Ogre","color":"R","type":"unit","cost":{"generic":4,"colored":2},"power":8,"health":3,"keywords":["frenzy"],"text":"Frenzy.","flavor":"The mountain sent its opinion in person.","effects":[]},{"id":"R10","name":"Firebomb Cache","color":"R","type":"plot","cost":{"generic":1,"colored":1},"trap":true,"keywords":[],"text":"Trap \u2014 when this room is breached: deal 3 damage to each raider.","flavor":"Store in a cool, dry place. Or don't.","effects":[{"trigger":"trap","op":"damage","target":"raiders","n":3}]},{"id":"R11","name":"Sound the Warhorn","color":"R","type":"plot","cost":{"generic":2,"colored":1},"scheme":2,"keywords":[],"text":"Scheme 2 \u2014 Spring: your units get +2/+0 until end of turn.","flavor":"One note, and the whole castle answers.","effects":[{"trigger":"sprung","op":"buff","target":"all_friendly_units","p":2,"h":0,"duration":"turn"}]},{"id":"R12","name":"Powder-Keg Cellar","color":"R","type":"plot","cost":{"generic":2,"colored":2},"scheme":4,"keywords":[],"text":"Scheme 4 \u2014 Spring: deal X damage to each unit in one battlefield space, where X is the number of cards sharing this room.","flavor":"The cellar was full. Then it was everywhere.","effects":[{"trigger":"sprung","op":"damage","target":"units_in_lane","n":"count_room"}]},{"id":"R13","name":"Rally the Fallen","color":"R","type":"plot","cost":{"generic":1,"colored":1},"tribute":1,"keywords":[],"text":"Tribute 1 \u2014 Spring: return up to 2 units from your discard pile to your hand.","flavor":"Dead is just tired with extra steps.","effects":[{"trigger":"sprung","op":"recover","filter":"unit","to":"hand","n":2}]},{"id":"G00","name":"Bramwen, the Rootcrowned","color":"G","type":"leader","cost":{"generic":4,"colored":2},"power":6,"health":6,"keywords":["overgrow"],"text":"Overgrow (placing this into your castle doesn't count against your one-per-turn Muster). While faceup, friendly units get +0/+1.","flavor":"Where she walks, the mortar remembers it was mountain.","effects":[{"trigger":"static","op":"buff","target":"all_friendly_units","p":0,"h":1,"duration":"static"}]},{"id":"G01","name":"Sapling Steward","color":"G","type":"unit","cost":{"generic":0,"colored":1},"power":1,"health":2,"keywords":[],"text":"","flavor":"He waters the arrow-slits. Give him a century.","effects":[]},{"id":"G02","name":"Wallcreeper Vine","color":"G","type":"unit","cost":{"generic":1,"colored":1},"power":2,"health":2,"keywords":["overgrow"],"text":"Overgrow (placing this into your castle doesn't count against your one-per-turn Muster).","flavor":"Nobody planted it. Nobody could stop it.","effects":[]},{"id":"G03","name":"Moss Sentinel","color":"G","type":"unit","cost":{"generic":1,"colored":1},"power":1,"health":4,"keywords":[],"text":"","flavor":"It has stood the gate so long the gate now leans on it.","effects":[]},{"id":"G04","name":"Wellspring Warden","color":"G","type":"unit","cost":{"generic":2,"colored":1},"power":3,"health":3,"keywords":[],"text":"Arrival: untap up to one of your cards.","flavor":"She draws from the deep cistern, and the castle drinks twice.","effects":[{"trigger":"arrival","op":"untap","n":1}]},{"id":"G05","name":"Trellis Knight","color":"G","type":"unit","cost":{"generic":2,"colored":1},"power":3,"health":3,"keywords":["overgrow"],"text":"Overgrow (placing this into your castle doesn't count against your one-per-turn Muster).","flavor":"His armor took root years ago; now the roses hold the line with him.","effects":[]},{"id":"G06","name":"Orchard Chirurgeon","color":"G","type":"unit","cost":{"generic":3,"colored":1},"power":3,"health":4,"keywords":[],"text":"Arrival: heal 2 damage from a friendly unit.","flavor":"Grafts for the trees, splints for the soldiers \u2014 same knife.","effects":[{"trigger":"arrival","op":"heal","target":"friendly_unit","n":2}]},{"id":"G07","name":"Bailey Aurochs","color":"G","type":"unit","cost":{"generic":2,"colored":2},"power":4,"health":5,"keywords":[],"text":"","flavor":"It was meant to pull the siege engines. It prefers to be one.","effects":[]},{"id":"G08","name":"Greybark Warden","color":"G","type":"unit","cost":{"generic":3,"colored":2},"power":5,"health":5,"keywords":[],"text":"Demise: return a unit from your discard pile to your hand.","flavor":"When an elder falls in the wood, a sapling stands in the gap.","effects":[{"trigger":"demise","op":"recover","filter":"unit","to":"hand","n":1}]},{"id":"G09","name":"The Walking Bailey","color":"G","type":"unit","cost":{"generic":4,"colored":2},"power":6,"health":6,"keywords":["overgrow"],"text":"Overgrow (placing this into your castle doesn't count against your one-per-turn Muster).","flavor":"One dawn the east wall was simply gone \u2014 and standing in the enemy's field.","effects":[]},{"id":"G10","name":"Census of the Crowded Hall","color":"G","type":"plot","cost":{"generic":1,"colored":1},"scheme":2,"keywords":[],"text":"Scheme 2. Sprung: draw a card for every two cards sharing this Plot's room.","flavor":"Count the boots at the hearth, and know what the keep can dare.","effects":[{"trigger":"sprung","op":"draw","n":"count_room_half"}]},{"id":"G11","name":"Bramble Portcullis","color":"G","type":"plot","cost":{"generic":1,"colored":1},"trap":true,"keywords":[],"text":"Trap \u2014 when this room is breached: units in this room get +1/+1 until end of turn.","flavor":"The gate was open. The gate was hungry.","effects":[{"trigger":"trap","op":"buff","target":"units_in_room","p":1,"h":1,"duration":"turn"}]},{"id":"G12","name":"Waking of the Walls","color":"G","type":"plot","cost":{"generic":2,"colored":2},"scheme":3,"keywords":[],"text":"Scheme 3. Sprung: friendly units get +2/+2 until end of turn.","flavor":"The ivy tightened its grip, and the stones squared their shoulders.","effects":[{"trigger":"sprung","op":"buff","target":"all_friendly_units","p":2,"h":2,"duration":"turn"}]},{"id":"G13","name":"The Rootheart Awakens","color":"G","type":"plot","cost":{"generic":3,"colored":2},"scheme":4,"tribute":2,"keywords":[],"text":"Scheme 4, Tribute 2. Sprung: put a unit from your hand onto a battlefield space without paying its cost (it musters), then heal 2 damage from each friendly unit.","flavor":"Beneath the deepest cellar, something older than the charter opened one eye.","effects":[{"trigger":"sprung","op":"summon","from":"hand","to":"lane","filter":"unit"},{"trigger":"sprung","op":"heal","target":"all_friendly_units","n":2}]}],
+{"W":["W01","W01","W01","W02","W02","W02","W03","W03","W03","W04","W04","W05","W05","W05","W06","W06","W07","W07","W07","W08","W08","W08","W09","W09","W10","W10","W11","W11","W12","W13"],"U":["U01","U01","U01","U02","U02","U02","U03","U03","U03","U04","U04","U04","U05","U05","U05","U06","U06","U06","U07","U07","U08","U08","U09","U09","U10","U10","U11","U11","U12","U13"],"B":["B01","B01","B01","B02","B02","B02","B03","B03","B03","B04","B04","B04","B05","B05","B05","B06","B06","B07","B07","B08","B08","B09","B10","B10","B11","B11","B12","B13","B13","B13"],"R":["R01","R01","R01","R02","R02","R02","R03","R03","R03","R04","R04","R04","R05","R05","R05","R06","R06","R07","R07","R07","R08","R08","R09","R09","R10","R10","R11","R11","R12","R13"],"G":["G01","G01","G01","G02","G02","G02","G03","G03","G03","G04","G04","G04","G05","G05","G05","G06","G06","G07","G07","G07","G08","G08","G09","G09","G10","G10","G11","G11","G12","G13"]});
+</script>
+</body>
+</html>
