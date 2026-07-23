@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2b2119">
+<title>Marble Drop Gantry</title>
+<meta name="description" content="Marble Drop Gantry — an incremental marble-run builder. Pieces drip in, you build the gantry higher, marbles clatter down through everything you've made and bank their gold in the basin.">
+<meta property="og:title" content="Marble Drop Gantry">
+<meta property="og:description" content="An incremental marble-run builder. Build higher; every bounce pays; the void keeps what you drop.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b2119'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%236fa8c9'/%3E%3Cellipse cx='12.5' cy='12' rx='3.4' ry='2.2' fill='%23fff' opacity='.85' transform='rotate(-30 12.5 12)'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#2b2119; --panel:#3a2d21; --ink:#f2e8d8; --muted:#a89478; --line:#57452f; --accent:#e0a63f;
+    --wood:#8a5f38; --wood-dark:#5e3f24; --wood-lite:#b58755;
+    --brass:#c9973f; --brass-hi:#f3d489; --brass-lo:#7a5a22;
+    --gold-coin:#ffd75e; --good:#7fbf6a; --bad:#d9584a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:none;overscroll-behavior:none;
+    user-select:none;-webkit-user-select:none}
+  canvas{position:fixed;inset:0;display:block;touch-action:none}
+  button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:6px 10px;cursor:pointer}
+  button:active{transform:scale(.96)}
+  button:disabled{opacity:.35;cursor:default}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ── top bar ── */
+  #topbar{position:fixed;top:0;left:0;right:0;height:44px;display:flex;align-items:center;gap:14px;
+    padding:0 12px 0 14px;background:rgba(58,45,33,.92);border-bottom:1px solid var(--line);z-index:20;
+    padding-top:env(safe-area-inset-top)}
+  #gold{font-weight:700;font-size:17px;color:var(--gold-coin)}
+  #rate{color:var(--muted);font-size:13px}
+  #height{font-weight:600;margin-left:auto}
+  #mstone{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+  #msbar{display:block;width:160px;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+  #msfill{display:block;height:100%;width:0%;background:var(--accent)}
+  #valveBtn{display:none;border-color:var(--brass);color:var(--brass-hi);font-size:13px}
+  #valveBtn.ready{border-color:var(--gold-coin);color:var(--gold-coin);box-shadow:0 0 8px rgba(255,215,94,.35)}
+  .tbtn{width:40px;min-height:40px;text-align:center;padding:8px 0}
+
+  /* ── queue hotbar ── */
+  #hotbar{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:8px;z-index:20}
+  .slot{width:76px;height:76px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    transition:transform .12s,border-color .12s}
+  .slot .glyph{font-size:30px;color:var(--brass-hi)}
+  .slot .key{position:absolute;top:3px;left:7px;font-size:11px;color:var(--muted)}
+  .slot .pname{position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:9px;color:var(--muted)}
+  .slot.sel{border:2px solid var(--accent);transform:translateY(-4px)}
+  .slot.empty .glyph{opacity:.15}
+  .slot.pop{animation:pop .15s ease-out}
+  .slot.shake{animation:shake .2s}
+  #qmore{align-self:center;color:var(--muted);font-size:12px;padding:0 4px}
+  @keyframes pop{from{transform:scale(1.2)}to{transform:scale(1)}}
+  @keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+
+  /* ── upgrade panel ── */
+  #panel{position:fixed;top:44px;right:0;bottom:0;width:300px;background:var(--panel);
+    border-left:1px solid var(--line);transform:translateX(100%);transition:transform .2s ease-out;
+    z-index:30;overflow-y:auto;padding:10px;touch-action:pan-y}
+  #panel.open{transform:translateX(0)}
+  #panel h2{font-size:15px;margin:4px 4px 10px;color:var(--brass-hi)}
+  .urow{display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid var(--line)}
+  .urow .uinfo{flex:1;min-width:0}
+  .urow .uname{font-size:13px;font-weight:600}
+  .urow .ueff{font-size:11px;color:var(--muted)}
+  .urow button{min-width:74px;min-height:40px;font-size:12px;padding:8px 6px}
+  #pclose{position:absolute;top:6px;right:8px;width:36px;min-height:36px;padding:4px 0;text-align:center}
+  .urow .lvl{font-size:10px;color:var(--accent)}
+
+  /* ── touch-only controls ── */
+  #tctl,#camchips,#gear{display:none}
+  body.touch #tctl{display:flex;position:fixed;right:12px;bottom:120px;flex-direction:column;gap:12px;z-index:25}
+  #tctl button{width:56px;height:56px;border-radius:50%;font-size:22px;padding:0}
+  body.touch #camchips{display:flex;position:fixed;right:12px;top:76px;flex-direction:column;gap:8px;z-index:25}
+  #camchips button{width:40px;height:40px;border-radius:50%;font-size:15px;padding:0}
+  #btnCancel{display:none}
+
+  /* ── hint tooltip ── */
+  #hint{position:fixed;background:var(--panel);border:1px solid var(--accent);border-radius:8px;
+    padding:7px 10px;font-size:13px;max-width:180px;z-index:40;pointer-events:none;display:none;
+    animation:pulse 1.2s ease-in-out infinite}
+  #hint:after{content:"";position:absolute;bottom:-6px;left:50%;margin-left:-6px;border:6px solid transparent;
+    border-top-color:var(--accent);border-bottom:0}
+  @keyframes pulse{50%{transform:scale(1.05)}}
+  .pulseOutline{box-shadow:0 0 0 2px var(--accent)!important}
+
+  /* ── floaters ── */
+  .floater{position:fixed;z-index:35;font-weight:700;font-size:14px;pointer-events:none;
+    transition:transform .8s ease-out,opacity .8s ease-out;color:var(--gold-coin)}
+  .floater.bad{color:var(--bad)}
+  #combo{position:fixed;z-index:35;font-weight:800;font-size:20px;color:var(--gold-coin);display:none;
+    pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+
+  /* ── mobile reflow ── */
+  @media (max-width:700px){
+    #rate,#mstone #mslabel{display:none}
+    #msbar{width:90px}
+    #hotbar{bottom:0;left:0;right:0;transform:none;gap:0;padding-bottom:env(safe-area-inset-bottom)}
+    .slot{flex:1;height:72px;border-radius:0;border-width:1px 0 0 1px}
+    body.touch #gear{display:flex;flex:1;height:72px;align-items:center;justify-content:center;
+      background:var(--panel);border:1px solid var(--line);border-width:1px 0 0 1px;border-radius:0;font-size:24px}
+    #panel{width:100%;top:auto;height:70vh;border-left:0;border-top:1px solid var(--line);
+      transform:translateY(100%)}
+    #panel.open{transform:translateY(0)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #hint{animation:none}
+    .slot.pop,.slot.shake{animation:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="topbar">
+  <span id="gold" class="num">⛃ 0</span><span id="rate" class="num"></span>
+  <button id="valveBtn" title="Overpressure Valve (V)">Valve</button>
+  <span id="height" class="num">▲ 0 m</span>
+  <span id="mstone"><span id="msbar"><span id="msfill"></span></span><span id="mslabel"></span></span>
+  <button id="uBtn" class="tbtn" title="Upgrades (U)">⚙</button>
+  <button id="mBtn" class="tbtn" title="Mute (M)">🔊</button>
+</div>
+
+<div id="hotbar"></div>
+
+<div id="panel"><h2>Upgrades</h2><button id="pclose" aria-label="Close">✕</button><div id="ulist"></div></div>
+
+<div id="tctl">
+  <button id="btnRot" aria-label="Rotate">↻</button>
+  <button id="btnPlace" aria-label="Place">✓</button>
+  <button id="btnCancel" aria-label="Cancel">✕</button>
+</div>
+<div id="camchips">
+  <button id="chipUp" aria-label="Jump to emitter">▲</button>
+  <button id="chipDn" aria-label="Jump to basin">▼</button>
+</div>
+
+<div id="hint"></div>
+<div id="combo" class="num"></div>
+
+<script>
+(() => {
+'use strict';
+// ============================================================ constants
+const SAVE_KEY = 'marble-drop-gantry-save', HINT_KEY = 'marble-drop-gantry-hint';
+const PAL = { bg:'#2b2119', panel:'#3a2d21', ink:'#f2e8d8', muted:'#a89478', line:'#57452f',
+  accent:'#e0a63f', wood:'#8a5f38', woodDark:'#5e3f24', woodLite:'#b58755',
+  brass:'#c9973f', brassHi:'#f3d489', brassLo:'#7a5a22', gold:'#ffd75e', good:'#7fbf6a', bad:'#d9584a' };
+
+const PHYS = { FIXED_DT:1/60, SUBSTEPS:8, GRAVITY:2200, R_MARBLE:7, MAX_SPEED:1600,
+  MAX_STEP_DISP:6, V_REST:60, SLEEP_SPEED:15, CELL:64, MAX_FRAME:0.1, RESOLVE_ITERS:2,
+  SEPARATE_MARBLES:true, BUMPER_POP:350, A_BOOST:2600, BOOST_VMAX:900, SPIN_W:3.0 };
+
+const W = 1200;              // world width; y-down, basin floor at y=0, tower builds into -y
+const PX_PER_M = 40;
+
+// materials {e restitution, mu tangential decay /s}
+const MAT = { plank:{e:.35,mu:1.0}, chute:{e:.25,mu:.5}, funnel:{e:.30,mu:.8}, wall:{e:.45,mu:.3},
+  cradle:{e:.20,mu:2.0}, bumper:{e:.90,mu:.1}, boost:{e:.30,mu:0}, spinner:{e:.55,mu:.4}, hub:{e:.30,mu:.4} };
+
+// arc helper (build once at boot)
+function arcPts(cx, cy, r, a0, a1, n){ const p=[]; for(let i=0;i<=n;i++){const a=a0+(a1-a0)*i/n;
+  p.push([cx+r*Math.cos(a), cy+r*Math.sin(a)]);} return p; }
+function segsFromPts(pts){ const s=[]; for(let i=0;i<pts.length-1;i++)
+  s.push([pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]]); return s; }
+// local geometry on a 120px module, pivot (0,0), y-down. (physics-spec §4)
+const PIECE_DEFS = {
+  plank:  { name:'Plank',        base:1, glyph:'▬', segs:[[-60,0,60,0]] },
+  funnel: { name:'Wide Funnel',  base:1, glyph:'▽', segs:[[-60,-40,-10,40],[60,-40,10,40],[-10,40,-10,55],[10,40,10,55]] },
+  chute:  { name:'Curved Chute', base:1, glyph:'⌒', segs:segsFromPts(arcPts(60,-60,120,Math.PI,Math.PI/2,8)) },
+  bumper: { name:'Bumper Peg',   base:2, glyph:'●', circles:[{x:0,y:0,r:22}] },
+  cradle: { name:'Cradle Dish',  base:1, glyph:'◡', segs:segsFromPts(arcPts(0,-80,100,
+             Math.PI/2+Math.asin(60/100), Math.PI/2-Math.asin(60/100), 6)) },
+  wall:   { name:'Brass Baffle', base:1, glyph:'▮', segs:[[0,-60,0,60]] },
+  spinner:{ name:'Spinner',      base:3, glyph:'✣', hub:{r:10}, paddleIn:12, paddleOut:55 },
+  boost:  { name:'Accelerator Rail', base:4, glyph:'≫', segs:[[-55,0,55,0]], boost:true },
+};
+
+// upgrades (economy-spec §2). cost(L) = ceil(base * growth^L)
+const UPG = {
+  drip:   { name:'Drip Regulator',  base:15,  g:1.32, cap:20, eff:L=>`spawn every ${(3*Math.pow(.88,L)).toFixed(2)} s` },
+  hopper: { name:'Marble Hopper',   base:25,  g:1.35, cap:12, eff:L=>`marble cap ${8+6*L}` },
+  foundry:{ name:'Foundry Contract',base:20,  g:1.30, cap:15, eff:L=>`piece every ${(12*Math.pow(.90,L)).toFixed(1)} s` },
+  racks:  { name:'Queue Racks',     base:40,  g:1.35, cap:9,  eff:L=>`queue holds ${3+L}` },
+  rails:  { name:'Burnished Rails', base:50,  g:1.27, cap:0,  eff:L=>`all payouts ×${Math.pow(1.22,L).toFixed(2)}` },
+  gild:   { name:'Gilding Vat',     base:200, g:1.30, cap:15, eff:L=>`${L}% gilded (pay ×10)` },
+  chimes: { name:'Resonant Chimes', base:150, g:1.28, cap:8,  eff:L=>`combo step ${(0.08+0.02*L).toFixed(2)}` },
+  basin:  { name:'Basin Extension', base:75,  g:1.35, cap:6,  eff:L=>`basin ${480+80*L} px wide` },
+  nets:   { name:'Velvet Nets',     base:120, g:1.33, cap:4,  eff:L=>`strays refund ${15*L}%` },
+  valve:  { name:'Overpressure Valve', base:25000, g:1.35, cap:5, eff:L=>L?`×3 burst 8 s, cd ${96-6*L} s`:'unlock the valve (V)' },
+};
+const costOf = (k, L) => Math.ceil(UPG[k].base * Math.pow(UPG[k].g, L));
+
+// milestones (economy-spec §3, unlock slots reconciled to the physics piece set)
+const MILESTONES = [
+  { h:5,  unlock:'bumper', bonus:50,     flavor:'First rung. The foreman nods.' },
+  { h:6,  unlock:'chute',  bonus:150,    flavor:'The clatter starts to sound like music.' },
+  { h:10, unlock:'cradle', bonus:400,    flavor:'Ten metres of honest brass.' },
+  { h:15, unlock:'wall',   bonus:1200,   flavor:'A baffle for every argument.' },
+  { h:21, unlock:'spinner',bonus:3500,   flavor:'It turns. Therefore it earns.' },
+  { h:28, unlock:'boost',  bonus:10000,  flavor:'Faster marbles, fatter ledgers.' },
+  { h:36, unlock:'twin',   bonus:30000,  flavor:'Two mouths to feed the machine.' },
+  { h:45, unlock:'bell',   bonus:100000, flavor:'The whole valley hears it ring.' },
+];
+const DRIP_WEIGHTS = { plank:3, funnel:2, chute:2, bumper:2, cradle:1.5, wall:1.5, spinner:1, boost:1 };
+
+// ============================================================ state
+const S = {
+  gold:0, nextPieceId:1, pieces:[], queue:['funnel','plank','funnel'],
+  upgrades:{drip:0,hopper:0,foundry:0,racks:0,rails:0,gild:0,chimes:0,basin:0,nets:0,valve:0},
+  milestonesClaimed:0,
+  stats:{ totalGoldEarned:0, marblesBanked:0, marblesLost:0, marblesSeized:0, bestCombo:0, maxHeightM:0, playtimeS:0 },
+  muted:false,
+};
+let marbles = [], particles = [], spinners = [];
+let selSlot = -1, ghost = null;          // ghost = {type, rot, flip, x, y, valid}
+let spawnTimer = 0, dripTimer = 0, saveTimer = 0, spawnFlip = false;
+let valveT = 0, valveCd = 0, valveSeen = false;
+let emitterX = W/2, emitterY = -180, minTopY = 0;
+let goldEMA = 0, lastGold = 0, comboCatches = [];
+let hintStep = 0, time = 0;
+const derived = {
+  Mrails: () => Math.pow(1.22, S.upgrades.rails),
+  comboStep: () => 0.08 + 0.02*S.upgrades.chimes,
+  spawnInterval: () => 3*Math.pow(.88,S.upgrades.drip) * (valveT>0?0.5:1) * (S.milestonesClaimed>=7?0.5:1),
+  marbleCap: () => 8 + 6*S.upgrades.hopper,
+  dripInterval: () => 12*Math.pow(.90,S.upgrades.foundry),
+  queueCap: () => 3 + S.upgrades.racks,
+  basinW: () => 480 + 80*S.upgrades.basin,
+  bell: () => S.milestonesClaimed >= 8,
+  unlocked: () => ['plank','funnel'].concat(MILESTONES.slice(0,S.milestonesClaimed).map(m=>m.unlock))
+                  .filter(u=>PIECE_DEFS[u]),
+};
+
+// ============================================================ persistence (all try/catch)
+function saveGame(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:1,
+  gold:S.gold, nextPieceId:S.nextPieceId,
+  pieces:S.pieces.map(p=>({id:p.id,type:p.type,x:p.x,y:p.y,rot:p.rot,flip:!!p.flip,t:p.touchedEver?1:0})),
+  queue:S.queue, upgrades:S.upgrades, milestonesClaimed:S.milestonesClaimed,
+  stats:S.stats, muted:S.muted, valveCd:Math.max(0,valveCd), savedAt:Date.now() })); }catch(e){} }
+function loadGame(){ try{
+  const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+  if (!d || d.v !== 1) return false;
+  S.gold=Math.max(0,+d.gold||0); S.nextPieceId=d.nextPieceId||1;
+  S.queue=(Array.isArray(d.queue)?d.queue:[]).filter(t=>PIECE_DEFS[t]);   // unknown types would kill the rAF loop
+  for (const k in S.upgrades){ const v=Math.floor(+((d.upgrades||{})[k])||0);
+    S.upgrades[k]=Math.max(0,Math.min(UPG[k].cap||Infinity,v)); }         // clamp to caps
+  S.milestonesClaimed=Math.max(0,Math.min(MILESTONES.length,d.milestonesClaimed||0));
+  Object.assign(S.stats, d.stats||{}); S.muted=!!d.muted;
+  for (const p of (d.pieces||[])) if (PIECE_DEFS[p.type]){
+    const np=addPiece(p.type,p.x,p.y,p.rot||0,!!p.flip,p.id,true); np.touchedEver=!!p.t; }
+  // refresh must not skip gates: cooldown keeps ticking on wall-clock, burst is lost,
+  // and the piece drip restarts full (reload-spam gains nothing)
+  valveT=0; valveCd=Math.max(0,(+d.valveCd||0) - (d.savedAt?(Date.now()-d.savedAt)/1000:0));
+  return true; }catch(e){ return false; } }
+try{ hintStep = parseInt(localStorage.getItem(HINT_KEY)||'0',10)||0; }catch(e){}
+function setHint(n){ hintStep=n; try{ localStorage.setItem(HINT_KEY,String(n)); }catch(e){} }
+
+// ============================================================ geometry / placement
+function pieceWorldGeo(type, x, y, rotDeg, flip){
+  const def = PIECE_DEFS[type], th = rotDeg*Math.PI/180, c = Math.cos(th), s = Math.sin(th);
+  const tf = (lx,ly)=>{ if (flip) lx=-lx; return [x + lx*c - ly*s, y + lx*s + ly*c]; };
+  const segs=[], circles=[];
+  for (const g of (def.segs||[])){ const a=tf(g[0],g[1]), b=tf(g[2],g[3]); segs.push([a[0],a[1],b[0],b[1]]); }
+  for (const g of (def.circles||[])){ const p=tf(g.x,g.y); circles.push({x:p[0],y:p[1],r:g.r}); }
+  let tHat=null;
+  if (def.boost){ const a=tf(-1,0), b=tf(1,0); const l=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
+    tHat=[(b[0]-a[0])/l,(b[1]-a[1])/l]; }
+  // tight AABB from geometry, padded 4
+  let mnx=1e9,mny=1e9,mxx=-1e9,mxy=-1e9;
+  const eat=(px,py,r=0)=>{mnx=Math.min(mnx,px-r);mny=Math.min(mny,py-r);mxx=Math.max(mxx,px+r);mxy=Math.max(mxy,py+r);};
+  for (const g of segs){ eat(g[0],g[1]); eat(g[2],g[3]); }
+  for (const g of circles) eat(g.x,g.y,g.r);
+  if (def.hub){ eat(x,y,def.paddleOut); }
+  return { segs, circles, tHat, aabb:{minX:mnx-4,minY:mny-4,maxX:mxx+4,maxY:mxy+4} };
+}
+function addPiece(type, x, y, rot, flip, id, silent){
+  const geo = pieceWorldGeo(type,x,y,rot,flip);
+  const pid = id || S.nextPieceId++;
+  const p = { id: pid, type, x, y, rot, flip, geo, flash:0, touchedEver:false,
+              phi: pid*1.3, spinDir: flip?-1:1 };
+  if (id && id >= S.nextPieceId) S.nextPieceId = id+1;
+  S.pieces.push(p);
+  if (type==='spinner') spinners.push(p);
+  rebuildStatics(); recomputeTower();
+  if (!silent){ checkMilestones(); }
+  return p;
+}
+let touchedMinY = 0;   // top of the highest piece a marble has ACTUALLY touched
+function recomputeTower(){
+  minTopY = 0;
+  let hx = W/2;
+  touchedMinY = 0;
+  for (const p of S.pieces){
+    if (p.geo.aabb.minY < minTopY){ minTopY = p.geo.aabb.minY; hx = p.x; }
+    if (p.touchedEver && p.geo.aabb.minY < touchedMinY) touchedMinY = p.geo.aabb.minY;
+  }
+  emitterY = minTopY - 180;
+  emitterX += (hx - emitterX) * 0.5;   // emitter tracks the highest piece's column…
+  // …but never drifts off the basin span — off-center towers must not silently route
+  // the whole stream into the void (verify finding: economy collapse)
+  const bw = derived.basinW()/2 - 60;
+  emitterX = Math.max(W/2 - bw, Math.min(W/2 + bw, emitterX));
+  const h = heightM();
+  if (h > S.stats.maxHeightM) S.stats.maxHeightM = h;
+}
+// milestone/progress height = touched height: a marble must have christened the piece.
+// Kills every stack-tall-and-claim exploit — the run has to be real.
+function heightM(){ return Math.max(0, -touchedMinY/PX_PER_M); }
+function builtHeightM(){ return Math.max(0, -minTopY/PX_PER_M); }
+
+function snapToGrid(x,y){ return { x: Math.round(x/8)*8, y: Math.round(y/8)*8 }; }
+function rotStep(rot,dir){ return ((rot + dir*15) % 360 + 360) % 360; }
+// returns true when legal, else a reason string ('oob'|'overlap'|'support')
+function placeReason(type, x, y, rot, flip){
+  const a = pieceWorldGeo(type,x,y,rot,flip).aabb;
+  if (a.minX < 0 || a.maxX > W || a.maxY > 0 || a.minY < -8000) return 'oob';
+  for (const p of S.pieces){ const b = p.geo.aabb;
+    if (a.minX < b.maxX-2 && a.maxX > b.minX+2 && a.minY < b.maxY-2 && a.maxY > b.minY+2) return 'overlap'; }
+  // support rule: must sit within 48px of the floor band or of an existing piece —
+  // no free-floating skyscrapers; keeps builds coherent
+  if (a.maxY >= -64) return true;
+  for (const p of S.pieces){ const b = p.geo.aabb;
+    if (a.minX < b.maxX+48 && a.maxX > b.minX-48 && a.minY < b.maxY+48 && a.maxY > b.minY-48) return true; }
+  return 'support';
+}
+function validPlacement(type, x, y, rot, flip){ return placeReason(type,x,y,rot,flip) === true; }
+// scan upward for the nearest legal anchor at column x (default ghost + auto-reselect)
+function findLegalAnchor(type, x, rot, flip){
+  for (let y = -24; y >= -8000; y -= 24){
+    const g = snapToGrid(x, y);
+    if (validPlacement(type, g.x, g.y, rot, flip)) return g;
+  }
+  return snapToGrid(x, minTopY - 48);
+}
+
+// ============================================================ broadphase (physics-spec §3)
+let hash = new Map(), queryId = 0;
+const hkey = (cx,cy)=>(cx+2048)*4096+(cy+2048);
+function rebuildStatics(){
+  hash = new Map();
+  for (const p of S.pieces){
+    if (p.type==='spinner') continue;                     // spinners live in their own list
+    const def = PIECE_DEFS[p.type];
+    for (const g of p.geo.segs) insertCollider({ type:'seg', g, mat:MAT[p.type], piece:p,
+      boost:!!def.boost, tHat:p.geo.tHat,
+      minX:Math.min(g[0],g[2]), minY:Math.min(g[1],g[3]), maxX:Math.max(g[0],g[2]), maxY:Math.max(g[1],g[3]) });
+    for (const cgeo of p.geo.circles) insertCollider({ type:'circle', c:cgeo, mat:MAT[p.type], piece:p,
+      bumper:p.type==='bumper', minX:cgeo.x-cgeo.r, minY:cgeo.y-cgeo.r, maxX:cgeo.x+cgeo.r, maxY:cgeo.y+cgeo.r });
+  }
+}
+function insertCollider(col){
+  const pad = PHYS.R_MARBLE + 1, C = PHYS.CELL;
+  const x0=Math.floor((col.minX-pad)/C), x1=Math.floor((col.maxX+pad)/C);
+  const y0=Math.floor((col.minY-pad)/C), y1=Math.floor((col.maxY+pad)/C);
+  for (let cy=y0;cy<=y1;cy++) for (let cx=x0;cx<=x1;cx++){
+    const k=hkey(cx,cy); let arr=hash.get(k); if(!arr){arr=[];hash.set(k,arr);} arr.push(col); }
+}
+function queryColliders(x,y,out){
+  out.length = 0; queryId++;
+  const r = PHYS.R_MARBLE + PHYS.MAX_STEP_DISP, C = PHYS.CELL;
+  const x0=Math.floor((x-r)/C), x1=Math.floor((x+r)/C), y0=Math.floor((y-r)/C), y1=Math.floor((y+r)/C);
+  for (let cy=y0;cy<=y1;cy++) for (let cx=x0;cx<=x1;cx++){
+    const arr = hash.get(hkey(cx,cy)); if (!arr) continue;
+    for (const col of arr){ if (col.stamp===queryId) continue; col.stamp=queryId; out.push(col); } }
+  return out;
+}
+
+// ============================================================ physics (physics-spec §1–§2)
+function closestPointOnSegment(px,py,ax,ay,bx,by){
+  const dx=bx-ax, dy=by-ay, len2=dx*dx+dy*dy;
+  const t = len2>0 ? Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/len2)) : 0;
+  return { x:ax+t*dx, y:ay+t*dy, t };
+}
+function resolveCircleSegment(m, ax,ay,bx,by, mat, svx,svy, h){
+  const c = closestPointOnSegment(m.x,m.y,ax,ay,bx,by);
+  let nx=m.x-c.x, ny=m.y-c.y;
+  const dist=Math.hypot(nx,ny);
+  if (dist >= PHYS.R_MARBLE) return 0;
+  if (dist > 1e-6){ nx/=dist; ny/=dist; }
+  else { const sdx=bx-ax, sdy=by-ay, sl=Math.hypot(sdx,sdy)||1; nx=-sdy/sl; ny=sdx/sl;
+    if (m.vx*nx+m.vy*ny > 0){ nx=-nx; ny=-ny; }
+    if (m.vx===0 && m.vy===0){ nx=0; ny=-1; } }
+  const pen = PHYS.R_MARBLE - dist;
+  m.x += nx*pen; m.y += ny*pen;
+  let rvx=m.vx-svx, rvy=m.vy-svy;
+  const vn = rvx*nx+rvy*ny;
+  let tx=rvx-vn*nx, ty=rvy-vn*ny;
+  if (vn < 0){
+    const e = (-vn < PHYS.V_REST) ? 0 : mat.e;
+    const f = Math.max(0, 1 - mat.mu*h);
+    tx*=f; ty*=f;
+    rvx = tx + nx*(-vn*e); rvy = ty + ny*(-vn*e);
+    m.vx = rvx+svx; m.vy = rvy+svy;
+    return -vn;                                    // impact speed (for audio)
+  }
+  return 0.0001;                                   // touching, separating
+}
+function resolveCircleCircle(m, cx,cy,cr, mat){
+  let nx=m.x-cx, ny=m.y-cy;
+  const dist=Math.hypot(nx,ny), R=PHYS.R_MARBLE+cr;
+  if (dist >= R) return 0;
+  if (dist > 1e-6){ nx/=dist; ny/=dist; } else { nx=0; ny=-1; }
+  m.x += nx*(R-dist); m.y += ny*(R-dist);
+  const vn = m.vx*nx+m.vy*ny;
+  if (vn < 0){
+    const e = (-vn < PHYS.V_REST) ? 0 : mat.e;
+    m.vx -= (1+e)*vn*nx; m.vy -= (1+e)*vn*ny;
+    return -vn;
+  }
+  return 0.0001;
+}
+const qbuf = [];
+function collideMarble(m, h){
+  for (let pass=0; pass<PHYS.RESOLVE_ITERS; pass++){
+    queryColliders(m.x, m.y, qbuf);
+    for (const col of qbuf){
+      let imp = 0;
+      if (col.type==='seg'){
+        imp = resolveCircleSegment(m, col.g[0],col.g[1],col.g[2],col.g[3], col.mat, 0,0, h);
+        if (imp && col.boost && col.tHat){          // contact acceleration, capped
+          const vt = m.vx*col.tHat[0] + m.vy*col.tHat[1];
+          if (vt < PHYS.BOOST_VMAX){ const add=Math.min(PHYS.A_BOOST*h, PHYS.BOOST_VMAX-vt);
+            m.vx += col.tHat[0]*add; m.vy += col.tHat[1]*add; }
+        }
+      } else {
+        imp = resolveCircleCircle(m, col.c.x,col.c.y,col.c.r, col.mat);
+        if (imp && col.bumper){
+          const dx=m.x-col.c.x, dy=m.y-col.c.y, d=Math.hypot(dx,dy)||1, nx=dx/d, ny=dy/d;
+          const last = m.popCd.get(col.piece.id)||-9;
+          if (time-last > 0.15){
+            const vn = m.vx*nx+m.vy*ny;
+            if (vn < PHYS.BUMPER_POP){ m.vx += nx*(PHYS.BUMPER_POP-vn); m.vy += ny*(PHYS.BUMPER_POP-vn); }
+            m.popCd.set(col.piece.id, time);
+          }
+        }
+      }
+      if (imp) onContact(m, col.piece, imp, pass===0);
+    }
+    // spinners: bounding-circle precheck, then hub + 4 paddles with surface velocity
+    for (const sp of spinners){
+      const dx=m.x-sp.x, dy=m.y-sp.y;
+      if (dx*dx+dy*dy > (55+PHYS.R_MARBLE+4)*(55+PHYS.R_MARBLE+4)) continue;
+      let imp = resolveCircleCircle(m, sp.x, sp.y, 10, MAT.hub);
+      if (imp) onContact(m, sp, imp, pass===0);
+      const w = sp.spinDir * PHYS.SPIN_W;
+      for (const g of sp.wsegs){
+        const c = closestPointOnSegment(m.x,m.y,g[0],g[1],g[2],g[3]);
+        const rx=c.x-sp.x, ry=c.y-sp.y;
+        imp = resolveCircleSegment(m, g[0],g[1],g[2],g[3], MAT.spinner, -w*ry, w*rx, h);
+        if (imp) onContact(m, sp, imp, pass===0);
+      }
+    }
+  }
+}
+function updateSpinners(dt){
+  for (const sp of spinners){
+    sp.phi += sp.spinDir * PHYS.SPIN_W * dt;
+    sp.wsegs = [];
+    for (let k=0;k<4;k++){ const a = sp.phi + k*Math.PI/2, ca=Math.cos(a), sa=Math.sin(a);
+      sp.wsegs.push([sp.x+12*ca, sp.y+12*sa, sp.x+55*ca, sp.y+55*sa]); }
+  }
+}
+
+// ============================================================ economy (economy-spec §1)
+function valveMult(){ return valveT>0 ? 3 : 1; }
+function touchPay(n){ return Math.max(1, Math.floor(PIECE_DEFS_BASE_CACHE * derived.Mrails() *
+  (1 + derived.comboStep()*(n-1)) * valveMult())); }
+let PIECE_DEFS_BASE_CACHE = 1; // set per call in onContact (avoids alloc); see hatch for pure version
+function touchPayPure(base, n, rails, cstep, vm){ return Math.max(1, Math.floor(base * rails * (1 + cstep*(n-1)) * vm)); }
+
+function onContact(m, piece, impactSpeed, allowFx){
+  if (!piece) return;
+  if (!piece.touchedEver){                          // first marble ever to reach this piece
+    piece.touchedEver = true;
+    if (piece.geo.aabb.minY < touchedMinY){
+      touchedMinY = piece.geo.aabb.minY;
+      const h = heightM(); if (h > S.stats.maxHeightM) S.stats.maxHeightM = h;
+      checkMilestones();                            // milestones fire on PROVEN height
+    }
+  }
+  // income: FIRST touch of each distinct piece only (repeat touches pay 0)
+  if (!m.touched.has(piece.id)){
+    m.touched.add(piece.id);
+    PIECE_DEFS_BASE_CACHE = PIECE_DEFS[piece.type].base;
+    const pay = touchPay(m.touched.size);
+    m.escrow += pay;
+    piece.flash = 0.1;
+    if (hintStep === 1 || hintStep === 2){ const sp = worldToScreen(m.x, m.y); showFloater(sp.x, sp.y, '+'+pay, false); }
+  }
+  if (allowFx && impactSpeed > 40){ ping(impactSpeed, m); if (impactSpeed > 140) dust(m.x, m.y, 3); }
+  if (impactSpeed > 1) m.spin = impactSpeed/PHYS.R_MARBLE * (m.vx>=0?1:-1);
+}
+function bankMarble(m){
+  const n = m.touched.size;
+  const basinBonus = Math.max(1, Math.floor(5 * derived.Mrails() *
+    (1 + derived.comboStep()*Math.max(0,n-1)) * valveMult()));
+  let banked = Math.floor((m.escrow + basinBonus) * (m.gilded?10:1) * (derived.bell()?1.5:1));
+  addGold(banked);
+  S.stats.marblesBanked++;
+  if (n > S.stats.bestCombo) S.stats.bestCombo = n;
+  comboCatches.push(time); pushOutcome(0);
+  const sp = worldToScreen(m.x, 0);
+  showFloater(sp.x, sp.y-16, '+'+fmt(banked), false);
+  basinGlow = Math.min(1, basinGlow + 0.25);
+  chime(); sparkle(m.x, 8, 5);
+  if (hintStep === 1) setHint(2);
+}
+function voidMarble(m){
+  S.stats.marblesLost++; pushOutcome(1);
+  const refund = Math.floor(m.escrow * 0.15 * S.upgrades.nets);
+  if (refund > 0) addGold(refund);
+  if (m.escrow > 0){ const sp = worldToScreen(m.x, 0); showFloater(sp.x, sp.y-16, '−'+fmt(m.escrow-refund), true); thud(); }
+}
+function addGold(n){ S.gold += n; S.stats.totalGoldEarned += n; }
+const recentOutcomes = [];                   // 1 = voided, 0 = banked (ring of last 20)
+let strayWarnT = -999;
+function pushOutcome(v){ recentOutcomes.push(v); if (recentOutcomes.length>20) recentOutcomes.shift(); }
+
+function checkMilestones(){
+  const h = heightM();
+  while (S.milestonesClaimed < MILESTONES.length && h >= MILESTONES[S.milestonesClaimed].h){
+    const ms = MILESTONES[S.milestonesClaimed];
+    S.milestonesClaimed++;
+    addGold(ms.bonus);
+    toast(`${ms.h} m — ${PIECE_DEFS[ms.unlock] ? PIECE_DEFS[ms.unlock].name+' unlocked!' :
+      (ms.unlock==='twin'?'Twin Emitter!':'The Sky Bell rings!')} +${fmt(ms.bonus)}`, ms.flavor);
+    fanfare(); confetti(); shake = RM()?0:0.1;
+    updateHUD(true);
+  }
+}
+function buyUpgrade(k){
+  const L = S.upgrades[k], u = UPG[k];
+  if (u.cap && L >= u.cap) return;
+  const cost = costOf(k, L);
+  if (S.gold < cost){ nope(); return; }
+  S.gold -= cost; S.upgrades[k]++;
+  click2(); updateHUD(true);
+  if (hintStep === 2) setHint(3);
+}
+function fireValve(){
+  if (S.upgrades.valve < 1 || valveT > 0 || valveCd > 0) return;
+  valveT = 8; valveCd = 96 - 6*S.upgrades.valve;
+  fanfare();
+}
+
+// ============================================================ marbles
+function spawnMarble(){
+  if (marbles.length >= derived.marbleCap()) return;   // cap gates spawning; never queue
+  const twin = S.milestonesClaimed >= 7;
+  const ox = twin ? (spawnFlip ? -80 : 80) : 0; spawnFlip = !spawnFlip;
+  let x = emitterX + ox + (Math.random()*90-45), y = emitterY;
+  for (let tries=0; tries<5; tries++){
+    let bad = false;
+    for (const o of marbles){ const dx=o.x-x, dy=o.y-y; if (dx*dx+dy*dy < 16*16){ bad=true; break; } }
+    if (!bad){ queryColliders(x,y,qbuf);
+      for (const col of qbuf){ if (col.type==='seg'){
+        const c=closestPointOnSegment(x,y,col.g[0],col.g[1],col.g[2],col.g[3]);
+        if (Math.hypot(x-c.x,y-c.y) < PHYS.R_MARBLE+2){ bad=true; break; } } } }
+    if (!bad){
+      marbles.push({ x, y, vx:Math.random()*60-30, vy:0, hue:(Math.random()*5)|0,
+        gilded: Math.random() < 0.01*S.upgrades.gild, escrow:0, touched:new Set(), popCd:new Map(),
+        snapX:x, snapY:y, stuckCount:0, snapT:time, spin:0, dead:false });
+      return;
+    }
+    y -= 20;
+  }
+}
+function physicsTick(dt){
+  time += dt;
+  updateSpinners(dt);
+  const h = dt/PHYS.SUBSTEPS;
+  for (let s=0;s<PHYS.SUBSTEPS;s++){
+    for (const m of marbles){
+      if (m.dead) continue;
+      m.vy += PHYS.GRAVITY*h;
+      const sp = Math.hypot(m.vx,m.vy);
+      if (sp > PHYS.MAX_SPEED){ const k=PHYS.MAX_SPEED/sp; m.vx*=k; m.vy*=k; }
+      let dx=m.vx*h, dy=m.vy*h;
+      const d = Math.hypot(dx,dy);
+      if (d > PHYS.MAX_STEP_DISP){ const k=PHYS.MAX_STEP_DISP/d; dx*=k; dy*=k; }
+      m.x += dx; m.y += dy;
+      collideMarble(m, h);
+    }
+    if (PHYS.SEPARATE_MARBLES) separateMarbles();
+  }
+  housekeeping(dt);
+}
+function separateMarbles(){
+  for (let i=0;i<marbles.length;i++){ const a=marbles[i]; if (a.dead || !isFinite(a.x+a.y)) continue;
+    for (let j=i+1;j<marbles.length;j++){ const b=marbles[j]; if (b.dead || !isFinite(b.x+b.y)) continue;
+      let dx=b.x-a.x, dy=b.y-a.y; const d=Math.hypot(dx,dy);
+      if (d < 14 && d > 1e-6){ const push=(14-d)*0.5/d;
+        a.x-=dx*push; a.y-=dy*push; b.x+=dx*push; b.y+=dy*push; }
+      else if (d <= 1e-6){ const rx=Math.random()*2-1; a.x-=rx*3; a.y+=3; b.x+=rx*3; b.y-=3; }
+    } }
+}
+function housekeeping(dt){
+  const bw = derived.basinW()/2;
+  for (const m of marbles){
+    if (m.dead) continue;
+    if (!isFinite(m.x+m.y+m.vx+m.vy)){ m.dead=true; continue; }         // NaN guard FIRST
+    if (m.x < PHYS.R_MARBLE){ m.x=PHYS.R_MARBLE; m.vx*=-0.4; }
+    if (m.x > W-PHYS.R_MARBLE){ m.x=W-PHYS.R_MARBLE; m.vx*=-0.4; }
+    if (m.y >= 0){                                                       // crossed the floor line
+      if (Math.abs(m.x - W/2) <= bw) bankMarble(m); else voidMarble(m);
+      m.dead = true; continue;
+    }
+    if (time - m.snapT >= 1){                                            // stuck detector (1s ladder —
+      if (Math.hypot(m.x-m.snapX, m.y-m.snapY) < 6){                     // sleepers hog cap slots)
+        m.stuckCount++;
+        if (m.stuckCount===1){ m.vx += Math.random()*120-60; m.vy -= 80; }
+        else if (m.stuckCount===2){ m.vx += Math.random()*180-90; m.vy -= 120; }
+        else if (m.stuckCount>=3){                                       // seize: bank 50% escrow
+          const half = Math.floor(m.escrow*0.5);
+          if (half>0){ addGold(half); const sp=worldToScreen(m.x,m.y); showFloater(sp.x,sp.y,'+'+fmt(half)+' seized',false); }
+          S.stats.marblesSeized = (S.stats.marblesSeized||0)+1;
+          dust(m.x,m.y,4); m.dead=true; continue;
+        }
+      } else m.stuckCount = 0;
+      m.snapX=m.x; m.snapY=m.y; m.snapT=time;
+    }
+    m.spin *= Math.pow(0.99, dt*60);
+  }
+  marbles = marbles.filter(m=>!m.dead && m.y < 200);
+  // piece flash decay lives in the fixed step (frame-rate independent, decays off-screen)
+  for (const p of S.pieces) if (p.flash>0) p.flash -= dt;
+  // timers — primer chain: the first few marbles come fast so the screen is never dead
+  spawnTimer -= dt;
+  if (spawnTimer <= 0){ spawnMarble();
+    const warm = S.stats.marblesBanked + S.stats.marblesLost < 5;
+    spawnTimer = warm ? Math.min(1.0, derived.spawnInterval()) : derived.spawnInterval(); }
+  dripTimer -= dt;
+  if (dripTimer <= 0){
+    dripTimer = derived.dripInterval();
+    if (S.queue.length < derived.queueCap()){
+      const pool = derived.unlocked(); let tot=0;
+      for (const t of pool) tot += DRIP_WEIGHTS[t]||1;
+      let r = Math.random()*tot, pick = pool[0];
+      for (const t of pool){ r -= DRIP_WEIGHTS[t]||1; if (r<=0){ pick=t; break; } }
+      S.queue.push(pick); hotbarDirty = true; slotPop = true;
+    }
+  }
+  if (valveT > 0) valveT -= dt; else if (valveCd > 0) valveCd -= dt;
+  saveTimer += dt; if (saveTimer >= 10){ saveTimer=0; saveGame(); }
+  S.stats.playtimeS += dt;
+  // stray-rate guardrail: rolling last-20 outcomes, re-armable every 2 min —
+  // income collapse must be flagged while it happens, not after 60 lifetime marbles
+  if (recentOutcomes.length >= 20 && time - strayWarnT > 120){
+    const lost = recentOutcomes.reduce((a,b)=>a+b,0);
+    if (lost >= 12){ strayWarnT = time; toast('The void is eating your wages','Route the run back over the basin.'); }
+  }
+}
+
+// ============================================================ camera / transforms
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let viewW=0, viewH=0, dpr=1, scale=1, ox=0;
+let camY=-500, camX=0, camTY=-500, camTX=0, prevCamY=null, lastWheel=-9, lastJump=-9;
+function fit(){
+  dpr = Math.min(window.devicePixelRatio||1, 2);
+  viewW = window.innerWidth; viewH = window.innerHeight;
+  cv.width = Math.round(viewW*dpr); cv.height = Math.round(viewH*dpr);
+  cv.style.width = viewW+'px'; cv.style.height = viewH+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  scale = viewW >= 700 ? Math.min(viewW/W, 1) : Math.max(0.5, viewW/W);
+  ox = Math.max(0, (viewW - W*scale)/2);
+  buildSprites();
+  camTX = clampCamX(camTX); camTY = clampCamY(camTY);
+}
+// reserve the full-width mobile tray so the basin is never hidden behind it
+function trayH(){ return (touchMode && viewW < 700) ? 84 : 0; }
+function camBottomVal(){ return 80 - (viewH - trayH())/scale; }
+function clampCamY(y){ const top = Math.min(emitterY-140, camBottomVal());
+  return Math.max(top, Math.min(camBottomVal(), y)); }
+function clampCamX(x){ return Math.max(0, Math.min(Math.max(0, W - viewW/scale), x)); }
+function worldToScreen(wx,wy){ return { x:(wx-camX)*scale+ox, y:(wy-camY)*scale }; }
+function screenToWorld(sx,sy){ return { x:(sx-ox)/scale+camX, y:sy/scale+camY }; }
+
+// ============================================================ sprites (pre-rendered)
+const HUES = ['#6fa8c9','#7fb069','#d9a05b','#9b7fc9','#c97f96'];
+let marbleSprites=[], gildSprite=null, bumperSprite=null, glowSprite=null;
+function makeMarbleSprite(hue){
+  const r=16, c=document.createElement('canvas'); c.width=c.height=r*2*dpr;
+  const g=c.getContext('2d'); g.scale(dpr,dpr);
+  const grad=g.createRadialGradient(r-0.35*r, r-0.35*r, 1, r, r, 1.4*r);
+  grad.addColorStop(0,'rgba(255,255,255,0.95)'); grad.addColorStop(0.3,hue);
+  grad.addColorStop(0.85,shade(hue,-35)); grad.addColorStop(1,shade(hue,-50));
+  g.fillStyle=grad; g.beginPath(); g.arc(r,r,r,0,7); g.fill();
+  g.save(); g.translate(r-0.4*r, r-0.45*r); g.rotate(-Math.PI/6);
+  g.fillStyle='rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(0,0,0.28*r,0.18*r,0,0,7); g.fill(); g.restore();
+  g.strokeStyle=shade(hue,25); g.globalAlpha=0.25; g.beginPath(); g.arc(r,r+0.55*r,0.5*r,Math.PI*1.2,Math.PI*1.8); g.stroke();
+  return c;
+}
+function shade(hex,pct){ const n=parseInt(hex.slice(1),16), a=n>>16&255, b=n>>8&255, c=n&255, f=1+pct/100;
+  const cl=v=>Math.max(0,Math.min(255,Math.round(v*f)));
+  return `rgb(${cl(a)},${cl(b)},${cl(c)})`; }
+function buildSprites(){
+  marbleSprites = HUES.map(makeMarbleSprite);
+  gildSprite = makeMarbleSprite('#e8b93a');
+  { const r=22, c=document.createElement('canvas'); c.width=c.height=r*2*dpr;
+    const g=c.getContext('2d'); g.scale(dpr,dpr);
+    const grad=g.createRadialGradient(r-6,r-6,2,r,r,r);
+    grad.addColorStop(0,PAL.brassHi); grad.addColorStop(0.55,PAL.brass); grad.addColorStop(1,PAL.brassLo);
+    g.fillStyle=grad; g.beginPath(); g.arc(r,r,r,0,7); g.fill(); bumperSprite=c; }
+  { const c=document.createElement('canvas'); c.width=180*dpr; c.height=60*dpr;
+    const g=c.getContext('2d'); g.scale(dpr,dpr);
+    const grad=g.createRadialGradient(90,30,4,90,30,90);
+    grad.addColorStop(0,'rgba(255,215,94,0.8)'); grad.addColorStop(1,'rgba(255,215,94,0)');
+    g.fillStyle=grad; g.fillRect(0,0,180,60); glowSprite=c; }
+}
+
+// ============================================================ particles & floaters
+let basinGlow=0.08, shake=0;
+function addP(x,y,vx,vy,life,kind,hue){ if (particles.length>=220) return;
+  particles.push({x,y,vx,vy,life,maxLife:life,kind,hue,rot:Math.random()*6,vr:Math.random()*12-6}); }
+function dust(x,y,n){ if (RM()) n=1; for(let i=0;i<n;i++)
+  addP(x,y,Math.random()*130-65,-(Math.random()*50+40),0.35,'dust'); }
+function sparkle(x,y,n){ if (RM()) n=2; for(let i=0;i<n;i++)
+  addP(x,y,Math.random()*160-80,-(Math.random()*80+60),0.5,'spark'); }
+function confetti(){ if (RM()) return;
+  for (let i=0;i<40;i++){ const w=screenToWorld(Math.random()*viewW,0);
+    addP(w.x, camY+10, Math.random()*40-20, Math.random()*100+120, 2.2, 'conf', i%5); } }
+function stepParticles(dt){
+  for (const p of particles){ p.life-=dt;
+    p.vy += (p.kind==='conf'?60:(p.kind==='spark'?300:200))*dt;
+    p.x += p.vx*dt + (p.kind==='conf'?Math.sin(p.life*6+p.rot)*30*dt:0);
+    p.y += p.vy*dt; p.rot += p.vr*dt; }
+  particles = particles.filter(p=>p.life>0);
+}
+const floaterPool=[];
+function showFloater(sx,sy,text,bad){
+  if (sx<-40||sx>viewW+40||sy<0||sy>viewH) return;
+  let el = floaterPool.find(f=>!f.busy);
+  if (!el){ if (floaterPool.length>=12) return;
+    el={div:document.createElement('div'),busy:false}; el.div.className='floater';
+    document.body.appendChild(el.div); floaterPool.push(el); }
+  el.busy=true; const d=el.div;
+  d.textContent=text; d.className='floater'+(bad?' bad':'');
+  d.style.left=sx+'px'; d.style.top=sy+'px'; d.style.opacity='1'; d.style.transform='translateY(0)';
+  requestAnimationFrame(()=>{ d.style.transform='translateY(-30px)'; d.style.opacity='0'; });
+  setTimeout(()=>{ el.busy=false; }, 850);
+}
+let toastT=0;
+function toast(a,b){ toastMsg=[a,b]; toastT=4; }
+let toastMsg=null;
+
+// ============================================================ audio (controls-spec §6)
+let actx=null, master=null, voices=[];
+function audio(){ if (actx) return actx;
+  try{ actx = new (window.AudioContext||window.webkitAudioContext)();
+    master = actx.createGain(); master.gain.value = S.muted?0:1; master.connect(actx.destination);
+  }catch(e){} return actx; }
+function voiceOK(){ if (!actx) return false;
+  voices = voices.filter(t=>t>actx.currentTime); return voices.length < 12; }
+function osc(type,f0,peak,dur,f1){
+  if (!actx || !voiceOK()) return;
+  const t=actx.currentTime, o=actx.createOscillator(), g=actx.createGain();
+  o.type=type; o.frequency.setValueAtTime(f0,t);
+  if (f1) o.frequency.exponentialRampToValueAtTime(f1,t+dur*0.8);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(peak,t+0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.02); voices.push(t+dur);
+}
+const PENTA=[440,494.9,554.4,659.3,740,880,989.8,1108.7,1318.5];
+const pentatonicIndex = sp => Math.max(0,Math.min(8,Math.floor(sp/120)));
+let pingWindow=[], lastPingByMarble=new WeakMap();
+function ping(speed,m){
+  if (!actx || S.muted || speed<40) return;
+  const now=performance.now();
+  if (m){ const lp=lastPingByMarble.get(m)||0; if (now-lp<60) return; lastPingByMarble.set(m,now); }
+  pingWindow=pingWindow.filter(t=>now-t<50); if (pingWindow.length>=8) return; pingWindow.push(now);
+  osc('sine', PENTA[pentatonicIndex(speed)], Math.min(0.16, 0.04+speed/4000), 0.15);
+}
+function chime(){ if (!actx||S.muted) return;
+  const n=comboCatches.filter(t=>time-t<2).length;
+  const f=1318.5*Math.pow(2,Math.min(7,n)/12)*(1+(Math.random()*0.012-0.006));
+  osc('sine',f,0.11,0.25); osc('sine',f*1.5,0.045,0.25); }
+function thud(){ if (!actx||S.muted) return; osc('sine',90,0.2,0.11,55); }
+function thunk(){ if (!actx||S.muted) return; osc('sine',90,0.22,0.11,55); osc('triangle',300,0.1,0.06); }
+function nope(){ if (!actx||S.muted) return; osc('square',160,0.05,0.05); }
+function click2(){ if (!actx||S.muted) return; osc('square',660,0.08,0.03);
+  setTimeout(()=>osc('square',880,0.08,0.03),40); }
+function fanfare(){ if (!actx||S.muted) return;
+  [440,554.4,659.3].forEach((f,i)=>setTimeout(()=>osc('square',f,0.06,0.11),i*90));
+  setTimeout(()=>osc('square',880,0.06,0.35),270); }
+function setMuted(b){ S.muted=b; if (master) master.gain.value=b?0:1;
+  mBtn.textContent=b?'🔇':'🔊'; }
+
+// ============================================================ input
+const RM = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+let touchMode = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
+document.body.classList.toggle('touch', touchMode);
+function setTouchMode(b){ if (b!==touchMode){ touchMode=b; document.body.classList.toggle('touch',b); hotbarDirty=true; } }
+
+const pointers = new Map();
+let panLast=null, midPan=false, ghostSX=0, ghostSY=0, mouseOnCanvas=false;
+cv.addEventListener('contextmenu', e=>e.preventDefault());
+window.addEventListener('pointerdown', e=>{
+  audio(); if (actx && actx.state==='suspended') actx.resume();
+  if (e.target !== cv) return;
+  setTouchMode(e.pointerType==='touch');
+  // touch: the bottom sheet covers the tray — tapping the canvas closes it
+  if (e.pointerType==='touch' && panelEl.classList.contains('open')){ togglePanel(); return; }
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
+  if (e.pointerType==='mouse'){
+    if (e.button===2){ deselect(); return; }
+    if (e.button===1){ midPan=true; panLast={x:e.clientX,y:e.clientY}; cv.style.cursor='grabbing'; e.preventDefault(); return; }
+    if (e.button===0 && ghost){ tryPlace(); }
+  } else {
+    if (pointers.size===2){ panLast=avgPointer(); }
+    else if (!ghost){ panLast={x:e.clientX,y:e.clientY}; }
+    else { moveGhostTouch(e.clientX,e.clientY); }
+  }
+});
+window.addEventListener('pointermove', e=>{
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
+  if (e.pointerType==='mouse'){
+    mouseOnCanvas = e.target===cv;
+    ghostSX=e.clientX; ghostSY=e.clientY;
+    if (midPan && panLast){ camTY = clampCamY(camTY - (e.clientY-panLast.y)/scale);
+      camTX = clampCamX(camTX - (e.clientX-panLast.x)/scale); panLast={x:e.clientX,y:e.clientY}; return; }
+    if (ghost && mouseOnCanvas) moveGhostMouse(e.clientX,e.clientY);
+  } else if (pointers.has(e.pointerId)){
+    if (pointers.size>=2){ const a=avgPointer();
+      if (panLast){ camTY=clampCamY(camTY-(a.y-panLast.y)/scale); camTX=clampCamX(camTX-(a.x-panLast.x)/scale); }
+      panLast=a; }
+    else if (ghost){ moveGhostTouch(e.clientX,e.clientY); }
+    else if (panLast){ camTY=clampCamY(camTY-(e.clientY-panLast.y)/scale);
+      camTX=clampCamX(camTX-(e.clientX-panLast.x)/scale); panLast={x:e.clientX,y:e.clientY}; }
+  }
+});
+window.addEventListener('pointerup', e=>{
+  pointers.delete(e.pointerId);
+  if (e.button===1){ midPan=false; cv.style.cursor=''; }
+  if (pointers.size<2) panLast = pointers.size===1 ? [...pointers.values()][0] : null;
+});
+window.addEventListener('pointercancel', e=>{ pointers.delete(e.pointerId); panLast=null; midPan=false; });
+function avgPointer(){ let x=0,y=0,n=0; for (const p of pointers.values()){x+=p.x;y+=p.y;n++;}
+  return {x:x/n,y:y/n}; }
+
+cv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  let dy = e.deltaY; if (e.deltaMode===1) dy*=16; else if (e.deltaMode===2) dy*=viewH;
+  if (e.shiftKey && !e.ctrlKey && ghost){ const d=e.deltaY||e.deltaX;         // Chrome remaps shifted wheel to deltaX
+    rotateGhost(d>0?1:-1); return; }                                          // Shift+wheel = rotate
+  camTY = clampCamY(camTY + dy*1.2/scale); lastWheel = time;                  // wheel = pan (ctrl+wheel too)
+}, { passive:false });
+
+window.addEventListener('keydown', e=>{
+  const t=e.target; if (t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA')) return;
+  audio(); if (actx && actx.state==='suspended') actx.resume();
+  switch (e.key){
+    case 'q': case 'Q': rotateGhost(-1); break;
+    case 'e': case 'E': case 'r': case 'R': rotateGhost(1); break;
+    case 'f': case 'F': if (ghost){ ghost.flip=!ghost.flip; refreshGhost(); } break;
+    case '1': case '2': case '3': case '4': selectSlot(+e.key-1, true); break;
+    case 'Tab': { e.preventDefault();
+      for (let i=1;i<=4;i++){ const idx=(selSlot+i)%4; if (S.queue[idx]){ selectSlot(idx,false); break; } } } break;
+    case ' ': e.preventDefault(); lastJump=time;
+      if (prevCamY!==null && Math.abs(camTY-clampCamY(emitterY-100))<40){ camTY=clampCamY(prevCamY); prevCamY=null; }
+      else { prevCamY=camTY; camTY=clampCamY(emitterY-100); } break;
+    case 'Home': e.preventDefault(); lastJump=time; camTY=clampCamY(emitterY-100); break;
+    case 'End': case 'b': case 'B': e.preventDefault(); lastJump=time; camTY=camBottomVal(); break;
+    case 'Escape': if (panelEl.classList.contains('open')) togglePanel(); else deselect(); break;
+    case 'm': case 'M': setMuted(!S.muted); saveGame(); break;
+    case 'u': case 'U': togglePanel(); break;
+    case 'v': case 'V': fireValve(); break;
+  }
+});
+
+// ghost / placement flow
+function selectSlot(i, toggle, anchor){
+  if (i<0 || i>=4 || !S.queue[i]){ shakeSlot(i); nope(); return; }
+  if (toggle && selSlot===i){ deselect(); return; }
+  selSlot=i;
+  const type=S.queue[i];
+  // anchor priority: explicit (post-place) > carried ghost > mouse > scanned legal spot
+  const w = anchor ? anchor
+    : ghost ? {x:ghost.x,y:ghost.y}
+    : (!touchMode && mouseOnCanvas) ? screenToWorld(ghostSX,ghostSY)
+    : findLegalAnchor(type, S.pieces.length ? emitterX : W/2, 0, false);
+  ghost = { type, rot:0, flip:false, x:w.x, y:w.y, valid:false, reason:null };
+  if (anchor){ ghostHoldX=ghostSX; ghostHoldY=ghostSY; ghostHeld=true; }  // mouse must move 16px to retake
+  refreshGhost(); hotbarDirty=true;
+  btnCancel.style.display='block';
+}
+function deselect(){ ghost=null; selSlot=-1; hotbarDirty=true; btnCancel.style.display='none'; }
+let ghostHoldX=0, ghostHoldY=0, ghostHeld=false;
+function rotateGhost(dir){ if (!ghost) return; ghost.rot=rotStep(ghost.rot,dir); refreshGhost(); }
+function moveGhostMouse(sx,sy){
+  if (ghostHeld){ if (Math.hypot(sx-ghostHoldX,sy-ghostHoldY) < 16) return; ghostHeld=false; }
+  const w=screenToWorld(sx,sy); const g=snapToGrid(w.x,w.y);
+  ghost.x=g.x; ghost.y=g.y; refreshGhost(); }
+function moveGhostTouch(sx,sy){ ghostHeld=false;
+  const w=screenToWorld(sx,sy); const g=snapToGrid(w.x, w.y-90);
+  ghost.x=g.x; ghost.y=g.y; refreshGhost(); }
+function refreshGhost(){ if (!ghost) return;
+  const r = placeReason(ghost.type,ghost.x,ghost.y,ghost.rot,ghost.flip);
+  ghost.valid = r===true; ghost.reason = r===true?null:r; }
+function tryPlace(){
+  if (!ghost || !ghost.valid){ nope(); return; }
+  const type=ghost.type, px=ghost.x;
+  S.queue.splice(selSlot,1);
+  const placed = addPiece(type, ghost.x, ghost.y, ghost.rot, ghost.flip);
+  thunk(); dust(ghost.x,ghost.y,4);
+  // camera pull-up if placed above view top
+  const topY = placed.geo.aabb.minY;
+  if (topY < camY+40/scale) camTY = clampCamY(topY - 40/scale);
+  if (hintStep===0) setHint(1);
+  // keep a same-type slot selected, else next non-empty; anchor the fresh ghost at the
+  // next legal spot above the piece just placed — never as a red X on top of it
+  let next = S.queue.slice(0,4).indexOf(type);
+  if (next===-1) next = S.queue.slice(0,4).findIndex(q=>q);
+  ghost=null; selSlot=-1;
+  if (next>=0) selectSlot(next,false, findLegalAnchor(S.queue[next], px, 0, false));
+  else { hotbarDirty=true; btnCancel.style.display='none'; }
+  saveGame();
+}
+
+// touch buttons + chips
+const btnRot=document.getElementById('btnRot'), btnPlace=document.getElementById('btnPlace'),
+      btnCancel=document.getElementById('btnCancel');
+btnRot.addEventListener('click',()=>rotateGhost(1));
+let rotHold=null;
+btnRot.addEventListener('pointerdown',()=>{ rotHold=setTimeout(function rep(){ rotateGhost(1);
+  rotHold=setTimeout(rep,150); },350); });
+['pointerup','pointercancel','pointerleave'].forEach(ev=>btnRot.addEventListener(ev,()=>clearTimeout(rotHold)));
+btnPlace.addEventListener('click',()=>tryPlace());
+btnCancel.addEventListener('click',()=>deselect());
+const chipUp=document.getElementById('chipUp'), chipDn=document.getElementById('chipDn');
+chipUp.addEventListener('click',()=>{ lastJump=time; camTY=clampCamY(emitterY-100); });
+chipDn.addEventListener('click',()=>{ lastJump=time; camTY=camBottomVal(); });
+
+// ============================================================ HUD
+const goldEl=document.getElementById('gold'), rateEl=document.getElementById('rate'),
+  heightEl=document.getElementById('height'), msfill=document.getElementById('msfill'),
+  mslabel=document.getElementById('mslabel'), hotbarEl=document.getElementById('hotbar'),
+  panelEl=document.getElementById('panel'), ulist=document.getElementById('ulist'),
+  uBtn=document.getElementById('uBtn'), mBtn=document.getElementById('mBtn'),
+  valveBtn=document.getElementById('valveBtn'), hintEl=document.getElementById('hint'),
+  comboEl=document.getElementById('combo');
+let hotbarDirty=true, slotPop=false, hudT=0;
+uBtn.addEventListener('click',togglePanel);
+document.getElementById('pclose').addEventListener('click',togglePanel);
+mBtn.addEventListener('click',()=>{ audio(); setMuted(!S.muted); saveGame(); });
+valveBtn.addEventListener('click',fireValve);
+function togglePanel(){ panelEl.classList.toggle('open'); renderUpgrades(); }
+function fmt(n){ if (n<10000) return Math.floor(n).toLocaleString('en-US');
+  if (n<1e6) return (n/1e3).toFixed(1)+'k'; if (n<1e9) return (n/1e6).toFixed(2)+'M';
+  return (n/1e9).toFixed(2)+'B'; }
+function renderHotbar(){
+  hotbarDirty=false; hotbarEl.innerHTML='';
+  for (let i=0;i<4;i++){
+    const d=document.createElement('div'); d.className='slot'+(i===selSlot?' sel':'')+(S.queue[i]?'':' empty');
+    const def=S.queue[i]?PIECE_DEFS[S.queue[i]]:null;
+    d.innerHTML=`<span class="key">${i+1}</span><span class="glyph">${def?def.glyph:'·'}</span>`+
+      (def?`<span class="pname">${def.name}</span>`:'');
+    if (slotPop && i===Math.min(3,S.queue.length-1)) d.classList.add('pop');
+    d.addEventListener('click',()=>{ audio(); selectSlot(i,true); });
+    d.dataset.slot=i;
+    hotbarEl.appendChild(d);
+  }
+  slotPop=false;
+  if (S.queue.length>4){ const m=document.createElement('span'); m.id='qmore';
+    m.textContent='+'+(S.queue.length-4); hotbarEl.appendChild(m); }
+  if (touchMode){ const g=document.createElement('button'); g.id='gear'; g.textContent='⚙';
+    g.addEventListener('click',togglePanel); hotbarEl.appendChild(g); }
+}
+function shakeSlot(i){ const el=hotbarEl.querySelector(`[data-slot="${i}"]`);
+  if (el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } }
+let upgSig='';
+function upgSignature(){
+  let s=valveSeen?'v':'';
+  for (const k in UPG) s += S.upgrades[k]+':'+(S.gold>=costOf(k,S.upgrades[k])?1:0)+';';
+  return s;
+}
+function renderUpgrades(){
+  if (!panelEl.classList.contains('open')) return;
+  if (S.milestonesClaimed>=5 || S.gold>=10000) valveSeen=true;
+  const sig=upgSignature();
+  if (sig===upgSig) return;               // don't rebuild DOM under the pointer needlessly
+  upgSig=sig;
+  ulist.innerHTML='';
+  for (const k in UPG){
+    const u=UPG[k], L=S.upgrades[k];
+    if (k==='valve' && !valveSeen) continue;
+    const capped = u.cap && L>=u.cap;
+    const row=document.createElement('div'); row.className='urow';
+    row.innerHTML=`<div class="uinfo"><div class="uname">${u.name} <span class="lvl">L${L}</span></div>
+      <div class="ueff">${u.eff(L)}${capped?' (max)':' → '+u.eff(L+1)}</div></div>`;
+    const b=document.createElement('button');
+    b.textContent = capped?'MAX':fmt(costOf(k,L))+' g';
+    b.disabled = capped || S.gold < costOf(k,L);
+    b.addEventListener('click',()=>{ buyUpgrade(k); renderUpgrades(); });
+    row.appendChild(b); ulist.appendChild(row);
+  }
+}
+function updateHUD(force){
+  goldEl.textContent='⛃ '+fmt(S.gold);
+  const rate=goldEMA; rateEl.textContent=rate>0.05?`(+${rate<100?rate.toFixed(1):fmt(rate)} g/s)`:'';
+  heightEl.textContent='▲ '+heightM().toFixed(1)+' m';
+  const next=MILESTONES[S.milestonesClaimed];
+  if (next){ const prev=S.milestonesClaimed?MILESTONES[S.milestonesClaimed-1].h:0;
+    msfill.style.width=Math.min(100,100*(heightM()-prev)/(next.h-prev))+'%';
+    mslabel.textContent=`${PIECE_DEFS[next.unlock]?PIECE_DEFS[next.unlock].name:(next.unlock==='twin'?'Twin Emitter':'Sky Bell')} @ ${next.h} m`;
+  } else { msfill.style.width='100%'; mslabel.textContent='Gantry complete'; }
+  if (S.upgrades.valve>=1){ valveBtn.style.display='inline-block';
+    valveBtn.classList.toggle('ready', valveT<=0&&valveCd<=0);
+    valveBtn.textContent = valveT>0?`Valve ${valveT.toFixed(0)}s`:(valveCd>0?`Valve ${Math.ceil(valveCd)}s`:'Valve (V)'); }
+  if (hotbarDirty||force) renderHotbar();
+  btnPlace.disabled = !(ghost && ghost.valid);
+  // camera chips are no-ops while the whole tower fits on screen — dim them
+  const collapsed = Math.abs(clampCamY(-1e9) - camBottomVal()) < 40;
+  chipUp.disabled = chipDn.disabled = collapsed;
+  if (force){ upgSig=''; renderUpgrades(); }
+}
+
+// hints (controls-spec §7)
+function updateHint(){
+  let show=null, anchor=null;
+  document.querySelectorAll('.pulseOutline').forEach(el=>el.classList.remove('pulseOutline'));
+  if (hintStep===0 && !ghost){
+    anchor=hotbarEl.querySelector('[data-slot="0"]');
+    show=touchMode?'Tap a piece':'Pick a piece — 1';
+    anchor && anchor.classList.add('pulseOutline');
+  } else if (hintStep===0 && ghost){
+    const sp=worldToScreen(ghost.x,ghost.y);
+    show = ghost.valid ? (touchMode?'Drag, then ✓':'Click to place')
+      : ghost.reason==='support' ? 'Needs support — near the floor or another piece'
+      : ghost.reason==='overlap' ? 'Overlaps a piece — slide it clear'
+      : 'Out of bounds';
+    positionHint(sp.x, sp.y-80); hintEl.textContent=show; hintEl.style.display='block'; return;
+  } else if (hintStep===1 && S.pieces.length){
+    const p=S.pieces[S.pieces.length-1], sp=worldToScreen(p.x,p.y);
+    show='Marbles pay for every piece they touch';
+    positionHint(sp.x, sp.y-70); hintEl.textContent=show; hintEl.style.display='block'; return;
+  } else if (hintStep===2 && S.gold>=15){
+    anchor=touchMode?document.getElementById('gear'):uBtn;
+    show=touchMode?'Spend it':'Spend it — U';
+    anchor && anchor.classList.add('pulseOutline');
+  } else { hintEl.style.display='none'; return; }
+  if (show && anchor){
+    const r=anchor.getBoundingClientRect();
+    if (r.top < 70) positionHintBelow(r.left+r.width/2, r.bottom+14);  // topbar anchors: go below
+    else positionHint(r.left+r.width/2, r.top-14);
+    hintEl.textContent=show; hintEl.style.display='block';
+  } else hintEl.style.display='none';
+}
+function positionHintBelow(cx,ty){ hintEl.style.left=Math.max(6,Math.min(viewW-190,cx-90))+'px';
+  hintEl.style.top=ty+'px'; }
+function positionHint(cx,by){ hintEl.style.left=Math.max(6,Math.min(viewW-190,cx-90))+'px';
+  hintEl.style.top=Math.max(6,by-40)+'px'; }
+
+// ============================================================ render
+function draw(){
+  ctx.clearRect(0,0,viewW,viewH);
+  const shx = shake>0 ? (Math.random()*4-2) : 0;
+  ctx.save(); if (shx) ctx.translate(0,shx);
+  // parallax
+  drawParallax();
+  // letterbox walls
+  if (ox>0){ ctx.fillStyle='rgba(0,0,0,0.25)';
+    ctx.fillRect(0,0,ox,viewH); ctx.fillRect(viewW-ox,0,ox,viewH); }
+  // floor / basin
+  const f0=worldToScreen(0,0), bw=derived.basinW();
+  const bl=worldToScreen(W/2-bw/2,0), br=worldToScreen(W/2+bw/2,0);
+  ctx.fillStyle=PAL.woodDark; ctx.fillRect(0, f0.y, viewW, viewH-f0.y);
+  ctx.fillStyle='#1c1510'; ctx.fillRect(worldToScreen(0,0).x, f0.y, (bl.x-worldToScreen(0,0).x), 16*scale);
+  ctx.fillRect(br.x, f0.y, worldToScreen(W,0).x-br.x, 16*scale);
+  // basin glow + trough
+  ctx.globalAlpha=basinGlow;
+  ctx.drawImage(glowSprite,0,0,180*dpr,60*dpr, (bl.x+br.x)/2-90*scale, f0.y-40*scale, 180*scale, 60*scale);
+  ctx.globalAlpha=1;
+  ctx.fillStyle=PAL.brassLo; ctx.fillRect(bl.x, f0.y-4*scale, br.x-bl.x, 10*scale);
+  ctx.fillStyle=PAL.brass; ctx.fillRect(bl.x, f0.y-4*scale, br.x-bl.x, 3*scale);
+  // pieces
+  for (const p of S.pieces) drawPiece(p);
+  // ghost
+  if (ghost) drawGhost();
+  // emitter
+  drawEmitter();
+  // marbles
+  for (const m of marbles){
+    const sp=worldToScreen(m.x,m.y);
+    if (sp.y<-30||sp.y>viewH+30) continue;
+    const r=PHYS.R_MARBLE*scale;
+    if (m.gilded){ ctx.globalAlpha=0.35; ctx.fillStyle=PAL.gold;
+      ctx.beginPath(); ctx.arc(sp.x-m.vx*0.012*scale, sp.y-m.vy*0.012*scale, r*0.8, 0, 7); ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.drawImage(gildSprite, sp.x-r, sp.y-r, r*2, r*2); }
+    else ctx.drawImage(marbleSprites[m.hue], sp.x-r, sp.y-r, r*2, r*2);
+    if (m.touched.size>=5){ ctx.fillStyle=PAL.gold; ctx.font=`${11*Math.max(scale,0.8)}px system-ui`;
+      ctx.textAlign='center'; ctx.fillText('×'+(1+derived.comboStep()*(m.touched.size-1)).toFixed(1), sp.x, sp.y-r-4); }
+  }
+  // particles
+  for (const p of particles){
+    const sp=worldToScreen(p.x,p.y), a=Math.max(0,p.life/p.maxLife);
+    if (p.kind==='dust'){ ctx.globalAlpha=a; ctx.fillStyle='#c9b18f'; ctx.fillRect(sp.x-1.5,sp.y-1.5,3,3); }
+    else if (p.kind==='spark'){ ctx.globalAlpha=a*(0.6+0.4*Math.sin(p.life*40)); ctx.fillStyle=PAL.gold;
+      ctx.fillRect(sp.x-1,sp.y-1,2,2); }
+    else { ctx.globalAlpha=a; ctx.save(); ctx.translate(sp.x,sp.y); ctx.rotate(p.rot);
+      ctx.fillStyle=[PAL.accent,PAL.gold,'#7fb069','#6fa8c9','#c97f96'][p.hue||0];
+      ctx.fillRect(-1.5,-3,3,6); ctx.restore(); }
+  }
+  ctx.globalAlpha=1;
+  // valve overdrive tint
+  if (valveT>0){ ctx.fillStyle='rgba(255,215,94,0.04)'; ctx.fillRect(0,0,viewW,viewH); }
+  // toast
+  if (toastT>0 && toastMsg){
+    ctx.globalAlpha=Math.min(1,toastT);
+    ctx.fillStyle=PAL.panel; ctx.strokeStyle=PAL.accent;
+    const tw=Math.min(420,viewW-40);
+    ctx.beginPath(); ctx.roundRect((viewW-tw)/2, 64, tw, 54, 10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=PAL.brassHi; ctx.font='600 15px system-ui'; ctx.textAlign='center';
+    ctx.fillText(toastMsg[0], viewW/2, 87);
+    ctx.fillStyle=PAL.muted; ctx.font='12px system-ui';
+    ctx.fillText(toastMsg[1], viewW/2, 106);
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+}
+function drawParallax(){
+  for (const layer of [[0.3,220,6,0.35],[0.6,340,10,0.5]]){
+    const [f,gap,hgt,al]=layer;
+    ctx.globalAlpha=al*0.5; ctx.fillStyle=PAL.woodDark;
+    const off=((camY*f)%gap+gap)%gap;
+    for (let y=-off*scale; y<viewH+gap*scale; y+=gap*scale)
+      ctx.fillRect(0,y,viewW,hgt*scale);
+  }
+  ctx.globalAlpha=1;
+  if (!RM()){
+    ctx.fillStyle='rgba(242,232,216,0.06)';
+    for (let i=0;i<12;i++){ const mx=(i*997)%viewW, my=((i*613)+time*8)%viewH;
+      ctx.beginPath(); ctx.arc(mx,my,1+i%2,0,7); ctx.fill(); }
+  }
+}
+function drawSegList(segs, flash){
+  for (const g of segs){
+    const a=worldToScreen(g[0],g[1]), b=worldToScreen(g[2],g[3]);
+    ctx.strokeStyle=PAL.wood; ctx.lineWidth=8*scale; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    ctx.strokeStyle=flash?PAL.brassHi:PAL.brass; ctx.lineWidth=2.5*scale;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  }
+}
+function drawPiece(p){
+  const sp=worldToScreen(p.x,p.y);
+  if (sp.y<-140||sp.y>viewH+140) return;
+  const flash = p.flash>0;                 // decay happens in housekeeping (fixed step)
+  if (p.type==='bumper'){
+    const r=22*scale;
+    ctx.drawImage(bumperSprite, sp.x-r, sp.y-r, r*2, r*2);
+    if (flash){ ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(sp.x,sp.y,r+3,0,7); ctx.stroke(); }
+    return;
+  }
+  if (p.type==='spinner'){
+    ctx.fillStyle=PAL.wood; ctx.beginPath(); ctx.arc(sp.x,sp.y,10*scale,0,7); ctx.fill();
+    ctx.strokeStyle=PAL.woodDark; ctx.stroke();
+    if (p.wsegs) drawSegList(p.wsegs, flash);
+    return;
+  }
+  if (p.type==='funnel'){
+    const g=p.geo.segs;
+    const a=worldToScreen(g[0][0],g[0][1]), b=worldToScreen(g[0][2],g[0][3]),
+          c=worldToScreen(g[1][0],g[1][1]);
+    ctx.fillStyle='rgba(188,216,230,0.15)';
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath(); ctx.fill();
+  }
+  drawSegList(p.geo.segs, flash);
+  if (p.type==='boost'){                      // animated chevrons
+    const g=p.geo.segs[0], t=(time*60)%20/20;
+    for (let i=0;i<3;i++){
+      const u=((i+t)/3)%1, wx=g[0]+(g[2]-g[0])*u, wy=g[1]+(g[3]-g[1])*u, s2=worldToScreen(wx,wy);
+      ctx.fillStyle=PAL.brassHi; ctx.globalAlpha=0.7;
+      ctx.beginPath(); ctx.moveTo(s2.x-3*scale,s2.y-6*scale); ctx.lineTo(s2.x+3*scale,s2.y-9*scale);
+      ctx.lineTo(s2.x+3*scale,s2.y-4*scale); ctx.closePath(); ctx.fill(); ctx.globalAlpha=1; }
+  }
+}
+function drawGhost(){
+  const geo=pieceWorldGeo(ghost.type,ghost.x,ghost.y,ghost.rot,ghost.flip);
+  // support-rule violation: SHOW the rule — floor band + attachment zones near the ghost
+  if (ghost.reason==='support'){
+    const f0=worldToScreen(0,-64), f1=worldToScreen(W,0);
+    ctx.fillStyle='rgba(127,191,106,0.10)'; ctx.fillRect(f0.x,f0.y,f1.x-f0.x,f1.y-f0.y);
+    ctx.strokeStyle='rgba(127,191,106,0.35)'; ctx.setLineDash([6,6]); ctx.lineWidth=1.5;
+    ctx.strokeRect(f0.x,f0.y,f1.x-f0.x,f1.y-f0.y);
+    for (const p of S.pieces){
+      if (Math.abs(p.x-ghost.x)>320 || Math.abs(p.y-ghost.y)>320) continue;
+      const b=p.geo.aabb, a0=worldToScreen(b.minX-48,b.minY-48), a1=worldToScreen(b.maxX+48,b.maxY+48);
+      ctx.strokeRect(a0.x,a0.y,a1.x-a0.x,a1.y-a0.y);
+    }
+    ctx.setLineDash([]);
+  }
+  ctx.globalAlpha = ghost.valid?0.7:0.4;
+  const col = ghost.valid?null:PAL.bad;
+  for (const g of geo.segs){
+    const a=worldToScreen(g[0],g[1]), b=worldToScreen(g[2],g[3]);
+    ctx.strokeStyle=col||PAL.wood; ctx.lineWidth=8*scale; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    ctx.strokeStyle=col||PAL.brass; ctx.lineWidth=2.5*scale;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+  for (const c of geo.circles){
+    const s2=worldToScreen(c.x,c.y);
+    ctx.fillStyle=col||PAL.brass; ctx.beginPath(); ctx.arc(s2.x,s2.y,c.r*scale,0,7); ctx.fill(); }
+  if (ghost.type==='spinner'){
+    const s2=worldToScreen(ghost.x,ghost.y);
+    ctx.strokeStyle=col||PAL.brass; ctx.lineWidth=2.5*scale;
+    for (let k=0;k<4;k++){ const a=k*Math.PI/2;
+      ctx.beginPath(); ctx.moveTo(s2.x+12*scale*Math.cos(a), s2.y+12*scale*Math.sin(a));
+      ctx.lineTo(s2.x+55*scale*Math.cos(a), s2.y+55*scale*Math.sin(a)); ctx.stroke(); } }
+  ctx.globalAlpha = ghost.valid?0.9:0.7;
+  const gp=worldToScreen(ghost.x,ghost.y);
+  if (ghost.valid){ ctx.strokeStyle=PAL.accent; ctx.lineWidth=1;      // snap crosshair
+    ctx.beginPath(); ctx.moveTo(gp.x-4,gp.y); ctx.lineTo(gp.x+4,gp.y);
+    ctx.moveTo(gp.x,gp.y-4); ctx.lineTo(gp.x,gp.y+4); ctx.stroke();
+    ctx.strokeStyle=PAL.good; ctx.globalAlpha=0.5; ctx.lineWidth=2;
+    const a=geo.aabb, p0=worldToScreen(a.minX,a.minY), p1=worldToScreen(a.maxX,a.maxY);
+    ctx.strokeRect(p0.x,p0.y,p1.x-p0.x,p1.y-p0.y);
+  } else { const sz=touchMode?16:10;
+    ctx.strokeStyle=PAL.bad; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(gp.x-sz/2,gp.y-sz/2); ctx.lineTo(gp.x+sz/2,gp.y+sz/2);
+    ctx.moveTo(gp.x+sz/2,gp.y-sz/2); ctx.lineTo(gp.x-sz/2,gp.y+sz/2); ctx.stroke(); }
+  ctx.globalAlpha=1;
+}
+function drawEmitter(){
+  const twin=S.milestonesClaimed>=7;
+  for (const off of (twin?[-80,80]:[0])){
+    const e=worldToScreen(emitterX+off, emitterY);
+    ctx.fillStyle=PAL.brassLo;
+    ctx.beginPath(); ctx.moveTo(e.x-26*scale,e.y-30*scale); ctx.lineTo(e.x+26*scale,e.y-30*scale);
+    ctx.lineTo(e.x+10*scale,e.y); ctx.lineTo(e.x-10*scale,e.y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle=PAL.brass;
+    ctx.fillRect(e.x-26*scale, e.y-34*scale, 52*scale, 6*scale);
+  }
+  if (derived.bell()){ const b=worldToScreen(emitterX, emitterY-60);
+    ctx.fillStyle=PAL.gold; ctx.beginPath(); ctx.arc(b.x,b.y,10*scale,Math.PI,0); ctx.fill();
+    ctx.fillRect(b.x-10*scale,b.y,20*scale,3*scale); }
+}
+
+// ============================================================ combo counter DOM
+function updateCombo(){
+  comboCatches = comboCatches.filter(t=>time-t<2);
+  const n=comboCatches.length;
+  if (n>=5){ const sp=worldToScreen(W/2, -70);
+    const hb=hotbarEl.getBoundingClientRect();
+    comboEl.style.display='block'; comboEl.textContent='×'+n;
+    comboEl.style.left=(sp.x-16)+'px';
+    comboEl.style.top=Math.min(sp.y, hb.top-40)+'px'; }   // never overlap the hotbar
+  else comboEl.style.display='none';
+}
+
+// ============================================================ main loop
+let acc=0, lastT=0;
+function frame(t){
+  try{ frameBody(t); }catch(e){ console.error(e); }   // one bad frame must never kill the rAF chain
+  requestAnimationFrame(frame);
+}
+function frameBody(t){
+  const dt=Math.min((t-lastT)/1000||0, PHYS.MAX_FRAME); lastT=t;
+  acc += dt;
+  while (acc >= PHYS.FIXED_DT){ physicsTick(PHYS.FIXED_DT); acc -= PHYS.FIXED_DT; }
+  // camera lerp (+ ghost edge auto-nudge, user wheel wins for 150ms)
+  if (ghost && time-lastWheel>0.15 && time-lastJump>1){   // user pans/jumps always win
+    const gs=worldToScreen(ghost.x,ghost.y);
+    if (gs.y < 120) camTY = clampCamY(camTY - 240*dt/scale);
+    else if (gs.y > viewH-100-trayH()) camTY = clampCamY(camTY + 240*dt/scale);
+  }
+  const k = 1-Math.exp(-(RM()?30:10)*dt);
+  camY += (camTY-camY)*k; camX += (camTX-camX)*k;
+  if (Math.abs(camTY-camY)<0.5) camY=camTY;
+  stepParticles(dt);
+  basinGlow = Math.max(0.08, basinGlow - basinGlow*6*dt);
+  if (shake>0) shake-=dt;
+  if (toastT>0) toastT-=dt;
+  draw();
+  updateCombo();
+  hudT+=dt; if (hudT>0.1){ hudT=0;
+    goldEMA += ((S.gold-lastGold)/0.1 - goldEMA)*0.05; lastGold=S.gold;
+    updateHUD(); updateHint();
+    if (panelEl.classList.contains('open') && (frameCount%10===0)) renderUpgrades(); }
+  frameCount++;
+}
+let frameCount=0;
+
+// ============================================================ boot
+window.addEventListener('resize', fit);
+document.addEventListener('visibilitychange',()=>{ if (document.hidden) saveGame(); });
+window.addEventListener('beforeunload', saveGame);
+const hadSave = loadGame();
+if (hadSave){
+  if (S.pieces.length>0 && hintStep<3) setHint(3);
+  recomputeTower();
+  const away=(()=>{try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));return d&&d.savedAt?Date.now()-d.savedAt:0;}catch(e){return 0;}})();
+  if (away > 3600e3) toast('The workshop slept '+Math.floor(away/3600e3)+' h','The marbles waited.');
+}
+rebuildStatics(); recomputeTower();
+// reload must not skip the piece-drip gate (refresh-spam gave a free piece per reload)
+dripTimer = derived.dripInterval();
+fit();
+setMuted(S.muted);
+camY = camTY = camBottomVal();
+lastGold = S.gold;
+// boot burst: three staggered marbles so the first seconds always have motion
+for (const dy of [0,-70,-140]){ const y0=emitterY;
+  marbles.push({ x:emitterX+Math.random()*60-30, y:y0+dy, vx:Math.random()*40-20, vy:0,
+    hue:(Math.random()*5)|0, gilded:false, escrow:0, touched:new Set(), popCd:new Map(),
+    snapX:0, snapY:0, stuckCount:0, snapT:0, spin:0, dead:false }); }
+updateHUD(true);
+requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(frame); });
+
+// ============================================================ dev hatch (pure, for headless smoke tests)
+function stepMarble(m, colliders, h){
+  m.vy += PHYS.GRAVITY*h;
+  const sp=Math.hypot(m.vx,m.vy);
+  if (sp>PHYS.MAX_SPEED){ const k=PHYS.MAX_SPEED/sp; m.vx*=k; m.vy*=k; }
+  let dx=m.vx*h, dy=m.vy*h; const d=Math.hypot(dx,dy);
+  if (d>PHYS.MAX_STEP_DISP){ const k=PHYS.MAX_STEP_DISP/d; dx*=k; dy*=k; }
+  m.x+=dx; m.y+=dy;
+  for (let pass=0;pass<PHYS.RESOLVE_ITERS;pass++)
+    for (const c of colliders){
+      if (c.type==='circle') resolveCircleCircle(m,c.x,c.y,c.r,c.mat||MAT.bumper);
+      else resolveCircleSegment(m,c[0],c[1],c[2],c[3],c.mat||MAT.plank,0,0,h);
+    }
+  return m;
+}
+window.__game = {
+  PHYS, MAT, PIECE_DEFS, UPG, MILESTONES, W, PX_PER_M,
+  closestPointOnSegment, resolveCircleSegment, resolveCircleCircle, stepMarble,
+  snapToGrid, rotStep, pentatonicIndex, costOf,
+  touchPay: touchPayPure,
+  validPlacement, clampCam: clampCamY,
+  get state(){ return S; }, get marbles(){ return marbles; }, get time(){ return time; },
+  step: physicsTick, setMuted,
+  reset(){ try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(HINT_KEY); }catch(e){}
+    location.reload(); },
+};
+})();
+</script>
+</body>
+</html>
