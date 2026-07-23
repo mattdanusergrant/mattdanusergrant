@@ -173,6 +173,9 @@ button{font:inherit; color:inherit; background:none; border:none; cursor:pointer
 .helpbody p{margin:6px 0}
 .helpbody .kw{margin-right:4px}
 kbd.gold{font-family:inherit; border:1px solid var(--line2); border-radius:5px; padding:0 5px; background:var(--codebg); font-size:12px}
+#hovercard{position:fixed; z-index:90; width:280px; pointer-events:none; display:none}
+#hovercard .bigcard{margin:0; box-shadow:var(--shadow-hover)}
+.zlink{font-size:12px}
 .toast{position:fixed; top:14px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); border-radius:999px; padding:8px 18px; font-size:13.5px; z-index:80; box-shadow:var(--shadow-hover); max-width:88vw; text-align:center}
 </style>
 </head>
@@ -1084,8 +1087,16 @@ function sheetHTML(){
       return `<div data-insp="${iid}">${bigCardHTML(iid, showFace)}
         ${mine && S.phase==='main' && S.active===sh.pi && !VIEW.aiBusy ? actionRowHTML(iid, sh) : ''}</div>`;
     }).join('') : '<p class="sub">Empty.</p>';
+    let zoneBtns='';
+    if(sh.zone==='room'){
+      if(sh.idx===0) zoneBtns=`<div class="acts">
+        <button class="act" data-zv="${sh.pi}:discard"><b>View ${mine?'your':'their'} discard pile (${p.discard.length})</b><small>Discards are public — anyone may read them</small></button>
+        ${p.exile.length?`<button class="act" data-zv="${sh.pi}:exile"><b>View exiled cards (${p.exile.length})</b><small>Cast out of the game</small></button>`:''}</div>`;
+      if(sh.idx===1) zoneBtns=`<p class="sub">Deck: ${p.deck.length} cards — facedown and private, as at a table.</p>`;
+      if(sh.idx===2) zoneBtns=mine?'':`<p class="sub">Hand: ${p.hand.length} cards — hidden, as at a table.</p>`;
+    }
     return `<div class="scrim" data-close="1"><div class="sheet">
-      <h3 class="disp">${title}</h3><p class="sub">${sub}</p>${cards}
+      <h3 class="disp">${title}</h3><p class="sub">${sub}</p>${cards}${zoneBtns}
       ${mine&&sh.zone==='room'&&!P().mustered&&P().hand.length?`<button class="act" id="fromHandHere"><b>Place a card from hand here</b><small>Your one free castle placement this turn</small></button>`:''}
     </div></div>`;
   }
@@ -1128,6 +1139,16 @@ function sheetHTML(){
     return `<div class="scrim" data-close="1"><div class="sheet">
       <h3 class="disp">Move where?</h3><p class="sub">Moving taps this card — that is its action for the turn.</p>
       <div class="acts">${opts.join('')}</div></div></div>`;
+  }
+  if(sh.kind==='zone'){
+    const p=S.players[sh.pi]; const arr=sh.z==='discard'?p.discard:p.exile;
+    const who = sh.pi===viewer()?'Your':esc(p.name)+"'s";
+    return `<div class="scrim" data-close="1"><div class="sheet">
+      <h3 class="disp">${who} ${sh.z==='discard'?'discard pile':'exiled cards'} <span class="num">(${arr.length})</span></h3>
+      <p class="sub">${sh.z==='discard'?'Public information — newest on top.':'Removed from the game by the Crypt breach or exile effects.'}</p>
+      ${arr.length? [...arr].reverse().map(iid=>bigCardHTML(iid,true)).join('') : '<p class="sub">Empty.</p>'}
+      <div class="acts"><button class="act" data-close="1"><b>Close</b></button></div>
+    </div></div>`;
   }
   if(sh.kind==='help') return helpSheet();
   return '';
@@ -1422,6 +1443,7 @@ function wire(){
     // resume any pending flow render
     render(); } });
   const sh=VIEW.sheet;
+  overlays.querySelectorAll('[data-zv]').forEach(el=>el.onclick=()=>{ const [pi,z]=el.dataset.zv.split(':'); VIEW.sheet={kind:'zone', pi:+pi, z}; render(); });
   overlays.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>{
     const act=el.dataset.act, iid=el.dataset.i;
     if(act==='reveal') tapForManaSolo(iid,true);
@@ -1476,8 +1498,41 @@ const FACTION_BLURB={W:'The shield-wall. Garrisons that defend even tapped.',U:'
 window.KC_INIT = function(cards, decks){
   CARDS = cards; DECKS = decks;
   for(const c of CARDS) byId[c.id]=c;
+  initHover();
   render();
 };
+/* mouseover preview: a big card follows the pointer on desktop.
+   Never leaks: enemy facedown cards preview as a card back only. */
+function initHover(){
+  if(!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  const hc=document.createElement('div'); hc.id='hovercard'; document.body.appendChild(hc);
+  const iidOf=(el)=>{
+    const t=el.closest('[data-i],[data-h],[data-pl],[data-tr]');
+    if(!t) return null;
+    if(t.dataset.i) return t.dataset.i;
+    if(t.dataset.pl) return t.dataset.pl;
+    if(t.dataset.tr) return t.dataset.tr;
+    if(t.dataset.h!==undefined && S && S.players) return S.players[viewer()].hand[+t.dataset.h]||null;
+    return null;
+  };
+  document.addEventListener('mouseover',(ev)=>{
+    if(!S){ hc.style.display='none'; return; }
+    const iid=iidOf(ev.target);
+    if(!iid || !S.inst[iid]){ hc.style.display='none'; return; }
+    const showFace = I(iid).faceup || I(iid).owner===viewer() || whereIs(iid)&&whereIs(iid).zone==='hand';
+    hc.innerHTML = bigCardHTML(iid, showFace);
+    hc.style.display='block';
+  });
+  document.addEventListener('mouseout',(ev)=>{ if(!iidOf(ev.target)) return; hc.style.display='none'; });
+  document.addEventListener('mousemove',(ev)=>{
+    if(hc.style.display==='none') return;
+    const w=290, h=hc.offsetHeight||220;
+    let x=ev.clientX+18, y=ev.clientY+14;
+    if(x+w>innerWidth) x=ev.clientX-w-14;
+    if(y+h>innerHeight) y=Math.max(8, innerHeight-h-8);
+    hc.style.left=x+'px'; hc.style.top=y+'px';
+  });
+}
 </script>
 <script>
 'use strict';
