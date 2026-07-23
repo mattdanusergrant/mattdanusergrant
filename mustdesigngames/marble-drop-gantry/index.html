@@ -41,6 +41,16 @@
   #valveBtn{display:none;border-color:var(--brass);color:var(--brass-hi);font-size:13px}
   #modeBtn{font-size:13px;color:var(--muted)}
   #modeBtn:hover{color:var(--ink)}
+  #dbg{display:none;color:var(--bad);border:1px solid var(--bad);border-radius:999px;
+    padding:2px 9px;font-size:10px;letter-spacing:.12em;font-weight:600}
+  #resetBtn{display:block;margin:18px 4px 8px;width:calc(100% - 8px);min-height:40px;
+    color:var(--muted);font-size:13px}
+  #resetBtn.confirm{color:#fff;background:var(--bad);border-color:var(--bad)}
+  /* debug palette: one small slot per piece type, horizontally scrollable if needed */
+  #hotbar.debug{max-width:96vw;overflow-x:auto;overscroll-behavior:contain}
+  #hotbar.debug .slot{min-width:56px;width:56px;height:66px}
+  #hotbar.debug .slot .glyph{font-size:20px}
+  #hotbar.debug .slot .pname{font-size:7.5px}
   #valveBtn.ready{border-color:var(--gold-coin);color:var(--gold-coin);box-shadow:0 0 8px rgba(255,215,94,.35)}
   .tbtn{width:40px;min-height:40px;text-align:center;padding:8px 0}
 
@@ -123,6 +133,7 @@
   <span id="gold" class="num">⛃ 0</span><span id="rate" class="num"></span>
   <button id="valveBtn" title="Overpressure Valve (V)">Valve</button>
   <button id="modeBtn" title="Switch build (G)">⬒ Bricks</button>
+  <span id="dbg">DEBUG</span>
   <span id="height" class="num">▲ 0 m</span>
   <span id="mstone"><span id="msbar"><span id="msfill"></span></span><span id="mslabel"></span></span>
   <button id="uBtn" class="tbtn" title="Upgrades (U)">⚙</button>
@@ -131,7 +142,8 @@
 
 <div id="hotbar"></div>
 
-<div id="panel"><h2>Upgrades</h2><button id="pclose" aria-label="Close">✕</button><div id="ulist"></div></div>
+<div id="panel"><h2>Upgrades</h2><button id="pclose" aria-label="Close">✕</button><div id="ulist"></div>
+  <button id="resetBtn">Reset workshop…</button></div>
 
 <div id="tctl">
   <button id="btnRot" aria-label="Rotate">↻</button>
@@ -212,7 +224,7 @@ const MILESTONES = [
   { h:45, unlock:'bell',   iso:'bell',    bonus:100000, flavor:'The whole valley hears it ring.' },
 ];
 const DRIP_WEIGHTS = { plank:3, funnel:2, chute:2, bumper:2, cradle:1.5, wall:1.5, spinner:1, boost:1 };
-const ISO_DRIP_WEIGHTS = { ichute:3, idrop:2.5, icorner:2, ielbow:2, ispiral:1.5, isplit:1.5, ibooster:1, ikicker:0.75 };
+const ISO_DRIP_WEIGHTS = { ichute:3, ialt:3, idrop:2.5, icorner:2, icornerL:2, ielbow:2, ispiral:1.5, isplit:1.5, ibooster:1, ikicker:0.75 };
 
 // ============================================================ Brickworks (iso mode) defs
 // Grid: IGX columns × stacked levels. One block per cell; marble paths are carved THROUGH
@@ -224,10 +236,19 @@ const ITOPX=14, ITOPY=10;                           // top-face skew (iso look)
 const ISO_DEFS = {
   ichute:  { name:'Through Chute', base:1, glyph:'▤',
              routes:{ L:[[0,26],[28,28],[56,30]], T:[[28,0],[28,26],[56,30]] }, out:'R' },
+  // the Alternator: a brass flicker in the cell's heart sends each arrival left, then
+  // right, back and forth forever — enter from any side and get flicked (including
+  // straight back out the way you came in)
+  ialt:    { name:'Alternator',    base:1, glyph:'⇋',
+             routes:{ T:[[28,0],[28,18]], L:[[0,26],[28,18]], R:[[56,26],[28,18]] },
+             out:'ALT',
+             branches:{ L:[[28,18],[14,22],[0,26]], R:[[28,18],[42,22],[56,26]] } },
   idrop:   { name:'Drop Shaft',    base:1, glyph:'▯',
              routes:{ T:[[28,0],[28,44]] }, out:'B', speed:'drop' },
-  icorner: { name:'Corner Brick',  base:1, glyph:'◱',
+  icorner: { name:'Right Corner',  base:1, glyph:'◱',
              routes:{ T:[[28,0],[28,24],[42,27],[56,28]] }, out:'R' },
+  icornerL:{ name:'Left Corner',   base:1, glyph:'◰',
+             routes:{ T:[[28,0],[28,24],[14,27],[0,28]] }, out:'L' },
   ielbow:  { name:'Elbow Brick',   base:1, glyph:'◵',
              routes:{ L:[[0,24],[20,27],[28,34],[28,44]] }, out:'B', speed:'drop' },
   ispiral: { name:'Helix Brick',   base:2, glyph:'♨',
@@ -307,11 +328,16 @@ const S = {
   milestonesClaimed:0,
   stats:{ totalGoldEarned:0, marblesBanked:0, marblesLost:0, marblesSeized:0, bestCombo:0, maxHeightM:0, playtimeS:0, jumpsCaught:0 },
   muted:false,
-  iso:{ blocks:[], queue:['ichute','idrop','ichute'], milestonesClaimed:0, nextId:1 },
+  iso:{ blocks:[], queue:['ialt','ichute','idrop'], milestonesClaimed:0, nextId:1 },
 };
 const msGet = () => MODE==='iso' ? S.iso.milestonesClaimed : S.milestonesClaimed;
 const msInc = () => { if (MODE==='iso') S.iso.milestonesClaimed++; else S.milestonesClaimed++; };
 const Q     = () => MODE==='iso' ? S.iso.queue : S.queue;
+// debug mode (` key, or tap the gold counter 5×): the hotbar becomes a full palette —
+// one slot per piece type, infinite supply, everything unlocked for building
+let DEBUG = false;
+const PALETTE = () => Object.keys(MODE==='iso' ? ISO_DEFS : PIECE_DEFS);
+const SLOTMAX = () => DEBUG ? PALETTE().length : 4;
 let marbles = [], particles = [], spinners = [];
 let selSlot = -1, ghost = null;          // ghost = {type, rot, flip, x, y, valid}
 let spawnTimer = 0, dripTimer = 0, saveTimer = 0, spawnFlip = false;
@@ -334,7 +360,8 @@ const derived = {
 
 // ============================================================ persistence (all try/catch)
 // v2 = v1 + mode + iso build. v1 saves migrate silently (classic untouched, iso empty).
-function saveGame(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:2, mode:MODE,
+function saveGame(){ if (wiping) return;   // a reset must not be re-saved by beforeunload
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:2, mode:MODE,
   gold:S.gold, nextPieceId:S.nextPieceId,
   pieces:S.pieces.map(p=>({id:p.id,type:p.type,x:p.x,y:p.y,rot:p.rot,flip:!!p.flip,t:p.touchedEver?1:0})),
   queue:S.queue, upgrades:S.upgrades, milestonesClaimed:S.milestonesClaimed,
@@ -364,7 +391,7 @@ function loadGame(){ try{
     for (const b of (d.iso.blocks||[]))
       if (ISO_DEFS[b.type] && b.gx>=0 && b.gx<IGX && b.gy>=0 && b.gy<=180 && !isoGrid.has(ikey(b.gx,b.gy)))
         isoAddBlock(b.type, b.gx, b.gy, !!b.flip, b.id, !!b.t);
-    if (!S.iso.queue.length && !S.iso.blocks.length) S.iso.queue=['ichute','idrop','ichute'];
+    if (!S.iso.queue.length && !S.iso.blocks.length) S.iso.queue=['ialt','ichute','idrop'];
   }
   MODE = d.mode==='iso' ? 'iso' : 'classic'; S.mode = MODE;
   return true; }catch(e){ return false; } }
@@ -637,6 +664,7 @@ function msUnlockLabel(ms){
   const key = MODE==='iso' ? ms.iso : ms.unlock;
   if (key==='twin') return 'Twin Emitter!';
   if (key==='bell') return 'The Sky Bell rings!';
+  if (key==='icorner') return 'Corner Bricks (L+R) unlocked!';
   const def = MODE==='iso' ? ISO_DEFS[key] : PIECE_DEFS[key];
   return def ? def.name+' unlocked!' : 'Unlocked!';
 }
@@ -919,9 +947,11 @@ function isoAdvance(dt){
   marbles = marbles.filter(m=>!m.dead && m.y < 200);
 }
 function isoUnlocked(){
-  return ['ichute','idrop']
+  const u = ['ichute','ialt','idrop']
     .concat(MILESTONES.slice(0, S.iso.milestonesClaimed).map(ms=>ms.iso))
-    .filter(u=>ISO_DEFS[u]);
+    .filter(t=>ISO_DEFS[t]);
+  if (u.includes('icorner')) u.push('icornerL');   // corners unlock as a left+right pair
+  return u;
 }
 function findIsoAnchor(gx){
   gx = Math.max(0, Math.min(IGX-1, gx));
@@ -1131,10 +1161,14 @@ window.addEventListener('keydown', e=>{
     case 'q': case 'Q': rotateGhost(-1); break;
     case 'e': case 'E': case 'r': case 'R': rotateGhost(1); break;
     case 'f': case 'F': if (ghost){ ghost.flip=!ghost.flip; refreshGhost(); } break;
-    case '1': case '2': case '3': case '4': selectSlot(+e.key-1, true); break;
-    case 'Tab': { e.preventDefault();
-      for (let i=1;i<=4;i++){ const idx=(selSlot+i)%4; if (Q()[idx]){ selectSlot(idx,false); break; } } } break;
+    case '1': case '2': case '3': case '4': case '5':
+    case '6': case '7': case '8': case '9': selectSlot(+e.key-1, true); break;
+    case '0': selectSlot(9, true); break;
+    case 'Tab': { e.preventDefault(); const n=SLOTMAX();
+      for (let i=1;i<=n;i++){ const idx=(selSlot+i)%n;
+        if (DEBUG || Q()[idx]){ selectSlot(idx,false); break; } } } break;
     case 'g': case 'G': setMode(MODE==='iso'?'classic':'iso'); break;
+    case '`': toggleDebug(); break;
     case ' ': e.preventDefault(); lastJump=time;
       if (prevCamY!==null && Math.abs(camTY-clampCamY(emitterY-100))<40){ camTY=clampCamY(prevCamY); prevCamY=null; }
       else { prevCamY=camTY; camTY=clampCamY(emitterY-100); } break;
@@ -1148,11 +1182,12 @@ window.addEventListener('keydown', e=>{
 });
 
 // ghost / placement flow
-function selectSlot(i, toggle, anchor){
-  if (i<0 || i>=4 || !Q()[i]){ shakeSlot(i); nope(); return; }
+function selectSlot(i, toggle, anchor, keepFlip){
+  const list = DEBUG ? PALETTE() : Q();
+  if (i<0 || i>=SLOTMAX() || !list[i]){ shakeSlot(i); nope(); return; }
   if (toggle && selSlot===i){ deselect(); return; }
   selSlot=i;
-  const type=Q()[i];
+  const type=list[i];
   if (MODE==='iso'){
     let cell;
     if (anchor && anchor.iso) cell = anchor;
@@ -1160,7 +1195,7 @@ function selectSlot(i, toggle, anchor){
     else if (!touchMode && mouseOnCanvas){ const w=screenToWorld(ghostSX,ghostSY);
       cell = { gx:Math.floor((w.x-IX0)/ICW), gy:Math.max(0,Math.floor(-w.y/ICH)) }; }
     else cell = findIsoAnchor(isoTargets.length ? isoTargets[0].gx : (IGX>>1));
-    ghost = { iso:true, type, flip:false, gx:cell.gx, gy:cell.gy, valid:false, reason:null };
+    ghost = { iso:true, type, flip:!!keepFlip, gx:cell.gx, gy:cell.gy, valid:false, reason:null };
     if (anchor){ ghostHoldX=ghostSX; ghostHoldY=ghostSY; ghostHeld=true; }
     refreshGhost(); hotbarDirty=true; btnCancel.style.display='block';
     return;
@@ -1170,7 +1205,7 @@ function selectSlot(i, toggle, anchor){
     : ghost ? {x:ghost.x,y:ghost.y}
     : (!touchMode && mouseOnCanvas) ? screenToWorld(ghostSX,ghostSY)
     : findLegalAnchor(type, S.pieces.length ? emitterX : W/2, 0, false);
-  ghost = { type, rot:0, flip:false, x:w.x, y:w.y, valid:false, reason:null };
+  ghost = { type, rot:0, flip:!!keepFlip, x:w.x, y:w.y, valid:false, reason:null };
   if (anchor){ ghostHoldX=ghostSX; ghostHoldY=ghostSY; ghostHeld=true; }  // mouse must move 16px to retake
   refreshGhost(); hotbarDirty=true;
   btnCancel.style.display='block';
@@ -1200,26 +1235,31 @@ function refreshGhost(){ if (!ghost) return;
 function tryPlace(){
   if (!ghost || !ghost.valid){ nope(); return; }
   if (ghost.iso){ isoTryPlace(); return; }
-  const type=ghost.type, px=ghost.x;
-  S.queue.splice(selSlot,1);
+  const type=ghost.type, px=ghost.x, keptFlip=ghost.flip, keptSlot=selSlot;
+  if (!DEBUG) S.queue.splice(selSlot,1);
   const placed = addPiece(type, ghost.x, ghost.y, ghost.rot, ghost.flip);
   thunk(); dust(ghost.x,ghost.y,4);
   // camera pull-up if placed above view top
   const topY = placed.geo.aabb.minY;
   if (topY < camY+40/scale) camTY = clampCamY(topY - 40/scale);
   if (hintStep===0) setHint(1);
+  ghost=null; selSlot=-1;
+  if (DEBUG){   // palette is infinite: keep the same slot armed, anchored above the piece
+    selectSlot(keptSlot,false, findLegalAnchor(type, px, 0, keptFlip), keptFlip);
+    saveGame(); return;
+  }
   // keep a same-type slot selected, else next non-empty; anchor the fresh ghost at the
   // next legal spot above the piece just placed — never as a red X on top of it
   let next = S.queue.slice(0,4).indexOf(type);
   if (next===-1) next = S.queue.slice(0,4).findIndex(q=>q);
-  ghost=null; selSlot=-1;
   if (next>=0) selectSlot(next,false, findLegalAnchor(S.queue[next], px, 0, false));
   else { hotbarDirty=true; btnCancel.style.display='none'; }
   saveGame();
 }
 function isoTryPlace(){
   const { type, gx, gy, flip } = ghost;
-  S.iso.queue.splice(selSlot,1);
+  const keptSlot = selSlot;
+  if (!DEBUG) S.iso.queue.splice(selSlot,1);
   const b = isoAddBlock(type, gx, gy, flip);
   recomputeIsoTower();
   thunk(); dust(IX0+gx*ICW+ICW/2, -(gy+1)*ICH+ICH/2, 4);
@@ -1235,14 +1275,17 @@ function isoTryPlace(){
   }
   const topY = -(gy+1)*ICH;
   if (topY < camY+40/scale) camTY = clampCamY(topY - 40/scale);
+  ghost=null; selSlot=-1;
+  const anchorAbove = t => isoPlaceReason(t, gx, gy+1)===true ? {iso:true,gx,gy:gy+1}
+    : Object.assign({iso:true}, findIsoAnchor(gx));
+  if (DEBUG){   // palette is infinite: same slot stays armed, ghost hops above the brick
+    selectSlot(keptSlot,false, anchorAbove(type), flip);
+    saveGame(); return;
+  }
   let next = S.iso.queue.slice(0,4).indexOf(type);
   if (next===-1) next = S.iso.queue.slice(0,4).findIndex(q=>q);
-  ghost=null; selSlot=-1;
-  if (next>=0){
-    const above = isoPlaceReason(S.iso.queue[next], gx, gy+1)===true ? {iso:true,gx,gy:gy+1}
-      : Object.assign({iso:true}, findIsoAnchor(gx));
-    selectSlot(next,false, above);
-  } else { hotbarDirty=true; btnCancel.style.display='none'; }
+  if (next>=0) selectSlot(next,false, anchorAbove(S.iso.queue[next]));
+  else { hotbarDirty=true; btnCancel.style.display='none'; }
   saveGame();
 }
 
@@ -1273,6 +1316,35 @@ uBtn.addEventListener('click',togglePanel);
 document.getElementById('pclose').addEventListener('click',togglePanel);
 const modeBtn=document.getElementById('modeBtn');
 modeBtn.addEventListener('click',()=>{ audio(); setMode(MODE==='iso'?'classic':'iso'); });
+// debug toggle: ` key, or 5 quick taps on the gold counter (mobile path)
+const dbgChip=document.getElementById('dbg');
+function toggleDebug(){
+  DEBUG = !DEBUG;
+  deselect();
+  dbgChip.style.display = DEBUG ? 'inline-block' : 'none';
+  toast(DEBUG ? 'Debug: full palette, infinite pieces' : 'Debug off',
+        DEBUG ? 'Every piece type, nothing consumed.' : 'Back to the queue.');
+  hotbarDirty = true; updateHUD(true);
+}
+let goldTaps=[];
+goldEl.addEventListener('click',()=>{ const now=performance.now();
+  goldTaps=goldTaps.filter(t=>now-t<2000); goldTaps.push(now);
+  if (goldTaps.length>=5){ goldTaps=[]; toggleDebug(); } });
+// full reset (two-stage confirm): wipes BOTH builds, gold, upgrades, hints
+let wiping=false;
+function wipeGame(){ wiping=true;
+  try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(HINT_KEY); }catch(e){}
+  location.reload(); }
+const resetBtn=document.getElementById('resetBtn');
+let resetArm=0;
+resetBtn.addEventListener('click',()=>{
+  if (Date.now()-resetArm < 4000){ wipeGame(); return; }
+  resetArm=Date.now();
+  resetBtn.textContent='Wipe BOTH builds + gold? Click again';
+  resetBtn.classList.add('confirm');
+  setTimeout(()=>{ resetBtn.textContent='Reset workshop…';
+    resetBtn.classList.remove('confirm'); resetArm=0; },4000);
+});
 // switch between the two builds; each keeps its own tower/queue/milestones, marbles reset
 function setMode(m){
   if (m===MODE) return;
@@ -1296,7 +1368,23 @@ function fmt(n){ if (n<10000) return Math.floor(n).toLocaleString('en-US');
   return (n/1e9).toFixed(2)+'B'; }
 function renderHotbar(){
   hotbarDirty=false; hotbarEl.innerHTML='';
-  const q = Q(), TB = MODE==='iso' ? ISO_DEFS : PIECE_DEFS;
+  hotbarEl.classList.toggle('debug', DEBUG);
+  const TB = MODE==='iso' ? ISO_DEFS : PIECE_DEFS;
+  if (DEBUG){                                    // full palette, one of each, infinite
+    PALETTE().forEach((t,i)=>{
+      const d=document.createElement('div'); d.className='slot'+(i===selSlot?' sel':'');
+      d.innerHTML=`<span class="key">${(i+1)%10}</span><span class="glyph">${TB[t].glyph}</span>`+
+        `<span class="pname">${TB[t].name}</span>`;
+      d.addEventListener('click',()=>{ audio(); selectSlot(i,true); });
+      d.dataset.slot=i; hotbarEl.appendChild(d);
+    });
+    const inf=document.createElement('span'); inf.id='qmore'; inf.textContent='∞';
+    hotbarEl.appendChild(inf);
+    if (touchMode){ const g=document.createElement('button'); g.id='gear'; g.textContent='⚙';
+      g.addEventListener('click',togglePanel); hotbarEl.appendChild(g); }
+    return;
+  }
+  const q = Q();
   for (let i=0;i<4;i++){
     const d=document.createElement('div'); d.className='slot'+(i===selSlot?' sel':'')+(q[i]?'':' empty');
     const def=q[i]?TB[q[i]]:null;
@@ -1351,6 +1439,7 @@ function updateHUD(force){
     msfill.style.width=Math.min(100,100*(heightM()-prev)/(next.h-prev))+'%';
     const key = MODE==='iso' ? next.iso : next.unlock;
     const nm = key==='twin' ? 'Twin Emitter' : key==='bell' ? 'Sky Bell'
+      : key==='icorner' && MODE==='iso' ? 'Corner Bricks'
       : (MODE==='iso' ? ISO_DEFS[key] : PIECE_DEFS[key]).name;
     mslabel.textContent=`${nm} @ ${next.h} m`;
   } else { msfill.style.width='100%'; mslabel.textContent='Gantry complete'; }
@@ -1577,7 +1666,7 @@ function drawGhost(){
   ctx.globalAlpha=1;
 }
 // ── Brickworks renderer: iso cubes on a gridded lattice ──
-function drawIsoCube(gx, gy, type, flip, alpha, badTint, flash){
+function drawIsoCube(gx, gy, type, flip, alpha, badTint, flash, alt){
   const def = ISO_DEFS[type];
   const o = worldToScreen(IX0+gx*ICW, -(gy+1)*ICH);
   const w=ICW*scale, h=ICH*scale, tx=ITOPX*scale, ty=ITOPY*scale;
@@ -1623,6 +1712,12 @@ function drawIsoCube(gx, gy, type, flip, alpha, badTint, flash){
     const cxp = o.x + (flip?12:44)*scale, cyp = o.y + 12*scale, d = flip?-1:1;
     ctx.beginPath(); ctx.moveTo(cxp, cyp+5*scale); ctx.lineTo(cxp+6*scale*d, cyp);
     ctx.lineTo(cxp, cyp-5*scale); ctx.closePath(); ctx.fill(); }
+  if (type==='ialt'){                              // the flicker arm — tilts toward its NEXT flick
+    const px = o.x+28*scale, py = o.y+26*scale, d = alt ? 1 : -1;
+    ctx.strokeStyle = badTint || PAL.brassHi; ctx.lineWidth = 3*scale; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + d*10*scale, py-11*scale); ctx.stroke();
+    ctx.fillStyle = badTint || PAL.brassLo;
+    ctx.beginPath(); ctx.arc(px, py, 3.2*scale, 0, 7); ctx.fill(); }
   ctx.globalAlpha = 1;
 }
 function drawIsoScene(){
@@ -1668,7 +1763,7 @@ function drawIsoScene(){
   for (const b of sorted){
     const sy = worldToScreen(0, -(b.gy+1)*ICH).y;
     if (sy<-120 || sy>viewH+120) continue;
-    drawIsoCube(b.gx, b.gy, b.type, b.flip, 1, null, b.flash>0);
+    drawIsoCube(b.gx, b.gy, b.type, b.flip, 1, null, b.flash>0, b.alt);
   }
   if (ghost && ghost.iso) drawIsoGhost();
   drawEmitter();
@@ -1843,8 +1938,8 @@ window.__game = {
   validPlacement, clampCam: clampCamY,
   get state(){ return S; }, get marbles(){ return marbles; }, get time(){ return time; },
   step: physicsTick, setMuted,
-  reset(){ try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(HINT_KEY); }catch(e){}
-    location.reload(); },
+  reset(){ wipeGame(); },
+  toggleDebug, get DEBUG(){ return DEBUG; },
 };
 })();
 </script>
