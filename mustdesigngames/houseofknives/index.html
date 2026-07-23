@@ -207,7 +207,7 @@ let VIEW = {sheet:null, picking:null, flow:null, toast:null}; // transient ui (n
 
 function freshPlayer(name, color){
   return { name, color, deck:[], hand:[], discard:[], exile:[],
-    rooms:[[],[],[]], fields:[[],[],[]], start:[],
+    rooms:[[],[],[]], fields:[[],[],[]],
     leader:null, mustered:false, overgrowUsed:0, lost:false };
 }
 function newGame(c0, c1){
@@ -222,9 +222,8 @@ function newGame(c0, c1){
     // leader instance (not in deck)
     const ldef = CARDS.find(c => c.color===col && c.type==='leader');
     p.leader = makeInst(ldef.id, pi);
-    p.start = [p.leader, p.deck.pop(), p.deck.pop()]; // the household: Leader + top 2, all hidden
-    for(const iid of p.start) I(iid).faceup = false;
-    for(let k=0;k<5;k++) p.hand.push(p.deck.pop());
+    p.hand.push(p.leader);                 // presented to all, then hidden in hand
+    for(let k=0;k<4;k++) p.hand.push(p.deck.pop());
   }
   logLine(`A new siege begins — ${COLORS[c0]} vs ${COLORS[c1]}.`, true);
 }
@@ -341,10 +340,7 @@ function beginTurn(){
   }
   // clear all turn buffs owned by active player's cards (fresh turn)
   S.phase='main';
-  // draw (P1 skips very first draw)
-  if(!(S.turn===1 && S.active===0)){
-    if(!draw(S.active,1)) return; // deck-out loss handled
-  }
+  if(!draw(S.active,1)) return; // turn-order compensation lives in the opening draws
   logLine(`— Turn ${S.turn}, ${p.name} (${COLORS[p.color]}) —`, true);
 }
 function draw(pi, n){
@@ -1284,30 +1280,49 @@ function renderSetup(){
   if(bs) bs.onclick=()=>{ newGame(VIEW.setup.p0, VIEW.setup.p1); S.phase='setup'; S.setupStage=0; render(); };
   wireTheme();
 }
-function renderLeaderSetup(){ // house setup: seat 3 hidden cards (Leader among them)
+function renderLeaderSetup(){ // opening: reveal Leaders -> each player seeds 1 facedown card per room from hand
+  if(!S.revealDone){
+    app.innerHTML=`<div class="topbar"><span class="brand">House <em>of</em> Knives</span></div>
+      <div style="max-width:560px;margin:0 auto">
+      <p class="eyebrow">The Houses present their Leaders</p>
+      <h1 class="disp" style="font-size:24px;line-height:1.15">Know your enemy's face. You will not know their address.</h1>
+      ${S.players.map(p=>`<p class="eyebrow" style="margin-top:14px">${esc(p.name)} — ${COLORS[p.color]}</p>${bigCardHTML(p.leader,true)}`).join('')}
+      <p style="color:var(--ink2);font-size:14px">Each Leader now goes into its owner's hand. It may be hidden among the opening castle cards — or held back. The crown's face is public; its address is the first bluff.</p>
+      <button class="chip primary" id="revGo" style="font-size:16px;padding:10px 26px">Begin the seating</button>
+      <div class="spacer"></div></div>`;
+    overlays.innerHTML='';
+    document.getElementById('revGo').onclick=()=>{ S.revealDone=true; render(); };
+    return;
+  }
   const pi=S.setupStage; const p=S.players[pi];
   S._pl = S._pl || {};
-  const rows = p.start.map(iid=>`<div>${bigCardHTML(iid,true)}
-      <div class="roomopt">${[0,1,2].map(r=>`<button class="act" data-hp="${iid}:${r}" style="${S._pl[iid]===r?'outline:2px solid var(--focus)':''}"><b>${ROOMS[r]}</b><small>→ ${ZONE_OF_ROOM[r]}</small></button>`).join('')}</div></div>`).join('');
+  const taken = Object.values(S._pl);
+  const roomRow = r => `<div style="margin:10px 0">
+    <p class="eyebrow">${ROOMS[r]} <span style="letter-spacing:0;text-transform:none">→ ${ZONE_OF_ROOM[r]}</span></p>
+    <div class="handrow">${p.hand.map(iid=>{ const d=D(iid); const sel=S._pl[r]===iid; const used=!sel&&taken.includes(iid);
+      return `<button class="hcard ${d.color} ${sel?'sel':''}" data-pk="${r}:${iid}" ${used?'disabled style="opacity:.35"':''}>
+        <span class="hn">${esc(d.name)}</span><span class="ht">${d.type}</span>
+        <span class="hb"><span class="num">${costStr(fullCost(d))}</span>${isUnit(iid)?`<span class="num">${d.power}/${d.health}</span>`:''}</span></button>`; }).join('')}</div></div>`;
   app.innerHTML=`<div class="topbar"><span class="brand">House <em>of</em> Knives</span></div>
-    <div style="max-width:560px;margin:0 auto">
-    <p class="eyebrow">${esc(p.name)} — seat your House</p>
-    <h1 class="disp" style="font-size:24px;line-height:1.15">Three cards begin in play, all facedown. One is your Leader. Hide the crown well.</h1>
-    <p style="color:var(--ink2);font-size:14px">Your Leader and the top two cards of your deck start hidden in your castle. Only you know which room holds the crown. Every facedown card taps for 1 Gold.</p>
-    ${rows}
-    <div class="spacer"></div>
-    <button class="chip primary" id="hgo" style="font-size:16px;padding:10px 26px" ${p.start.every(x=>S._pl[x]!==undefined)?'':'disabled'}>Take your seats</button>
+    <div style="max-width:640px;margin:0 auto">
+    <p class="eyebrow">${esc(p.name)} — seed your castle</p>
+    <h1 class="disp" style="font-size:24px;line-height:1.15">Place one card from your hand in each room, facedown.</h1>
+    <p style="color:var(--ink2);font-size:14px">Your Leader may take a room — or stay in your hand. Then you refill to five${pi>0?` (+${pi} for going ${['first','second','third','fourth'][pi]})`:''}.</p>
+    ${[0,1,2].map(roomRow).join('')}
+    <button class="chip primary" id="ogo" style="font-size:16px;padding:10px 26px" ${[0,1,2].every(r=>S._pl[r]!==undefined)?'':'disabled'}>Seal the rooms</button>
     <div class="spacer"></div></div>`;
   overlays.innerHTML='';
-  app.querySelectorAll('[data-hp]').forEach(el=>el.onclick=()=>{ const [iid,r]=el.dataset.hp.split(':'); S._pl[iid]=+r; render(); });
-  const g=document.getElementById('hgo');
+  app.querySelectorAll('[data-pk]').forEach(el=>el.onclick=()=>{ const [r,iid]=el.dataset.pk.split(':');
+    if(S._pl[r]===iid) delete S._pl[r]; else S._pl[r]=iid; render(); });
+  const g=document.getElementById('ogo');
   if(g) g.onclick=()=>{
-    for(const iid of p.start){ I(iid).faceup=false; p.rooms[S._pl[iid]].push(iid); }
-    logLine(`${p.name} seats their House — three hidden cards take their places.`);
-    p.start=[]; S._pl={};
+    for(const r of [0,1,2]){ const iid=S._pl[r]; p.hand.splice(p.hand.indexOf(iid),1); I(iid).faceup=false; p.rooms[r].push(iid); }
+    draw(pi, 3+pi);
+    logLine(`${p.name} seals one hidden card into each room and draws ${3+pi}.`);
+    S._pl={};
     if(S.setupStage===0){ S.setupStage=1;
       overlays.innerHTML=`<div class="full"><div class="fullin"><p class="eyebrow">Pass the device</p>
-        <h1 class="disp">${esc(S.players[1].name)}</h1><p>Seat your House in secret.</p>
+        <h1 class="disp">${esc(S.players[1].name)}</h1><p>Seed your castle in secret.</p>
         <button class="chip primary" id="passGo" style="font-size:16px;padding:10px 26px">Ready</button></div></div>`;
       app.innerHTML='';
       document.getElementById('passGo').onclick=()=>render();
@@ -1327,7 +1342,7 @@ function renderVictory(){
 function helpSheet(){
   return `<div class="scrim" data-close="1"><div class="sheet helpbody">
     <h3 class="disp">How to play</h3>
-    <p class="sub">Kill the enemy Leader. Protect your own — it starts the game hidden facedown in your castle, beside the top two cards of your deck.</p>
+    <p class="sub">Kill the enemy Leader. Protect your own. Openings: Leaders are revealed to all, taken into hand, then each player seeds one facedown card into each room — the crown may be walled up, or still in the hand.</p>
     <h4>Your turn</h4>
     <p>Untap, draw, then place <b>one</b> card from hand into a room — faceup or facedown. Facedown cards tap for 1 <kbd class="gold">Gold</kbd>; faceup cards tap for their color and have abilities live. Every card gets <b>one tap per turn</b>: mana, a move, or an attack.</p>
     <h4>The castle</h4>
