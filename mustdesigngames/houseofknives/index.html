@@ -210,9 +210,9 @@ function freshPlayer(name, color){
     rooms:[[],[],[]], fields:[[],[],[]],
     leader:null, mustered:false, overgrowUsed:0, lost:false };
 }
-function newGame(c0, c1){
-  S = { seed: Math.floor(Math.random()*1e9), turn:1, active:0, phase:'setup', pendingFx:[],
-        players:[freshPlayer('Player 1', c0), freshPlayer('Player 2', c1)],
+function newGame(c0, c1, solo){
+  S = { seed: Math.floor(Math.random()*1e9), turn:1, active:0, phase:'setup', pendingFx:[], solo:!!solo,
+        players:[freshPlayer(solo?'You':'Player 1', c0), freshPlayer(solo?'The Rival':'Player 2', c1)],
         inst:{}, nextI:1, log:[], winner:null, setupStage:0 };
   for (const [pi, col] of [[0,c0],[1,c1]]){
     const p = S.players[pi];
@@ -236,10 +236,11 @@ function I(id){ return S.inst[id]; }
 function D(id){ return byId[I(id).cid]; }
 function P(){ return S.players[S.active]; }
 function OPP(){ return S.players[1-S.active]; }
+function viewer(){ return (S && S.solo) ? 0 : (S ? S.active : 0); } // solo: board always from the human's seat
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
 function logLine(t, hl){ S.log.push({t, hl:!!hl, turn:S.turn}); }
 function snapshot(){ UNDO.push(JSON.stringify(S)); if (UNDO.length>80) UNDO.shift(); }
-function undo(){ if(!UNDO.length) return toast('Nothing to undo'); S = JSON.parse(UNDO.pop()); VIEW={sheet:null,picking:null,flow:null}; render(); }
+function undo(){ if(!UNDO.length) return toast('Nothing to undo'); S = JSON.parse(UNDO.pop()); VIEW={sheet:null,picking:null,flow:null,aiBusy:VIEW.aiBusy}; render(); }
 
 /* ---------- derived stats (statics + turn buffs) ---------- */
 function whereIs(iid){ // -> {pi, zone:'room'|'field'|'hand'|'deck'|'discard'|'exile', idx}
@@ -357,10 +358,15 @@ function draw(pi, n){
 function endTurn(){
   S.raided=null;
   for(const iid of Object.keys(S.inst)){ S.inst[iid].buffs = S.inst[iid].buffs.filter(b=>b.duration!=='turn'); S.inst[iid].dmg = 0; }
-  UNDO=[]; // undo never crosses the pass screen (no hotseat peeking)
+  UNDO=[]; // undo never crosses turns
   S.active = 1-S.active;
   if(S.active===0) S.turn++;
   VIEW.sheet=null; VIEW.flow=null;
+  if(S.solo){
+    beginTurn(); render();
+    if(S.phase!=='over' && S.active===1) setTimeout(aiKickoff, window.KC_AI_DELAY||600);
+    return;
+  }
   showPass(()=>{ beginTurn(); render(); });
 }
 function eliminate(pi, why){
@@ -914,7 +920,7 @@ function toast(msg){ VIEW.toast=msg; render(); setTimeout(()=>{ if(VIEW.toast===
 
 function miniHTML(iid, opts){
   const inst=I(iid); const d=D(iid);
-  const mine = inst.owner===S.active;
+  const mine = inst.owner===viewer();
   const showFace = inst.faceup || (mine && !(opts&&opts.hideOwn));
   const cls=['mini'];
   if(!inst.faceup && !showFace){ cls.push('dn'); }
@@ -959,7 +965,7 @@ function cellIsPick(pi, zone, idx){
   return false;
 }
 function boardHTML(){
-  const me=S.active, op=1-S.active;
+  const me=viewer(), op=1-viewer();
   // opponent rows are mirrored: their rooms render right-to-left from my perspective
   const oppOrder=[2,1,0];
   return `<div class="board">
@@ -976,21 +982,22 @@ function boardHTML(){
 }
 function statusHTML(){
   const p=P();
+  const busy=VIEW.aiBusy?`<span class="pill" style="border-color:var(--hurt);color:var(--hurt)">The Rival is scheming…</span>`:'';
   return `<div class="statusline">
     <b class="num">Turn ${S.turn}</b>
-    <span class="pill">${esc(p.name)}</span>
+    <span class="pill">${esc(p.name)}</span>${busy}
     <span>${p.mustered? 'castle card placed':'castle card available'}</span>
-    <span class="num">hand ${p.hand.length}</span>
+    <span class="num">hand ${S.players[viewer()].hand.length}</span>
   </div>`;
 }
 function trayHTML(){
-  const p=P();
+  const p=S.players[viewer()];
   return `<div class="tray"><div class="tray-inner">
     <div class="tray-head">
       <span class="eyebrow">Your hand — tap a card</span>
       <span style="display:flex;gap:6px">
-        <button class="chip" id="btnUndo">Undo</button>
-        <button class="chip primary" id="btnEnd">End turn</button>
+        <button class="chip" id="btnUndo" ${VIEW.aiBusy?'disabled':''}>Undo</button>
+        <button class="chip primary" id="btnEnd" ${VIEW.aiBusy?'disabled':''}>End turn</button>
       </span>
     </div>
     <div class="handrow">${p.hand.map((iid,ix)=>{
@@ -1033,7 +1040,7 @@ function renderGame(){
   wire();
 }
 function raidBarHTML(){
-  if(S.phase!=='main') return '';
+  if(S.phase!=='main' || S.active!==viewer()) return '';
   const names=['left','center','right'];
   const btns=[0,1,2].map(i=>{
     const used=S.raided&&S.raided[i];
@@ -1053,7 +1060,7 @@ function openCell(pi, zone, idx){
 function bigCardHTML(iid, showFace){
   const inst=I(iid); const d=D(iid);
   if(!showFace) return `<div class="bigcard"><div class="bch"><span class="bcn">Facedown card</span></div>
-    <div class="bcx">Taps for 1 Gold. Hidden from your enemy${inst.owner===S.active?'':' — and from you'}.</div></div>`;
+    <div class="bcx">Taps for 1 Gold. Hidden from your enemy${inst.owner===viewer()?'':' — and from you'}.</div></div>`;
   const st=isUnit(iid)?stats(iid):null;
   return `<div class="bigcard ${d.color}">
     <div class="bch"><span class="bcn">${esc(d.name)}</span><span class="num" style="font-weight:600">${costStr(fullCost(d))}</span></div>
@@ -1069,13 +1076,13 @@ function sheetHTML(){
   if(sh.kind==='cell'){
     const p=S.players[sh.pi];
     const arr = sh.zone==='room'? p.rooms[sh.idx] : p.fields[sh.idx];
-    const mine = sh.pi===S.active;
+    const mine = sh.pi===viewer();
     const title = sh.zone==='room'? `${ROOMS[sh.idx]} — ${mine?'your':esc(p.name)+"'s"} castle` : `${['Left','Center','Right'][sh.idx]} field — ${mine?'yours':esc(p.name)}`;
     const sub = sh.zone==='room'? `Breached: ${BREACH_TEXT[sh.idx].split(': ')[1]}` : 'Lane-locked: this space clashes straight across the midline.';
     const cards = arr.length? arr.map(iid=>{
       const showFace = I(iid).faceup || mine;
       return `<div data-insp="${iid}">${bigCardHTML(iid, showFace)}
-        ${mine && S.phase==='main' ? actionRowHTML(iid, sh) : ''}</div>`;
+        ${mine && S.phase==='main' && S.active===sh.pi && !VIEW.aiBusy ? actionRowHTML(iid, sh) : ''}</div>`;
     }).join('') : '<p class="sub">Empty.</p>';
     return `<div class="scrim" data-close="1"><div class="sheet">
       <h3 class="disp">${title}</h3><p class="sub">${sub}</p>${cards}
@@ -1083,9 +1090,10 @@ function sheetHTML(){
     </div></div>`;
   }
   if(sh.kind==='hand'){
-    const p=P(); const iid=p.hand[sh.hidx]; if(!iid){ VIEW.sheet=null; return ''; }
+    const p=S.players[viewer()]; const iid=p.hand[sh.hidx]; if(!iid){ VIEW.sheet=null; return ''; }
     const d=D(iid);
     const acts=[];
+    if(sh.readonly) return `<div class="scrim" data-close="1"><div class="sheet">${bigCardHTML(iid,true)}</div></div>`;
     if(!p.mustered || hasOvergrowDef(d))
       acts.push(`<button class="act" data-a="muster"><b>Place into your castle</b><small>${p.mustered?'Overgrow — an extra placement':'Your one free placement'} · choose room &amp; facing</small></button>`);
     if(isUnitDef(d))
@@ -1256,28 +1264,39 @@ function showPass(cb){
 }
 function renderSetup(){
   const opts=Object.keys(DECKS);
-  VIEW.setup=VIEW.setup||{p0:null,p1:null};
-  const pick=(slot)=>opts.map(c=>{
+  VIEW.setup=VIEW.setup||{p0:null,p1:'RND',mode:'solo'};
+  const solo=VIEW.setup.mode!=='hotseat';
+  const pick=(slot,withRnd)=>(withRnd?[`<div class="dopt ${VIEW.setup[slot]==='RND'?'sel':''}" data-dk="${slot}:RND">
+      <h3 class="disp">Random</h3><p>The Rival keeps its banners furled until the reveal.</p></div>`]:[]).concat(opts.map(c=>{
     const l=CARDS.find(x=>x.color===c&&x.type==='leader');
     return `<div class="dopt ${VIEW.setup[slot]===c?'sel':''}" data-dk="${slot}:${c}">
       <h3 class="disp" style="color:var(--${c})">${COLORS[c]}</h3>
-      <p>${l?esc(l.name):''}</p><p>${esc(FACTION_BLURB[c]||'')}</p></div>`; }).join('');
+      <p>${l?esc(l.name):''}</p><p>${esc(FACTION_BLURB[c]||'')}</p></div>`; })).join('');
   app.innerHTML=`<div class="topbar"><span class="brand">House <em>of</em> Knives</span>
     <button class="chip" id="btnTheme">◐</button></div>
     <div style="max-width:640px;margin:0 auto">
-    <p class="eyebrow">A prototype · hotseat for two</p>
+    <p class="eyebrow">A playtest build of a tabletop TCG</p>
     <h1 class="disp" style="font-size:clamp(30px,6vw,44px);line-height:1.1">Two castles. Three rooms each.<br>One Leader must fall.</h1>
     <p style="color:var(--ink2)">Every card can be a worker, a soldier, or a conspirator. Tap is tempo. Crowded rooms breed incredible plots.</p>
-    <h3 class="disp" style="margin-top:18px">Player 1 — choose a castle</h3>
-    <div class="deckpick">${pick('p0')}</div>
-    <h3 class="disp">Player 2 — choose a castle</h3>
-    <div class="deckpick">${pick('p1')}</div>
+    <div style="display:flex;gap:8px;margin:16px 0 4px">
+      <button class="chip ${solo?'primary':''}" data-mode="solo">Solo vs the Rival</button>
+      <button class="chip ${solo?'':'primary'}" data-mode="hotseat">Two players, one device</button>
+    </div>
+    <h3 class="disp" style="margin-top:14px">${solo?'Your House':'Player 1 — choose a castle'}</h3>
+    <div class="deckpick">${pick('p0',false)}</div>
+    <h3 class="disp">${solo?"The Rival's House":'Player 2 — choose a castle'}</h3>
+    <div class="deckpick">${pick('p1',solo)}</div>
     <button class="chip primary" id="btnStart" style="font-size:16px;padding:10px 26px" ${(VIEW.setup.p0&&VIEW.setup.p1)?'':'disabled'}>Raise the banners</button>
     <div class="spacer"></div></div>`;
   overlays.innerHTML='';
-  app.querySelectorAll('[data-dk]').forEach(el=>el.onclick=()=>{ const [s,c]=el.dataset.dk.split(':'); VIEW.setup[s]=c; renderSetup(); });
+  app.querySelectorAll('[data-mode]').forEach(el=>el.onclick=()=>{ VIEW.setup.mode=el.dataset.mode;
+    if(VIEW.setup.mode==='hotseat'&&VIEW.setup.p1==='RND') VIEW.setup.p1=null; renderSetup(); });
+  app.querySelectorAll('[data-dk]').forEach(el=>el.onclick=()=>{ const [sl,c]=el.dataset.dk.split(':'); VIEW.setup[sl]=c; renderSetup(); });
   const bs=document.getElementById('btnStart');
-  if(bs) bs.onclick=()=>{ newGame(VIEW.setup.p0, VIEW.setup.p1); S.phase='setup'; S.setupStage=0; render(); };
+  if(bs) bs.onclick=()=>{
+    let p1=VIEW.setup.p1;
+    if(p1==='RND'){ const pool=opts.filter(c=>c!==VIEW.setup.p0); p1=pool[Math.floor(Math.random()*pool.length)]||opts[0]; }
+    newGame(VIEW.setup.p0, p1, solo); S.phase='setup'; S.setupStage=0; render(); };
   wireTheme();
 }
 function renderLeaderSetup(){ // opening: reveal Leaders -> each player seeds 1 facedown card per room from hand
@@ -1320,6 +1339,12 @@ function renderLeaderSetup(){ // opening: reveal Leaders -> each player seeds 1 
     draw(pi, 3+pi);
     logLine(`${p.name} seals one hidden card into each room and draws ${3+pi}.`);
     S._pl={};
+    if(S.solo){
+      aiSeedOpening();
+      S.phase='main'; beginTurn(); render();
+      toast('The Rival has sealed its rooms.');
+      return;
+    }
     if(S.setupStage===0){ S.setupStage=1;
       overlays.innerHTML=`<div class="full"><div class="fullin"><p class="eyebrow">Pass the device</p>
         <h1 class="disp">${esc(S.players[1].name)}</h1><p>Seed your castle in secret.</p>
@@ -1361,7 +1386,8 @@ function helpSheet(){
 /* ---------- wiring ---------- */
 function wire(){
   wireTheme();
-  const q=(s,fn)=>{ const el=document.getElementById(s); if(el) el.onclick=fn; };
+  const LOCKED=()=>!!VIEW.aiBusy;
+  const q=(s,fn)=>{ const el=document.getElementById(s); if(el) el.onclick=()=>{ if(LOCKED()&&s!=='btnHelp') return; fn(); }; };
   q('btnEnd', ()=>{ snapshot(); logLine(`${P().name} ends the turn.`); endTurn(); });
   q('btnUndo', undo);
   q('btnHelp', ()=>{ VIEW.sheet={kind:'help'}; render(); });
@@ -1371,6 +1397,7 @@ function wire(){
   app.querySelectorAll('[data-raid]').forEach(el=>el.onclick=()=>startRaid(+el.dataset.raid));
   // cells
   app.querySelectorAll('[data-cell]').forEach(el=>el.onclick=(ev)=>{
+    if(LOCKED()) return;
     const [pi,zone,idx]=el.dataset.cell.split(':'); const PI=+pi, IDX=+idx;
     const pk=VIEW.picking;
     if(pk&&pk.kind==='pay'){ // pay by tapping own castle cards: click cell -> tap first eligible, or specific mini
@@ -1388,7 +1415,7 @@ function wire(){
     openCell(PI, zone, IDX);
   });
   // hand
-  app.querySelectorAll('[data-h]').forEach(el=>el.onclick=()=>{ VIEW.sheet={kind:'hand',hidx:+el.dataset.h}; render(); });
+  app.querySelectorAll('[data-h]').forEach(el=>el.onclick=()=>{ if(LOCKED()||S.active!==viewer()) { VIEW.sheet={kind:'hand',hidx:+el.dataset.h, readonly:true}; render(); return; } VIEW.sheet={kind:'hand',hidx:+el.dataset.h}; render(); });
   // overlays (sheets)
   overlays.querySelectorAll('[data-close]').forEach(el=>el.onclick=(ev)=>{ if(ev.target===el||el.tagName==='BUTTON'){ VIEW.sheet=null; render(); } });
   overlays.querySelectorAll('[data-closerev]').forEach(el=>el.onclick=(ev)=>{ if(ev.target===el||el.tagName==='BUTTON'){ VIEW.reveal=null;
@@ -1451,6 +1478,160 @@ window.KC_INIT = function(cards, decks){
   for(const c of CARDS) byId[c.id]=c;
   render();
 };
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   The Rival — a solo opponent for playtesting.
+   HARD CONSTRAINT: the Rival is a PLAYER, not a system. Every move it
+   makes is a legal human play under rules.md; it reads only public
+   information plus its own hidden cards, exactly like a person across
+   the table. It exists so the tabletop game can be tested solo — it
+   adds no rules and never will.
+   ===================================================================== */
+window.KC_AI_DELAY = window.KC_AI_DELAY===undefined ? 650 : window.KC_AI_DELAY;
+const AI_PI = 1;
+function aiP(){ return S.players[AI_PI]; }
+function aiRand(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+/* ---- opening: seed one facedown card per room; maybe hide the Leader ---- */
+function aiSeedOpening(){
+  const p=aiP();
+  const picks=[];
+  if(Math.random()<0.55) picks.push(p.leader);                    // wall the crown up…
+  const traps=p.hand.filter(x=>D(x).trap && !picks.includes(x));
+  const units=p.hand.filter(x=>isUnit(x)&&x!==p.leader&&!picks.includes(x)).sort((a,b)=>fullCostN(a)-fullCostN(b));
+  const rest=p.hand.filter(x=>!picks.includes(x));
+  for(const pool of [traps, units, rest]) for(const c of pool){ if(picks.length<3 && !picks.includes(c)) picks.push(c); }
+  const rooms=[0,1,2].sort(()=>Math.random()-0.5);
+  picks.slice(0,3).forEach((iid,k)=>{ p.hand.splice(p.hand.indexOf(iid),1); I(iid).faceup=false; p.rooms[rooms[k]].push(iid); });
+  draw(AI_PI, 3+AI_PI);
+  logLine('The Rival seals one hidden card into each room and draws '+(3+AI_PI)+'.');
+}
+function fullCostN(iid){ const d=D(iid); return (d.cost.generic||0)+(d.cost.colored||0); }
+
+/* ---- turn driver: paced steps, all through the same engine actions a human uses ---- */
+function aiKickoff(){
+  if(S.phase==='over'){ return; }
+  VIEW.aiBusy=true; render();
+  const steps=[aiMuster, aiDeploy, aiDeploy, aiSpring, aiSneaks, ()=>aiRaid(0), ()=>aiRaid(1), ()=>aiRaid(2)];
+  let k=0;
+  const tick=()=>{
+    if(S.phase==='over'){ VIEW.aiBusy=false; render(); return; }
+    if(k<steps.length){
+      try{ steps[k++](); aiSettle(); }catch(e){ console.warn('rival stumbled:', e); VIEW.picking=null; VIEW.flow=null; }
+      render();
+      setTimeout(tick, window.KC_AI_DELAY);
+    } else {
+      VIEW.aiBusy=false;
+      snapshot(); logLine('The Rival ends the turn.');
+      endTurn();
+    }
+  };
+  setTimeout(tick, window.KC_AI_DELAY);
+}
+
+/* ---- settle any pending choice the way a table player would ---- */
+function aiSettle(){
+  for(let guard=0; guard<24; guard++){
+    if(VIEW.flow){
+      const f=VIEW.flow;
+      if(f.type==='garrison' || (f.type==='raid'&&f.stage==='assign')){ autoAssign(f); f.type==='garrison'?resolveGarrison():resolveClash(); continue; }
+      if(f.type==='raid'&&f.stage==='select'){ VIEW.flow=null; continue; }
+      if(f.type==='sneakpick'){ VIEW.flow=null; continue; }
+    }
+    const pk=VIEW.picking;
+    if(!pk) return;
+    if(pk.kind==='pay'){
+      const srcs=manaSources(AI_PI).filter(x=>!pk.tapped.includes(x)&&!(pk.exclude||[]).includes(x));
+      if(!srcs.length){ VIEW.picking=null; undo(); return; }
+      // spend faceup color-matches before revealing hidden cards
+      srcs.sort((a,b)=>(I(b).faceup?1:0)-(I(a).faceup?1:0));
+      clickPaySource(srcs[0]); continue;
+    }
+    if(pk.kind==='list'){ const pick=pk.cands.slice(0,pk.n); VIEW.picking=null; pk.onDone(pick); continue; }
+    if(pk.kind==='foresee'){ const done=pk.onDone; done(pk.cards.map(iid=>({iid,where:'top'}))); continue; }
+    if(pk.kind==='lane'){ const human=S.players[0];
+      const idx=[0,1,2].sort((a,b)=>human.fields[b].length-human.fields[a].length)[0];
+      const cb=pk.onPick; cb(idx); continue; }
+    return;
+  }
+}
+
+/* ---- affordability: can the Rival pay and still keep two guards untapped? ---- */
+function aiCanAfford(d, reserve){
+  const srcs=manaSources(AI_PI);
+  const cost=fullCost(d);
+  const total=(cost.generic||0)+(cost.colored||0);
+  if(srcs.filter(x=>canColorFor(x,cost)).length < (cost.colored||0)) return false;
+  return srcs.length - total >= (reserve===undefined?2:reserve);
+}
+
+function aiMuster(){
+  const p=aiP();
+  if(p.mustered || !p.hand.length) return;
+  const plots=p.hand.filter(x=>D(x).type==='plot');
+  const pick = plots.length ? plots.sort((a,b)=>(D(b).scheme||0)-(D(a).scheme||0))[0]
+             : [...p.hand].sort((a,b)=>fullCostN(b)-fullCostN(a))[0];
+  const counts=p.rooms.map(r=>r.length);
+  const room = D(pick).type==='plot'
+    ? counts.indexOf(Math.max(...counts))   // schemes join the crowd
+    : counts.indexOf(Math.min(...counts));  // bodies spread the watch
+  muster(p.hand.indexOf(pick), room, true);
+}
+
+function aiDeploy(){
+  const p=aiP();
+  const units=p.hand.filter(x=>isUnit(x)&&D(x).type!=='leader'&&aiCanAfford(D(x)))
+    .sort((a,b)=>fullCostN(a)-fullCostN(b));
+  if(!units.length) return;
+  const iid=units[0];
+  const human=S.players[0];
+  // deploy toward the human lane with the least standing defense (remember: boards invert)
+  const lane=[0,1,2].sort((a,b)=>{
+    const hpA=human.fields[2-a].reduce((n,x)=>n+hp(x),0), hpB=human.fields[2-b].reduce((n,x)=>n+hp(x),0);
+    return hpA-hpB; })[0];
+  deployFromHand(p.hand.indexOf(iid), lane);
+  aiSettle(); // pay
+}
+
+function aiSpring(){
+  const p=aiP();
+  for(let r=0;r<3;r++) for(const iid of p.rooms[r]){
+    const d=D(iid);
+    if(d.type==='plot' && !d.trap && canSpring(iid) && aiCanAfford(d,1)){ springPlot(iid); aiSettle(); return; }
+  }
+}
+
+function aiSneaks(){
+  const human=S.players[0];
+  for(let z=0;z<3;z++) for(const iid of [...aiP().fields[z]]){
+    if(!canSneak(iid)) continue;
+    // prefer the room sheltering a revealed, tapped Leader; else the most crowded room
+    let best=-1, bestScore=-1;
+    for(let r=0;r<3;r++){ const room=human.rooms[r]; if(!room.length) continue;
+      let sc=room.length;
+      if(room.includes(human.leader) && I(human.leader).faceup && I(human.leader).tapped) sc+=100;
+      if(sc>bestScore){ bestScore=sc; best=r; } }
+    if(best<0) return;
+    sneakInto(iid, best); aiSettle(); return; // one infiltration per turn keeps it watchable
+  }
+}
+
+function aiRaid(lane){
+  if(S.phase!=='over' && S.raided && S.raided[lane]) return;
+  const p=aiP(), human=S.players[0];
+  const party=p.fields[lane].filter(x=>raidEligible(x,lane));
+  if(!party.length) return;
+  const enemy=human.fields[2-lane];
+  const myPower=party.reduce((n,x)=>n+stats(x).p,0);
+  const theirHP=enemy.reduce((n,x)=>n+hp(x),0);
+  const roomBehind=human.rooms[2-lane];
+  if(enemy.length===0 && roomBehind.length===0) return;          // nothing to sack
+  if(enemy.length>0 && myPower < theirHP) return;                // can't clear the lane
+  startRaid(lane); VIEW.flow.raiders=party; launchRaid();
+  aiSettle();
+}
 </script>
 <script>
 /* ===== CARD SET — forged by design-forge 2026-07-23, adjudicated; heal purge 2nd ruling (see ../decision-log.md) ===== */
