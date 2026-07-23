@@ -39,6 +39,8 @@
   #msbar{display:block;width:160px;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
   #msfill{display:block;height:100%;width:0%;background:var(--accent)}
   #valveBtn{display:none;border-color:var(--brass);color:var(--brass-hi);font-size:13px}
+  #modeBtn{font-size:13px;color:var(--muted)}
+  #modeBtn:hover{color:var(--ink)}
   #valveBtn.ready{border-color:var(--gold-coin);color:var(--gold-coin);box-shadow:0 0 8px rgba(255,215,94,.35)}
   .tbtn{width:40px;min-height:40px;text-align:center;padding:8px 0}
 
@@ -120,6 +122,7 @@
 <div id="topbar">
   <span id="gold" class="num">⛃ 0</span><span id="rate" class="num"></span>
   <button id="valveBtn" title="Overpressure Valve (V)">Valve</button>
+  <button id="modeBtn" title="Switch build (G)">⬒ Bricks</button>
   <span id="height" class="num">▲ 0 m</span>
   <span id="mstone"><span id="msbar"><span id="msfill"></span></span><span id="mslabel"></span></span>
   <button id="uBtn" class="tbtn" title="Upgrades (U)">⚙</button>
@@ -197,26 +200,118 @@ const UPG = {
 const costOf = (k, L) => Math.ceil(UPG[k].base * Math.pow(UPG[k].g, L));
 
 // milestones (economy-spec §3, unlock slots reconciled to the physics piece set)
+// unlock = classic piece; iso = the Brickworks block the same milestone unlocks
 const MILESTONES = [
-  { h:5,  unlock:'bumper', bonus:50,     flavor:'First rung. The foreman nods.' },
-  { h:6,  unlock:'chute',  bonus:150,    flavor:'The clatter starts to sound like music.' },
-  { h:10, unlock:'cradle', bonus:400,    flavor:'Ten metres of honest brass.' },
-  { h:15, unlock:'wall',   bonus:1200,   flavor:'A baffle for every argument.' },
-  { h:21, unlock:'spinner',bonus:3500,   flavor:'It turns. Therefore it earns.' },
-  { h:28, unlock:'boost',  bonus:10000,  flavor:'Faster marbles, fatter ledgers.' },
-  { h:36, unlock:'twin',   bonus:30000,  flavor:'Two mouths to feed the machine.' },
-  { h:45, unlock:'bell',   bonus:100000, flavor:'The whole valley hears it ring.' },
+  { h:5,  unlock:'bumper', iso:'icorner', bonus:50,     flavor:'First rung. The foreman nods.' },
+  { h:6,  unlock:'chute',  iso:'ielbow',  bonus:150,    flavor:'The clatter starts to sound like music.' },
+  { h:10, unlock:'cradle', iso:'ispiral', bonus:400,    flavor:'Ten metres of honest brass.' },
+  { h:15, unlock:'wall',   iso:'isplit',  bonus:1200,   flavor:'A baffle for every argument.' },
+  { h:21, unlock:'spinner',iso:'ibooster',bonus:3500,   flavor:'It turns. Therefore it earns.' },
+  { h:28, unlock:'boost',  iso:'ikicker', bonus:10000,  flavor:'Faster marbles, fatter ledgers.' },
+  { h:36, unlock:'twin',   iso:'twin',    bonus:30000,  flavor:'Two mouths to feed the machine.' },
+  { h:45, unlock:'bell',   iso:'bell',    bonus:100000, flavor:'The whole valley hears it ring.' },
 ];
 const DRIP_WEIGHTS = { plank:3, funnel:2, chute:2, bumper:2, cradle:1.5, wall:1.5, spinner:1, boost:1 };
+const ISO_DRIP_WEIGHTS = { ichute:3, idrop:2.5, icorner:2, ielbow:2, ispiral:1.5, isplit:1.5, ibooster:1, ikicker:0.75 };
+
+// ============================================================ Brickworks (iso mode) defs
+// Grid: IGX columns × stacked levels. One block per cell; marble paths are carved THROUGH
+// blocks and traversed deterministically. Ports: T(top) L(left) R(right) B(bottom).
+// routes: inPort -> polyline in local cell px (56×44, y down from cell top) ending at the
+// exit edge. flip mirrors x and swaps L/R. 1 level = 1 m.
+const ICW=56, ICH=44, IGX=20, IX0=(W-IGX*ICW)/2;   // 40px margins
+const ITOPX=14, ITOPY=10;                           // top-face skew (iso look)
+const ISO_DEFS = {
+  ichute:  { name:'Through Chute', base:1, glyph:'▤',
+             routes:{ L:[[0,26],[28,28],[56,30]], T:[[28,0],[28,26],[56,30]] }, out:'R' },
+  idrop:   { name:'Drop Shaft',    base:1, glyph:'▯',
+             routes:{ T:[[28,0],[28,44]] }, out:'B', speed:'drop' },
+  icorner: { name:'Corner Brick',  base:1, glyph:'◱',
+             routes:{ T:[[28,0],[28,24],[42,27],[56,28]] }, out:'R' },
+  ielbow:  { name:'Elbow Brick',   base:1, glyph:'◵',
+             routes:{ L:[[0,24],[20,27],[28,34],[28,44]] }, out:'B', speed:'drop' },
+  ispiral: { name:'Helix Brick',   base:2, glyph:'♨',
+             routes:{ T:[[28,0],[44,8],[12,18],[44,30],[16,38],[28,44]] }, out:'B', speed:'slow' },
+  isplit:  { name:'Splitter Brick',base:2, glyph:'⑃',
+             routes:{ T:[[28,0],[28,20]] }, out:'ALT',
+             branches:{ L:[[28,20],[14,24],[0,26]], R:[[28,20],[42,24],[56,26]] } },
+  ibooster:{ name:'Booster Rail',  base:3, glyph:'≫',
+             routes:{ L:[[0,28],[56,28]] }, out:'R', speed:'boost' },
+  ikicker: { name:'Kicker Brick',  base:4, glyph:'⤤',
+             routes:{ L:[[0,28],[26,26],[44,18]] }, out:'JUMP' },
+};
+const isoGrid = new Map();                          // gx*4096+gy -> block
+const ikey = (gx,gy)=>gx*4096+gy;
+const mirrorPort = p => p==='L'?'R':p==='R'?'L':p;
+function isoRoute(def, flip, port){                 // resolved polyline for an entry port
+  const real = flip ? mirrorPort(port) : port;
+  const raw = def.routes[real]; if (!raw) return null;
+  return flip ? raw.map(([x,y])=>[ICW-x,y]) : raw;
+}
+function isoAccepts(block, port){ return !!ISO_DEFS[block.type].routes[block.flip?mirrorPort(port):port]; }
+function isoOut(block){ const o=ISO_DEFS[block.type].out;
+  return block.flip ? (o==='R'?'L':o==='L'?'R':o) : o; }
+function polyCum(pts){ const c=[0]; for(let i=1;i<pts.length;i++)
+  c.push(c[i-1]+Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1])); return c; }
+function polyAt(pts, cum, d){
+  if (d<=0) return pts[0];
+  const total=cum[cum.length-1]; if (d>=total) return pts[pts.length-1];
+  let i=1; while (cum[i]<d) i++;
+  const f=(d-cum[i-1])/(cum[i]-cum[i-1]);
+  return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*f, pts[i-1][1]+(pts[i][1]-pts[i-1][1])*f];
+}
+function isoCellOrigin(gx,gy){ return { x: IX0+gx*ICW, y: -(gy+1)*ICH }; }  // top-left of front face
+function isoAddBlock(type, gx, gy, flip, id, touched){
+  const b = { id: id || S.iso.nextId++, type, gx, gy, flip:!!flip, touchedEver:!!touched,
+              flash:0, alt:false };
+  if (id && id >= S.iso.nextId) S.iso.nextId = id+1;
+  S.iso.blocks.push(b); isoGrid.set(ikey(gx,gy), b);
+  return b;
+}
+function isoPlaceReason(type, gx, gy){
+  if (gx<0 || gx>=IGX || gy<0 || gy>180) return 'oob';
+  if (isoGrid.has(ikey(gx,gy))) return 'overlap';
+  if (gy===0) return true;                                        // on the ground plate
+  if (isoGrid.has(ikey(gx-1,gy)) || isoGrid.has(ikey(gx+1,gy)) ||
+      isoGrid.has(ikey(gx,gy-1)) || isoGrid.has(ikey(gx,gy+1))) return true;
+  return 'support';                                               // lego: must touch a face
+}
+// emitter targets: highest blocks with an open top port (nothing stacked above)
+let isoTargets = [];
+function recomputeIsoTower(){
+  let maxGy = -1, maxTouched = -1;
+  const open = [];
+  for (const b of S.iso.blocks){
+    if (b.gy > maxGy) maxGy = b.gy;
+    if (b.touchedEver && b.gy > maxTouched) maxTouched = b.gy;
+    if (isoAccepts(b,'T') && !isoGrid.has(ikey(b.gx,b.gy+1))) open.push(b);
+  }
+  open.sort((a,b)=>b.gy-a.gy);
+  isoTargets = open.slice(0, msGet()>=7 ? 2 : 1);
+  // feed the shared camera/emitter plumbing (same globals the classic mode uses)
+  minTopY = -(maxGy+1)*ICH;
+  touchedMinY = -(maxTouched+1)*ICH;
+  emitterY = minTopY - 160;
+  emitterX = isoTargets.length ? IX0 + isoTargets[0].gx*ICW + ICW/2 : W/2;
+  const h = heightM(); if (h > S.stats.maxHeightM) S.stats.maxHeightM = h;
+}
 
 // ============================================================ state
+// Two builds share one game: 'classic' (freeform physics) and 'iso' (Brickworks —
+// isometric lego grid, deterministic paths, rare jumps). Gold/upgrades/stats are shared;
+// tower, queue, and milestones are per-mode. The classic sim is untouched by iso code.
+let MODE = 'classic';
 const S = {
   gold:0, nextPieceId:1, pieces:[], queue:['funnel','plank','funnel'],
   upgrades:{drip:0,hopper:0,foundry:0,racks:0,rails:0,gild:0,chimes:0,basin:0,nets:0,valve:0},
   milestonesClaimed:0,
-  stats:{ totalGoldEarned:0, marblesBanked:0, marblesLost:0, marblesSeized:0, bestCombo:0, maxHeightM:0, playtimeS:0 },
+  stats:{ totalGoldEarned:0, marblesBanked:0, marblesLost:0, marblesSeized:0, bestCombo:0, maxHeightM:0, playtimeS:0, jumpsCaught:0 },
   muted:false,
+  iso:{ blocks:[], queue:['ichute','idrop','ichute'], milestonesClaimed:0, nextId:1 },
 };
+const msGet = () => MODE==='iso' ? S.iso.milestonesClaimed : S.milestonesClaimed;
+const msInc = () => { if (MODE==='iso') S.iso.milestonesClaimed++; else S.milestonesClaimed++; };
+const Q     = () => MODE==='iso' ? S.iso.queue : S.queue;
 let marbles = [], particles = [], spinners = [];
 let selSlot = -1, ghost = null;          // ghost = {type, rot, flip, x, y, valid}
 let spawnTimer = 0, dripTimer = 0, saveTimer = 0, spawnFlip = false;
@@ -227,25 +322,29 @@ let hintStep = 0, time = 0;
 const derived = {
   Mrails: () => Math.pow(1.22, S.upgrades.rails),
   comboStep: () => 0.08 + 0.02*S.upgrades.chimes,
-  spawnInterval: () => 3*Math.pow(.88,S.upgrades.drip) * (valveT>0?0.5:1) * (S.milestonesClaimed>=7?0.5:1),
+  spawnInterval: () => 3*Math.pow(.88,S.upgrades.drip) * (valveT>0?0.5:1) * (msGet()>=7?0.5:1),
   marbleCap: () => 8 + 6*S.upgrades.hopper,
   dripInterval: () => 12*Math.pow(.90,S.upgrades.foundry),
   queueCap: () => 3 + S.upgrades.racks,
   basinW: () => 480 + 80*S.upgrades.basin,
-  bell: () => S.milestonesClaimed >= 8,
+  bell: () => msGet() >= 8,
   unlocked: () => ['plank','funnel'].concat(MILESTONES.slice(0,S.milestonesClaimed).map(m=>m.unlock))
                   .filter(u=>PIECE_DEFS[u]),
 };
 
 // ============================================================ persistence (all try/catch)
-function saveGame(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:1,
+// v2 = v1 + mode + iso build. v1 saves migrate silently (classic untouched, iso empty).
+function saveGame(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:2, mode:MODE,
   gold:S.gold, nextPieceId:S.nextPieceId,
   pieces:S.pieces.map(p=>({id:p.id,type:p.type,x:p.x,y:p.y,rot:p.rot,flip:!!p.flip,t:p.touchedEver?1:0})),
   queue:S.queue, upgrades:S.upgrades, milestonesClaimed:S.milestonesClaimed,
-  stats:S.stats, muted:S.muted, valveCd:Math.max(0,valveCd), savedAt:Date.now() })); }catch(e){} }
+  stats:S.stats, muted:S.muted, valveCd:Math.max(0,valveCd),
+  iso:{ blocks:S.iso.blocks.map(b=>({id:b.id,type:b.type,gx:b.gx,gy:b.gy,flip:!!b.flip,t:b.touchedEver?1:0})),
+        queue:S.iso.queue, milestonesClaimed:S.iso.milestonesClaimed, nextId:S.iso.nextId },
+  savedAt:Date.now() })); }catch(e){} }
 function loadGame(){ try{
   const d = JSON.parse(localStorage.getItem(SAVE_KEY));
-  if (!d || d.v !== 1) return false;
+  if (!d || (d.v !== 1 && d.v !== 2)) return false;
   S.gold=Math.max(0,+d.gold||0); S.nextPieceId=d.nextPieceId||1;
   S.queue=(Array.isArray(d.queue)?d.queue:[]).filter(t=>PIECE_DEFS[t]);   // unknown types would kill the rAF loop
   for (const k in S.upgrades){ const v=Math.floor(+((d.upgrades||{})[k])||0);
@@ -257,6 +356,17 @@ function loadGame(){ try{
   // refresh must not skip gates: cooldown keeps ticking on wall-clock, burst is lost,
   // and the piece drip restarts full (reload-spam gains nothing)
   valveT=0; valveCd=Math.max(0,(+d.valveCd||0) - (d.savedAt?(Date.now()-d.savedAt)/1000:0));
+  // Brickworks build (v2); a v1 save just gets the fresh iso defaults
+  if (d.v===2 && d.iso){
+    S.iso.queue = (Array.isArray(d.iso.queue)?d.iso.queue:[]).filter(t=>ISO_DEFS[t]);
+    S.iso.milestonesClaimed = Math.max(0,Math.min(MILESTONES.length, d.iso.milestonesClaimed||0));
+    S.iso.nextId = Math.max(1, d.iso.nextId||1);
+    for (const b of (d.iso.blocks||[]))
+      if (ISO_DEFS[b.type] && b.gx>=0 && b.gx<IGX && b.gy>=0 && b.gy<=180 && !isoGrid.has(ikey(b.gx,b.gy)))
+        isoAddBlock(b.type, b.gx, b.gy, !!b.flip, b.id, !!b.t);
+    if (!S.iso.queue.length && !S.iso.blocks.length) S.iso.queue=['ichute','idrop','ichute'];
+  }
+  MODE = d.mode==='iso' ? 'iso' : 'classic'; S.mode = MODE;
   return true; }catch(e){ return false; } }
 try{ hintStep = parseInt(localStorage.getItem(HINT_KEY)||'0',10)||0; }catch(e){}
 function setHint(n){ hintStep=n; try{ localStorage.setItem(HINT_KEY,String(n)); }catch(e){} }
@@ -311,8 +421,9 @@ function recomputeTower(){
 }
 // milestone/progress height = touched height: a marble must have christened the piece.
 // Kills every stack-tall-and-claim exploit — the run has to be real.
-function heightM(){ return Math.max(0, -touchedMinY/PX_PER_M); }
-function builtHeightM(){ return Math.max(0, -minTopY/PX_PER_M); }
+// (iso: 1 level = 1 m = 44 px; classic: 40 px = 1 m)
+function heightM(){ return Math.max(0, -touchedMinY/(MODE==='iso'?ICH:PX_PER_M)); }
+function builtHeightM(){ return Math.max(0, -minTopY/(MODE==='iso'?ICH:PX_PER_M)); }
 
 function snapToGrid(x,y){ return { x: Math.round(x/8)*8, y: Math.round(y/8)*8 }; }
 function rotStep(rot,dir){ return ((rot + dir*15) % 360 + 360) % 360; }
@@ -522,14 +633,20 @@ const recentOutcomes = [];                   // 1 = voided, 0 = banked (ring of 
 let strayWarnT = -999;
 function pushOutcome(v){ recentOutcomes.push(v); if (recentOutcomes.length>20) recentOutcomes.shift(); }
 
+function msUnlockLabel(ms){
+  const key = MODE==='iso' ? ms.iso : ms.unlock;
+  if (key==='twin') return 'Twin Emitter!';
+  if (key==='bell') return 'The Sky Bell rings!';
+  const def = MODE==='iso' ? ISO_DEFS[key] : PIECE_DEFS[key];
+  return def ? def.name+' unlocked!' : 'Unlocked!';
+}
 function checkMilestones(){
   const h = heightM();
-  while (S.milestonesClaimed < MILESTONES.length && h >= MILESTONES[S.milestonesClaimed].h){
-    const ms = MILESTONES[S.milestonesClaimed];
-    S.milestonesClaimed++;
+  while (msGet() < MILESTONES.length && h >= MILESTONES[msGet()].h){
+    const ms = MILESTONES[msGet()];
+    msInc();
     addGold(ms.bonus);
-    toast(`${ms.h} m — ${PIECE_DEFS[ms.unlock] ? PIECE_DEFS[ms.unlock].name+' unlocked!' :
-      (ms.unlock==='twin'?'Twin Emitter!':'The Sky Bell rings!')} +${fmt(ms.bonus)}`, ms.flavor);
+    toast(`${ms.h} m — ${msUnlockLabel(ms)} +${fmt(ms.bonus)}`, ms.flavor);
     fanfare(); confetti(); shake = RM()?0:0.1;
     updateHUD(true);
   }
@@ -551,8 +668,9 @@ function fireValve(){
 
 // ============================================================ marbles
 function spawnMarble(){
+  if (MODE==='iso'){ isoSpawnMarble(); return; }
   if (marbles.length >= derived.marbleCap()) return;   // cap gates spawning; never queue
-  const twin = S.milestonesClaimed >= 7;
+  const twin = msGet() >= 7;
   const ox = twin ? (spawnFlip ? -80 : 80) : 0; spawnFlip = !spawnFlip;
   let x = emitterX + ox + (Math.random()*90-45), y = emitterY;
   for (let tries=0; tries<5; tries++){
@@ -573,6 +691,7 @@ function spawnMarble(){
 }
 function physicsTick(dt){
   time += dt;
+  if (MODE==='iso'){ isoAdvance(dt); sharedTimers(dt); return; }
   updateSpinners(dt);
   const h = dt/PHYS.SUBSTEPS;
   for (let s=0;s<PHYS.SUBSTEPS;s++){
@@ -628,9 +747,14 @@ function housekeeping(dt){
     m.spin *= Math.pow(0.99, dt*60);
   }
   marbles = marbles.filter(m=>!m.dead && m.y < 200);
-  // piece flash decay lives in the fixed step (frame-rate independent, decays off-screen)
+  sharedTimers(dt);
+}
+// timers/economy plumbing shared by both modes
+function sharedTimers(dt){
+  // flash decay lives in the fixed step (frame-rate independent, decays off-screen)
   for (const p of S.pieces) if (p.flash>0) p.flash -= dt;
-  // timers — primer chain: the first few marbles come fast so the screen is never dead
+  for (const b of S.iso.blocks) if (b.flash>0) b.flash -= dt;
+  // spawn — primer chain: the first few marbles come fast so the screen is never dead
   spawnTimer -= dt;
   if (spawnTimer <= 0){ spawnMarble();
     const warm = S.stats.marblesBanked + S.stats.marblesLost < 5;
@@ -638,23 +762,171 @@ function housekeeping(dt){
   dripTimer -= dt;
   if (dripTimer <= 0){
     dripTimer = derived.dripInterval();
-    if (S.queue.length < derived.queueCap()){
-      const pool = derived.unlocked(); let tot=0;
-      for (const t of pool) tot += DRIP_WEIGHTS[t]||1;
+    const q = Q();
+    if (q.length < derived.queueCap()){
+      const pool = MODE==='iso' ? isoUnlocked() : derived.unlocked();
+      const wts  = MODE==='iso' ? ISO_DRIP_WEIGHTS : DRIP_WEIGHTS;
+      let tot=0; for (const t of pool) tot += wts[t]||1;
       let r = Math.random()*tot, pick = pool[0];
-      for (const t of pool){ r -= DRIP_WEIGHTS[t]||1; if (r<=0){ pick=t; break; } }
-      S.queue.push(pick); hotbarDirty = true; slotPop = true;
+      for (const t of pool){ r -= wts[t]||1; if (r<=0){ pick=t; break; } }
+      q.push(pick); hotbarDirty = true; slotPop = true;
     }
   }
   if (valveT > 0) valveT -= dt; else if (valveCd > 0) valveCd -= dt;
   saveTimer += dt; if (saveTimer >= 10){ saveTimer=0; saveGame(); }
   S.stats.playtimeS += dt;
-  // stray-rate guardrail: rolling last-20 outcomes, re-armable every 2 min —
-  // income collapse must be flagged while it happens, not after 60 lifetime marbles
+  // stray-rate guardrail: rolling last-20 outcomes, re-armable every 2 min
   if (recentOutcomes.length >= 20 && time - strayWarnT > 120){
     const lost = recentOutcomes.reduce((a,b)=>a+b,0);
     if (lost >= 12){ strayWarnT = time; toast('The void is eating your wages','Route the run back over the basin.'); }
   }
+}
+
+// ============================================================ Brickworks runtime
+// Deterministic: marbles ride carved paths block-to-block. Leaving the track is RARE —
+// a 0.4% rail-hop at junctions, or the late-game Kicker Brick — and landing an airborne
+// marble back into an open top port pays a celebrated catch bonus.
+function isoSpawnMarble(){
+  if (marbles.length >= derived.marbleCap()) return;
+  let x, y = emitterY + 20;
+  if (isoTargets.length){
+    const t = isoTargets[(spawnFlip=!spawnFlip) && isoTargets.length>1 ? 1 : 0];
+    x = IX0 + t.gx*ICW + ICW/2 + (Math.random()*12-6);
+  } else x = W/2 + (Math.random()*120-60);
+  marbles.push({ x, y, vx:0, vy:0, hue:(Math.random()*5)|0,
+    gilded: Math.random() < 0.01*S.upgrades.gild, escrow:0, touched:new Set(),
+    track:false, block:null, route:null, cum:null, dist:0, speed:0,
+    jumping:false, airT:0, shed:0, dead:false });
+}
+function isoLaunch(m, vx, vy, jumping){
+  m.track=false; m.block=null; m.vx=vx; m.vy=vy; m.jumping=jumping; m.airT=0;
+}
+function whoosh(){ if (!actx||S.muted) return; osc('sine',180,0.09,0.32,880); }
+function enterBlock(m, block, port){
+  const def = ISO_DEFS[block.type];
+  let route = isoRoute(def, block.flip, port);
+  let out = isoOut(block);
+  if (def.branches){                                   // splitter: pick a side on entry
+    block.alt = !block.alt;
+    const side = block.alt ? 'L' : 'R';
+    const br = block.flip ? def.branches[mirrorPort(side)].map(([x,y])=>[ICW-x,y]) : def.branches[side];
+    route = route.concat(br.slice(1));
+    out = side;
+  }
+  // speed model per block family — flat blocks damp toward rolling speed (no free 400px/s)
+  const sIn = m.track ? m.speed : Math.max(120, Math.min(360, Math.hypot(m.vx,m.vy)*0.5));
+  m.speed = def.speed==='drop'  ? Math.min(sIn*1.3+40, 420)
+          : def.speed==='slow'  ? 90
+          : def.speed==='boost' ? Math.min(Math.max(sIn,130)*1.8, 430)
+          : Math.max(110, Math.min(sIn*0.78, 320));
+  // catch bonus: an airborne JUMPING marble landing in a top port is the moment
+  // (0.15s floor separates real flights from instant block-to-block transfers)
+  if (m.jumping && m.airT > 0.15 && port === 'T'){
+    const bonus = Math.max(5, Math.floor(25 * derived.Mrails() * valveMult()));
+    m.escrow += bonus; S.stats.jumpsCaught++;
+    const sp = worldToScreen(m.x, m.y);
+    showFloater(sp.x, sp.y, 'CAUGHT +'+fmt(bonus), false);
+    click2(); chime(); sparkle(m.x, m.y, 5);
+  }
+  m.track=true; m.block=block; m.route=route; m.cum=polyCum(route); m.dist=0; m.out=out;
+  m.jumping=false; m.airT=0; m.shed=0;
+  if (!block.touchedEver){ block.touchedEver=true; recomputeIsoTower(); checkMilestones(); }
+  if (!m.touched.has(block.id)){
+    m.touched.add(block.id);
+    PIECE_DEFS_BASE_CACHE = def.base;
+    m.escrow += touchPay(m.touched.size);
+    block.flash = 0.12;
+  }
+  ping(m.speed*1.4, m);
+}
+function isoResolveExit(m){
+  const b = m.block, out = m.out;
+  if (out === 'JUMP'){
+    const dir = b.flip ? -1 : 1;
+    isoLaunch(m, dir*(m.speed*1.5+140), -330, true); whoosh(); return;
+  }
+  const [dgx, dgy, req] = out==='R' ? [1,0,'L'] : out==='L' ? [-1,0,'R'] : [0,-1,'T'];
+  const nb = isoGrid.get(ikey(b.gx+dgx, b.gy+dgy));
+  if (nb && isoAccepts(nb, req)){
+    if (Math.random() < 0.004){                        // the rare rail-hop
+      const dir = out==='L' ? -1 : out==='R' ? 1 : (Math.random()<0.5?-1:1);
+      isoLaunch(m, dir*80 + (Math.random()*40-20), -210, true); whoosh(); return;
+    }
+    enterBlock(m, nb, req); return;
+  }
+  if (nb){                                             // wrong port: tumble off it
+    isoLaunch(m, (out==='L'?-1:out==='R'?1:(Math.random()<0.5?-1:1))*45, -150, false); return;
+  }
+  if (out === 'B'){ isoLaunch(m, 0, m.speed*0.35, false); return; }   // open drop
+  isoLaunch(m, (out==='L'?-1:1)*m.speed*0.8, -60, false);             // roll off the end
+}
+function isoAdvance(dt){
+  const bw = derived.basinW()/2;
+  for (const m of marbles){
+    if (m.dead) continue;
+    if (!isFinite(m.x+m.y+m.vx+m.vy)){ m.dead=true; continue; }
+    if (m.track){
+      m.dist += m.speed*dt;
+      const o = isoCellOrigin(m.block.gx, m.block.gy);
+      const p = polyAt(m.route, m.cum, m.dist);
+      m.x = o.x + p[0]; m.y = o.y + p[1];
+      if (m.dist >= m.cum[m.cum.length-1]) isoResolveExit(m);
+    } else {
+      const prevY = m.y;
+      m.airT += dt;
+      m.vy = Math.min(m.vy + 2200*dt, 700);
+      m.x += m.vx*dt; m.y += m.vy*dt;
+      if (m.x < IX0-20){ m.x=IX0-20; m.vx=Math.abs(m.vx)*0.5; }
+      if (m.x > W-IX0+20){ m.x=W-IX0+20; m.vx=-Math.abs(m.vx)*0.5; }
+      if (m.vy > 0){                                   // falling: try to land in a top port
+        const gx = Math.floor((m.x-IX0)/ICW);
+        if (gx>=0 && gx<IGX){
+          const gyHi = Math.floor(-prevY/ICH - 1), gyLo = Math.ceil(-m.y/ICH - 1);
+          for (let gy=gyHi; gy>=gyLo; gy--){
+            if (gy<0) break;
+            const blk = isoGrid.get(ikey(gx,gy));
+            if (!blk) continue;
+            const topY = -(gy+1)*ICH;
+            if (topY < prevY-2 || topY > m.y+2) continue;
+            if (isoAccepts(blk,'T') && !isoGrid.has(ikey(gx,gy+1))){ enterBlock(m, blk, 'T'); break; }
+            // closed top: shed sideways off the brick
+            m.y = topY-1; m.vy = -80; m.vx += (Math.random()<0.5?-1:1)*(50+m.shed*20); m.shed++;
+            break;
+          }
+        }
+      }
+      if (!m.track){
+        // bricks are solid: an air marble drifting into an occupied cell hits the wall
+        const cgx = Math.floor((m.x-IX0)/ICW), cgy = Math.floor(-m.y/ICH);
+        if (cgx>=0 && cgx<IGX && cgy>=0 && m.y<0 && isoGrid.has(ikey(cgx,cgy))){
+          const cellL = IX0+cgx*ICW;
+          if (m.vx > 0){ m.x = cellL - PHYS.R_MARBLE; } else { m.x = cellL + ICW + PHYS.R_MARBLE; }
+          m.vx *= -0.45; ping(Math.abs(m.vx), m);
+        }
+        if (m.y >= 0){
+          if (Math.abs(m.x - W/2) <= bw) bankMarble(m); else voidMarble(m);
+          m.dead = true; continue;
+        }
+        if (m.airT > 12){                              // pinballing forever: seize out
+          const half = Math.floor(m.escrow*0.5);
+          if (half>0) addGold(half);
+          S.stats.marblesSeized = (S.stats.marblesSeized||0)+1;
+          dust(m.x,m.y,3); m.dead=true; continue;
+        }
+      }
+    }
+  }
+  marbles = marbles.filter(m=>!m.dead && m.y < 200);
+}
+function isoUnlocked(){
+  return ['ichute','idrop']
+    .concat(MILESTONES.slice(0, S.iso.milestonesClaimed).map(ms=>ms.iso))
+    .filter(u=>ISO_DEFS[u]);
+}
+function findIsoAnchor(gx){
+  gx = Math.max(0, Math.min(IGX-1, gx));
+  for (let gy=0; gy<=180; gy++) if (isoPlaceReason('ichute', gx, gy)===true) return { gx, gy };
+  return { gx, gy:0 };
 }
 
 // ============================================================ camera / transforms
@@ -672,9 +944,10 @@ function fit(){
   buildSprites();
   camTX = clampCamX(camTX); camTY = clampCamY(camTY);
 }
-// reserve the full-width mobile tray so the basin is never hidden behind it
+// reserve the full-width mobile tray so the basin is never hidden behind it;
+// 132px ground clearance keeps the bottom build row clear of the floating hotbar
 function trayH(){ return (touchMode && viewW < 700) ? 84 : 0; }
-function camBottomVal(){ return 80 - (viewH - trayH())/scale; }
+function camBottomVal(){ return 132 - (viewH - trayH())/scale; }
 function clampCamY(y){ const top = Math.min(emitterY-140, camBottomVal());
   return Math.max(top, Math.min(camBottomVal(), y)); }
 function clampCamX(x){ return Math.max(0, Math.min(Math.max(0, W - viewW/scale), x)); }
@@ -860,7 +1133,8 @@ window.addEventListener('keydown', e=>{
     case 'f': case 'F': if (ghost){ ghost.flip=!ghost.flip; refreshGhost(); } break;
     case '1': case '2': case '3': case '4': selectSlot(+e.key-1, true); break;
     case 'Tab': { e.preventDefault();
-      for (let i=1;i<=4;i++){ const idx=(selSlot+i)%4; if (S.queue[idx]){ selectSlot(idx,false); break; } } } break;
+      for (let i=1;i<=4;i++){ const idx=(selSlot+i)%4; if (Q()[idx]){ selectSlot(idx,false); break; } } } break;
+    case 'g': case 'G': setMode(MODE==='iso'?'classic':'iso'); break;
     case ' ': e.preventDefault(); lastJump=time;
       if (prevCamY!==null && Math.abs(camTY-clampCamY(emitterY-100))<40){ camTY=clampCamY(prevCamY); prevCamY=null; }
       else { prevCamY=camTY; camTY=clampCamY(emitterY-100); } break;
@@ -875,10 +1149,22 @@ window.addEventListener('keydown', e=>{
 
 // ghost / placement flow
 function selectSlot(i, toggle, anchor){
-  if (i<0 || i>=4 || !S.queue[i]){ shakeSlot(i); nope(); return; }
+  if (i<0 || i>=4 || !Q()[i]){ shakeSlot(i); nope(); return; }
   if (toggle && selSlot===i){ deselect(); return; }
   selSlot=i;
-  const type=S.queue[i];
+  const type=Q()[i];
+  if (MODE==='iso'){
+    let cell;
+    if (anchor && anchor.iso) cell = anchor;
+    else if (ghost && ghost.iso) cell = { gx:ghost.gx, gy:ghost.gy };
+    else if (!touchMode && mouseOnCanvas){ const w=screenToWorld(ghostSX,ghostSY);
+      cell = { gx:Math.floor((w.x-IX0)/ICW), gy:Math.max(0,Math.floor(-w.y/ICH)) }; }
+    else cell = findIsoAnchor(isoTargets.length ? isoTargets[0].gx : (IGX>>1));
+    ghost = { iso:true, type, flip:false, gx:cell.gx, gy:cell.gy, valid:false, reason:null };
+    if (anchor){ ghostHoldX=ghostSX; ghostHoldY=ghostSY; ghostHeld=true; }
+    refreshGhost(); hotbarDirty=true; btnCancel.style.display='block';
+    return;
+  }
   // anchor priority: explicit (post-place) > carried ghost > mouse > scanned legal spot
   const w = anchor ? anchor
     : ghost ? {x:ghost.x,y:ghost.y}
@@ -891,19 +1177,29 @@ function selectSlot(i, toggle, anchor){
 }
 function deselect(){ ghost=null; selSlot=-1; hotbarDirty=true; btnCancel.style.display='none'; }
 let ghostHoldX=0, ghostHoldY=0, ghostHeld=false;
-function rotateGhost(dir){ if (!ghost) return; ghost.rot=rotStep(ghost.rot,dir); refreshGhost(); }
+function rotateGhost(dir){ if (!ghost) return;
+  if (ghost.iso){ ghost.flip=!ghost.flip; refreshGhost(); return; }   // iso: rotate = flip
+  ghost.rot=rotStep(ghost.rot,dir); refreshGhost(); }
+function ghostToCell(wx,wy){ return { gx:Math.max(0,Math.min(IGX-1,Math.floor((wx-IX0)/ICW))),
+  gy:Math.max(0,Math.floor(-wy/ICH)) }; }
 function moveGhostMouse(sx,sy){
   if (ghostHeld){ if (Math.hypot(sx-ghostHoldX,sy-ghostHoldY) < 16) return; ghostHeld=false; }
-  const w=screenToWorld(sx,sy); const g=snapToGrid(w.x,w.y);
+  const w=screenToWorld(sx,sy);
+  if (ghost.iso){ const c=ghostToCell(w.x,w.y); ghost.gx=c.gx; ghost.gy=c.gy; refreshGhost(); return; }
+  const g=snapToGrid(w.x,w.y);
   ghost.x=g.x; ghost.y=g.y; refreshGhost(); }
 function moveGhostTouch(sx,sy){ ghostHeld=false;
-  const w=screenToWorld(sx,sy); const g=snapToGrid(w.x, w.y-90);
+  const w=screenToWorld(sx,sy);
+  if (ghost.iso){ const c=ghostToCell(w.x, w.y-90); ghost.gx=c.gx; ghost.gy=c.gy; refreshGhost(); return; }
+  const g=snapToGrid(w.x, w.y-90);
   ghost.x=g.x; ghost.y=g.y; refreshGhost(); }
 function refreshGhost(){ if (!ghost) return;
-  const r = placeReason(ghost.type,ghost.x,ghost.y,ghost.rot,ghost.flip);
+  const r = ghost.iso ? isoPlaceReason(ghost.type, ghost.gx, ghost.gy)
+                      : placeReason(ghost.type,ghost.x,ghost.y,ghost.rot,ghost.flip);
   ghost.valid = r===true; ghost.reason = r===true?null:r; }
 function tryPlace(){
   if (!ghost || !ghost.valid){ nope(); return; }
+  if (ghost.iso){ isoTryPlace(); return; }
   const type=ghost.type, px=ghost.x;
   S.queue.splice(selSlot,1);
   const placed = addPiece(type, ghost.x, ghost.y, ghost.rot, ghost.flip);
@@ -919,6 +1215,34 @@ function tryPlace(){
   ghost=null; selSlot=-1;
   if (next>=0) selectSlot(next,false, findLegalAnchor(S.queue[next], px, 0, false));
   else { hotbarDirty=true; btnCancel.style.display='none'; }
+  saveGame();
+}
+function isoTryPlace(){
+  const { type, gx, gy, flip } = ghost;
+  S.iso.queue.splice(selSlot,1);
+  const b = isoAddBlock(type, gx, gy, flip);
+  recomputeIsoTower();
+  thunk(); dust(IX0+gx*ICW+ICW/2, -(gy+1)*ICH+ICH/2, 4);
+  // the lego click: audible confirm when a port actually lines up with a neighbor
+  const out = isoOut(b);
+  const pairs = [[1,0,'L','R'],[-1,0,'R','L'],[0,-1,'T','B'],[0,1,'B','T']];
+  for (const [dx,dy,nReq,myPort] of pairs){
+    const nb = isoGrid.get(ikey(gx+dx, gy+dy));
+    if (!nb) continue;
+    if ((out===myPort && isoAccepts(nb,nReq)) || (isoAccepts(b,myPort) && isoOut(nb)===nReq)){
+      click2(); break;
+    }
+  }
+  const topY = -(gy+1)*ICH;
+  if (topY < camY+40/scale) camTY = clampCamY(topY - 40/scale);
+  let next = S.iso.queue.slice(0,4).indexOf(type);
+  if (next===-1) next = S.iso.queue.slice(0,4).findIndex(q=>q);
+  ghost=null; selSlot=-1;
+  if (next>=0){
+    const above = isoPlaceReason(S.iso.queue[next], gx, gy+1)===true ? {iso:true,gx,gy:gy+1}
+      : Object.assign({iso:true}, findIsoAnchor(gx));
+    selectSlot(next,false, above);
+  } else { hotbarDirty=true; btnCancel.style.display='none'; }
   saveGame();
 }
 
@@ -947,6 +1271,23 @@ const goldEl=document.getElementById('gold'), rateEl=document.getElementById('ra
 let hotbarDirty=true, slotPop=false, hudT=0;
 uBtn.addEventListener('click',togglePanel);
 document.getElementById('pclose').addEventListener('click',togglePanel);
+const modeBtn=document.getElementById('modeBtn');
+modeBtn.addEventListener('click',()=>{ audio(); setMode(MODE==='iso'?'classic':'iso'); });
+// switch between the two builds; each keeps its own tower/queue/milestones, marbles reset
+function setMode(m){
+  if (m===MODE) return;
+  deselect();
+  marbles = [];                                   // marble shapes differ per mode
+  MODE = m; S.mode = m;
+  if (MODE==='iso') recomputeIsoTower();
+  else { rebuildStatics(); recomputeTower(); }
+  camY = camTY = camBottomVal(); camX = camTX = clampCamX(camX);
+  prevCamY = null;
+  spawnTimer = 0;                                 // first marble arrives immediately
+  modeBtn.textContent = MODE==='iso' ? '◇ Classic' : '⬒ Bricks';
+  hotbarDirty = true; upgSig='';
+  updateHUD(true); saveGame();
+}
 mBtn.addEventListener('click',()=>{ audio(); setMuted(!S.muted); saveGame(); });
 valveBtn.addEventListener('click',fireValve);
 function togglePanel(){ panelEl.classList.toggle('open'); renderUpgrades(); }
@@ -955,19 +1296,20 @@ function fmt(n){ if (n<10000) return Math.floor(n).toLocaleString('en-US');
   return (n/1e9).toFixed(2)+'B'; }
 function renderHotbar(){
   hotbarDirty=false; hotbarEl.innerHTML='';
+  const q = Q(), TB = MODE==='iso' ? ISO_DEFS : PIECE_DEFS;
   for (let i=0;i<4;i++){
-    const d=document.createElement('div'); d.className='slot'+(i===selSlot?' sel':'')+(S.queue[i]?'':' empty');
-    const def=S.queue[i]?PIECE_DEFS[S.queue[i]]:null;
+    const d=document.createElement('div'); d.className='slot'+(i===selSlot?' sel':'')+(q[i]?'':' empty');
+    const def=q[i]?TB[q[i]]:null;
     d.innerHTML=`<span class="key">${i+1}</span><span class="glyph">${def?def.glyph:'·'}</span>`+
       (def?`<span class="pname">${def.name}</span>`:'');
-    if (slotPop && i===Math.min(3,S.queue.length-1)) d.classList.add('pop');
+    if (slotPop && i===Math.min(3,q.length-1)) d.classList.add('pop');
     d.addEventListener('click',()=>{ audio(); selectSlot(i,true); });
     d.dataset.slot=i;
     hotbarEl.appendChild(d);
   }
   slotPop=false;
-  if (S.queue.length>4){ const m=document.createElement('span'); m.id='qmore';
-    m.textContent='+'+(S.queue.length-4); hotbarEl.appendChild(m); }
+  if (q.length>4){ const m=document.createElement('span'); m.id='qmore';
+    m.textContent='+'+(q.length-4); hotbarEl.appendChild(m); }
   if (touchMode){ const g=document.createElement('button'); g.id='gear'; g.textContent='⚙';
     g.addEventListener('click',togglePanel); hotbarEl.appendChild(g); }
 }
@@ -1004,10 +1346,13 @@ function updateHUD(force){
   goldEl.textContent='⛃ '+fmt(S.gold);
   const rate=goldEMA; rateEl.textContent=rate>0.05?`(+${rate<100?rate.toFixed(1):fmt(rate)} g/s)`:'';
   heightEl.textContent='▲ '+heightM().toFixed(1)+' m';
-  const next=MILESTONES[S.milestonesClaimed];
-  if (next){ const prev=S.milestonesClaimed?MILESTONES[S.milestonesClaimed-1].h:0;
+  const next=MILESTONES[msGet()];
+  if (next){ const prev=msGet()?MILESTONES[msGet()-1].h:0;
     msfill.style.width=Math.min(100,100*(heightM()-prev)/(next.h-prev))+'%';
-    mslabel.textContent=`${PIECE_DEFS[next.unlock]?PIECE_DEFS[next.unlock].name:(next.unlock==='twin'?'Twin Emitter':'Sky Bell')} @ ${next.h} m`;
+    const key = MODE==='iso' ? next.iso : next.unlock;
+    const nm = key==='twin' ? 'Twin Emitter' : key==='bell' ? 'Sky Bell'
+      : (MODE==='iso' ? ISO_DEFS[key] : PIECE_DEFS[key]).name;
+    mslabel.textContent=`${nm} @ ${next.h} m`;
   } else { msfill.style.width='100%'; mslabel.textContent='Gantry complete'; }
   if (S.upgrades.valve>=1){ valveBtn.style.display='inline-block';
     valveBtn.classList.toggle('ready', valveT<=0&&valveCd<=0);
@@ -1020,10 +1365,11 @@ function updateHUD(force){
   if (force){ upgSig=''; renderUpgrades(); }
 }
 
-// hints (controls-spec §7)
+// hints (controls-spec §7) — classic mode only
 function updateHint(){
   let show=null, anchor=null;
   document.querySelectorAll('.pulseOutline').forEach(el=>el.classList.remove('pulseOutline'));
+  if (MODE!=='classic'){ hintEl.style.display='none'; return; }
   if (hintStep===0 && !ghost){
     anchor=hotbarEl.querySelector('[data-slot="0"]');
     show=touchMode?'Tap a piece':'Pick a piece — 1';
@@ -1061,6 +1407,7 @@ function draw(){
   ctx.clearRect(0,0,viewW,viewH);
   const shx = shake>0 ? (Math.random()*4-2) : 0;
   ctx.save(); if (shx) ctx.translate(0,shx);
+  if (MODE==='iso'){ drawIsoScene(); drawFxOverlays(); ctx.restore(); return; }
   // parallax
   drawParallax();
   // letterbox walls
@@ -1081,7 +1428,7 @@ function draw(){
   // pieces
   for (const p of S.pieces) drawPiece(p);
   // ghost
-  if (ghost) drawGhost();
+  if (ghost && !ghost.iso) drawGhost();
   // emitter
   drawEmitter();
   // marbles
@@ -1097,7 +1444,11 @@ function draw(){
     if (m.touched.size>=5){ ctx.fillStyle=PAL.gold; ctx.font=`${11*Math.max(scale,0.8)}px system-ui`;
       ctx.textAlign='center'; ctx.fillText('×'+(1+derived.comboStep()*(m.touched.size-1)).toFixed(1), sp.x, sp.y-r-4); }
   }
-  // particles
+  drawFxOverlays();
+  ctx.restore();
+}
+// particles + valve tint + toast — shared by both mode renderers
+function drawFxOverlays(){
   for (const p of particles){
     const sp=worldToScreen(p.x,p.y), a=Math.max(0,p.life/p.maxLife);
     if (p.kind==='dust'){ ctx.globalAlpha=a; ctx.fillStyle='#c9b18f'; ctx.fillRect(sp.x-1.5,sp.y-1.5,3,3); }
@@ -1108,9 +1459,7 @@ function draw(){
       ctx.fillRect(-1.5,-3,3,6); ctx.restore(); }
   }
   ctx.globalAlpha=1;
-  // valve overdrive tint
   if (valveT>0){ ctx.fillStyle='rgba(255,215,94,0.04)'; ctx.fillRect(0,0,viewW,viewH); }
-  // toast
   if (toastT>0 && toastMsg){
     ctx.globalAlpha=Math.min(1,toastT);
     ctx.fillStyle=PAL.panel; ctx.strokeStyle=PAL.accent;
@@ -1122,7 +1471,6 @@ function draw(){
     ctx.fillText(toastMsg[1], viewW/2, 106);
     ctx.globalAlpha=1;
   }
-  ctx.restore();
 }
 function drawParallax(){
   for (const layer of [[0.3,220,6,0.35],[0.6,340,10,0.5]]){
@@ -1228,8 +1576,160 @@ function drawGhost(){
     ctx.moveTo(gp.x+sz/2,gp.y-sz/2); ctx.lineTo(gp.x-sz/2,gp.y+sz/2); ctx.stroke(); }
   ctx.globalAlpha=1;
 }
+// ── Brickworks renderer: iso cubes on a gridded lattice ──
+function drawIsoCube(gx, gy, type, flip, alpha, badTint, flash){
+  const def = ISO_DEFS[type];
+  const o = worldToScreen(IX0+gx*ICW, -(gy+1)*ICH);
+  const w=ICW*scale, h=ICH*scale, tx=ITOPX*scale, ty=ITOPY*scale;
+  ctx.globalAlpha = alpha;
+  // right face
+  ctx.fillStyle = badTint || PAL.woodDark;
+  ctx.beginPath(); ctx.moveTo(o.x+w,o.y); ctx.lineTo(o.x+w+tx,o.y-ty);
+  ctx.lineTo(o.x+w+tx,o.y+h-ty); ctx.lineTo(o.x+w,o.y+h); ctx.closePath(); ctx.fill();
+  // top face + studs (or an open port hole)
+  ctx.fillStyle = badTint || PAL.woodLite;
+  ctx.beginPath(); ctx.moveTo(o.x,o.y); ctx.lineTo(o.x+w,o.y);
+  ctx.lineTo(o.x+w+tx,o.y-ty); ctx.lineTo(o.x+tx,o.y-ty); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = PAL.woodDark; ctx.lineWidth = 1; ctx.stroke();
+  const openTop = !!def.routes.T && !isoGrid.has(ikey(gx,gy+1));
+  if (openTop){
+    ctx.fillStyle = '#1c1510';
+    ctx.beginPath(); ctx.ellipse(o.x+w/2+tx/2, o.y-ty/2, 8*scale, 4.5*scale, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = badTint || PAL.brass; ctx.lineWidth = 1.5*scale; ctx.stroke();
+  } else {
+    ctx.fillStyle = badTint || PAL.wood;
+    for (const fx of [0.32, 0.68]){
+      ctx.beginPath(); ctx.ellipse(o.x+w*fx+tx/2, o.y-ty/2, 5*scale, 2.8*scale, 0, 0, 7);
+      ctx.fill(); ctx.stroke();
+    }
+  }
+  // front face + carved path grooves
+  ctx.fillStyle = badTint || PAL.wood;
+  ctx.fillRect(o.x, o.y, w, h);
+  ctx.strokeStyle = PAL.woodDark; ctx.strokeRect(o.x, o.y, w, h);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  const routes = Object.keys(def.routes).map(p=>isoRoute(def, flip, flip?mirrorPort(p):p)).filter(Boolean);
+  if (def.branches) for (const s of ['L','R'])
+    routes.push(flip ? def.branches[mirrorPort(s)].map(([x,y])=>[ICW-x,y]) : def.branches[s]);
+  for (const r of routes){
+    ctx.strokeStyle = '#241a10'; ctx.lineWidth = 9*scale;
+    ctx.beginPath(); r.forEach((p,i)=>{ const X=o.x+p[0]*scale, Y=o.y+p[1]*scale;
+      i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); }); ctx.stroke();
+    ctx.strokeStyle = badTint || (flash ? PAL.brassHi : PAL.brass); ctx.lineWidth = 2.5*scale;
+    ctx.beginPath(); r.forEach((p,i)=>{ const X=o.x+p[0]*scale, Y=o.y+p[1]*scale;
+      i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); }); ctx.stroke();
+  }
+  if (type==='ikicker'){ ctx.fillStyle = badTint || PAL.brassHi;   // launch chevron
+    const cxp = o.x + (flip?12:44)*scale, cyp = o.y + 12*scale, d = flip?-1:1;
+    ctx.beginPath(); ctx.moveTo(cxp, cyp+5*scale); ctx.lineTo(cxp+6*scale*d, cyp);
+    ctx.lineTo(cxp, cyp-5*scale); ctx.closePath(); ctx.fill(); }
+  ctx.globalAlpha = 1;
+}
+function drawIsoScene(){
+  drawParallax();
+  const gTop = Math.max(6, Math.ceil(-minTopY/ICH)+5);
+  // grid lines — the lattice is part of the look
+  ctx.lineWidth = 1;
+  for (let gx=0; gx<=IGX; gx++){
+    const a = worldToScreen(IX0+gx*ICW, 0), b = worldToScreen(IX0+gx*ICW, -gTop*ICH);
+    ctx.strokeStyle = 'rgba(87,69,47,0.55)';
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  }
+  for (let gy=0; gy<=gTop; gy++){
+    const a = worldToScreen(IX0, -gy*ICH), b = worldToScreen(IX0+IGX*ICW, -gy*ICH);
+    ctx.strokeStyle = gy%5===0 ? 'rgba(224,166,63,0.30)' : 'rgba(87,69,47,0.45)';
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    if (gy%5===0 && gy>0){ ctx.fillStyle='rgba(168,148,120,0.8)'; ctx.font=`${11*scale}px system-ui`;
+      ctx.textAlign='right'; ctx.fillText(gy+' m', a.x-6, a.y+4); }
+  }
+  // stud baseplate + basin tray
+  const bw = derived.basinW()/2;
+  for (let gx=0; gx<IGX; gx++){
+    const cx = IX0+gx*ICW+ICW/2;
+    const o = worldToScreen(IX0+gx*ICW, 0);
+    const w=ICW*scale, tx=ITOPX*scale, ty=ITOPY*scale;
+    const inBasin = Math.abs(cx - W/2) <= bw;
+    ctx.fillStyle = inBasin ? PAL.brassLo : PAL.woodDark;
+    ctx.beginPath(); ctx.moveTo(o.x,o.y); ctx.lineTo(o.x+w,o.y);
+    ctx.lineTo(o.x+w+tx,o.y-ty); ctx.lineTo(o.x+tx,o.y-ty); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.stroke();
+    if (inBasin){ ctx.fillStyle=PAL.brass; ctx.fillRect(o.x, o.y-1.5*scale, w, 3*scale); }
+    else { ctx.fillStyle=PAL.wood;
+      for (const fx of [0.32,0.68]){ ctx.beginPath();
+        ctx.ellipse(o.x+w*fx+tx/2, o.y-ty/2, 4.5*scale, 2.5*scale, 0, 0, 7); ctx.fill(); } }
+  }
+  // basin glow (shared sprite)
+  const f0=worldToScreen(W/2,0);
+  ctx.globalAlpha=basinGlow;
+  ctx.drawImage(glowSprite,0,0,180*dpr,60*dpr, f0.x-90*scale, f0.y-40*scale, 180*scale, 60*scale);
+  ctx.globalAlpha=1;
+  // blocks, back to front
+  const sorted = S.iso.blocks.slice().sort((a,b)=> a.gy-b.gy || a.gx-b.gx);
+  for (const b of sorted){
+    const sy = worldToScreen(0, -(b.gy+1)*ICH).y;
+    if (sy<-120 || sy>viewH+120) continue;
+    drawIsoCube(b.gx, b.gy, b.type, b.flip, 1, null, b.flash>0);
+  }
+  if (ghost && ghost.iso) drawIsoGhost();
+  drawEmitter();
+  // marbles — jumpers get a gold trail (the rare moment should read from across the room)
+  for (const m of marbles){
+    const sp=worldToScreen(m.x,m.y);
+    if (sp.y<-30||sp.y>viewH+30) continue;
+    const r=PHYS.R_MARBLE*scale;
+    if (m.jumping){ ctx.globalAlpha=0.5; ctx.fillStyle=PAL.gold;
+      for (let i=1;i<=3;i++){ ctx.beginPath();
+        ctx.arc(sp.x-m.vx*0.02*i*scale, sp.y-m.vy*0.02*i*scale, r*(1-i*0.22), 0, 7); ctx.fill(); }
+      ctx.globalAlpha=1; }
+    ctx.drawImage(m.gilded?gildSprite:marbleSprites[m.hue], sp.x-r, sp.y-r, r*2, r*2);
+    if (m.touched.size>=5){ ctx.fillStyle=PAL.gold; ctx.font=`${11*Math.max(scale,0.8)}px system-ui`;
+      ctx.textAlign='center'; ctx.fillText('×'+(1+derived.comboStep()*(m.touched.size-1)).toFixed(1), sp.x, sp.y-r-4); }
+  }
+}
+function drawIsoGhost(){
+  const ok = ghost.valid;
+  if (ghost.reason==='support'){                       // show where bricks may attach
+    ctx.fillStyle='rgba(127,191,106,0.10)'; ctx.strokeStyle='rgba(127,191,106,0.4)';
+    ctx.setLineDash([5,5]);
+    for (const b of S.iso.blocks){
+      if (Math.abs(b.gx-ghost.gx)>4 || Math.abs(b.gy-ghost.gy)>4) continue;
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const gx=b.gx+dx, gy=b.gy+dy;
+        if (gy<0 || gx<0 || gx>=IGX || isoGrid.has(ikey(gx,gy))) continue;
+        const o=worldToScreen(IX0+gx*ICW, -(gy+1)*ICH);
+        ctx.fillRect(o.x,o.y,ICW*scale,ICH*scale); ctx.strokeRect(o.x,o.y,ICW*scale,ICH*scale);
+      }
+    }
+    const g0=worldToScreen(IX0,-ICH), g1=worldToScreen(IX0+IGX*ICW,0);
+    ctx.fillRect(g0.x,g0.y,g1.x-g0.x,g1.y-g0.y);
+    ctx.setLineDash([]);
+  }
+  drawIsoCube(ghost.gx, ghost.gy, ghost.type, ghost.flip, ok?0.7:0.4, ok?null:PAL.bad, false);
+  const o = worldToScreen(IX0+ghost.gx*ICW, -(ghost.gy+1)*ICH);
+  if (ok){                                             // green dots where ports will click
+    const b = { type:ghost.type, flip:ghost.flip, gx:ghost.gx, gy:ghost.gy };
+    const out = isoOut(b);
+    const spots = [[1,0,'L','R', o.x+ICW*scale, o.y+ICH*scale*0.6],
+                   [-1,0,'R','L', o.x, o.y+ICH*scale*0.6],
+                   [0,-1,'T','B', o.x+ICW*scale/2, o.y+ICH*scale],
+                   [0,1,'B','T', o.x+ICW*scale/2, o.y]];
+    for (const [dx,dy,nReq,myPort,px,py] of spots){
+      const nb = isoGrid.get(ikey(ghost.gx+dx, ghost.gy+dy));
+      if (!nb) continue;
+      if ((out===myPort && isoAccepts(nb,nReq)) || (isoAccepts(b,myPort) && isoOut(nb)===nReq)){
+        ctx.fillStyle=PAL.good; ctx.beginPath(); ctx.arc(px,py,4*scale,0,7); ctx.fill();
+      }
+    }
+  } else {
+    const sz=touchMode?16:10;
+    ctx.strokeStyle=PAL.bad; ctx.lineWidth=2.5;
+    const cxp=o.x+ICW*scale/2, cyp=o.y+ICH*scale/2;
+    ctx.beginPath(); ctx.moveTo(cxp-sz/2,cyp-sz/2); ctx.lineTo(cxp+sz/2,cyp+sz/2);
+    ctx.moveTo(cxp+sz/2,cyp-sz/2); ctx.lineTo(cxp-sz/2,cyp+sz/2); ctx.stroke();
+  }
+}
 function drawEmitter(){
-  const twin=S.milestonesClaimed>=7;
+  const twin=msGet()>=7;
   for (const off of (twin?[-80,80]:[0])){
     const e=worldToScreen(emitterX+off, emitterY);
     ctx.fillStyle=PAL.brassLo;
@@ -1300,17 +1800,21 @@ if (hadSave){
   if (away > 3600e3) toast('The workshop slept '+Math.floor(away/3600e3)+' h','The marbles waited.');
 }
 rebuildStatics(); recomputeTower();
+if (MODE==='iso') recomputeIsoTower();          // active mode owns the camera/emitter globals
 // reload must not skip the piece-drip gate (refresh-spam gave a free piece per reload)
 dripTimer = derived.dripInterval();
 fit();
 setMuted(S.muted);
 camY = camTY = camBottomVal();
 lastGold = S.gold;
-// boot burst: three staggered marbles so the first seconds always have motion
-for (const dy of [0,-70,-140]){ const y0=emitterY;
-  marbles.push({ x:emitterX+Math.random()*60-30, y:y0+dy, vx:Math.random()*40-20, vy:0,
-    hue:(Math.random()*5)|0, gilded:false, escrow:0, touched:new Set(), popCd:new Map(),
-    snapX:0, snapY:0, stuckCount:0, snapT:0, spin:0, dead:false }); }
+modeBtn.textContent = MODE==='iso' ? '◇ Classic' : '⬒ Bricks';
+if (MODE==='classic'){
+  // boot burst: three staggered marbles so the first seconds always have motion
+  for (const dy of [0,-70,-140]){ const y0=emitterY;
+    marbles.push({ x:emitterX+Math.random()*60-30, y:y0+dy, vx:Math.random()*40-20, vy:0,
+      hue:(Math.random()*5)|0, gilded:false, escrow:0, touched:new Set(), popCd:new Map(),
+      snapX:0, snapY:0, stuckCount:0, snapT:0, spin:0, dead:false }); }
+}
 updateHUD(true);
 requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(frame); });
 
@@ -1330,7 +1834,9 @@ function stepMarble(m, colliders, h){
   return m;
 }
 window.__game = {
-  PHYS, MAT, PIECE_DEFS, UPG, MILESTONES, W, PX_PER_M,
+  PHYS, MAT, PIECE_DEFS, ISO_DEFS, UPG, MILESTONES, W, PX_PER_M,
+  get MODE(){ return MODE; }, setMode, isoPlaceReason, isoAccepts, isoOut, isoRoute,
+  get isoGrid(){ return isoGrid; },
   closestPointOnSegment, resolveCircleSegment, resolveCircleCircle, stepMarble,
   snapToGrid, rotStep, pentatonicIndex, costOf,
   touchPay: touchPayPure,
