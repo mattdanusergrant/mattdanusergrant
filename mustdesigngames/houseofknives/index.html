@@ -489,7 +489,7 @@ function clickPaySource(iid){
   render();
 }
 function costStr(c){ const parts=[]; if(c.generic) parts.push(c.generic); if(c.colored) parts.push(c.color.repeat(c.colored)); return parts.join('+')||'0'; }
-const PIPGLYPH={W:'\uD83D\uDCAE',U:'\uD83C\uDF0A',B:'\uD83D\uDC80',R:'\uD83D\uDD25',G:'\uD83C\uDF33'}; // 💮🌊💀🔥🌳 — Operator-picked
+const PIPGLYPH={W:'\uD83D\uDD4A\uFE0F',U:'\uD83D\uDEE1\uFE0F',B:'\uD83D\uDD2E',R:'\uD83D\uDD25',G:'\uD83C\uDF33'}; // 🕊️🛡️🔮🔥🌳 — Operator-picked 2026-07-23
 function costHTML(c){
   let h='';
   if(c.generic||!c.colored) h+=`<span class="pip g num">${c.generic||0}</span>`;
