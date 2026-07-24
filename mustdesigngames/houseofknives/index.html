@@ -84,11 +84,23 @@ button{font:inherit; color:inherit; background:none; border:none; cursor:pointer
 .cellname .zonehint{display:block; letter-spacing:0; text-transform:none; opacity:.8; font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .stack{display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; align-items:flex-start}
 
+/* cost pips */
+.costp{display:inline-flex; gap:2px; align-items:center; vertical-align:middle}
+.pip{width:13px; height:13px; border-radius:50%; font-size:8.5px; line-height:13px; text-align:center;
+  color:#fff; font-weight:700; display:inline-block; font-family:'Inter',system-ui,sans-serif}
+.pip.g{background:var(--codebg); color:var(--ink); border:1px solid var(--line2); line-height:11px}
+.pip.W{background:var(--W)} .pip.U{background:var(--U)} .pip.B{background:var(--B)} .pip.R{background:var(--R)} .pip.G{background:var(--G)}
+.bigcard .pip{width:17px; height:17px; font-size:11px; line-height:17px}
+.bigcard .pip.g{line-height:15px}
+
 /* mini card */
 .mini{width:52px; min-height:40px; border-radius:7px; border:1px solid var(--line2); background:var(--paper); position:relative; padding:3px 4px 2px; font-size:10px; line-height:1.15; overflow:hidden; flex:0 0 auto}
 .mini .mn{font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:9.5px; letter-spacing:0; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .mini .ph{position:absolute; right:3px; bottom:1px; font-weight:600; font-size:10px}
-.mini .cost{position:absolute; left:3px; bottom:1px; color:var(--muted); font-size:9px}
+.mini .costp{position:absolute; right:3px; top:2px}
+.mini .costp .pip{width:11px; height:11px; font-size:7.5px; line-height:11px}
+.mini .costp .pip.g{line-height:9px}
+.mini .mn{padding-right:2px}
 .mini.W{border-color:var(--W); background:var(--Wbg)} .mini.U{border-color:var(--U); background:var(--Ubg)}
 .mini.B{border-color:var(--B); background:var(--Bbg)} .mini.R{border-color:var(--R); background:var(--Rbg)}
 .mini.G{border-color:var(--G); background:var(--Gbg)}
@@ -96,7 +108,6 @@ button{font:inherit; color:inherit; background:none; border:none; cursor:pointer
 .mini.dn .mn{visibility:hidden}
 .mini.tapped{transform:rotate(8deg); opacity:.55}
 .mini.leader{border-width:2px}
-.mini.leader::before{content:"♛"; position:absolute; top:0; right:3px; font-size:9px}
 .mini.hurt .ph{color:var(--hurt)}
 .mini.plotcard::before{content:"◉"; position:absolute; top:1px; right:3px; font-size:8px; color:var(--muted)}
 
@@ -189,8 +200,10 @@ kbd.gold{font-family:inherit; border:1px solid var(--line2); border-radius:5px; 
   .mini{width:96px; min-height:66px; border-radius:9px; padding:6px 7px 4px; font-size:12px}
   .mini .mn{font-size:11.5px; white-space:normal; line-height:1.15; max-height:2.3em; overflow:hidden}
   .mini .ph{font-size:12.5px; right:5px; bottom:3px}
-  .mini .cost{font-size:10.5px; left:5px; bottom:3px}
-  .mini.leader::before{font-size:11px; right:5px; top:2px}
+  .mini .costp{right:4px; top:4px}
+  .mini .costp .pip{width:14px; height:14px; font-size:9.5px; line-height:14px}
+  .mini .costp .pip.g{line-height:12px}
+  .mini .mn{padding-right:34px}
   .brow{gap:10px}
   .board{gap:10px}
   .midline{margin:6px 10px}
@@ -473,6 +486,13 @@ function clickPaySource(iid){
   render();
 }
 function costStr(c){ const parts=[]; if(c.generic) parts.push(c.generic); if(c.colored) parts.push(c.color.repeat(c.colored)); return parts.join('+')||'0'; }
+const PIPGLYPH={W:'\u2600',U:'\u263D',B:'\u2620',R:'\u2738',G:'\u2618'}; // sun, moon, skull, burst, shamrock
+function costHTML(c){
+  let h='';
+  if(c.generic||!c.colored) h+=`<span class="pip g num">${c.generic||0}</span>`;
+  for(let k=0;k<(c.colored||0);k++) h+=`<span class="pip ${c.color}">${PIPGLYPH[c.color]||''}</span>`;
+  return `<span class="costp">${h}</span>`;
+}
 function fullCost(d){ return {generic:d.cost.generic||0, colored:d.cost.colored||0, color:d.color}; }
 
 /* ================= deploy ================= */
@@ -970,8 +990,8 @@ function miniHTML(iid, opts){
   const ph = st? `<span class="ph num">${st.p}/${Math.max(0,st.h-inst.dmg)}</span>`:'';
   const nm = inst.faceup? esc(d.name) : (mine? '🂠' : '');
   return `<div class="${cls.join(' ')}" data-i="${iid}">
-    <span class="mn">${inst.faceup?esc(d.name):''}</span>${inst.faceup?ph:''}
-    ${inst.faceup?`<span class="cost num">${costStr(fullCost(d))}</span>`:''}
+    <span class="mn">${inst.faceup?(d.type==='leader'?'\u265B ':'')+esc(d.name):''}</span>${inst.faceup?ph:''}
+    ${inst.faceup?costHTML(fullCost(d)):''}
   </div>`;
 }
 function cellHTML(pi, zone, idx){
@@ -1040,7 +1060,7 @@ function trayHTML(){
       return `<button class="hcard ${d.color}" data-h="${ix}">
         <span class="hn">${esc(d.name)}</span>
         <span class="ht">${d.type}${d.trap?' · trap':''}</span>
-        <span class="hb"><span class="num">${costStr(fullCost(d))}</span>${isUnitDef(d)?`<span class="num">${d.power}/${d.health}</span>`:''}</span>
+        <span class="hb">${costHTML(fullCost(d))}${isUnitDef(d)?`<span class="num">${d.power}/${d.health}</span>`:''}</span>
       </button>`; }).join('')||'<span style="color:var(--muted);font-size:13px;padding:8px">No cards in hand</span>'}</div>
   </div></div>`;
 }
@@ -1098,7 +1118,7 @@ function bigCardHTML(iid, showFace){
     <div class="bcx">Taps for 1 Gold. Hidden from your enemy${inst.owner===viewer()?'':' — and from you'}.</div></div>`;
   const st=isUnit(iid)?stats(iid):null;
   return `<div class="bigcard ${d.color}">
-    <div class="bch"><span class="bcn">${esc(d.name)}</span><span class="num" style="font-weight:600">${costStr(fullCost(d))}</span></div>
+    <div class="bch"><span class="bcn">${esc(d.name)}</span>${costHTML(fullCost(d))}</div>
     <div class="bct">${COLORS[d.color]} ${d.type}${d.trap?' — TRAP':''}${d.scheme?` · Scheme ${d.scheme}`:''}${d.tribute?` · Tribute ${d.tribute}`:''}</div>
     ${(d.keywords&&d.keywords.length)?`<div class="klist">${d.keywords.map(k=>`<span class="kw">${k}</span>`).join('')}</div>`:''}
     <div class="bcx">${esc(d.text||'')}</div>
@@ -1140,7 +1160,7 @@ function sheetHTML(){
     if(!p.mustered || hasOvergrowDef(d))
       acts.push(`<button class="act" data-a="muster"><b>Place into your castle</b><small>${p.mustered?'Overgrow — an extra placement':'Your one free placement'} · choose room &amp; facing</small></button>`);
     if(isUnitDef(d))
-      acts.push(`<button class="act" data-a="deploy"><b>Deploy to the battlefield</b><small>Pay ${costStr(fullCost(d))} by tapping castle cards</small></button>`);
+      acts.push(`<button class="act" data-a="deploy"><b>Deploy to the battlefield</b><small>Pay ${costHTML(fullCost(d))} by tapping castle cards</small></button>`);
     return `<div class="scrim" data-close="1"><div class="sheet">
       ${bigCardHTML(iid,true)}<div class="acts">${acts.join('')}</div>
     </div></div>`;
@@ -1192,8 +1212,8 @@ function actionRowHTML(iid, sh){
   if(sh.zone==='room'){
     if(!inst.faceup) acts.push(`<button class="act" data-act="reveal" data-i="${iid}"><b>Tap &amp; reveal</b><small>Flip faceup (rides on a tap) — abilities live, taps for its color</small></button>`);
     acts.push(`<button class="act" data-act="move" data-i="${iid}"><b>Move to an adjacent room</b><small>Uses its tap</small></button>`);
-    if(isUnit(iid)) acts.push(`<button class="act" data-act="deployC" data-i="${iid}"><b>Deploy to the ${['left','center','right'][sh.idx]} field</b><small>Pay ${costStr(fullCost(d))} — marches out of its own column</small></button>`);
-    if(canSpring(iid)) acts.push(`<button class="act" data-act="spring" data-i="${iid}"><b>◉ Spring this plot</b><small>Pay ${costStr(fullCost(d))}${d.tribute?` + tap ${d.tribute} roommate(s)`:''}</small></button>`);
+    if(isUnit(iid)) acts.push(`<button class="act" data-act="deployC" data-i="${iid}"><b>Deploy to the ${['left','center','right'][sh.idx]} field</b><small>Pay ${costHTML(fullCost(d))} — marches out of its own column</small></button>`);
+    if(canSpring(iid)) acts.push(`<button class="act" data-act="spring" data-i="${iid}"><b>◉ Spring this plot</b><small>Pay ${costHTML(fullCost(d))}${d.tribute?` + tap ${d.tribute} roommate(s)`:''}</small></button>`);
     else if(d.type==='plot'&&!d.trap&&inst.owner===S.active&&(d.scheme||0)>roomCount(iid))
       acts.push(`<p class="sub">Scheme ${d.scheme}: needs ${d.scheme} other cards in this room (has ${roomCount(iid)}).</p>`);
   } else {
@@ -1256,8 +1276,8 @@ function pickingHTML(){
   if(pk.kind==='pay'){
     const pr=payProgress();
     return `<div class="promptbar"><div class="pin">
-      <span>${esc(pk.label)} — tap castle cards to pay <b class="num">${costStr(pk.cost)}</b>
-        <span class="num">(need ${Math.max(0,pr.needC)} ${pk.cost.color} + ${Math.max(0,pr.needG)} gold)</span></span>
+      <span>${esc(pk.label)} — tap castle cards to pay ${costHTML(pk.cost)}
+        <span class="num">(need ${Math.max(0,pr.needC)} ${PIPGLYPH[pk.cost.color]||''} + ${Math.max(0,pr.needG)} gold)</span></span>
       <button class="chip ghost" id="cancelPay">Cancel</button>
     </div></div>`;
   }
@@ -1296,7 +1316,7 @@ function revealHTML(){
   const r=VIEW.reveal; if(!r) return '';
   return `<div class="scrim" data-closerev="1"><div class="sheet">
     <h3 class="disp">${esc(r.title)}</h3>
-    ${r.cards.map(d=>`<div class="bigcard ${d.color}"><div class="bch"><span class="bcn">${esc(d.name)}</span><span class="num">${costStr({generic:d.cost.generic,colored:d.cost.colored,color:d.color})}</span></div>
+    ${r.cards.map(d=>`<div class="bigcard ${d.color}"><div class="bch"><span class="bcn">${esc(d.name)}</span>${costHTML({generic:d.cost.generic,colored:d.cost.colored,color:d.color})}</div>
       <div class="bct">${COLORS[d.color]} ${d.type}</div><div class="bcx">${esc(d.text||'')}</div></div>`).join('')}
     <div class="acts"><button class="act" data-closerev="1"><b>Close</b></button></div></div></div>`;
 }
@@ -1374,7 +1394,7 @@ function renderLeaderSetup(){ // opening: reveal Leaders -> each player seeds 1 
     <div class="handrow">${p.hand.map(iid=>{ const d=D(iid); const sel=S._pl[r]===iid; const used=!sel&&taken.includes(iid);
       return `<button class="hcard ${d.color} ${sel?'sel':''}" data-pk="${r}:${iid}" ${used?'disabled style="opacity:.35"':''}>
         <span class="hn">${esc(d.name)}</span><span class="ht">${d.type}</span>
-        <span class="hb"><span class="num">${costStr(fullCost(d))}</span>${isUnit(iid)?`<span class="num">${d.power}/${d.health}</span>`:''}</span></button>`; }).join('')}</div></div>`;
+        <span class="hb">${costHTML(fullCost(d))}${isUnit(iid)?`<span class="num">${d.power}/${d.health}</span>`:''}</span></button>`; }).join('')}</div></div>`;
   app.innerHTML=`<div class="topbar"><span class="brand">House <em>of</em> Knives</span></div>
     <div style="max-width:640px;margin:0 auto">
     <p class="eyebrow">${esc(p.name)} — seed your castle</p>
