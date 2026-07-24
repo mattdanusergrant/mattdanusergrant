@@ -45,7 +45,13 @@
     padding:2px 9px;font-size:10px;letter-spacing:.12em;font-weight:600}
   #resetBtn{display:block;margin:18px 4px 8px;width:calc(100% - 8px);min-height:40px;
     color:var(--muted);font-size:13px}
-  #resetBtn.confirm{color:#fff;background:var(--bad);border-color:var(--bad)}
+  #resetBtn.confirm,#meltBtn.confirm{color:#fff;background:var(--bad);border-color:var(--bad)}
+  /* melt / prestige box */
+  #meltbox{display:none;margin:16px 4px 0;padding:10px 8px;border:1px solid var(--brass);border-radius:10px}
+  #meltline{font-size:13px;font-weight:600;color:var(--brass-hi);margin-bottom:8px}
+  #meltBtn{width:100%;min-height:40px;font-size:13px;border-color:var(--brass);color:var(--brass-hi)}
+  #meltnote{font-size:11px;color:var(--muted);margin-top:8px}
+  #ingotChip{display:none;color:var(--brass-hi);font-size:13px;font-weight:600}
   /* debug palette: one small slot per piece type, horizontally scrollable if needed */
   #hotbar.debug{max-width:96vw;overflow-x:auto;overscroll-behavior:contain}
   #hotbar.debug .slot{min-width:56px;width:56px;height:66px}
@@ -130,7 +136,7 @@
 <canvas id="c"></canvas>
 
 <div id="topbar">
-  <span id="gold" class="num">⛃ 0</span><span id="rate" class="num"></span>
+  <span id="gold" class="num">⛃ 0</span><span id="ingotChip" class="num"></span><span id="rate" class="num"></span>
   <button id="valveBtn" title="Overpressure Valve (V)">Valve</button>
   <button id="modeBtn" title="Switch build (G)">⬒ Bricks</button>
   <span id="dbg">DEBUG</span>
@@ -143,6 +149,8 @@
 <div id="hotbar"></div>
 
 <div id="panel"><h2>Upgrades</h2><button id="pclose" aria-label="Close">✕</button><div id="ulist"></div>
+  <div id="meltbox"><div id="meltline"></div><button id="meltBtn">Melt Down the Gantry</button>
+    <div id="meltnote"></div></div>
   <button id="resetBtn">Reset workshop…</button></div>
 
 <div id="tctl">
@@ -325,8 +333,8 @@ let MODE = 'classic';
 const S = {
   gold:0, nextPieceId:1, pieces:[], queue:['funnel','plank','funnel'],
   upgrades:{drip:0,hopper:0,foundry:0,racks:0,rails:0,gild:0,chimes:0,basin:0,nets:0,valve:0},
-  milestonesClaimed:0,
-  stats:{ totalGoldEarned:0, marblesBanked:0, marblesLost:0, marblesSeized:0, bestCombo:0, maxHeightM:0, playtimeS:0, jumpsCaught:0 },
+  milestonesClaimed:0, ingots:0,
+  stats:{ totalGoldEarned:0, marblesBanked:0, marblesLost:0, marblesSeized:0, bestCombo:0, maxHeightM:0, playtimeS:0, jumpsCaught:0, melts:0 },
   muted:false,
   iso:{ blocks:[], queue:['ialt','ichute','idrop'], milestonesClaimed:0, nextId:1 },
 };
@@ -347,6 +355,7 @@ let goldEMA = 0, lastGold = 0, comboCatches = [];
 let hintStep = 0, time = 0;
 const derived = {
   Mrails: () => Math.pow(1.22, S.upgrades.rails),
+  Mingot: () => 1 + 0.1*S.ingots,          // Brass Ingots: +10% all income each (prestige)
   comboStep: () => 0.08 + 0.02*S.upgrades.chimes,
   spawnInterval: () => 3*Math.pow(.88,S.upgrades.drip) * (valveT>0?0.5:1) * (msGet()>=7?0.5:1),
   marbleCap: () => 8 + 6*S.upgrades.hopper,
@@ -359,9 +368,10 @@ const derived = {
 };
 
 // ============================================================ persistence (all try/catch)
-// v2 = v1 + mode + iso build. v1 saves migrate silently (classic untouched, iso empty).
+// v2 = v1 + mode + iso build; v3 = v2 + ingots (prestige). Older saves migrate silently
+// (classic untouched, iso empty, ingots 0).
 function saveGame(){ if (wiping) return;   // a reset must not be re-saved by beforeunload
-  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:2, mode:MODE,
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({ v:3, mode:MODE, ingots:S.ingots,
   gold:S.gold, nextPieceId:S.nextPieceId,
   pieces:S.pieces.map(p=>({id:p.id,type:p.type,x:p.x,y:p.y,rot:p.rot,flip:!!p.flip,t:p.touchedEver?1:0})),
   queue:S.queue, upgrades:S.upgrades, milestonesClaimed:S.milestonesClaimed,
@@ -371,13 +381,16 @@ function saveGame(){ if (wiping) return;   // a reset must not be re-saved by be
   savedAt:Date.now() })); }catch(e){} }
 function loadGame(){ try{
   const d = JSON.parse(localStorage.getItem(SAVE_KEY));
-  if (!d || (d.v !== 1 && d.v !== 2)) return false;
+  if (!d || (d.v !== 1 && d.v !== 2 && d.v !== 3)) return false;
   S.gold=Math.max(0,+d.gold||0); S.nextPieceId=d.nextPieceId||1;
+  S.ingots=Math.max(0,Math.floor(+d.ingots||0));
   S.queue=(Array.isArray(d.queue)?d.queue:[]).filter(t=>PIECE_DEFS[t]);   // unknown types would kill the rAF loop
   for (const k in S.upgrades){ const v=Math.floor(+((d.upgrades||{})[k])||0);
     S.upgrades[k]=Math.max(0,Math.min(UPG[k].cap||Infinity,v)); }         // clamp to caps
   S.milestonesClaimed=Math.max(0,Math.min(MILESTONES.length,d.milestonesClaimed||0));
   Object.assign(S.stats, d.stats||{}); S.muted=!!d.muted;
+  // stats feed the ingot formula — a NaN/negative save must not poison income
+  for (const k in S.stats){ const v=+S.stats[k]; S.stats[k]=(isFinite(v)&&v>0)?v:0; }
   for (const p of (d.pieces||[])) if (PIECE_DEFS[p.type]){
     const np=addPiece(p.type,p.x,p.y,p.rot||0,!!p.flip,p.id,true); np.touchedEver=!!p.t; }
   // refresh must not skip gates: cooldown keeps ticking on wall-clock, burst is lost,
@@ -608,9 +621,9 @@ function updateSpinners(dt){
 // ============================================================ economy (economy-spec §1)
 function valveMult(){ return valveT>0 ? 3 : 1; }
 function touchPay(n){ return Math.max(1, Math.floor(PIECE_DEFS_BASE_CACHE * derived.Mrails() *
-  (1 + derived.comboStep()*(n-1)) * valveMult())); }
+  (1 + derived.comboStep()*(n-1)) * valveMult() * derived.Mingot())); }
 let PIECE_DEFS_BASE_CACHE = 1; // set per call in onContact (avoids alloc); see hatch for pure version
-function touchPayPure(base, n, rails, cstep, vm){ return Math.max(1, Math.floor(base * rails * (1 + cstep*(n-1)) * vm)); }
+function touchPayPure(base, n, rails, cstep, vm, im=1){ return Math.max(1, Math.floor(base * rails * (1 + cstep*(n-1)) * vm * im)); }
 
 function onContact(m, piece, impactSpeed, allowFx){
   if (!piece) return;
@@ -637,7 +650,7 @@ function onContact(m, piece, impactSpeed, allowFx){
 function bankMarble(m){
   const n = m.touched.size;
   const basinBonus = Math.max(1, Math.floor(5 * derived.Mrails() *
-    (1 + derived.comboStep()*Math.max(0,n-1)) * valveMult()));
+    (1 + derived.comboStep()*Math.max(0,n-1)) * valveMult() * derived.Mingot()));
   let banked = Math.floor((m.escrow + basinBonus) * (m.gilded?10:1) * (derived.bell()?1.5:1));
   addGold(banked);
   S.stats.marblesBanked++;
@@ -673,8 +686,9 @@ function checkMilestones(){
   while (msGet() < MILESTONES.length && h >= MILESTONES[msGet()].h){
     const ms = MILESTONES[msGet()];
     msInc();
-    addGold(ms.bonus);
-    toast(`${ms.h} m — ${msUnlockLabel(ms)} +${fmt(ms.bonus)}`, ms.flavor);
+    const grant = Math.floor(ms.bonus * derived.Mingot());
+    addGold(grant);
+    toast(`${ms.h} m — ${msUnlockLabel(ms)} +${fmt(grant)}`, ms.flavor);
     fanfare(); confetti(); shake = RM()?0:0.1;
     updateHUD(true);
   }
@@ -692,6 +706,38 @@ function fireValve(){
   if (S.upgrades.valve < 1 || valveT > 0 || valveCd > 0) return;
   valveT = 8; valveCd = 96 - 6*S.upgrades.valve;
   fanfare();
+}
+
+// ── prestige: Melt Down the Gantry (economy-spec §7) ──
+// Ingots derive from LIFETIME stats (monotonic — reload/melt-spam gains nothing), and
+// maxHeightM is TOUCHED height, so flagpole stacks never mint ingots. Melting slags both
+// towers, both milestone tracks and the gold; upgrades, ingots and lifetime stats survive.
+function ingotsEarnedTotal(){
+  return Math.floor(Math.sqrt(Math.max(0, S.stats.maxHeightM * S.stats.totalGoldEarned) / 1e6));
+}
+function pendingIngots(){ return Math.max(0, ingotsEarnedTotal() - S.ingots); }
+function meltDown(){
+  const p = pendingIngots();
+  if (p < 1) return false;
+  S.ingots += p; S.stats.melts = (S.stats.melts||0)+1;
+  S.pieces = []; spinners = []; S.queue = ['funnel','plank','funnel'];
+  S.milestonesClaimed = 0; S.nextPieceId = 1;
+  S.iso.blocks = []; isoGrid.clear(); S.iso.queue = ['ialt','ichute','idrop'];
+  S.iso.milestonesClaimed = 0; S.iso.nextId = 1;
+  S.gold = 0; lastGold = 0; goldEMA = 0;
+  marbles = []; particles = []; comboCatches = []; recentOutcomes.length = 0;
+  valveT = 0; valveCd = 0;
+  minTopY = 0; touchedMinY = 0; isoTargets = [];
+  deselect();
+  rebuildStatics(); recomputeTower();
+  if (MODE==='iso') recomputeIsoTower();
+  spawnTimer = 0; dripTimer = derived.dripInterval();
+  camY = camTY = camBottomVal(); camX = camTX = clampCamX(camX); prevCamY = null;
+  toast(`Melted down — +${p} ingot${p>1?'s':''} ⚒`, `All income ×${derived.Mingot().toFixed(1)}. Build it again, better.`);
+  fanfare(); confetti(); shake = RM()?0:0.15;
+  hotbarDirty = true; upgSig = '';
+  updateHUD(true); saveGame();
+  return true;
 }
 
 // ============================================================ marbles
@@ -850,7 +896,7 @@ function enterBlock(m, block, port){
   // catch bonus: an airborne JUMPING marble landing in a top port is the moment
   // (0.15s floor separates real flights from instant block-to-block transfers)
   if (m.jumping && m.airT > 0.15 && port === 'T'){
-    const bonus = Math.max(5, Math.floor(25 * derived.Mrails() * valveMult()));
+    const bonus = Math.max(5, Math.floor(25 * derived.Mrails() * valveMult() * derived.Mingot()));
     m.escrow += bonus; S.stats.jumpsCaught++;
     const sp = worldToScreen(m.x, m.y);
     showFloater(sp.x, sp.y, 'CAUGHT +'+fmt(bonus), false);
@@ -1310,7 +1356,9 @@ const goldEl=document.getElementById('gold'), rateEl=document.getElementById('ra
   panelEl=document.getElementById('panel'), ulist=document.getElementById('ulist'),
   uBtn=document.getElementById('uBtn'), mBtn=document.getElementById('mBtn'),
   valveBtn=document.getElementById('valveBtn'), hintEl=document.getElementById('hint'),
-  comboEl=document.getElementById('combo');
+  comboEl=document.getElementById('combo'), ingotChip=document.getElementById('ingotChip'),
+  meltBox=document.getElementById('meltbox'), meltLine=document.getElementById('meltline'),
+  meltBtn=document.getElementById('meltBtn'), meltNote=document.getElementById('meltnote');
 let hotbarDirty=true, slotPop=false, hudT=0;
 uBtn.addEventListener('click',togglePanel);
 document.getElementById('pclose').addEventListener('click',togglePanel);
@@ -1340,11 +1388,39 @@ let resetArm=0;
 resetBtn.addEventListener('click',()=>{
   if (Date.now()-resetArm < 4000){ wipeGame(); return; }
   resetArm=Date.now();
-  resetBtn.textContent='Wipe BOTH builds + gold? Click again';
+  resetBtn.textContent='Wipe EVERYTHING — builds, gold, ingots? Click again';
   resetBtn.classList.add('confirm');
   setTimeout(()=>{ resetBtn.textContent='Reset workshop…';
     resetBtn.classList.remove('confirm'); resetArm=0; },4000);
 });
+// melt (prestige): two-stage confirm, same rhythm as reset — but it only slags the towers
+let meltArm=0;
+meltBtn.addEventListener('click',()=>{
+  if (pendingIngots() < 1){ nope(); return; }
+  if (Date.now()-meltArm < 4000){ meltArm=0; meltDown(); renderMelt(); return; }
+  meltArm=Date.now();
+  meltBtn.textContent='Towers, milestones + gold melt to slag. Sure?';
+  meltBtn.classList.add('confirm');
+  setTimeout(()=>{ meltArm=0; meltBtn.classList.remove('confirm'); renderMelt(); },4000);
+});
+function renderMelt(){
+  const pend = pendingIngots();
+  const show = S.ingots > 0 || pend > 0;
+  meltBox.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  meltLine.textContent = S.ingots > 0
+    ? `⚒ ${S.ingots} Brass Ingot${S.ingots>1?'s':''} — all income ×${derived.Mingot().toFixed(1)}`
+    : '⚒ The crucible is hot.';
+  if (Date.now()-meltArm >= 4000){
+    meltBtn.classList.remove('confirm');
+    meltBtn.textContent = pend > 0 ? `Melt Down the Gantry — +${pend} ⚒` : 'Melt Down the Gantry';
+    meltBtn.disabled = pend < 1;
+  }
+  if (pend > 0) meltNote.textContent = 'Melting resets both towers, milestones and gold. Upgrades and ingots stay.';
+  else { const nextTotal = (S.ingots+1)*(S.ingots+1)*1e6;
+    const cur = Math.max(0, S.stats.maxHeightM * S.stats.totalGoldEarned);
+    meltNote.textContent = `Next ingot: ${Math.min(99,Math.floor(100*cur/nextTotal))}% — earn gold, climb higher.`; }
+}
 // switch between the two builds; each keeps its own tower/queue/milestones, marbles reset
 function setMode(m){
   if (m===MODE) return;
@@ -1411,7 +1487,8 @@ function upgSignature(){
 }
 function renderUpgrades(){
   if (!panelEl.classList.contains('open')) return;
-  if (S.milestonesClaimed>=5 || S.gold>=10000) valveSeen=true;
+  if (S.milestonesClaimed>=5 || S.gold>=10000 || S.upgrades.valve>0) valveSeen=true;
+  renderMelt();                           // cheap textContent writes; outside the sig guard
   const sig=upgSignature();
   if (sig===upgSig) return;               // don't rebuild DOM under the pointer needlessly
   upgSig=sig;
@@ -1432,6 +1509,9 @@ function renderUpgrades(){
 }
 function updateHUD(force){
   goldEl.textContent='⛃ '+fmt(S.gold);
+  if (S.ingots>0){ ingotChip.style.display='inline'; ingotChip.textContent='⚒ '+S.ingots;
+    ingotChip.title=`Brass Ingots — all income ×${derived.Mingot().toFixed(1)}`; }
+  else ingotChip.style.display='none';
   const rate=goldEMA; rateEl.textContent=rate>0.05?`(+${rate<100?rate.toFixed(1):fmt(rate)} g/s)`:'';
   heightEl.textContent='▲ '+heightM().toFixed(1)+' m';
   const next=MILESTONES[msGet()];
@@ -1940,6 +2020,8 @@ window.__game = {
   step: physicsTick, setMuted,
   reset(){ wipeGame(); },
   toggleDebug, get DEBUG(){ return DEBUG; },
+  ingotsEarnedTotal, pendingIngots, meltDown, get ingots(){ return S.ingots; },
+  save: saveGame,
 };
 })();
 </script>
