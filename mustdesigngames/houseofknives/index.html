@@ -195,6 +195,20 @@ kbd.gold{font-family:inherit; border:1px solid var(--line2); border-radius:5px; 
   .board{gap:10px}
   .midline{margin:6px 10px}
 }
+
+/* Wide desktop: the hand leaves the bottom tray and floats along the board's left edge */
+@media (min-width:1200px){
+  #app{margin-left:max(232px, calc((100vw - 1160px)/2)); margin-right:auto; padding-bottom:40px}
+  .tray{position:fixed; left:16px; right:auto; top:96px; bottom:auto; width:196px;
+    background:none; border:none; box-shadow:none; z-index:20}
+  .tray-inner{max-width:none; padding:0}
+  .tray-head{flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:10px}
+  .tray-head > span:last-child{display:flex; gap:6px}
+  .handrow{flex-direction:column; overflow-x:visible; overflow-y:auto;
+    max-height:calc(100dvh - 190px); gap:8px; padding:2px 4px 8px 2px}
+  .hcard{flex:0 0 auto; width:100%; background:var(--paper); box-shadow:var(--shadow)}
+  .hcard:hover{box-shadow:var(--shadow-hover)}
+}
 </style>
 </head>
 <body>
