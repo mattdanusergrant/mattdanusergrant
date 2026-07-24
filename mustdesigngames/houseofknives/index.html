@@ -89,9 +89,10 @@ button{font:inherit; color:inherit; background:none; border:none; cursor:pointer
 .pip{width:13px; height:13px; border-radius:50%; font-size:8.5px; line-height:13px; text-align:center;
   color:#fff; font-weight:700; display:inline-block; font-family:'Inter',system-ui,sans-serif}
 .pip.g{background:var(--codebg); color:var(--ink); border:1px solid var(--line2); line-height:11px}
-.pip.W{background:var(--W)} .pip.U{background:var(--U)} .pip.B{background:var(--B)} .pip.R{background:var(--R)} .pip.G{background:var(--G)}
+.pip.W,.pip.U,.pip.B,.pip.R,.pip.G{background:none; border:none; width:auto; min-width:13px; font-size:11px; line-height:13px}
 .bigcard .pip{width:17px; height:17px; font-size:11px; line-height:17px}
 .bigcard .pip.g{line-height:15px}
+.bigcard .pip.W,.bigcard .pip.U,.bigcard .pip.B,.bigcard .pip.R,.bigcard .pip.G{width:auto; min-width:17px; font-size:14px}
 
 /* mini card */
 .mini{width:52px; min-height:40px; border-radius:7px; border:1px solid var(--line2); background:var(--paper); position:relative; padding:3px 4px 2px; font-size:10px; line-height:1.15; overflow:hidden; flex:0 0 auto}
@@ -100,6 +101,7 @@ button{font:inherit; color:inherit; background:none; border:none; cursor:pointer
 .mini .costp{position:absolute; right:3px; top:2px}
 .mini .costp .pip{width:11px; height:11px; font-size:7.5px; line-height:11px}
 .mini .costp .pip.g{line-height:9px}
+.mini .costp .pip.W,.mini .costp .pip.U,.mini .costp .pip.B,.mini .costp .pip.R,.mini .costp .pip.G{width:auto; min-width:11px; font-size:9px}
 .mini .mn{padding-right:2px}
 .mini.W{border-color:var(--W); background:var(--Wbg)} .mini.U{border-color:var(--U); background:var(--Ubg)}
 .mini.B{border-color:var(--B); background:var(--Bbg)} .mini.R{border-color:var(--R); background:var(--Rbg)}
@@ -203,6 +205,7 @@ kbd.gold{font-family:inherit; border:1px solid var(--line2); border-radius:5px; 
   .mini .costp{right:4px; top:4px}
   .mini .costp .pip{width:14px; height:14px; font-size:9.5px; line-height:14px}
   .mini .costp .pip.g{line-height:12px}
+  .mini .costp .pip.W,.mini .costp .pip.U,.mini .costp .pip.B,.mini .costp .pip.R,.mini .costp .pip.G{width:auto; min-width:14px; font-size:11.5px}
   .mini .mn{padding-right:34px}
   .brow{gap:10px}
   .board{gap:10px}
@@ -486,7 +489,7 @@ function clickPaySource(iid){
   render();
 }
 function costStr(c){ const parts=[]; if(c.generic) parts.push(c.generic); if(c.colored) parts.push(c.color.repeat(c.colored)); return parts.join('+')||'0'; }
-const PIPGLYPH={W:'\u2600',U:'\u263D',B:'\u2620',R:'\u2738',G:'\u2618'}; // sun, moon, skull, burst, shamrock
+const PIPGLYPH={W:'\u2694\uFE0F',U:'\uD83C\uDF0A',B:'\uD83D\uDC80',R:'\uD83D\uDD25',G:'\uD83C\uDF3F'}; // ⚔️🌊💀🔥🌿 (W locked by Operator; UBRG provisional)
 function costHTML(c){
   let h='';
   if(c.generic||!c.colored) h+=`<span class="pip g num">${c.generic||0}</span>`;
