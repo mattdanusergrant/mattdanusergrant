@@ -118,10 +118,14 @@ button{font:inherit; color:inherit; background:none; border:none; cursor:pointer
 .tray-inner{max-width:900px; margin:0 auto; padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
 .tray-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px}
 .handrow{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px}
-.hcard{flex:0 0 92px; border-radius:10px; border:1.5px solid var(--line2); background:var(--paper); padding:6px; font-size:11px; cursor:pointer; text-align:left}
-.hcard .hn{font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:12px; line-height:1.1; display:block; min-height:26px}
+.hcard{flex:0 0 92px; border-radius:10px; border:1.5px solid var(--line2); background:var(--paper); padding:6px; font-size:11px; cursor:pointer; text-align:left; position:relative}
+.hcard .hn{font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:12px; line-height:1.15; display:block; min-height:26px}
 .hcard .ht{color:var(--muted); font-size:10px}
-.hcard .hb{display:flex; justify-content:space-between; margin-top:3px; font-weight:600; font-size:11px}
+.hcard .hcost{float:right; margin:0 0 2px 5px}
+.hcard .hcost .pip{width:12px; height:12px; font-size:8px; line-height:12px}
+.hcard .hcost .pip.g{line-height:10px}
+.hcard .hcost .pip.W,.hcard .hcost .pip.U,.hcard .hcost .pip.B,.hcard .hcost .pip.R,.hcard .hcost .pip.G{width:auto; min-width:12px; font-size:10px}
+.hcard .hb{display:flex; justify-content:flex-end; margin-top:3px; font-weight:600; font-size:11px; min-height:14px; clear:both}
 .hcard.W{border-color:var(--W)} .hcard.U{border-color:var(--U)} .hcard.B{border-color:var(--B)} .hcard.R{border-color:var(--R)} .hcard.G{border-color:var(--G)}
 .hcard.sel{outline:2px solid var(--focus)}
 
@@ -1065,9 +1069,10 @@ function trayHTML(){
     <div class="handrow">${p.hand.map((iid,ix)=>{
       const d=D(iid);
       return `<button class="hcard ${d.color}" data-h="${ix}">
+        <span class="hcost">${costHTML(fullCost(d))}</span>
         <span class="hn">${esc(d.name)}</span>
         <span class="ht">${d.type}${d.trap?' · trap':''}</span>
-        <span class="hb">${costHTML(fullCost(d))}${isUnitDef(d)?`<span class="num">${d.power}/${d.health}</span>`:''}</span>
+        <span class="hb">${isUnitDef(d)?`<span class="num">${d.power}/${d.health}</span>`:''}</span>
       </button>`; }).join('')||'<span style="color:var(--muted);font-size:13px;padding:8px">No cards in hand</span>'}</div>
   </div></div>`;
 }
@@ -1400,8 +1405,9 @@ function renderLeaderSetup(){ // opening: reveal Leaders -> each player seeds 1 
     <p class="eyebrow">${ROOMS[r]} <span style="letter-spacing:0;text-transform:none">→ ${ZONE_OF_ROOM[r]}</span></p>
     <div class="handrow">${p.hand.map(iid=>{ const d=D(iid); const sel=S._pl[r]===iid; const used=!sel&&taken.includes(iid);
       return `<button class="hcard ${d.color} ${sel?'sel':''}" data-pk="${r}:${iid}" ${used?'disabled style="opacity:.35"':''}>
+        <span class="hcost">${costHTML(fullCost(d))}</span>
         <span class="hn">${esc(d.name)}</span><span class="ht">${d.type}</span>
-        <span class="hb">${costHTML(fullCost(d))}${isUnit(iid)?`<span class="num">${d.power}/${d.health}</span>`:''}</span></button>`; }).join('')}</div></div>`;
+        <span class="hb">${isUnit(iid)?`<span class="num">${d.power}/${d.health}</span>`:''}</span></button>`; }).join('')}</div></div>`;
   app.innerHTML=`<div class="topbar"><span class="brand">${GAME_BRAND}</span></div>
     <div style="max-width:640px;margin:0 auto">
     <p class="eyebrow">${esc(p.name)} — seed your castle</p>
