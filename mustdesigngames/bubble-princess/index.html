@@ -163,7 +163,7 @@
   // ===================== world =====================
   const TS = 32;                          // tile size (world px)
   // Legend: # wall · . floor · , carpet · L locked door · E exit door · C cage · T chest
-  //         P player start · g goon · a archer · b brute
+  //         P player start · g goon · a archer · b brute · f fly (harmless, slows; frog food)
   const MAPS = [
     [ // Floor 1 — The Foyer
       '##############################',
@@ -172,7 +172,7 @@
       '#..P.......#........#........#',
       '#..........#...g....#........#',
       '#..........L........#........#',
-      '#..........#........#........#',
+      '#..........#........#..f..f..#',
       '#..........#........#........#',
       '#..,,,,,...#........#........#',
       '#..,,,,,g..#........L...g....#',
@@ -197,10 +197,10 @@
       '#..........T..#..............#',
       '#.............#..............#',
       '#######L#############L########',
-      '#.............#..............#',
-      '#.............#..............#',
+      '#....f........#..............#',
+      '#.............#......f.......#',
       '#...g.........#...........C..#',
-      '#.............#..............#',
+      '#.............#..........f...#',
       '#.............L..............#',
       '#.C...........#.........g....#',
       '#..a........T.#.....T.......E#',
@@ -218,12 +218,12 @@
       '#..g..........T............C.#',
       '#.............a..............#',
       '#.......b.....#......b.......#',
-      '#............................#',
+      '#......f..............f......#',
       '#.C.......................g..#',
       '######L################L######',
       '#.............T..............#',
       '#...g..................g.....#',
-      '#............................#',
+      '#.........f........f.........#',
       '#.C...........P............C.#',
       '#............................#',
       '##############################'
@@ -247,14 +247,16 @@
   const HINTS_DESK = {
     move: 'WASD / arrows to move · aim with the mouse · click to blow bubbles',
     lock: 'Your wand is the Master Key — walk into any lock to pop it open',
-    dance: 'Hold SPACE to dance — it heals you (but you can\'t move)',
-    guest: 'Rescued guests follow you — hold SPACE and they\'ll dance around you!'
+    dance: 'Hold SPACE to dance — it heals you (you waltz at half speed)',
+    guest: 'Rescued guests follow you — hold SPACE and they\'ll dance around you!',
+    fly: 'Flies slow you down — only your party frogs can eat them!'
   };
   const HINTS_TOUCH = {
     move: 'Left thumb to move · tap the right side to blow bubbles',
     lock: 'Your wand is the Master Key — walk into any lock to pop it open',
-    dance: 'Hold 💃 Dance to heal (you can\'t move while dancing)',
-    guest: 'Rescued guests follow you — hold 💃 and they\'ll dance around you!'
+    dance: 'Hold 💃 Dance to heal (you waltz at half speed)',
+    guest: 'Rescued guests follow you — hold 💃 and they\'ll dance around you!',
+    fly: 'Flies slow you down — only your party frogs can eat them!'
   };
   let touchMode = false;
 
@@ -265,8 +267,9 @@
     fireCd: 0, twirl: 0
   };
   let floor = 1, tiles = [], cols = 0, rows = 0, specials = {};
-  let enemies = [], frogs = [], guests = [], bolts = [], arrows = [], parts = [], rings = [];
-  let trail = [];                          // player position history for the conga line
+  let enemies = [], party = [], flies = [], zaps = [], bolts = [], arrows = [], parts = [], rings = [];
+  let shieldUp = false, shieldCd = 0;      // the Shield guest's bubble shield
+  let trail = [];                          // player position history for the follow line
   let score = 0, frogCount = 0, guestCount = 0, locksOpened = 0;
   let camX = 0, camY = 0, shake = 0, hurtFlash = 0;
   let state = 'play';                      // play | clear | over | won
@@ -285,15 +288,22 @@
     score = n; scoreEl.textContent = score;
     if (score > best) { best = score; try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {} }
   }
+  function roleCount(role) {
+    let n = 0; party.forEach(m => { if (m.kind === 'guest' && m.role === role) n++; });
+    return n;
+  }
+  function addScore(n) {   // the Sparkle guest's passive: all pickups worth 1.5×
+    setScore(score + (roleCount('sparkle') ? Math.round(n * 1.5) : n));
+  }
 
   function key(c, r) { return r * cols + c; }
   function loadFloor(n, keepParty) {
     floor = n;
     const rowsArr = MAPS[n - 1];
     rows = rowsArr.length; cols = rowsArr[0].length;
-    tiles = []; specials = {}; enemies = []; frogs = []; bolts = []; arrows = []; parts = []; rings = [];
-    const carried = keepParty ? guests.slice() : [];
-    guests = []; trail = [];
+    tiles = []; specials = {}; enemies = []; flies = []; zaps = []; bolts = []; arrows = []; parts = []; rings = [];
+    const carried = keepParty ? party.slice() : [];
+    party = []; trail = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const ch = rowsArr[r][c];
       let t = 0;
@@ -309,12 +319,13 @@
       if (ch === 'g') enemies.push(mkEnemy('goon', wx, wy));
       if (ch === 'a') enemies.push(mkEnemy('archer', wx, wy));
       if (ch === 'b') enemies.push(mkEnemy('brute', wx, wy));
+      if (ch === 'f') flies.push({ x: wx, y: wy, wob: Math.random() * 6.28 });
     }
-    // rescued guests attend the rest of the ball with you
-    carried.forEach((g, i) => { g.x = P.x; g.y = P.y; guests.push(g); });
+    // the whole party — guests and bubbled frogs — attends the rest of the ball
+    carried.forEach(m => { m.x = P.x; m.y = P.y; party.push(m); });
     camX = P.x; camY = P.y;
     P.dancing = false; P.fireCd = 0; P.iframe = 1.0;
-    snap = { score, frogCount, guestCount, locksOpened, hp: P.hp, party: guests.length };
+    snap = { score, frogCount, guestCount, locksOpened, hp: P.hp, party: party.length };
     state = 'play';
   }
   function mkEnemy(type, x, y) {
@@ -426,16 +437,25 @@
     s.open = true; locksOpened++;
     const wx = s.c * TS + TS / 2, wy = s.r * TS + TS / 2;
     stars(wx, wy, 6); pop(wx, wy, 10);
-    if (s.type === 'door') { sfx.unlock(); setScore(score + 5); }
+    if (s.type === 'door') { sfx.unlock(); addScore(5); }
     else if (s.type === 'chest') {
       sfx.chest();
       if (P.hp < P.maxHp) { P.hp = Math.min(P.maxHp, P.hp + 1); puff(wx, wy, 8, '#ff8fa3', 50); }
-      else setScore(score + 15);
+      else addScore(15);
     }
     else if (s.type === 'cage') {
       sfx.inspire();
-      guests.push({ x: wx, y: wy, r: 9, hue: ['#f2a2c4', '#a2c8f2', '#f2d3a2', '#b8f2a2'][(guests.length) % 4], bob: Math.random() * 6.28 });
-      guestCount++; setScore(score + 25); stars(wx, wy, 8);
+      // each rescued guest brings a passive to the party, by join order
+      const ROLES = [
+        { role: 'cheer',   hue: '#f2a2c4', label: '+ Cheer! (faster wand)' },
+        { role: 'shield',  hue: '#a2c8f2', label: '+ Shield! (blocks a hit)' },
+        { role: 'sparkle', hue: '#f2d3a2', label: '+ Sparkle! (1.5× score)' },
+        { role: 'vigor',   hue: '#b8f2a2', label: '+ Vigor! (faster healing)' }
+      ];
+      const R = ROLES[roleCount('cheer') + roleCount('shield') + roleCount('sparkle') + roleCount('vigor') & 3];
+      party.push({ kind: 'guest', role: R.role, hue: R.hue, x: wx, y: wy, bob: Math.random() * 6.28 });
+      guestCount++; addScore(25); stars(wx, wy, 8);
+      parts.push({ x: wx, y: wy - 18, vx: 0, vy: -26, life: 1.4, max: 1.4, col: '#ffd34d', kind: 'label', sz: 13, text: R.label });
       showHint('guest');
     }
     else if (s.type === 'exit') {
@@ -517,6 +537,12 @@
   // ===================== update =====================
   function hurt(dmg, fx, fy) {
     if (P.iframe > 0 || state !== 'play') return;
+    if (shieldUp) {   // the Shield guest's bubble takes the hit
+      shieldUp = false; shieldCd = 9 / Math.max(1, roleCount('shield'));
+      P.iframe = 0.6; shake = Math.max(shake, 3);
+      pop(P.x, P.y, 16); tone(500, 0.14, 'square', 0.05, 150);
+      return;
+    }
     P.hp -= dmg; P.iframe = 0.9; hurtFlash = 0.35; shake = Math.max(shake, 5);
     sfx.hurt(); puff(P.x, P.y, 10, '#ff5fa0', 90);
     const a = Math.atan2(P.y - fy, P.x - fx);
@@ -546,21 +572,21 @@
     overlay.classList.remove('show');
     if (state === 'won') {
       setScore(0); frogCount = 0; guestCount = 0; locksOpened = 0; runTime = 0;
-      P.hp = P.maxHp; guests = [];
+      P.hp = P.maxHp; party = []; shieldUp = false; shieldCd = 0;
       loadFloor(1, false);
     } else {
       // retry the floor from its snapshot
       setScore(snap.score); frogCount = snap.frogCount; guestCount = snap.guestCount; locksOpened = snap.locksOpened;
       P.hp = Math.max(3, snap.hp);
-      guests = guests.slice(0, snap.party);
+      party = party.slice(0, snap.party);
       loadFloor(floor, true);
     }
   });
 
   function fireBolt() {
     if (P.fireCd > 0 || P.dancing) return;
-    const cheered = guests.some(g => Math.hypot(g.x - P.x, g.y - P.y) < 160);
-    P.fireCd = cheered ? 0.19 : 0.27;
+    const cheer = roleCount('cheer');   // the Cheer guest's passive: a faster wand
+    P.fireCd = cheer ? Math.max(0.16, 0.21 - (cheer - 1) * 0.015) : 0.27;
     const a = P.aim;
     bolts.push({ x: P.x + Math.cos(a) * 18, y: P.y + Math.sin(a) * 18, vx: Math.cos(a) * 390, vy: Math.sin(a) * 390, life: 0.9, rot: 0 });
     sfx.shot();
@@ -586,14 +612,23 @@
     const il = Math.hypot(ix, iy);
     if (il > 1) { ix /= il; iy /= il; }
 
+    // flies cling and slow the princess (they never hurt her)
+    const nearFlies = flies.reduce((n, fl) => n + (Math.hypot(fl.x - P.x, fl.y - P.y) < 55 ? 1 : 0), 0);
+    const speedMul = Math.max(0.4, 1 - 0.15 * nearFlies);
+    if (nearFlies) showHint('fly');
+
     P.dancing = (keys.has(' ') || danceHeld);
     if (P.dancing) {
       P.twirl += dt * 9;
       P.healT += dt; P.pulseT += dt;
       waltz();
+      // she can waltz along at half speed while dancing
+      if (il > 0.05) moveCircle(P, ix * P.speed * 0.5 * speedMul * dt, iy * P.speed * 0.5 * speedMul * dt, P.r);
       if (Math.random() < dt * 9) bub(P.x + (Math.random() - 0.5) * 26, P.y - 10);
       if (Math.random() < dt * 2) note(P.x + (Math.random() - 0.5) * 24, P.y - 14);
-      if (P.healT >= 1.3) {
+      const vigor = roleCount('vigor');   // the Vigor guest's passive: faster heal ticks
+      const healIv = vigor ? Math.max(0.7, 0.95 - (vigor - 1) * 0.1) : 1.3;
+      if (P.healT >= healIv) {
         P.healT = 0;
         if (P.hp < P.maxHp) { P.hp++; sfx.heal(); puff(P.x, P.y - 10, 6, '#ff8fa3', 40); }
       }
@@ -603,7 +638,13 @@
       }
     } else {
       P.healT = 0; P.pulseT = 0.6; P.twirl *= 0.9;
-      if (il > 0.05) moveCircle(P, ix * P.speed * dt, iy * P.speed * dt, P.r);
+      if (il > 0.05) moveCircle(P, ix * P.speed * speedMul * dt, iy * P.speed * speedMul * dt, P.r);
+    }
+
+    // the Shield guest's bubble re-forms over time
+    if (roleCount('shield') && !shieldUp) {
+      shieldCd -= dt;
+      if (shieldCd <= 0) { shieldUp = true; tone(880, 0.08, 'sine', 0.04, 1200); rings.push({ x: P.x, y: P.y, r: 8, max: 26, life: 0.4 }); }
     }
 
     // aim
@@ -684,8 +725,8 @@
           en.hp--; en.flash = 0.15;
           if (en.hp <= 0) {
             enemies.splice(i, 1);
-            frogs.push({ x: en.x, y: en.y, t: 0, dx: 0, dy: 0, bob: Math.random() * 6.28 });
-            frogCount++; setScore(score + 10);
+            party.push({ kind: 'frog', x: en.x, y: en.y, bob: Math.random() * 6.28, eatT: 0 });
+            frogCount++; addScore(10);
             sfx.frog(); puff(en.x, en.y, 10, '#7de07a', 90); pop(en.x, en.y, 10);
             shake = Math.max(shake, 3);
           } else { pop(b.x, b.y, 6); }
@@ -704,37 +745,58 @@
       return true;
     });
 
-    // --- frogs (harmless, sealed inside drifting bubbles) ---
-    frogs.forEach(f => {
-      f.t -= dt; f.bob += dt * 3;
-      if (f.t <= 0) {
-        f.t = 1.5 + Math.random() * 1.5;
-        const a = Math.random() * 6.28; f.dx = Math.cos(a) * 22; f.dy = Math.sin(a) * 22;
+    // --- flies: harmless, but they swarm the princess and slow her down ---
+    flies.forEach(fl => {
+      fl.wob += dt;
+      const d = Math.hypot(P.x - fl.x, P.y - fl.y);
+      if (d < 320) {
+        const a = Math.atan2(P.y - fl.y, P.x - fl.x) + Math.sin(fl.wob * 3.1) * 0.9;
+        const sp = d > 46 ? 120 : 60;     // buzz in, then circle annoyingly
+        fl.x += Math.cos(a) * sp * dt; fl.y += Math.sin(a) * sp * dt;
+      } else {
+        fl.x += Math.cos(fl.wob * 1.7) * 26 * dt; fl.y += Math.sin(fl.wob * 2.3) * 26 * dt;
       }
-      moveCircle(f, f.dx * dt, f.dy * dt, 12);
     });
+    // --- party frogs eat flies (the ONLY way flies go away) ---
+    party.forEach(m => {
+      if (m.kind !== 'frog') return;
+      m.eatT -= dt;
+      if (m.eatT > 0) return;
+      for (let i = 0; i < flies.length; i++) {
+        const fl = flies[i];
+        if (Math.hypot(fl.x - m.x, fl.y - m.y) < 72) {
+          zaps.push({ x1: m.x, y1: m.y - 2, x2: fl.x, y2: fl.y, t: 0.14 });
+          flies.splice(i, 1);
+          m.eatT = 1.1;
+          addScore(5);
+          tone(700, 0.06, 'square', 0.05, 200); puff(fl.x, fl.y, 5, '#9fb3c8', 60);
+          break;
+        }
+      }
+    });
+    zaps = zaps.filter(z => (z.t -= dt) > 0);
 
     // --- guests: every rescued guest follows close behind; while the princess
     //     dances they fan out into a slowly orbiting ring and dance around her ---
-    if (P.dancing && guests.length) {
+    if (P.dancing && party.length) {
       danceSpin += dt * 1.1;
-      const n = guests.length;
-      guests.forEach((g, i) => {
+      const n = party.length;
+      party.forEach((m, i) => {
         const rad = n > 8 ? 44 + 24 * (i % 2) : 44;
         const a = danceSpin + i * 6.283 / n;
         const tx = P.x + Math.cos(a) * rad, ty = P.y + Math.sin(a) * rad;
-        g.x += (tx - g.x) * Math.min(1, dt * 8); g.y += (ty - g.y) * Math.min(1, dt * 8);
-        g.bob += dt * 9;
-        if (Math.random() < dt * 1.6) note(g.x, g.y - 12);
-        if (Math.random() < dt * 2.5) bub(g.x, g.y - 8);
+        m.x += (tx - m.x) * Math.min(1, dt * 8); m.y += (ty - m.y) * Math.min(1, dt * 8);
+        m.bob += dt * 9;
+        if (Math.random() < dt * 1.6) note(m.x, m.y - 12);
+        if (Math.random() < dt * 2.5) bub(m.x, m.y - 8);
       });
     } else {
-      guests.forEach((g, i) => {
+      party.forEach((m, i) => {
         const idx = trail.length - 2 - (i + 1) * 11 - 5;
         const tx = idx >= 0 ? trail[idx] : trail[0], ty = idx >= 0 ? trail[idx + 1] : trail[1];
-        if (tx !== undefined) { g.x += (tx - g.x) * Math.min(1, dt * 10); g.y += (ty - g.y) * Math.min(1, dt * 10); }
-        g.bob += dt * 6;
-        if (Math.random() < dt * 0.4) note(g.x, g.y - 12);
+        if (tx !== undefined) { m.x += (tx - m.x) * Math.min(1, dt * 10); m.y += (ty - m.y) * Math.min(1, dt * 10); }
+        m.bob += dt * 6;
+        if (m.kind === 'guest' && Math.random() < dt * 0.4) note(m.x, m.y - 12);
       });
     }
 
@@ -742,7 +804,7 @@
     parts = parts.filter(p => {
       p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
       p.vx *= (1 - dt * 2);
-      p.vy = (p.kind === 'note' || p.kind === 'bub' || p.kind === 'amb') ? p.vy : p.vy + 60 * dt;
+      p.vy = (p.kind === 'note' || p.kind === 'bub' || p.kind === 'amb' || p.kind === 'label') ? p.vy : p.vy + 60 * dt;
       return p.life > 0;
     });
     // ambient palace bubbles drifting up through the visible rooms
@@ -806,10 +868,15 @@
       if (!solidTile(c, r + 1)) { ctx.fillStyle = '#0f2f42'; ctx.fillRect(x, y + TS - 3, TS, 3); }
     }
 
-    frogs.forEach(drawFrog);
-    guests.forEach(drawGuest);
+    party.forEach(m => m.kind === 'frog' ? drawFrog(m) : drawGuest(m));
     enemies.forEach(drawEnemy);
+    flies.forEach(drawFly);
     drawPrincess();
+    zaps.forEach(z => {   // frog tongues
+      ctx.strokeStyle = '#ff7d9d'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(z.x1, z.y1); ctx.lineTo(z.x2, z.y2); ctx.stroke();
+      ctx.lineCap = 'butt';
+    });
 
     // bolts (bubbles) & arrows
     bolts.forEach(b => drawBubble(b.x, b.y, 6.5 + Math.sin(b.rot) * 1.2, 0.9));
@@ -831,6 +898,11 @@
       ctx.globalAlpha = a;
       if (p.kind === 'star') drawStar(p.x, p.y, p.sz, p.col, p.rot || 0);
       else if (p.kind === 'note') { ctx.fillStyle = p.col; ctx.font = 'bold ' + p.sz + 'px system-ui'; ctx.fillText('♪', p.x, p.y); }
+      else if (p.kind === 'label') {
+        ctx.fillStyle = p.col; ctx.font = '700 ' + p.sz + 'px system-ui'; ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(8,24,38,.8)'; ctx.lineWidth = 3; ctx.strokeText(p.text, p.x, p.y);
+        ctx.fillText(p.text, p.x, p.y); ctx.textAlign = 'left';
+      }
       else if (p.kind === 'bub' || p.kind === 'amb') {
         ctx.strokeStyle = p.col; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.sz, 0, 6.283); ctx.stroke();
@@ -1005,6 +1077,7 @@
     ctx.fillStyle = '#ffd34d';
     ctx.beginPath(); ctx.moveTo(-5, -15); ctx.lineTo(-5, -20); ctx.lineTo(-2, -16.5); ctx.lineTo(0, -21); ctx.lineTo(2, -16.5); ctx.lineTo(5, -20); ctx.lineTo(5, -15); ctx.closePath(); ctx.fill();
     ctx.restore();
+    if (shieldUp) drawBubble(x, y - 2, 21, 0.55);   // the Shield guest's bubble
     // bubble wand: a stem ending in the ring you blow bubbles through
     const wx = x + Math.cos(P.aim) * 17, wy = y + Math.sin(P.aim) * 17;
     ctx.strokeStyle = '#e8dcc8'; ctx.lineWidth = 2.5;
@@ -1045,13 +1118,26 @@
     ctx.restore();
     drawBubble(f.x, f.y + dy * 0.4, 12 + Math.sin(f.bob * 0.7) * 0.8);
   }
+  const ROLE_GLYPH = { cheer: '♪', shield: '◯', sparkle: '★', vigor: '♥' };
   function drawGuest(g) {
     const x = g.x, y = g.y + Math.sin(g.bob) * (P.dancing ? 3 : 1.5);
     ctx.fillStyle = g.hue;
     ctx.beginPath(); ctx.moveTo(0 + x, y - 4); ctx.lineTo(x + 8, y + 10); ctx.quadraticCurveTo(x, y + 13, x - 8, y + 10); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ffd9b8'; ctx.beginPath(); ctx.arc(x, y - 8, 5, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#1b5070'; ctx.beginPath(); ctx.arc(x, y - 10, 5, Math.PI, 0); ctx.fill();
-    drawStar(x + 8, y - 13, 3.5, '#ffd34d', g.bob);
+    ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 10px system-ui';
+    ctx.fillText(ROLE_GLYPH[g.role] || '★', x + 6, y - 14);
+  }
+  function drawFly(fl) {
+    const wob = Math.sin(fl.wob * 30);
+    ctx.fillStyle = 'rgba(200,225,255,.55)';
+    ctx.beginPath();
+    ctx.ellipse(fl.x - 3, fl.y - 3 + wob, 3.2, 1.6, -0.5, 0, 6.283);
+    ctx.ellipse(fl.x + 3, fl.y - 3 - wob, 3.2, 1.6, 0.5, 0, 6.283);
+    ctx.fill();
+    ctx.fillStyle = '#252c33';
+    ctx.beginPath(); ctx.ellipse(fl.x, fl.y, 4, 3, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#cfe3f2'; ctx.fillRect(fl.x - 2.5, fl.y - 1.5, 1.6, 1.6); ctx.fillRect(fl.x + 1, fl.y - 1.5, 1.6, 1.6);
   }
 
   // ===================== boot =====================
@@ -1075,13 +1161,18 @@
     get score() { return score; },
     get frogs() { return frogCount; },
     get guests() { return guestCount; },
+    get flies() { return flies.length; },
+    get partySize() { return party.length; },
+    get speedMul() { const n = flies.reduce((k, fl) => k + (Math.hypot(fl.x - P.x, fl.y - P.y) < 55 ? 1 : 0), 0); return Math.max(0.4, 1 - 0.15 * n); },
     get state() { return state; },
     get playerX() { return P.x; },
     get playerY() { return P.y; },
     get dancing() { return P.dancing; },
     get enemies() { return enemies.length; },
+    get enemyXY() { let best = null, bd = 1e9; enemies.forEach(en => { const d = Math.hypot(en.x - P.x, en.y - P.y); if (d < bd) { bd = d; best = en; } }); return best ? { x: best.x, y: best.y, d: bd } : null; },
+    get zoom() { return zoom; },
     get unlock() { return mg ? { bubbles: mg.bubbles.map(b => ({ x: b.x, y: b.y, r: b.r, popped: b.popped })) } : null; },
-    get guestXY() { return guests.length ? { x: guests[0].x, y: guests[0].y } : null; },
+    get guestXY() { return party.length ? { x: party[0].x, y: party[0].y } : null; },
     warp(n) { if (n >= 1 && n <= MAPS.length) { mg = null; loadFloor(n, true); } }
   };
 })();
