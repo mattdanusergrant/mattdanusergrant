@@ -792,7 +792,9 @@
       });
     } else {
       party.forEach((m, i) => {
-        const idx = trail.length - 2 - (i + 1) * 11 - 5;
+        // trail holds x,y PAIRS — the look-back offset must stay even or a member
+        // reads y-as-x and teleports (the vanishing-guest bug, fixed 2026-07-30)
+        const idx = trail.length - 2 - (i + 1) * 16 - 6;
         const tx = idx >= 0 ? trail[idx] : trail[0], ty = idx >= 0 ? trail[idx + 1] : trail[1];
         if (tx !== undefined) { m.x += (tx - m.x) * Math.min(1, dt * 10); m.y += (ty - m.y) * Math.min(1, dt * 10); }
         m.bob += dt * 6;
@@ -1173,6 +1175,7 @@
     get zoom() { return zoom; },
     get unlock() { return mg ? { bubbles: mg.bubbles.map(b => ({ x: b.x, y: b.y, r: b.r, popped: b.popped })) } : null; },
     get guestXY() { return party.length ? { x: party[0].x, y: party[0].y } : null; },
+    get partyXY() { return party.map(m => ({ kind: m.kind, x: m.x, y: m.y })); },
     warp(n) { if (n >= 1 && n <= MAPS.length) { mg = null; loadFloor(n, true); } }
   };
 })();
