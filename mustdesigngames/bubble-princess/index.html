@@ -165,18 +165,18 @@
   // Legend: # wall · . floor · , carpet · L locked door · E exit door · C cage · T chest
   //         P player start · g goon · a archer · b brute · f fly (harmless, slows; frog food)
   const MAPS = [
-    [ // Floor 1 — The Foyer
+    [ // Floor 1 — The Foyer (doors are double-wide: paired L tiles open together)
       '##############################',
       '#..........#........#........#',
       '#..........#.T......#.......E#',
       '#..P.......#........#........#',
       '#..........#...g....#........#',
       '#..........L........#........#',
-      '#..........#........#..f..f..#',
+      '#..........L........#..f..f..#',
       '#..........#........#........#',
       '#..,,,,,...#........#........#',
       '#..,,,,,g..#........L...g....#',
-      '#..,,,,,...#........#........#',
+      '#..,,,,,...#........L........#',
       '#..........#........#........#',
       '#..........#..g.....#........#',
       '#..........#........#........#',
@@ -192,17 +192,17 @@
       '#.P...........#............C.#',
       '#.............#.......a......#',
       '#.............L..............#',
-      '#.............#..............#',
+      '#.............L..............#',
       '#.............#..........g...#',
       '#..........T..#..............#',
       '#.............#..............#',
-      '#######L#############L########',
+      '#######LL############LL#######',
       '#....f........#..............#',
       '#.............#......f.......#',
       '#...g.........#...........C..#',
       '#.............#..........f...#',
       '#.............L..............#',
-      '#.C...........#.........g....#',
+      '#.C...........L.........g....#',
       '#..a........T.#.....T.......E#',
       '#........g....#.......g......#',
       '##############################'
@@ -214,13 +214,13 @@
       '#........b....,.....b........#',
       '#.............a..............#',
       '#.............,..............#',
-      '##############L###############',
+      '##############LL##############',
       '#..g..........T............C.#',
       '#.............a..............#',
       '#.......b.....#......b.......#',
       '#......f..............f......#',
       '#.C.......................g..#',
-      '######L################L######',
+      '######LL##############LL######',
       '#.............T..............#',
       '#...g..................g.....#',
       '#.........f........f.........#',
@@ -390,14 +390,16 @@
   // --- opening locks (the wand is the Master Key): touching one starts the
   //     kid-friendly unlock mini-game — pop the key-bubbles, no fail, no timer ---
   const MG_COUNT = { door: 3, chest: 4, cage: 4, exit: 5 };
+  const REACH = 16;                        // generous interact reach beyond the princess
   function tryOpenSpecials() {
-    const c0 = Math.floor((P.x - P.r - 4) / TS), c1 = Math.floor((P.x + P.r + 4) / TS);
-    const r0 = Math.floor((P.y - P.r - 4) / TS), r1 = Math.floor((P.y + P.r + 4) / TS);
+    const pad = P.r + REACH + 2;
+    const c0 = Math.floor((P.x - pad) / TS), c1 = Math.floor((P.x + pad) / TS);
+    const r0 = Math.floor((P.y - pad) / TS), r1 = Math.floor((P.y + pad) / TS);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const s = specials[key(c, r)];
       if (!s || s.open) continue;
       const nx = Math.max(c * TS, Math.min(P.x, c * TS + TS)), ny = Math.max(r * TS, Math.min(P.y, r * TS + TS));
-      if (Math.hypot(P.x - nx, P.y - ny) > P.r + 3) continue;
+      if (Math.hypot(P.x - nx, P.y - ny) > P.r + REACH) continue;
       startUnlock(s);
       return;
     }
@@ -437,7 +439,17 @@
     s.open = true; locksOpened++;
     const wx = s.c * TS + TS / 2, wy = s.r * TS + TS / 2;
     stars(wx, wy, 6); pop(wx, wy, 10);
-    if (s.type === 'door') { sfx.unlock(); addScore(5); }
+    if (s.type === 'door') {
+      sfx.unlock(); addScore(5);
+      // double-wide doors: the adjacent linked panel swings open with this one
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dc, dr]) => {
+        const p2 = specials[key(s.c + dc, s.r + dr)];
+        if (p2 && !p2.open && p2.type === 'door') {
+          p2.open = true;
+          stars(p2.c * TS + TS / 2, p2.r * TS + TS / 2, 6); pop(p2.c * TS + TS / 2, p2.r * TS + TS / 2, 10);
+        }
+      });
+    }
     else if (s.type === 'chest') {
       sfx.chest();
       if (P.hp < P.maxHp) { P.hp = Math.min(P.maxHp, P.hp + 1); puff(wx, wy, 8, '#ff8fa3', 50); }
