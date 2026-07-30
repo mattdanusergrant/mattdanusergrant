@@ -263,6 +263,7 @@ const byId = {}; // cid -> card def
 let S = null;            // game state (serializable)
 let UNDO = [];           // snapshot stack
 let VIEW = {sheet:null, picking:null, flow:null, toast:null}; // transient ui (not undone)
+let NET = null;          // online session: {room, seat, seen, status, deck} — null when local
 
 function freshPlayer(name, color){
   return { name, color, deck:[], hand:[], discard:[], exile:[],
@@ -295,7 +296,14 @@ function I(id){ return S.inst[id]; }
 function D(id){ return byId[I(id).cid]; }
 function P(){ return S.players[S.active]; }
 function OPP(){ return S.players[1-S.active]; }
-function viewer(){ return (S && S.solo) ? 0 : (S ? S.active : 0); } // solo: board always from the human's seat
+function viewer(){ if(NET) return NET.seat; return (S && S.solo) ? 0 : (S ? S.active : 0); } // solo/online: board always from my seat
+function netMyTurn(){ // online: is this client allowed to act right now?
+  if(!NET||!S) return true;
+  if(S.phase==='setup') return S.setupStage===NET.seat;
+  if(S.phase==='over') return false;
+  return S.active===NET.seat;
+}
+function uiLocked(){ return !!VIEW.aiBusy || (NET && !netMyTurn()); }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
 function logLine(t, hl){ S.log.push({t, hl:!!hl, turn:S.turn}); }
 function snapshot(){ UNDO.push(JSON.stringify(S)); if (UNDO.length>80) UNDO.shift(); }
@@ -426,6 +434,7 @@ function endTurn(){
     if(S.phase!=='over' && S.active===1) setTimeout(aiKickoff, window.KC_AI_DELAY||600);
     return;
   }
+  if(NET){ beginTurn(); render(); return; } // actor runs the opponent's upkeep too; the snapshot carries it over
   showPass(()=>{ beginTurn(); render(); });
 }
 function eliminate(pi, why){
@@ -1008,7 +1017,7 @@ function miniHTML(iid, opts){
 function cellHTML(pi, zone, idx){
   const p=S.players[pi];
   const arr = zone==='room'? p.rooms[idx] : p.fields[idx];
-  const mine = pi===S.active;
+  const mine = pi===viewer();
   const labels = zone==='room' ? ROOMS : ['Field','Field','Field'];
   const zh = zone==='room' ? `<span class="zonehint">→ ${ZONE_OF_ROOM[idx]}${idx===1?` (${p.deck.length})`:idx===0?` (${p.discard.length})`:` (${p.hand.length})`}</span>`:'';
   const hot = cellIsHot(pi, zone, idx) ? ' hot':'';
@@ -1049,9 +1058,15 @@ function boardHTML(){
 function statusHTML(){
   const p=P();
   const busy=VIEW.aiBusy?`<span class="pill" style="border-color:var(--hurt);color:var(--hurt)">The Rival is scheming…</span>`:'';
+  let net='';
+  if(NET){
+    const dot = NET.status==='err' ? '<span style="color:var(--hurt)">⚠</span>' : '●';
+    net = `<span class="pill num">${dot} ${esc(NET.room)}</span>`
+        + (S.phase!=='over' ? `<span class="pill" ${netMyTurn()?'style="border-color:var(--good,#2a7);color:var(--good,#2a7)"':''}>${netMyTurn()?'Your move':'Their move…'}</span>` : '');
+  }
   return `<div class="statusline">
     <b class="num">Turn ${S.turn}</b>
-    <span class="pill">${esc(p.name)}</span>${busy}
+    <span class="pill">${esc(p.name)}</span>${busy}${net}
     <span>${p.mustered? 'castle card placed':'castle card available'}</span>
     <span class="num">hand ${S.players[viewer()].hand.length}</span>
   </div>`;
@@ -1062,8 +1077,8 @@ function trayHTML(){
     <div class="tray-head">
       <span class="eyebrow">Your hand — tap a card</span>
       <span style="display:flex;gap:6px">
-        <button class="chip" id="btnUndo" ${VIEW.aiBusy?'disabled':''}>Undo</button>
-        <button class="chip primary" id="btnEnd" ${VIEW.aiBusy?'disabled':''}>End turn</button>
+        <button class="chip" id="btnUndo" ${uiLocked()?'disabled':''}>Undo</button>
+        <button class="chip primary" id="btnEnd" ${uiLocked()?'disabled':''}>End turn</button>
       </span>
     </div>
     <div class="handrow">${p.hand.map((iid,ix)=>{
@@ -1083,10 +1098,11 @@ function logHTML(){
 }
 
 function render(){
-  if(!S){ renderSetup(); return; }
-  if(S.phase==='setup'){ renderLeaderSetup(); return; }
-  if(S.phase==='over'){ renderGame(); renderVictory(); return; }
+  if(!S){ if(NET){ netLobbyScreen(); return; } renderSetup(); return; }
+  if(S.phase==='setup'){ renderLeaderSetup(); netAutoPush(); return; }
+  if(S.phase==='over'){ renderGame(); renderVictory(); netAutoPush(); return; }
   renderGame();
+  netAutoPush();
 }
 function renderGame(){
   app.innerHTML = `
@@ -1350,7 +1366,8 @@ function showPass(cb){
 function renderSetup(){
   const opts=Object.keys(DECKS);
   VIEW.setup=VIEW.setup||{p0:null,p1:'RND',mode:'solo'};
-  const solo=VIEW.setup.mode!=='hotseat';
+  const solo=VIEW.setup.mode==='solo';
+  const online=VIEW.setup.mode==='online';
   const pick=(slot,withRnd)=>(withRnd?[`<div class="dopt ${VIEW.setup[slot]==='RND'?'sel':''}" data-dk="${slot}:RND">
       <h3 class="disp">Random</h3><p>The Rival keeps its banners furled until the reveal.</p></div>`]:[]).concat(opts.map(c=>{
     const l=CARDS.find(x=>x.color===c&&x.type==='leader');
@@ -1363,15 +1380,26 @@ function renderSetup(){
     <p class="eyebrow">A playtest build of a tabletop TCG</p>
     <h1 class="disp" style="font-size:clamp(30px,6vw,44px);line-height:1.1">Two castles. Three rooms each.<br>One Leader must fall.</h1>
     <p style="color:var(--ink2)">Every card can be a worker, a soldier, or a conspirator. Tap is tempo. Crowded rooms breed incredible plots.</p>
-    <div style="display:flex;gap:8px;margin:16px 0 4px">
+    <div style="display:flex;gap:8px;margin:16px 0 4px;flex-wrap:wrap">
       <button class="chip ${solo?'primary':''}" data-mode="solo">Solo vs the Rival</button>
-      <button class="chip ${solo?'':'primary'}" data-mode="hotseat">Two players, one device</button>
+      <button class="chip ${VIEW.setup.mode==='hotseat'?'primary':''}" data-mode="hotseat">Two players, one device</button>
+      <button class="chip ${online?'primary':''}" data-mode="online">Online vs a friend</button>
     </div>
-    <h3 class="disp" style="margin-top:14px">${solo?'Your House':'Player 1 — choose a castle'}</h3>
+    <h3 class="disp" style="margin-top:14px">${(solo||online)?'Your House':'Player 1 — choose a castle'}</h3>
     <div class="deckpick">${pick('p0',false)}</div>
+    ${online?`
+      <div style="display:flex;gap:8px;align-items:center;margin:14px 0 6px;flex-wrap:wrap">
+        <button class="chip primary" id="btnCreate" ${VIEW.setup.p0?'':'disabled'}>Create a room</button>
+        <span style="color:var(--muted)">— or —</span>
+        <input id="joinCode" placeholder="CODE" maxlength="5" autocapitalize="characters" autocomplete="off"
+          style="width:6.5ch;padding:8px 10px;font:600 15px/1 var(--mono,monospace);letter-spacing:2px;text-transform:uppercase;background:none;border:1px solid var(--line);border-radius:10px;color:var(--ink)">
+        <button class="chip" id="btnJoin" ${VIEW.setup.p0?'':'disabled'}>Join a room</button>
+      </div>
+      <p style="color:var(--ink2);font-size:14px">Create a room and send the five-letter code to your rival — they join from this same page. Turns travel in a couple of seconds; a refresh rejoins the game.</p>
+    `:`
     <h3 class="disp">${solo?"The Rival's House":'Player 2 — choose a castle'}</h3>
     <div class="deckpick">${pick('p1',solo)}</div>
-    <button class="chip primary" id="btnStart" style="font-size:16px;padding:10px 26px" ${(VIEW.setup.p0&&VIEW.setup.p1)?'':'disabled'}>Raise the banners</button>
+    <button class="chip primary" id="btnStart" style="font-size:16px;padding:10px 26px" ${(VIEW.setup.p0&&VIEW.setup.p1)?'':'disabled'}>Raise the banners</button>`}
     <div class="spacer"></div></div>`;
   overlays.innerHTML='';
   app.querySelectorAll('[data-mode]').forEach(el=>el.onclick=()=>{ VIEW.setup.mode=el.dataset.mode;
@@ -1382,10 +1410,17 @@ function renderSetup(){
     let p1=VIEW.setup.p1;
     if(p1==='RND'){ const pool=opts.filter(c=>c!==VIEW.setup.p0); p1=pool[Math.floor(Math.random()*pool.length)]||opts[0]; }
     newGame(VIEW.setup.p0, p1, solo); S.phase='setup'; S.setupStage=0; render(); };
+  const bc=document.getElementById('btnCreate');
+  if(bc) bc.onclick=()=>netCreate(VIEW.setup.p0);
+  const bj=document.getElementById('btnJoin');
+  if(bj) bj.onclick=()=>{ const code=(document.getElementById('joinCode').value||'').trim().toUpperCase();
+    if(code.length!==5) return toast('Room codes are five letters.');
+    netJoin(code, VIEW.setup.p0); };
   wireTheme();
 }
 function renderLeaderSetup(){ // opening: reveal Leaders -> each player seeds 1 facedown card per room from hand
-  if(!S.revealDone){
+  const revSeen = NET ? VIEW.revSeen : S.revealDone; // online: the reveal is dismissed per-client
+  if(!revSeen){
     app.innerHTML=`<div class="topbar"><span class="brand">${GAME_BRAND}</span></div>
       <div style="max-width:560px;margin:0 auto">
       <p class="eyebrow">The Houses present their Leaders</p>
@@ -1395,9 +1430,10 @@ function renderLeaderSetup(){ // opening: reveal Leaders -> each player seeds 1 
       <button class="chip primary" id="revGo" style="font-size:16px;padding:10px 26px">Begin the seating</button>
       <div class="spacer"></div></div>`;
     overlays.innerHTML='';
-    document.getElementById('revGo').onclick=()=>{ S.revealDone=true; render(); };
+    document.getElementById('revGo').onclick=()=>{ if(NET) VIEW.revSeen=true; else S.revealDone=true; render(); };
     return;
   }
+  if(NET && S.setupStage!==NET.seat){ netWaitScreen('Your rival is seeding their castle…', 'Three rooms, three hidden cards. You will not be told which one wears the crown.'); return; }
   const pi=S.setupStage; const p=S.players[pi];
   S._pl = S._pl || {};
   const taken = Object.values(S._pl);
@@ -1431,6 +1467,12 @@ function renderLeaderSetup(){ // opening: reveal Leaders -> each player seeds 1 
       toast('The Rival has sealed its rooms.');
       return;
     }
+    if(NET){ // hand the baton across the wire; the second seeder also opens turn 1
+      if(S.setupStage===0){ S.setupStage=1; }
+      else { S.phase='main'; beginTurn(); }
+      render(); netPush();
+      return;
+    }
     if(S.setupStage===0){ S.setupStage=1;
       overlays.innerHTML=`<div class="full"><div class="fullin"><p class="eyebrow">Pass the device</p>
         <h1 class="disp">${esc(S.players[1].name)}</h1><p>Seed your castle in secret.</p>
@@ -1446,9 +1488,9 @@ function renderVictory(){
     <p class="eyebrow">The siege is over</p>
     <h1 class="disp">${esc(w.name)} triumphs</h1>
     <p>${COLORS[w.color]} rules the field. ${S.turn} turns of scheming and steel.</p>
-    <button class="chip primary" id="again" style="font-size:16px;padding:10px 26px">Play again</button>
+    <button class="chip primary" id="again" style="font-size:16px;padding:10px 26px">${NET?'Leave the room':'Play again'}</button>
   </div></div>`;
-  document.getElementById('again').onclick=()=>{ S=null; UNDO=[]; VIEW={setup:VIEW.setup}; render(); };
+  document.getElementById('again').onclick=()=>{ if(NET) return netLeave(); S=null; UNDO=[]; VIEW={setup:VIEW.setup}; render(); };
 }
 function helpSheet(){
   return `<div class="scrim" data-close="1"><div class="sheet helpbody">
@@ -1472,7 +1514,7 @@ function helpSheet(){
 /* ---------- wiring ---------- */
 function wire(){
   wireTheme();
-  const LOCKED=()=>!!VIEW.aiBusy;
+  const LOCKED=uiLocked;
   const q=(s,fn)=>{ const el=document.getElementById(s); if(el) el.onclick=()=>{ if(LOCKED()&&s!=='btnHelp') return; fn(); }; };
   q('btnEnd', ()=>{ snapshot(); logLine(`${P().name} ends the turn.`); endTurn(); });
   q('btnUndo', undo);
@@ -1480,10 +1522,10 @@ function wire(){
   q('btnSneak', ()=>{ const sneaks=[]; for(let z=0;z<3;z++) for(const iid of P().fields[z]) if(canSneak(iid)) sneaks.push(iid);
     if(sneaks.length===1) startSneak(sneaks[0]);
     else pickFromList(sneaks,1,'Which unit sneaks?',(ch)=>{ VIEW.picking=null; if(ch.length) startSneak(ch[0]); else render(); }); });
-  app.querySelectorAll('[data-raid]').forEach(el=>el.onclick=()=>startRaid(+el.dataset.raid));
-  // cells
+  app.querySelectorAll('[data-raid]').forEach(el=>el.onclick=()=>{ if(LOCKED()) return; startRaid(+el.dataset.raid); });
+  // cells — browsing stays open while waiting on the opponent online; mutations are gated per-action
   app.querySelectorAll('[data-cell]').forEach(el=>el.onclick=(ev)=>{
-    if(LOCKED()) return;
+    if(VIEW.aiBusy) return;
     const [pi,zone,idx]=el.dataset.cell.split(':'); const PI=+pi, IDX=+idx;
     const pk=VIEW.picking;
     if(pk&&pk.kind==='pay'){ // pay by tapping own castle cards: click cell -> tap first eligible, or specific mini
@@ -1559,11 +1601,164 @@ function wireTheme(){
 }
 const FACTION_BLURB={W:'The shield-wall. Garrisons that defend even tapped.',U:'The spymaster. Sees the deck, exposes schemes.',B:'The underworld. Sneaks past walls; raises the dead.',R:'The torch. Strikes the turn it arrives.',G:'The wild growth. Out-builds the one-card law.'};
 
+/* ---------- online play: two browsers, one append-only op log ----------
+   The acting client is authoritative: after each completed action it appends a
+   full state snapshot to pw_ops; the other client polls and adopts. Turn order
+   serialises the writers, (room,idx) uniqueness catches any race. Playtest-grade:
+   both clients hold full state (as with any shared-seed scheme), so devtools can
+   peek — same trust level as playing across a real table. */
+const NET_BASE = window.KC_NET_BASE || 'https://ep-autumn-heart-af3xqegy.apirest.c-2.us-west-2.aws.neon.tech/neondb/rest/v1';
+const NET_POLL_MS = window.KC_NET_POLL || 2000;
+function netRoomCode(){ const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=A[Math.floor(Math.random()*A.length)]; return s; }
+function netPillUpdate(){ /* cheap: statusline re-renders on next render(); only force one for status flips */ }
+
+async function netCreate(deck){
+  let room=netRoomCode();
+  NET={room, seat:0, seen:-1, status:'wait', deck, lobby:'hosting'};
+  render();
+  for(let tries=0;tries<3;tries++){
+    try{
+      const r=await fetch(NET_BASE+'/pw_games',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({room:NET.room, seed:Math.floor(Math.random()*1e9), p0_deck:deck, p0_name:'Host'})});
+      if(r.status===409){ NET.room=netRoomCode(); continue; } // code collision — reroll
+      if(!r.ok) throw new Error('http '+r.status);
+      location.hash='room='+NET.room+'&seat=0&deck='+deck;
+      netStartPolling(); render();
+      return;
+    }catch(e){ if(tries===2){ NET=null; render(); return toast('Could not reach the game server.'); } }
+  }
+}
+async function netJoin(room, deck){
+  NET={room, seat:1, seen:-1, status:'wait', deck, lobby:'joining'};
+  render();
+  try{
+    const g=await fetch(`${NET_BASE}/pw_games?room=eq.${room}&select=room`).then(r=>r.json());
+    if(!Array.isArray(g)||!g.length){ NET=null; render(); return toast(`No room called ${room}.`); }
+    const r=await fetch(NET_BASE+'/pw_ops',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({room, idx:0, actor:1, op:{t:'join', deck, name:'Guest'}})});
+    if(r.status===409){ // seat already claimed — likely our own earlier tab; rejoin onto the latest state
+      NET.rejoined=true;
+    } else if(!r.ok) throw new Error('http '+r.status);
+    location.hash='room='+room+'&seat=1&deck='+deck;
+    netStartPolling(); render();
+  }catch(e){ NET=null; render(); toast('Could not reach the game server.'); }
+}
+function netLeave(){
+  if(NET&&NET.timer) clearInterval(NET.timer);
+  NET=null; S=null; UNDO=[];
+  VIEW={sheet:null,picking:null,flow:null,toast:null,setup:VIEW.setup};
+  if(location.hash) history.replaceState(null,'',location.pathname+location.search);
+  render();
+}
+function netStartPolling(){
+  if(NET.timer) clearInterval(NET.timer);
+  NET.timer=setInterval(netPoll, NET_POLL_MS);
+  netPoll();
+}
+async function netPoll(){
+  if(!NET||NET.polling) return;
+  NET.polling=true;
+  try{
+    const rows=await fetch(`${NET_BASE}/pw_ops?room=eq.${NET.room}&idx=gt.${NET.seen}&order=idx.asc&select=idx,actor,op`)
+      .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.json(); });
+    const wasErr=NET.status==='err'; NET.status = NET.status==='wait'?'wait':'ok';
+    netApply(rows||[]);
+    if(wasErr) render();
+  }catch(e){ if(NET&&NET.status!=='err'){ NET.status='err'; render(); } }
+  if(NET) NET.polling=false;
+}
+function netApply(rows){
+  let join=null, last=null;
+  for(const row of rows){
+    NET.seen=Math.max(NET.seen, row.idx);
+    if(row.op&&row.op.t==='join') join=row.op;
+    else if(row.op&&row.op.t==='state') last=row;
+  }
+  if(last && (last.actor!==NET.seat || !S)){ // adopt the opponent's snapshot (or any snapshot on [re]connect)
+    const mineBefore=S&&netMyTurn();
+    S=last.op.s; UNDO=[];
+    NET.status='ok';
+    NET.lastSynced=JSON.stringify(S);
+    VIEW.sheet=null; VIEW.picking=null; VIEW.flow=null;
+    render();
+    if(!mineBefore && netMyTurn() && S.phase==='main') toast('Your move.');
+    return;
+  }
+  if(join && NET.seat===0 && !S){ // a challenger arrived — the host deals the opening
+    newGame(NET.deck, join.deck, false);
+    S.players[0].name='Host'; S.players[1].name=join.name||'Guest';
+    S.phase='setup'; S.setupStage=0;
+    NET.status='ok';
+    render(); netPush();
+  }
+}
+function netPush(){ // queue the current state; netFlush pushes the newest queued snapshot
+  if(!NET||!S) return;
+  const j=JSON.stringify(S);
+  if(j===NET.lastSynced) return;
+  NET.want=j; netFlush();
+}
+async function netFlush(){
+  if(!NET||NET.pushing||!NET.want) return;
+  NET.pushing=true;
+  const payload=NET.want; NET.want=null;
+  try{
+    const r=await fetch(NET_BASE+'/pw_ops',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({room:NET.room, idx:NET.seen+1, actor:NET.seat, op:{t:'state', s:JSON.parse(payload)}})});
+    if(r.status===409){ NET.pushing=false; NET.want=NET.want||payload; await netPoll(); return netFlush(); } // idx raced: catch up, retry
+    if(!r.ok) throw new Error('http '+r.status);
+    NET.seen++; NET.lastSynced=payload;
+    if(NET.status==='err'){ NET.status='ok'; render(); }
+  }catch(e){
+    NET.want=NET.want||payload; NET.pushing=false;
+    if(NET.status!=='err'){ NET.status='err'; render(); }
+    setTimeout(netFlush, 1500);
+    return;
+  }
+  NET.pushing=false;
+  netFlush(); // in case a newer snapshot queued while this one was in flight
+}
+let netPushTimer=null;
+function netAutoPush(){ // called after every render: push iff *I* changed the state since the last sync
+  if(!NET||!S) return;
+  if(S.phase==='setup') return;               // opening pushes are explicit (room picks stay private)
+  if(VIEW.picking||VIEW.flow) return;         // mid-action: wait for the action to finish
+  const j=JSON.stringify(S);
+  if(j===NET.lastSynced) return; // lastSynced = newest state in the log, whether I pushed it or adopted it
+  clearTimeout(netPushTimer);
+  netPushTimer=setTimeout(netPush, 200);
+}
+function netWaitScreen(msg, sub){
+  app.innerHTML=`<div class="topbar"><span class="brand">${GAME_BRAND}</span><button class="chip" id="btnTheme">◐</button></div>
+    <div style="max-width:560px;margin:0 auto;text-align:center;padding-top:6vh">
+    <p class="eyebrow">Online siege — room <b class="num">${esc(NET.room)}</b>${NET.status==='err'?' · <span style="color:var(--hurt)">reconnecting…</span>':''}</p>
+    <h1 class="disp" style="font-size:24px;line-height:1.2">${msg}</h1>
+    ${sub?`<p style="color:var(--ink2);font-size:14px">${sub}</p>`:''}
+    <button class="chip" id="btnLeave" style="margin-top:14px">Leave the room</button>
+    <div class="spacer"></div></div>`;
+  overlays.innerHTML='';
+  document.getElementById('btnLeave').onclick=netLeave;
+  wireTheme();
+}
+function netLobbyScreen(){ // NET exists but no game state yet
+  if(NET.lobby==='hosting') netWaitScreen(
+    `<span style="font-size:15px;display:block;color:var(--ink2);margin-bottom:6px">Your room code</span><span class="num" style="font-size:44px;letter-spacing:10px">${esc(NET.room)}</span>`,
+    'Send this code to your rival. The siege begins the moment they join.');
+  else netWaitScreen('Taking your seat…', 'Waiting for the host to deal the opening.');
+}
+
 /* ---------- boot ---------- */
 window.KC_INIT = function(cards, decks){
   CARDS = cards; DECKS = decks;
   for(const c of CARDS) byId[c.id]=c;
   initHover();
+  // refresh/rejoin: #room=CODE&seat=N&deck=C puts this client straight back into its seat
+  const h=new URLSearchParams(location.hash.slice(1));
+  if(h.get('room') && /^[A-Z2-9]{5}$/.test(h.get('room')) && (h.get('seat')==='0'||h.get('seat')==='1')){
+    NET={room:h.get('room'), seat:+h.get('seat'), seen:-1, status:'wait', deck:h.get('deck')||null,
+         lobby:h.get('seat')==='0'?'hosting':'joining'};
+    netStartPolling();
+  }
   render();
 };
 /* mouseover preview: a big card follows the pointer on desktop.
