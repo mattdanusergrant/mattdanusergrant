@@ -248,13 +248,13 @@
     move: 'WASD / arrows to move · aim with the mouse · click to blow bubbles',
     lock: 'Your wand is the Master Key — walk into any lock to pop it open',
     dance: 'Hold SPACE to dance — it heals you (but you can\'t move)',
-    guest: 'Dance near rescued guests to inspire them — they\'ll follow you'
+    guest: 'Rescued guests follow you — hold SPACE and they\'ll dance around you!'
   };
   const HINTS_TOUCH = {
     move: 'Left thumb to move · tap the right side to blow bubbles',
     lock: 'Your wand is the Master Key — walk into any lock to pop it open',
     dance: 'Hold 💃 Dance to heal (you can\'t move while dancing)',
-    guest: 'Dance near rescued guests to inspire them — they\'ll follow you'
+    guest: 'Rescued guests follow you — hold 💃 and they\'ll dance around you!'
   };
   let touchMode = false;
 
@@ -273,6 +273,8 @@
   let clearT = 0, runTime = 0;
   let hint = null, hintT = 0; const hintsShown = {};
   let snap = null;                         // floor-start snapshot for retry
+  let mg = null;                           // the kid-friendly unlock mini-game
+  let danceSpin = 0;                       // rotation of the guests' dance formation
 
   function showHint(key) {
     if (hintsShown[key]) return;
@@ -290,7 +292,7 @@
     const rowsArr = MAPS[n - 1];
     rows = rowsArr.length; cols = rowsArr[0].length;
     tiles = []; specials = {}; enemies = []; frogs = []; bolts = []; arrows = []; parts = []; rings = [];
-    const carried = keepParty ? guests.filter(g => g.inspired) : [];
+    const carried = keepParty ? guests.slice() : [];
     guests = []; trail = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const ch = rowsArr[r][c];
@@ -308,7 +310,7 @@
       if (ch === 'a') enemies.push(mkEnemy('archer', wx, wy));
       if (ch === 'b') enemies.push(mkEnemy('brute', wx, wy));
     }
-    // rescued & inspired guests attend the rest of the gala with you
+    // rescued guests attend the rest of the ball with you
     carried.forEach((g, i) => { g.x = P.x; g.y = P.y; guests.push(g); });
     camX = P.x; camY = P.y;
     P.dancing = false; P.fireCd = 0; P.iframe = 1.0;
@@ -374,35 +376,72 @@
     }
   }
 
-  // --- opening locks (the wand is the Master Key) ---
+  // --- opening locks (the wand is the Master Key): touching one starts the
+  //     kid-friendly unlock mini-game — pop the key-bubbles, no fail, no timer ---
+  const MG_COUNT = { door: 3, chest: 4, cage: 4, exit: 5 };
   function tryOpenSpecials() {
     const c0 = Math.floor((P.x - P.r - 4) / TS), c1 = Math.floor((P.x + P.r + 4) / TS);
     const r0 = Math.floor((P.y - P.r - 4) / TS), r1 = Math.floor((P.y + P.r + 4) / TS);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const s = specials[key(c, r)];
       if (!s || s.open) continue;
-      const wx = c * TS + TS / 2, wy = r * TS + TS / 2;
-      // must actually touch the tile box
       const nx = Math.max(c * TS, Math.min(P.x, c * TS + TS)), ny = Math.max(r * TS, Math.min(P.y, r * TS + TS));
       if (Math.hypot(P.x - nx, P.y - ny) > P.r + 3) continue;
-      s.open = true; locksOpened++;
-      stars(wx, wy, 6); pop(wx, wy, 10);
-      if (s.type === 'door') { sfx.unlock(); setScore(score + 5); }
-      else if (s.type === 'chest') {
-        sfx.chest();
-        if (P.hp < P.maxHp) { P.hp = Math.min(P.maxHp, P.hp + 1); puff(wx, wy, 8, '#ff8fa3', 50); }
-        else setScore(score + 15);
-      }
-      else if (s.type === 'cage') {
-        sfx.unlock();
-        guests.push({ x: wx, y: wy, hx: wx, hy: wy, r: 9, inspired: false, wt: 0, hue: ['#f2a2c4', '#a2c8f2', '#f2d3a2', '#b8f2a2'][(guests.length) % 4], bob: Math.random() * 6.28 });
-        showHint('guest');
-      }
-      else if (s.type === 'exit') {
-        sfx.clear();
-        if (floor < MAPS.length) { state = 'clear'; clearT = 1.4; }
-        else win();
-      }
+      startUnlock(s);
+      return;
+    }
+  }
+  function startUnlock(s) {
+    state = 'unlock';
+    const pw = Math.min(W - 30, 430), ph = Math.min(H - 90, 300);
+    const px = (W - pw) / 2, py = (H - ph) / 2 + 10;
+    const bubbles = [];
+    const n = MG_COUNT[s.type] || 3;
+    for (let i = 0; i < n; i++) bubbles.push({
+      x: px + 50 + Math.random() * (pw - 100),
+      y: py + 76 + Math.random() * (ph - 116),
+      vx: (Math.random() - 0.5) * 90, vy: (Math.random() - 0.5) * 90,
+      r: 29, popped: false
+    });
+    mg = { s, bubbles, panel: { x: px, y: py, w: pw, h: ph }, doneT: 0, sparks: [] };
+    tone(523, 0.1, 'triangle', 0.05, 784);
+  }
+  function updateUnlock(dt) {
+    const p = mg.panel;
+    mg.bubbles.forEach(b => {
+      if (b.popped) return;
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      if (b.x - b.r < p.x + 10) { b.x = p.x + 10 + b.r; b.vx = Math.abs(b.vx); }
+      if (b.x + b.r > p.x + p.w - 10) { b.x = p.x + p.w - 10 - b.r; b.vx = -Math.abs(b.vx); }
+      if (b.y - b.r < p.y + 52) { b.y = p.y + 52 + b.r; b.vy = Math.abs(b.vy); }
+      if (b.y + b.r > p.y + p.h - 10) { b.y = p.y + p.h - 10 - b.r; b.vy = -Math.abs(b.vy); }
+    });
+    mg.sparks = mg.sparks.filter(sp => { sp.life -= dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; return sp.life > 0; });
+    if (mg.bubbles.every(b => b.popped)) {
+      mg.doneT += dt;
+      if (mg.doneT > 0.45) { const s = mg.s; mg = null; state = 'play'; finishUnlock(s); }
+    }
+  }
+  function finishUnlock(s) {
+    s.open = true; locksOpened++;
+    const wx = s.c * TS + TS / 2, wy = s.r * TS + TS / 2;
+    stars(wx, wy, 6); pop(wx, wy, 10);
+    if (s.type === 'door') { sfx.unlock(); setScore(score + 5); }
+    else if (s.type === 'chest') {
+      sfx.chest();
+      if (P.hp < P.maxHp) { P.hp = Math.min(P.maxHp, P.hp + 1); puff(wx, wy, 8, '#ff8fa3', 50); }
+      else setScore(score + 15);
+    }
+    else if (s.type === 'cage') {
+      sfx.inspire();
+      guests.push({ x: wx, y: wy, r: 9, hue: ['#f2a2c4', '#a2c8f2', '#f2d3a2', '#b8f2a2'][(guests.length) % 4], bob: Math.random() * 6.28 });
+      guestCount++; setScore(score + 25); stars(wx, wy, 8);
+      showHint('guest');
+    }
+    else if (s.type === 'exit') {
+      sfx.clear();
+      if (floor < MAPS.length) { state = 'clear'; clearT = 1.4; }
+      else win();
     }
   }
 
@@ -426,8 +465,23 @@
   cv.addEventListener('pointerdown', (e) => {
     ac();
     const [sx, sy] = stagePos(e);
+    if (e.pointerType === 'touch' && !touchMode) { touchMode = true; document.body.classList.add('touch'); }
+    if (state === 'unlock' && mg) {          // taps/clicks go to the unlock mini-game
+      for (const b of mg.bubbles) {
+        if (!b.popped && Math.hypot(sx - b.x, sy - b.y) <= b.r + 8) {
+          b.popped = true;
+          const nPopped = mg.bubbles.filter(x => x.popped).length;
+          tone(480 + nPopped * 130, 0.09, 'triangle', 0.06, 900);
+          for (let i = 0; i < 10; i++) {
+            const a = Math.random() * 6.28, sp = 90 * (0.4 + Math.random());
+            mg.sparks.push({ x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5 });
+          }
+          break;
+        }
+      }
+      return;
+    }
     if (e.pointerType === 'touch') {
-      if (!touchMode) { touchMode = true; document.body.classList.add('touch'); }
       if (sx < W * 0.45 && stickId === null) { stickId = e.pointerId; stickOx = sx; stickOy = sy; stickDx = 0; stickDy = 0; }
       else if (aimId === null) { aimId = e.pointerId; aimSx = sx; aimSy = sy; }
     } else {
@@ -474,7 +528,7 @@
     state = 'over'; sfx.lose();
     ovTitle.textContent = 'Your bubble burst…';
     ovBody.textContent = 'The goons got the best of you on floor ' + floor + '.';
-    ovSub.textContent = 'Frogs so far: ' + frogCount + ' · guests inspired: ' + guestCount;
+    ovSub.textContent = 'Frogs so far: ' + frogCount + ' · guests rescued: ' + guestCount;
     ovBtn.textContent = 'Try floor ' + floor + ' again';
     overlay.classList.add('show');
   }
@@ -483,7 +537,7 @@
     const m = Math.floor(runTime / 60), s = Math.floor(runTime % 60);
     setScore(score + 100);
     ovTitle.textContent = '👑 A palace full of bubbles!';
-    ovBody.textContent = 'You bubbled ' + frogCount + ' goons into floating frogs, popped ' + locksOpened + ' locks open and inspired ' + guestCount + ' guests.';
+    ovBody.textContent = 'You bubbled ' + frogCount + ' goons into floating frogs, popped ' + locksOpened + ' locks open and rescued ' + guestCount + ' guests.';
     ovSub.textContent = 'Time ' + m + ':' + String(s).padStart(2, '0') + ' · score ' + score + ' · best ' + best;
     ovBtn.textContent = 'Encore — play again';
     overlay.classList.add('show');
@@ -498,15 +552,15 @@
       // retry the floor from its snapshot
       setScore(snap.score); frogCount = snap.frogCount; guestCount = snap.guestCount; locksOpened = snap.locksOpened;
       P.hp = Math.max(3, snap.hp);
-      guests = guests.filter(g => g.inspired).slice(0, snap.party);
+      guests = guests.slice(0, snap.party);
       loadFloor(floor, true);
     }
   });
 
   function fireBolt() {
     if (P.fireCd > 0 || P.dancing) return;
-    const inspired = guests.some(g => g.inspired && Math.hypot(g.x - P.x, g.y - P.y) < 160);
-    P.fireCd = inspired ? 0.19 : 0.27;
+    const cheered = guests.some(g => Math.hypot(g.x - P.x, g.y - P.y) < 160);
+    P.fireCd = cheered ? 0.19 : 0.27;
     const a = P.aim;
     bolts.push({ x: P.x + Math.cos(a) * 18, y: P.y + Math.sin(a) * 18, vx: Math.cos(a) * 390, vy: Math.sin(a) * 390, life: 0.9, rot: 0 });
     sfx.shot();
@@ -518,6 +572,7 @@
       if (clearT <= 0) loadFloor(floor + 1, true);
       return;
     }
+    if (state === 'unlock' && mg) { updateUnlock(dt); return; }
     if (state !== 'play') return;
     runTime += dt;
 
@@ -545,14 +600,6 @@
       if (P.pulseT >= 0.7) {
         P.pulseT = 0;
         rings.push({ x: P.x, y: P.y, r: 10, max: 120, life: 0.6 });
-        let hit = false;
-        guests.forEach(g => {
-          if (!g.inspired && Math.hypot(g.x - P.x, g.y - P.y) < 120) {
-            g.inspired = true; guestCount++; hit = true;
-            setScore(score + 25); stars(g.x, g.y, 8); sfx.inspire();
-          }
-        });
-        if (!hit && guests.some(g => !g.inspired)) { /* keep dancing closer! */ }
       }
     } else {
       P.healT = 0; P.pulseT = 0.6; P.twirl *= 0.9;
@@ -573,9 +620,13 @@
     P.fireCd -= dt; P.iframe -= dt; hurtFlash -= dt;
     tryOpenSpecials();
 
-    // conga trail
-    trail.push(P.x, P.y);
-    if (trail.length > 1400) trail.splice(0, trail.length - 1400);
+    // follow trail — only extended while actually moving, so guests hold a
+    // short distance behind instead of piling onto an idle princess
+    const ltx = trail[trail.length - 2], lty = trail[trail.length - 1];
+    if (ltx === undefined || Math.hypot(P.x - ltx, P.y - lty) > 2) {
+      trail.push(P.x, P.y);
+      if (trail.length > 1400) trail.splice(0, trail.length - 1400);
+    }
 
     // hint triggers
     if (floor === 1) {
@@ -663,22 +714,29 @@
       moveCircle(f, f.dx * dt, f.dy * dt, 12);
     });
 
-    // --- guests ---
-    const followers = guests.filter(g => g.inspired);
-    followers.forEach((g, i) => {
-      const idx = trail.length - 2 - (i + 1) * 24;
-      const tx = idx >= 0 ? trail[idx] : trail[0], ty = idx >= 0 ? trail[idx + 1] : trail[1];
-      if (tx !== undefined) { g.x += (tx - g.x) * Math.min(1, dt * 10); g.y += (ty - g.y) * Math.min(1, dt * 10); }
-      g.bob += dt * 6;
-      if (Math.random() < dt * 0.8) note(g.x, g.y - 12);
-    });
-    guests.forEach(g => {
-      if (g.inspired) return;
-      g.wt -= dt; g.bob += dt * 4;
-      if (g.wt <= 0) { g.wt = 0.8 + Math.random(); g.wa = Math.random() * 6.28; }
-      const nx = g.x + Math.cos(g.wa) * 18 * dt, ny = g.y + Math.sin(g.wa) * 18 * dt;
-      if (Math.hypot(nx - g.hx, ny - g.hy) < 26) { g.x = nx; g.y = ny; }
-    });
+    // --- guests: every rescued guest follows close behind; while the princess
+    //     dances they fan out into a slowly orbiting ring and dance around her ---
+    if (P.dancing && guests.length) {
+      danceSpin += dt * 1.1;
+      const n = guests.length;
+      guests.forEach((g, i) => {
+        const rad = n > 8 ? 44 + 24 * (i % 2) : 44;
+        const a = danceSpin + i * 6.283 / n;
+        const tx = P.x + Math.cos(a) * rad, ty = P.y + Math.sin(a) * rad;
+        g.x += (tx - g.x) * Math.min(1, dt * 8); g.y += (ty - g.y) * Math.min(1, dt * 8);
+        g.bob += dt * 9;
+        if (Math.random() < dt * 1.6) note(g.x, g.y - 12);
+        if (Math.random() < dt * 2.5) bub(g.x, g.y - 8);
+      });
+    } else {
+      guests.forEach((g, i) => {
+        const idx = trail.length - 2 - (i + 1) * 11 - 5;
+        const tx = idx >= 0 ? trail[idx] : trail[0], ty = idx >= 0 ? trail[idx + 1] : trail[1];
+        if (tx !== undefined) { g.x += (tx - g.x) * Math.min(1, dt * 10); g.y += (ty - g.y) * Math.min(1, dt * 10); }
+        g.bob += dt * 6;
+        if (Math.random() < dt * 0.4) note(g.x, g.y - 12);
+      });
+    }
 
     // --- particles & rings ---
     parts = parts.filter(p => {
@@ -819,6 +877,39 @@
     }
     ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = '12px system-ui';
     ctx.fillText('best ' + best, 10, H - 10);
+    if (state === 'unlock' && mg) drawUnlock();
+  }
+
+  function drawKeyGlyph(x, y) {
+    ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(x - 6, y, 4.5, 0, 6.283); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 1, y); ctx.lineTo(x + 10, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 5, y); ctx.lineTo(x + 5, y + 5); ctx.moveTo(x + 10, y); ctx.lineTo(x + 10, y + 5); ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+  function drawUnlock() {
+    const p = mg.panel;
+    ctx.fillStyle = 'rgba(8,24,38,.6)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#12384e'; ctx.strokeStyle = '#2e7196'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, p.h, 16); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffd34d'; ctx.textAlign = 'center';
+    ctx.font = '700 ' + (p.w < 380 ? 16 : 19) + 'px system-ui';
+    ctx.fillText('✨ Pop the bubbles to unlock! ✨', p.x + p.w / 2, p.y + 32);
+    const left = mg.bubbles.filter(b => !b.popped).length;
+    ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.font = '600 13px system-ui';
+    ctx.fillText(left ? left + ' to go' : 'Open!', p.x + p.w / 2, p.y + p.h - 16);
+    ctx.textAlign = 'left';
+    mg.bubbles.forEach(b => {
+      if (b.popped) return;
+      drawBubble(b.x, b.y, b.r);
+      drawKeyGlyph(b.x - 2, b.y);
+    });
+    mg.sparks.forEach(sp => {
+      ctx.globalAlpha = Math.max(0, sp.life * 2);
+      ctx.fillStyle = '#dff6ff';
+      ctx.beginPath(); ctx.arc(sp.x, sp.y, 2.2, 0, 6.283); ctx.fill();
+      ctx.globalAlpha = 1;
+    });
   }
 
   function drawSpecial(s) {
@@ -955,13 +1046,12 @@
     drawBubble(f.x, f.y + dy * 0.4, 12 + Math.sin(f.bob * 0.7) * 0.8);
   }
   function drawGuest(g) {
-    const x = g.x, y = g.y + Math.sin(g.bob) * (g.inspired ? 3 : 1);
+    const x = g.x, y = g.y + Math.sin(g.bob) * (P.dancing ? 3 : 1.5);
     ctx.fillStyle = g.hue;
     ctx.beginPath(); ctx.moveTo(0 + x, y - 4); ctx.lineTo(x + 8, y + 10); ctx.quadraticCurveTo(x, y + 13, x - 8, y + 10); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ffd9b8'; ctx.beginPath(); ctx.arc(x, y - 8, 5, 0, 6.283); ctx.fill();
-    ctx.fillStyle = '#3b2a5e'; ctx.beginPath(); ctx.arc(x, y - 10, 5, Math.PI, 0); ctx.fill();
-    if (g.inspired) drawStar(x + 8, y - 13, 3.5, '#ffd34d', g.bob);
-    else { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = 'bold 11px system-ui'; ctx.fillText('?', x - 3, y - 15); }
+    ctx.fillStyle = '#1b5070'; ctx.beginPath(); ctx.arc(x, y - 10, 5, Math.PI, 0); ctx.fill();
+    drawStar(x + 8, y - 13, 3.5, '#ffd34d', g.bob);
   }
 
   // ===================== boot =====================
@@ -990,7 +1080,9 @@
     get playerY() { return P.y; },
     get dancing() { return P.dancing; },
     get enemies() { return enemies.length; },
-    warp(n) { if (n >= 1 && n <= MAPS.length) loadFloor(n, true); }
+    get unlock() { return mg ? { bubbles: mg.bubbles.map(b => ({ x: b.x, y: b.y, r: b.r, popped: b.popped })) } : null; },
+    get guestXY() { return guests.length ? { x: guests[0].x, y: guests[0].y } : null; },
+    warp(n) { if (n >= 1 && n <= MAPS.length) { mg = null; loadFloor(n, true); } }
   };
 })();
 </script>
