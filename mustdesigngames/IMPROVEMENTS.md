@@ -28,7 +28,7 @@
 - sigil-tactics/DESIGN.md contradicts the implementation: the doc specifies a Speed-order initiative system with token brackets, but index.html (line ~1121) implements 'strict alternation'; the doc also contains two conflicting card-pool composition tables (v0.17 remnants)
 - keeprippingpacks hard-gates mobile users out of gameplay entirely (#mobile-gate shows only a drop-rate calculator) — the flagship 9.2k-line game is unplayable on phones
 - No LICENSE file anywhere in the repo
-- Provenance labeling is inconsistent: 4 of 19 games carry an #LLM-generated header tag (bloom-again, eat-monkey-eat, groundwork, mosslings), the rest don't, though git shows 46 of 55 commits authored by Claude
+- Provenance labeling is inconsistent: 4 of 19 games carry an header tag (bloom-again, eat-monkey-eat, groundwork, mosslings), the rest don't, though git shows 46 of 55 commits authored by Claude
 
 
 ## Ranked improvements
@@ -91,7 +91,7 @@
 
 ### 8. Add LICENSE and normalize provenance labels  `impact 2/5 · effort S`
 
-**Why:** No LICENSE means nobody can legally reuse anything; and the honest #LLM-generated tags on 4 games are a differentiator only if applied consistently (git history shows 46/55 commits are Claude-authored across all games).
+**Why:** No LICENSE means nobody can legally reuse anything; and the honest tags on 4 games are a differentiator only if applied consistently (git history shows 46/55 commits are Claude-authored across all games).
 
 **How:** Add MIT LICENSE at root. Add a short 'How these are built' section to README.md describing the AI-pair-development workflow (Claude sessions + human design direction, per the ConductiveOS Builder pattern) instead of ad-hoc per-file tags.
 
@@ -153,4 +153,3 @@
 - keepingcadence: rhythm-rpg (Rolls Per Groove) is the natural crossover if keepingcadence is music/rhythm-related — shared beat-timing/input-window code or a combined demo
 
 
-#LLM-generated

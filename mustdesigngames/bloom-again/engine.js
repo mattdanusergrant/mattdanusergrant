@@ -2,7 +2,6 @@
 // "Same geometry, N renderers, solidity = f(geometry, activeStyle)."
 // Scenes (vignettes) are data; per-state arrays track which blocks/gaps have been
 // transformed. Styles: charcoal + pixel. Vanilla, testable in Node.
-// #LLM-generated
 
 // ---- Scene constants (virtual units; portrait). Shared with the renderer. ----
 export const W = 112, H = 170;
