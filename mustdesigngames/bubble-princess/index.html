@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#241736">
-<title>Majestic Dazzle Gala</title>
-<meta name="description" content="A top-down princess action game: dazzle the usurper's goons into frogs, open every lock with your wand — the palace Master Key — and dance to heal yourself and inspire the court.">
-<meta property="og:title" content="Majestic Dazzle Gala">
-<meta property="og:description" content="A top-down princess action game: dazzle the usurper's goons into frogs, open every lock with your wand — the palace Master Key — and dance to heal yourself and inspire the court.">
+<meta name="theme-color" content="#0f2f42">
+<title>Bubble Princess</title>
+<meta name="description" content="A top-down bubble-powered princess action game: bubble the usurper's goons into harmless frogs that float off in bubbles, pop open every lock with your wand — the palace Master Key — and dance up a bubble storm that heals you and inspires the court.">
+<meta property="og:title" content="Bubble Princess">
+<meta property="og:description" content="A top-down bubble-powered princess action game: bubble the usurper's goons into harmless frogs that float off in bubbles, pop open every lock with your wand — the palace Master Key — and dance up a bubble storm that heals you and inspires the court.">
 <meta property="og:type" content="website">
 <!-- Favicon: inline SVG so the build stays single-file. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23241736'/%3E%3Cpath d='M7 23 L7 12 L12 16 L16 8 L20 16 L25 12 L25 23 Z' fill='%23FFD34D'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F2F42'/%3E%3Ccircle cx='16' cy='19' r='9' fill='rgba(191,234,255,0.18)' stroke='%23BFEAFF' stroke-width='2'/%3E%3Cpath d='M10 13 A 7 7 0 0 1 14 11' stroke='%23FFFFFF' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Cpath d='M11 8 L11 3 L14 6 L16 2 L18 6 L21 3 L21 8 Z' fill='%23FFD34D'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #241736; --panel: #2a1c44; --ink: #f4eefc; --muted: #a396bd;
-    --line: #3c2b5c; --accent: #ffd34d; --dazzle: #ff5fd2; --ok: #4ade80;
+    --bg: #0f2f42; --panel: #164257; --ink: #eefaff; --muted: #93bacd;
+    --line: #265a74; --accent: #7fe3ff; --bubble: #bfeaff; --ok: #4ade80;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; }
@@ -44,20 +44,20 @@
   #danceBtn {
     position: absolute; right: 14px; bottom: 14px; display: none;
     font-size: 16px; padding: 14px 18px; border-radius: 50px; opacity: .92;
-    background: #3b2a5e; border-color: #574190;
+    background: #1b5070; border-color: #2e7196;
   }
   .touch #danceBtn { display: block; }
   /* overlays (game over / victory) */
   #overlay {
     position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-    background: rgba(20, 10, 38, .82); backdrop-filter: blur(2px); text-align: center; padding: 20px;
+    background: rgba(8, 24, 38, .84); backdrop-filter: blur(2px); text-align: center; padding: 20px;
   }
   #overlay.show { display: flex; }
   #overlay .card { max-width: 420px; }
   #overlay h2 { font-size: 26px; margin: 0 0 8px; color: var(--accent); }
   #overlay p { margin: 6px 0; color: var(--ink); }
   #overlay .sub { color: var(--muted); font-size: 14px; }
-  #overlay button { margin-top: 14px; font-size: 16px; padding: 10px 18px; background: #3b2a5e; border-color: #574190; }
+  #overlay button { margin-top: 14px; font-size: 16px; padding: 10px 18px; background: #1b5070; border-color: #2e7196; }
   @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
   @media (max-height: 560px) { header { padding: 6px 4px 2px; } h1 { font-size: 18px; } .hint { display: none; } }
 </style>
@@ -65,7 +65,7 @@
 <body>
 <div id="app">
   <header>
-    <h1>Majestic Dazzle Gala</h1>
+    <h1>Bubble Princess</h1>
     <span class="score">★ <span id="score">0</span></span>
     <button id="mute" aria-label="Sound" title="Sound">🔊</button>
   </header>
@@ -79,13 +79,13 @@
       <button id="ovBtn"></button>
     </div></div>
   </div>
-  <p class="hint">WASD move · mouse aim · click to dazzle · hold SPACE to dance — your wand opens every lock.</p>
+  <p class="hint">WASD move · mouse aim · click to blow bubbles · hold SPACE to dance — your wand pops every lock.</p>
 </div>
 
 <script>
 (() => {
   'use strict';
-  const SLUG = 'majesticdazzlegala';           // namespaces this game's saves
+  const SLUG = 'bubble-princess';              // namespaces this game's saves
   const BEST_KEY = SLUG + '-best';
   const cv = document.getElementById('c');
   const ctx = cv.getContext('2d');
@@ -125,9 +125,9 @@
     } catch (e) {}
   }
   const sfx = {
-    shot()   { tone(880, 0.09, 'triangle', 0.04, 1320); },
+    shot()   { tone(320, 0.11, 'sine', 0.05, 760); },
     frog()   { tone(330, 0.22, 'square', 0.05, 110); },
-    unlock() { tone(659, 0.10, 'triangle', 0.05); setTimeout(() => tone(988, 0.16, 'triangle', 0.05), 70); },
+    unlock() { tone(950, 0.05, 'square', 0.04, 300); setTimeout(() => tone(988, 0.16, 'triangle', 0.05), 70); },
     chest()  { tone(784, 0.10, 'triangle', 0.05); setTimeout(() => tone(1175, 0.18, 'triangle', 0.05), 80); },
     hurt()   { tone(150, 0.20, 'sawtooth', 0.06, 90); },
     heal()   { tone(523, 0.14, 'sine', 0.05, 660); },
@@ -245,14 +245,14 @@
 
   // ===================== state =====================
   const HINTS_DESK = {
-    move: 'WASD / arrows to move · aim with the mouse · click to dazzle',
-    lock: 'Your wand is the Master Key — walk into any lock to open it',
+    move: 'WASD / arrows to move · aim with the mouse · click to blow bubbles',
+    lock: 'Your wand is the Master Key — walk into any lock to pop it open',
     dance: 'Hold SPACE to dance — it heals you (but you can\'t move)',
     guest: 'Dance near rescued guests to inspire them — they\'ll follow you'
   };
   const HINTS_TOUCH = {
-    move: 'Left thumb to move · tap the right side to dazzle',
-    lock: 'Your wand is the Master Key — walk into any lock to open it',
+    move: 'Left thumb to move · tap the right side to blow bubbles',
+    lock: 'Your wand is the Master Key — walk into any lock to pop it open',
     dance: 'Hold 💃 Dance to heal (you can\'t move while dancing)',
     guest: 'Dance near rescued guests to inspire them — they\'ll follow you'
   };
@@ -362,7 +362,16 @@
     }
   }
   function note(x, y) {
-    parts.push({ x, y, vx: (Math.random() - 0.5) * 30, vy: -55 - Math.random() * 25, life: 0.9, max: 0.9, col: Math.random() < 0.5 ? '#ff5fd2' : '#ffd34d', kind: 'note', sz: 10 });
+    parts.push({ x, y, vx: (Math.random() - 0.5) * 30, vy: -55 - Math.random() * 25, life: 0.9, max: 0.9, col: Math.random() < 0.5 ? '#ff9fd6' : '#ffd34d', kind: 'note', sz: 10 });
+  }
+  function bub(x, y) {   // a dance bubble drifting up
+    parts.push({ x, y, vx: (Math.random() - 0.5) * 36, vy: -45 - Math.random() * 30, life: 1.1, max: 1.1, col: '#bfeaff', kind: 'bub', sz: 2.5 + Math.random() * 3.5 });
+  }
+  function pop(x, y, n) { // a burst bubble: shards + droplets
+    for (let i = 0; i < (n || 8); i++) {
+      const a = Math.random() * 6.28, s = 70 * (0.4 + Math.random());
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, life: 0.4 + Math.random() * 0.3, max: 0.7, col: '#dff6ff', kind: 'dot', sz: 1.5 + Math.random() * 2 });
+    }
   }
 
   // --- opening locks (the wand is the Master Key) ---
@@ -377,7 +386,7 @@
       const nx = Math.max(c * TS, Math.min(P.x, c * TS + TS)), ny = Math.max(r * TS, Math.min(P.y, r * TS + TS));
       if (Math.hypot(P.x - nx, P.y - ny) > P.r + 3) continue;
       s.open = true; locksOpened++;
-      stars(wx, wy, 10);
+      stars(wx, wy, 6); pop(wx, wy, 10);
       if (s.type === 'door') { sfx.unlock(); setScore(score + 5); }
       else if (s.type === 'chest') {
         sfx.chest();
@@ -463,7 +472,7 @@
   }
   function lose() {
     state = 'over'; sfx.lose();
-    ovTitle.textContent = 'The gala is postponed…';
+    ovTitle.textContent = 'Your bubble burst…';
     ovBody.textContent = 'The goons got the best of you on floor ' + floor + '.';
     ovSub.textContent = 'Frogs so far: ' + frogCount + ' · guests inspired: ' + guestCount;
     ovBtn.textContent = 'Try floor ' + floor + ' again';
@@ -473,8 +482,8 @@
     state = 'won';
     const m = Math.floor(runTime / 60), s = Math.floor(runTime % 60);
     setScore(score + 100);
-    ovTitle.textContent = '👑 The Gala is saved!';
-    ovBody.textContent = 'You dazzled ' + frogCount + ' goons into frogs, opened ' + locksOpened + ' locks and inspired ' + guestCount + ' guests.';
+    ovTitle.textContent = '👑 A palace full of bubbles!';
+    ovBody.textContent = 'You bubbled ' + frogCount + ' goons into floating frogs, popped ' + locksOpened + ' locks open and inspired ' + guestCount + ' guests.';
     ovSub.textContent = 'Time ' + m + ':' + String(s).padStart(2, '0') + ' · score ' + score + ' · best ' + best;
     ovBtn.textContent = 'Encore — play again';
     overlay.classList.add('show');
@@ -527,7 +536,8 @@
       P.twirl += dt * 9;
       P.healT += dt; P.pulseT += dt;
       waltz();
-      if (Math.random() < dt * 6) note(P.x + (Math.random() - 0.5) * 24, P.y - 14);
+      if (Math.random() < dt * 9) bub(P.x + (Math.random() - 0.5) * 26, P.y - 10);
+      if (Math.random() < dt * 2) note(P.x + (Math.random() - 0.5) * 24, P.y - 14);
       if (P.healT >= 1.3) {
         P.healT = 0;
         if (P.hp < P.maxHp) { P.hp++; sfx.heal(); puff(P.x, P.y - 10, 6, '#ff8fa3', 40); }
@@ -610,24 +620,24 @@
       if (dp < en.r + P.r) hurt(en.dmg, en.x, en.y);
     });
 
-    // --- bolts ---
+    // --- bolts (bubbles) ---
     bolts = bolts.filter(b => {
       b.life -= dt; b.rot += dt * 14;
       b.x += b.vx * dt; b.y += b.vy * dt;
-      if (Math.random() < dt * 20) parts.push({ x: b.x, y: b.y, vx: 0, vy: 0, life: 0.25, max: 0.25, col: '#ff9fe4', kind: 'dot', sz: 2 });
-      if (b.life <= 0) return false;
-      if (solidTile(Math.floor(b.x / TS), Math.floor(b.y / TS))) { puff(b.x, b.y, 5, '#ff9fe4', 60); return false; }
+      if (Math.random() < dt * 16) parts.push({ x: b.x, y: b.y, vx: 0, vy: -20, life: 0.3, max: 0.3, col: '#bfeaff', kind: 'bub', sz: 1.5 });
+      if (b.life <= 0) { pop(b.x, b.y, 5); return false; }
+      if (solidTile(Math.floor(b.x / TS), Math.floor(b.y / TS))) { pop(b.x, b.y, 6); return false; }
       for (let i = 0; i < enemies.length; i++) {
         const en = enemies[i];
         if (Math.hypot(en.x - b.x, en.y - b.y) < en.r + 5) {
           en.hp--; en.flash = 0.15;
           if (en.hp <= 0) {
             enemies.splice(i, 1);
-            frogs.push({ x: en.x, y: en.y, t: 0, hop: 0, dx: 0, dy: 0, sq: 1 });
+            frogs.push({ x: en.x, y: en.y, t: 0, dx: 0, dy: 0, bob: Math.random() * 6.28 });
             frogCount++; setScore(score + 10);
-            sfx.frog(); puff(en.x, en.y, 14, '#7de07a', 90); stars(en.x, en.y, 6);
+            sfx.frog(); puff(en.x, en.y, 10, '#7de07a', 90); pop(en.x, en.y, 10);
             shake = Math.max(shake, 3);
-          } else { puff(b.x, b.y, 6, '#ffffff', 70); }
+          } else { pop(b.x, b.y, 6); }
           return false;
         }
       }
@@ -643,19 +653,14 @@
       return true;
     });
 
-    // --- frogs (harmless, cute) ---
+    // --- frogs (harmless, sealed inside drifting bubbles) ---
     frogs.forEach(f => {
-      f.t -= dt;
-      if (f.hop > 0) {
-        f.hop -= dt; f.sq = 1.25;
-        moveCircle(f, f.dx * dt, f.dy * dt, 7);
-      } else {
-        f.sq += (1 - f.sq) * dt * 8;
-        if (f.t <= 0) {
-          f.t = 0.6 + Math.random() * 1.4; f.hop = 0.3;
-          const a = Math.random() * 6.28; f.dx = Math.cos(a) * 90; f.dy = Math.sin(a) * 90;
-        }
+      f.t -= dt; f.bob += dt * 3;
+      if (f.t <= 0) {
+        f.t = 1.5 + Math.random() * 1.5;
+        const a = Math.random() * 6.28; f.dx = Math.cos(a) * 22; f.dy = Math.sin(a) * 22;
       }
+      moveCircle(f, f.dx * dt, f.dy * dt, 12);
     });
 
     // --- guests ---
@@ -678,9 +683,16 @@
     // --- particles & rings ---
     parts = parts.filter(p => {
       p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
-      p.vx *= (1 - dt * 2); p.vy = p.kind === 'note' ? p.vy : p.vy + 60 * dt;
+      p.vx *= (1 - dt * 2);
+      p.vy = (p.kind === 'note' || p.kind === 'bub' || p.kind === 'amb') ? p.vy : p.vy + 60 * dt;
       return p.life > 0;
     });
+    // ambient palace bubbles drifting up through the visible rooms
+    if (Math.random() < dt * 3) {
+      const ax = camX + (Math.random() - 0.5) * (W / zoom), ay = camY + (Math.random() - 0.5) * (H / zoom);
+      if (!solidTile(Math.floor(ax / TS), Math.floor(ay / TS)))
+        parts.push({ x: ax, y: ay, vx: (Math.random() - 0.5) * 8, vy: -12 - Math.random() * 10, life: 2.5, max: 2.5, col: 'rgba(191,234,255,.5)', kind: 'amb', sz: 1.5 + Math.random() * 2.5 });
+    }
     rings = rings.filter(r => { r.life -= dt; r.r += (r.max - r.r) * dt * 6; return r.life > 0; });
 
     // --- camera ---
@@ -716,12 +728,12 @@
       const t = tiles[key(c, r)];
       const x = c * TS, y = r * TS;
       if (t === 1) continue;
-      ctx.fillStyle = ((c + r) & 1) ? '#2c2148' : '#2e2350';
+      ctx.fillStyle = ((c + r) & 1) ? '#173d54' : '#194159';
       ctx.fillRect(x, y, TS, TS);
-      if (t === 2) { // carpet
-        ctx.fillStyle = '#7c2140';
+      if (t === 2) { // carpet — pearl pink runner
+        ctx.fillStyle = '#8c3a64';
         ctx.fillRect(x + 1, y + 1, TS - 2, TS - 2);
-        ctx.fillStyle = 'rgba(255,211,77,.35)';
+        ctx.fillStyle = 'rgba(255,214,235,.4)';
         ctx.fillRect(x + 3, y + 3, TS - 6, 1); ctx.fillRect(x + 3, y + TS - 4, TS - 6, 1);
       }
     }
@@ -731,9 +743,9 @@
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       if (tiles[key(c, r)] !== 1) continue;
       const x = c * TS, y = r * TS;
-      ctx.fillStyle = '#453465'; ctx.fillRect(x, y, TS, TS);
-      ctx.fillStyle = '#544180'; ctx.fillRect(x, y, TS, 5);
-      if (!solidTile(c, r + 1)) { ctx.fillStyle = '#241736'; ctx.fillRect(x, y + TS - 3, TS, 3); }
+      ctx.fillStyle = '#2b5a77'; ctx.fillRect(x, y, TS, TS);
+      ctx.fillStyle = '#356c8d'; ctx.fillRect(x, y, TS, 5);
+      if (!solidTile(c, r + 1)) { ctx.fillStyle = '#0f2f42'; ctx.fillRect(x, y + TS - 3, TS, 3); }
     }
 
     frogs.forEach(drawFrog);
@@ -741,8 +753,8 @@
     enemies.forEach(drawEnemy);
     drawPrincess();
 
-    // bolts & arrows
-    bolts.forEach(b => drawStar(b.x, b.y, 7, '#ff5fd2', b.rot, '#ffd7f2'));
+    // bolts (bubbles) & arrows
+    bolts.forEach(b => drawBubble(b.x, b.y, 6.5 + Math.sin(b.rot) * 1.2, 0.9));
     ctx.strokeStyle = '#d8c9a3'; ctx.lineWidth = 2;
     arrows.forEach(a => {
       const l = 10, ang = Math.atan2(a.vy, a.vx);
@@ -751,14 +763,22 @@
 
     // rings & particles
     rings.forEach(r => {
-      ctx.strokeStyle = 'rgba(255,95,210,' + (r.life * 1.4) + ')'; ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(191,234,255,' + (r.life * 1.4) + ')'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 6.283); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,' + (r.life * 0.7) + ')'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, -2.2, -1.2); ctx.stroke(); // bubble sheen
     });
     parts.forEach(p => {
       const a = Math.max(0, p.life / p.max);
       ctx.globalAlpha = a;
       if (p.kind === 'star') drawStar(p.x, p.y, p.sz, p.col, p.rot || 0);
       else if (p.kind === 'note') { ctx.fillStyle = p.col; ctx.font = 'bold ' + p.sz + 'px system-ui'; ctx.fillText('♪', p.x, p.y); }
+      else if (p.kind === 'bub' || p.kind === 'amb') {
+        ctx.strokeStyle = p.col; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.sz, 0, 6.283); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.55)';
+        ctx.beginPath(); ctx.arc(p.x - p.sz * 0.35, p.y - p.sz * 0.35, Math.max(0.6, p.sz * 0.2), 0, 6.283); ctx.fill();
+      }
       else { ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.sz, 0, 6.283); ctx.fill(); }
       ctx.globalAlpha = 1;
     });
@@ -847,6 +867,16 @@
       ctx.fillStyle = '#ffd34d'; ctx.fillRect(cx - 2, y + 12, 4, 6);
     }
   }
+  function drawBubble(x, y, r, alpha) {
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = 'rgba(191,234,255,.22)';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = '#dff6ff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, r * 0.65, -2.4, -1.3); ctx.stroke(); // shine
+    ctx.globalAlpha = 1;
+  }
   function drawStar(x, y, r, col, rot, halo) {
     if (halo) { ctx.fillStyle = halo; ctx.globalAlpha = 0.4; ctx.beginPath(); ctx.arc(x, y, r * 1.8, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
     ctx.fillStyle = col; ctx.beginPath();
@@ -870,10 +900,13 @@
     const x = P.x, y = P.y;
     const spin = P.dancing ? Math.cos(P.twirl) : 1;      // twirl squish
     ctx.save(); ctx.translate(x, y); ctx.scale(Math.max(0.25, Math.abs(spin)), 1);
-    // gown
-    ctx.fillStyle = '#ff5fd2';
+    // bubble gown: pearl-aqua with a pink sheen and a bubble-scalloped hem
+    ctx.fillStyle = '#bfe6f2';
     ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(11, 12); ctx.quadraticCurveTo(0, 16, -11, 12); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#ffd7f2'; ctx.fillRect(-11, 11, 22, 2);
+    ctx.fillStyle = 'rgba(255,159,214,.45)';
+    ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(7, 9); ctx.quadraticCurveTo(0, 12, -3, 9); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.2;
+    for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(i * 7, 12.5, 3.2, 0, 6.283); ctx.stroke(); } // bubble hem
     // head
     ctx.fillStyle = '#ffd9b8'; ctx.beginPath(); ctx.arc(0, -10, 6, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#6e4a2f'; ctx.beginPath(); ctx.arc(0, -12, 6, Math.PI, 0); ctx.fill();
@@ -881,11 +914,14 @@
     ctx.fillStyle = '#ffd34d';
     ctx.beginPath(); ctx.moveTo(-5, -15); ctx.lineTo(-5, -20); ctx.lineTo(-2, -16.5); ctx.lineTo(0, -21); ctx.lineTo(2, -16.5); ctx.lineTo(5, -20); ctx.lineTo(5, -15); ctx.closePath(); ctx.fill();
     ctx.restore();
-    // wand (points at aim; skip mid-twirl squish for clarity)
+    // bubble wand: a stem ending in the ring you blow bubbles through
     const wx = x + Math.cos(P.aim) * 17, wy = y + Math.sin(P.aim) * 17;
     ctx.strokeStyle = '#e8dcc8'; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(x + Math.cos(P.aim) * 5, y + Math.sin(P.aim) * 5); ctx.lineTo(wx, wy); ctx.stroke();
-    drawStar(wx, wy, 5, '#ffd34d', performance.now() / 200);
+    ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(wx + Math.cos(P.aim) * 4, wy + Math.sin(P.aim) * 4, 4.5, 0, 6.283); ctx.stroke();
+    ctx.fillStyle = 'rgba(191,234,255,.35)';
+    ctx.beginPath(); ctx.arc(wx + Math.cos(P.aim) * 4, wy + Math.sin(P.aim) * 4, 3.5, 0, 6.283); ctx.fill();
   }
   function drawEnemy(en) {
     const x = en.x, y = en.y;
@@ -910,11 +946,13 @@
     }
   }
   function drawFrog(f) {
-    ctx.save(); ctx.translate(f.x, f.y); ctx.scale(f.sq, 2 - f.sq);
-    ctx.fillStyle = '#59c94f'; ctx.beginPath(); ctx.ellipse(0, 0, 8, 6, 0, 0, 6.283); ctx.fill();
-    ctx.fillStyle = '#7de07a'; ctx.beginPath(); ctx.arc(-4, -5, 3, 0, 6.283); ctx.arc(4, -5, 3, 0, 6.283); ctx.fill();
-    ctx.fillStyle = '#0c2a0a'; ctx.beginPath(); ctx.arc(-4, -5, 1.4, 0, 6.283); ctx.arc(4, -5, 1.4, 0, 6.283); ctx.fill();
+    const dy = Math.sin(f.bob) * 2.5;   // the frog bobs gently inside its bubble
+    ctx.save(); ctx.translate(f.x, f.y + dy);
+    ctx.fillStyle = '#59c94f'; ctx.beginPath(); ctx.ellipse(0, 0, 7, 5.5, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#7de07a'; ctx.beginPath(); ctx.arc(-3.5, -4.5, 2.6, 0, 6.283); ctx.arc(3.5, -4.5, 2.6, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#0c2a0a'; ctx.beginPath(); ctx.arc(-3.5, -4.5, 1.2, 0, 6.283); ctx.arc(3.5, -4.5, 1.2, 0, 6.283); ctx.fill();
     ctx.restore();
+    drawBubble(f.x, f.y + dy * 0.4, 12 + Math.sin(f.bob * 0.7) * 0.8);
   }
   function drawGuest(g) {
     const x = g.x, y = g.y + Math.sin(g.bob) * (g.inspired ? 3 : 1);
