@@ -2,7 +2,7 @@
 // thirteen mini-games, scoring via the backend engine. The front-end is interaction-
 // driven: each game declares an `interaction` (trace / build / manip / anchors) plus a
 // few flags, and the loop below routes input accordingly. Solo by default; fill CONFIG
-// to submit to Supabase (uses ./online.mjs, which loads supabase-js from a CDN).  #LLM-generated
+// to submit to Supabase (uses ./online.mjs, which loads supabase-js from a CDN).
 import { boardForMatch, subSeed, mulberry32 } from "./backend/engine/grid.mjs";
 import { MINIGAMES } from "./backend/engine/minigames/index.mjs";
 import { duelStandings } from "./backend/engine/standings.mjs";

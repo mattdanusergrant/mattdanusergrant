@@ -1,6 +1,6 @@
 // Optional online adapter — loads supabase-js from a CDN so the no-bundler front-end
 // can submit scores. The canonical, bundled version is ../backend/client/api.mjs.
-// Requires: migrations applied + anonymous sign-ins (or swap for magic-link).  #LLM-generated
+// Requires: migrations applied + anonymous sign-ins (or swap for magic-link).
 let sb = null;
 
 export async function init(cfg) {
