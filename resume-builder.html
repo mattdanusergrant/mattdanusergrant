@@ -354,10 +354,18 @@
   }
 
   function render(m){
-    var h='<header class="r-header"><h1>'+esc(m.name||'Your Name')+'</h1>';
-    if(m.title) h+='<div class="tagline">'+esc(m.title)+'</div>';
-    if(m.contacts.length) h+='<div class="contact">'+m.contacts.map(contactHTML).join('')+'</div>';
-    h+='</header><hr class="divide" />';
+    // Only print a name block when there's actually a `# Name` line. A document
+    // without one (a cover letter, a note) should start with its own first line,
+    // not a placeholder header. The placeholder survives only for an empty doc,
+    // where it's the hint rather than a claim about the content.
+    var hasHeader = m.name || m.title || m.contacts.length;
+    var h='';
+    if(hasHeader || !m.sections.length){
+      h+='<header class="r-header"><h1>'+esc(m.name||'Your Name')+'</h1>';
+      if(m.title) h+='<div class="tagline">'+esc(m.title)+'</div>';
+      if(m.contacts.length) h+='<div class="contact">'+m.contacts.map(contactHTML).join('')+'</div>';
+      h+='</header><hr class="divide" />';
+    }
     m.sections.forEach(function(sec){
       if(sec.label) h+='<div class="section-label">'+esc(sec.label)+'</div>';
       if(sec.paragraphs.length) h+='<div class="summary no-break">'+sec.paragraphs.map(function(p){return '<p>'+esc(p)+'</p>';}).join('')+'</div>';
