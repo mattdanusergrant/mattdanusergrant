@@ -79,7 +79,7 @@
       <button id="ovBtn"></button>
     </div></div>
   </div>
-  <p class="hint">WASD move · mouse aim · click to blow bubbles · hold SPACE to dance — your wand pops every lock.</p>
+  <p class="hint">WASD move — the wand fires by itself · hold SPACE to dance · your wand pops every lock.</p>
 </div>
 
 <script>
@@ -245,14 +245,14 @@
 
   // ===================== state =====================
   const HINTS_DESK = {
-    move: 'WASD / arrows to move · aim with the mouse · click to blow bubbles',
+    move: 'WASD / arrows to move — your wand blows bubbles at goons by itself',
     lock: 'Your wand is the Master Key — walk into any lock to pop it open',
     dance: 'Hold SPACE to dance — it heals you (you waltz at half speed)',
     guest: 'Rescued guests follow you — hold SPACE and they\'ll dance around you!',
     fly: 'Flies slow you down — only your party frogs can eat them!'
   };
   const HINTS_TOUCH = {
-    move: 'Left thumb to move · tap the right side to blow bubbles',
+    move: 'Drag anywhere to move — the wand blows bubbles by itself',
     lock: 'Your wand is the Master Key — walk into any lock to pop it open',
     dance: 'Hold 💃 Dance to heal (you waltz at half speed)',
     guest: 'Rescued guests follow you — hold 💃 and they\'ll dance around you!',
@@ -485,11 +485,10 @@
     ac();
   });
   window.addEventListener('keyup', (e) => keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key));
-  window.addEventListener('blur', () => { keys.clear(); mouseDown = false; });
+  window.addEventListener('blur', () => keys.clear());
 
-  let mouseX = 0, mouseY = 0, mouseDown = false, mouseSeen = false;
+  // the wand aims and fires by itself — pointers only steer (touch stick) and pop mini-game bubbles
   let stickId = null, stickOx = 0, stickOy = 0, stickDx = 0, stickDy = 0;
-  let aimId = null, aimSx = 0, aimSy = 0;
   let danceHeld = false;
 
   function stagePos(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
@@ -513,11 +512,9 @@
       }
       return;
     }
-    if (e.pointerType === 'touch') {
-      if (sx < W * 0.45 && stickId === null) { stickId = e.pointerId; stickOx = sx; stickOy = sy; stickDx = 0; stickDy = 0; }
-      else if (aimId === null) { aimId = e.pointerId; aimSx = sx; aimSy = sy; }
-    } else {
-      mouseSeen = true; mouseX = sx; mouseY = sy; mouseDown = true;
+    if (e.pointerType === 'touch' && stickId === null) {
+      // the stick floats wherever the thumb lands — anywhere on the playfield
+      stickId = e.pointerId; stickOx = sx; stickOy = sy; stickDx = 0; stickDy = 0;
     }
     cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
   });
@@ -528,23 +525,16 @@
       const d = Math.hypot(dx, dy);
       if (d > 48) { dx = dx / d * 48; dy = dy / d * 48; }
       stickDx = dx / 48; stickDy = dy / 48;
-    } else if (e.pointerId === aimId) { aimSx = sx; aimSy = sy; }
-    else if (e.pointerType !== 'touch') { mouseSeen = true; mouseX = sx; mouseY = sy; }
+    }
   });
   function endPointer(e) {
     if (e.pointerId === stickId) { stickId = null; stickDx = 0; stickDy = 0; }
-    if (e.pointerId === aimId) aimId = null;
-    if (e.pointerType !== 'touch') mouseDown = false;
   }
   cv.addEventListener('pointerup', endPointer);
   cv.addEventListener('pointercancel', endPointer);
   danceBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); danceHeld = true; ac(); });
   danceBtn.addEventListener('pointerup', () => danceHeld = false);
   danceBtn.addEventListener('pointercancel', () => danceHeld = false);
-
-  function screenToWorld(sx, sy) {
-    return [camX - (W / zoom) / 2 + sx / zoom, camY - (H / zoom) / 2 + sy / zoom];
-  }
 
   // ===================== update =====================
   function hurt(dmg, fx, fy) {
@@ -659,16 +649,16 @@
       if (shieldCd <= 0) { shieldUp = true; tone(880, 0.08, 'sine', 0.04, 1200); rings.push({ x: P.x, y: P.y, r: 8, max: 26, life: 0.4 }); }
     }
 
-    // aim
-    if (touchMode && aimId !== null) {
-      const [wx, wy] = screenToWorld(aimSx, aimSy);
-      P.aim = Math.atan2(wy - P.y, wx - P.x);
-      fireBolt();
-    } else if (mouseSeen) {
-      const [wx, wy] = screenToWorld(mouseX, mouseY);
-      P.aim = Math.atan2(wy - P.y, wx - P.x);
-      if (mouseDown && !overlay.classList.contains('show')) fireBolt();
-    } else if (il > 0.05) P.aim = Math.atan2(iy, ix);
+    // auto-wand (Vampire-Survivors style): it aims and fires by itself at the
+    // nearest goon it can see; you just walk
+    let tgt = null, tgtD = 1e9;
+    enemies.forEach(en => {
+      const d = Math.hypot(en.x - P.x, en.y - P.y);
+      if (d < tgtD && d < 320 && los(P.x, P.y, en.x, en.y)) { tgtD = d; tgt = en; }
+    });
+    if (tgt) P.aim = Math.atan2(tgt.y - P.y, tgt.x - P.x);
+    else if (il > 0.05) P.aim = Math.atan2(iy, ix);
+    if (tgt) fireBolt();
 
     P.fireCd -= dt; P.iframe -= dt; hurtFlash -= dt;
     tryOpenSpecials();
