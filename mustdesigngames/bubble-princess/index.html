@@ -88,7 +88,7 @@
   const SLUG = 'bubble-princess';              // namespaces this game's saves
   const BEST_KEY = SLUG + '-best';
   const cv = document.getElementById('c');
-  const ctx = cv.getContext('2d');
+  let ctx = cv.getContext('2d');           // let: the art exporter briefly retargets it
   const scoreEl = document.getElementById('score');
   const muteBtn = document.getElementById('mute');
   const stage = document.getElementById('stage');
@@ -102,6 +102,46 @@
   // --- persistence: always try/catch (private-mode / disabled storage) ---
   let best = 0;
   try { best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch (e) {}
+
+  // ===================== art pipeline =====================
+  // Real art replaces the procedural placeholders file-by-file: drop a PNG named
+  // <asset>.png into assets/art/ and list it in assets/art/manifest.json — the game
+  // draws that sprite instead; anything unlisted keeps its procedural placeholder.
+  // Boxes are the world-px rects each sprite is drawn into (any source resolution
+  // scales to fit). Spec + exports for the artist: vault art/ART-SPEC.md.
+  const ART_BASE = 'assets/art/';
+  const ART_BOX = {
+    princess: [40, 48], 'princess-dance': [40, 48],
+    guest: [26, 30], 'guest-cheer': [26, 30], 'guest-shield': [26, 30], 'guest-sparkle': [26, 30], 'guest-vigor': [26, 30],
+    'frog-bubble': [30, 30], goon: [30, 30], archer: [30, 34], brute: [42, 42], fly: [14, 12],
+    bolt: [18, 18], door: [32, 32], 'door-open': [32, 32], exit: [32, 32],
+    chest: [32, 32], 'chest-open': [32, 32], cage: [32, 32], 'cage-open': [32, 32],
+    'tile-floor': [32, 32], 'tile-floor-alt': [32, 32], 'tile-carpet': [32, 32], 'tile-wall': [32, 32],
+    heart: [22, 20], key: [24, 16]
+  };
+  const ART = {};
+  function sprite(name) { const a = ART[name]; return a && a.ok ? a.img : null; }
+  function loadArt(name) {
+    if (!ART_BOX[name] || ART[name]) return;
+    const img = new Image();
+    ART[name] = { img, ok: false };
+    img.onload = () => { ART[name].ok = true; };
+    img.src = ART_BASE + name + '.png';
+  }
+  try {
+    if (location.protocol.indexOf('http') === 0)   // file:// preview: art off, no console noise
+      fetch(ART_BASE + 'manifest.json')
+        .then(r => (r && r.ok) ? r.json() : null)
+        .then(m => { if (m && Array.isArray(m.files)) m.files.forEach(f => loadArt(String(f).replace(/\.png$/i, ''))); })
+        .catch(() => {});
+  } catch (e) {}
+  function spr(name, x, y) {   // draw a sprite centered on (x,y) in its box; true if drawn
+    const s = sprite(name);
+    if (!s) return false;
+    const b = ART_BOX[name];
+    ctx.drawImage(s, x - b[0] / 2, y - b[1] / 2, b[0], b[1]);
+    return true;
+  }
 
   // --- audio: WebAudio blips, no asset files ---
   let actx = null, muted = false;
@@ -852,24 +892,15 @@
       const t = tiles[key(c, r)];
       const x = c * TS, y = r * TS;
       if (t === 1) continue;
-      ctx.fillStyle = ((c + r) & 1) ? '#173d54' : '#194159';
-      ctx.fillRect(x, y, TS, TS);
-      if (t === 2) { // carpet — pearl pink runner
-        ctx.fillStyle = '#8c3a64';
-        ctx.fillRect(x + 1, y + 1, TS - 2, TS - 2);
-        ctx.fillStyle = 'rgba(255,214,235,.4)';
-        ctx.fillRect(x + 3, y + 3, TS - 6, 1); ctx.fillRect(x + 3, y + TS - 4, TS - 6, 1);
-      }
+      drawFloorTile(x, y, (c + r) & 1);
+      if (t === 2) drawCarpetTile(x, y);
     }
     // specials (under actors)
     for (const k2 in specials) drawSpecial(specials[k2]);
     // walls
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       if (tiles[key(c, r)] !== 1) continue;
-      const x = c * TS, y = r * TS;
-      ctx.fillStyle = '#2b5a77'; ctx.fillRect(x, y, TS, TS);
-      ctx.fillStyle = '#356c8d'; ctx.fillRect(x, y, TS, 5);
-      if (!solidTile(c, r + 1)) { ctx.fillStyle = '#0f2f42'; ctx.fillRect(x, y + TS - 3, TS, 3); }
+      drawWallTile(c * TS, r * TS, !solidTile(c, r + 1));
     }
 
     party.forEach(m => m.kind === 'frog' ? drawFrog(m) : drawGuest(m));
@@ -883,7 +914,12 @@
     });
 
     // bolts (bubbles) & arrows
-    bolts.forEach(b => drawBubble(b.x, b.y, 6.5 + Math.sin(b.rot) * 1.2, 0.9));
+    bolts.forEach(b => {
+      if (sprite('bolt')) {
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.sin(b.rot) * 0.25);
+        spr('bolt', 0, 0); ctx.restore();
+      } else drawBubble(b.x, b.y, 6.5 + Math.sin(b.rot) * 1.2, 0.9);
+    });
     ctx.strokeStyle = '#d8c9a3'; ctx.lineWidth = 2;
     arrows.forEach(a => {
       const l = 10, ang = Math.atan2(a.vy, a.vx);
@@ -957,6 +993,7 @@
   }
 
   function drawKeyGlyph(x, y) {
+    if (spr('key', x + 2, y + 1)) return;
     ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.arc(x - 6, y, 4.5, 0, 6.283); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x - 1, y); ctx.lineTo(x + 10, y); ctx.stroke();
@@ -988,12 +1025,43 @@
     });
   }
 
+  function drawFloorTile(x, y, alt) {
+    const s = sprite(alt ? 'tile-floor-alt' : 'tile-floor') || sprite('tile-floor');
+    if (s) return ctx.drawImage(s, x, y, TS, TS);
+    ctx.fillStyle = alt ? '#173d54' : '#194159';
+    ctx.fillRect(x, y, TS, TS);
+  }
+  function drawCarpetTile(x, y) {
+    const s = sprite('tile-carpet');
+    if (s) return ctx.drawImage(s, x, y, TS, TS);
+    ctx.fillStyle = '#8c3a64';
+    ctx.fillRect(x + 1, y + 1, TS - 2, TS - 2);
+    ctx.fillStyle = 'rgba(255,214,235,.4)';
+    ctx.fillRect(x + 3, y + 3, TS - 6, 1); ctx.fillRect(x + 3, y + TS - 4, TS - 6, 1);
+  }
+  function drawWallTile(x, y, openBelow) {
+    const s = sprite('tile-wall');
+    if (s) return ctx.drawImage(s, x, y, TS, TS);
+    ctx.fillStyle = '#2b5a77'; ctx.fillRect(x, y, TS, TS);
+    ctx.fillStyle = '#356c8d'; ctx.fillRect(x, y, TS, 5);
+    if (openBelow) { ctx.fillStyle = '#0f2f42'; ctx.fillRect(x, y + TS - 3, TS, 3); }
+  }
   function drawSpecial(s) {
     const x = s.c * TS, y = s.r * TS, cx = x + TS / 2, cy = y + TS / 2;
     if (s.type === 'door' || s.type === 'exit') {
       if (s.open) { // open arch: floor + posts
+        if (spr('door-open', cx, cy)) return;
         ctx.fillStyle = '#2c2148'; ctx.fillRect(x, y, TS, TS);
         ctx.fillStyle = '#6b5432'; ctx.fillRect(x, y, 4, TS); ctx.fillRect(x + TS - 4, y, 4, TS);
+        return;
+      }
+      if (spr(s.type === 'exit' ? 'exit' : 'door', cx, cy)) {
+        if (s.type === 'exit') { // keep the go-here sparkle over real art too
+          const t = performance.now() / 300 + s.c;
+          ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t);
+          drawStar(cx + 9, cy - 9, 4, '#ffd34d', t);
+          ctx.globalAlpha = 1;
+        }
         return;
       }
       ctx.fillStyle = s.type === 'exit' ? '#8a6a2f' : '#6b4a2a';
@@ -1014,10 +1082,12 @@
       }
     } else if (s.type === 'cage') {
       if (s.open) {
+        if (spr('cage-open', cx, cy)) return;
         ctx.strokeStyle = '#8f86a8'; ctx.lineWidth = 2;
         ctx.strokeRect(x + 6, y + 20, TS - 12, 8); // collapsed bars
         return;
       }
+      if (spr('cage', cx, cy)) return;
       ctx.strokeStyle = '#a99ec4'; ctx.lineWidth = 2;
       ctx.strokeRect(x + 5, y + 3, TS - 10, TS - 6);
       for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x + 5 + i * (TS - 10) / 4, y + 3); ctx.lineTo(x + 5 + i * (TS - 10) / 4, y + TS - 3); ctx.stroke(); }
@@ -1026,9 +1096,11 @@
       ctx.fillStyle = '#ffd34d'; ctx.fillRect(cx - 4, cy - 6, 8, 3);
     } else if (s.type === 'chest') {
       if (s.open) {
+        if (spr('chest-open', cx, cy)) return;
         ctx.fillStyle = '#5a4426'; ctx.fillRect(x + 6, y + 12, TS - 12, 12);
         return;
       }
+      if (spr('chest', cx, cy)) return;
       ctx.fillStyle = '#7a5c33'; ctx.fillRect(x + 5, y + 8, TS - 10, 16);
       ctx.fillStyle = '#93733f'; ctx.fillRect(x + 5, y + 8, TS - 10, 6);
       ctx.fillStyle = '#ffd34d'; ctx.fillRect(cx - 2, y + 12, 4, 6);
@@ -1054,6 +1126,12 @@
     ctx.closePath(); ctx.fill();
   }
   function drawHeart(x, y, full) {
+    if (sprite('heart')) {
+      ctx.globalAlpha = full ? 1 : 0.22;
+      spr('heart', x, y);
+      ctx.globalAlpha = 1;
+      return;
+    }
     ctx.fillStyle = full ? '#ff5f87' : 'rgba(255,255,255,.18)';
     ctx.beginPath();
     ctx.moveTo(x, y + 6);
@@ -1066,6 +1144,15 @@
     if (blink) return;
     const x = P.x, y = P.y;
     const spin = P.dancing ? Math.cos(P.twirl) : 1;      // twirl squish
+    const ps = P.dancing ? (sprite('princess-dance') || sprite('princess')) : sprite('princess');
+    if (ps) {
+      const b = ART_BOX[P.dancing && sprite('princess-dance') ? 'princess-dance' : 'princess'];
+      ctx.save(); ctx.translate(x, y); ctx.scale(Math.max(0.25, Math.abs(spin)), 1);
+      ctx.drawImage(ps, -b[0] / 2, -b[1] / 2 - 4, b[0], b[1]);
+      ctx.restore();
+      drawWandAndShield(x, y);
+      return;
+    }
     ctx.save(); ctx.translate(x, y); ctx.scale(Math.max(0.25, Math.abs(spin)), 1);
     // bubble gown: pearl-aqua with a pink sheen and a bubble-scalloped hem
     ctx.fillStyle = '#bfe6f2';
@@ -1081,6 +1168,9 @@
     ctx.fillStyle = '#ffd34d';
     ctx.beginPath(); ctx.moveTo(-5, -15); ctx.lineTo(-5, -20); ctx.lineTo(-2, -16.5); ctx.lineTo(0, -21); ctx.lineTo(2, -16.5); ctx.lineTo(5, -20); ctx.lineTo(5, -15); ctx.closePath(); ctx.fill();
     ctx.restore();
+    drawWandAndShield(x, y);
+  }
+  function drawWandAndShield(x, y) {   // gameplay overlays stay procedural over any art
     if (shieldUp) drawBubble(x, y - 2, 21, 0.55);   // the Shield guest's bubble
     // bubble wand: a stem ending in the ring you blow bubbles through
     const wx = x + Math.cos(P.aim) * 17, wy = y + Math.sin(P.aim) * 17;
@@ -1094,6 +1184,10 @@
   function drawEnemy(en) {
     const x = en.x, y = en.y;
     if (en.flash > 0) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, en.r + 2, 0, 6.283); ctx.fill(); return; }
+    if (spr(en.type, x, y)) {
+      if (en.type === 'brute' && en.hp > 1) { ctx.fillStyle = '#ffd34d'; ctx.fillRect(x - 8, y - 22, 16, 3); }
+      return;
+    }
     if (en.type === 'goon') {
       ctx.fillStyle = '#6b7f5e'; ctx.beginPath(); ctx.arc(x, y, 13, 0, 6.283); ctx.fill();
       ctx.fillStyle = '#57684c'; ctx.beginPath(); ctx.arc(x, y - 5, 10, Math.PI, 0); ctx.fill(); // helmet
@@ -1115,6 +1209,7 @@
   }
   function drawFrog(f) {
     const dy = Math.sin(f.bob) * 2.5;   // the frog bobs gently inside its bubble
+    if (spr('frog-bubble', f.x, f.y + dy * 0.6)) return;
     ctx.save(); ctx.translate(f.x, f.y + dy);
     ctx.fillStyle = '#59c94f'; ctx.beginPath(); ctx.ellipse(0, 0, 7, 5.5, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#7de07a'; ctx.beginPath(); ctx.arc(-3.5, -4.5, 2.6, 0, 6.283); ctx.arc(3.5, -4.5, 2.6, 0, 6.283); ctx.fill();
@@ -1125,6 +1220,7 @@
   const ROLE_GLYPH = { cheer: '♪', shield: '◯', sparkle: '★', vigor: '♥' };
   function drawGuest(g) {
     const x = g.x, y = g.y + Math.sin(g.bob) * (P.dancing ? 3 : 1.5);
+    if (spr('guest-' + g.role, x, y) || spr('guest', x, y)) return;
     ctx.fillStyle = g.hue;
     ctx.beginPath(); ctx.moveTo(0 + x, y - 4); ctx.lineTo(x + 8, y + 10); ctx.quadraticCurveTo(x, y + 13, x - 8, y + 10); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ffd9b8'; ctx.beginPath(); ctx.arc(x, y - 8, 5, 0, 6.283); ctx.fill();
@@ -1133,6 +1229,7 @@
     ctx.fillText(ROLE_GLYPH[g.role] || '★', x + 6, y - 14);
   }
   function drawFly(fl) {
+    if (spr('fly', fl.x, fl.y)) return;
     const wob = Math.sin(fl.wob * 30);
     ctx.fillStyle = 'rgba(200,225,255,.55)';
     ctx.beginPath();
@@ -1142,6 +1239,62 @@
     ctx.fillStyle = '#252c33';
     ctx.beginPath(); ctx.ellipse(fl.x, fl.y, 4, 3, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#cfe3f2'; ctx.fillRect(fl.x - 2.5, fl.y - 1.5, 1.6, 1.6); ctx.fillRect(fl.x + 1, fl.y - 1.5, 1.6, 1.6);
+  }
+
+  // ===================== art exporter =====================
+  // Renders each placeholder standalone (same draw code, fabricated state) so the
+  // artist gets exact reference PNGs. Driven headless by the vault's export script.
+  function withP(px, py, aim, dancing, fn) {
+    const sx = P.x, sy = P.y, sa = P.aim, sd = P.dancing, st = P.twirl, si = P.iframe, sh = shieldUp;
+    P.x = px; P.y = py; P.aim = aim; P.dancing = dancing; P.twirl = 0.55; P.iframe = 0; shieldUp = false;
+    try { fn(); } finally { P.x = sx; P.y = sy; P.aim = sa; P.dancing = sd; P.twirl = st; P.iframe = si; shieldUp = sh; }
+  }
+  function tilePaint(type, open) {
+    return (cx, cy) => {
+      ctx.save(); ctx.translate(cx - TS / 2, cy - TS / 2);
+      drawSpecial({ type, open, c: 0, r: 0 });
+      ctx.restore();
+    };
+  }
+  const EXPORT_RENDER = {
+    'princess':       { w: 40, h: 48, paint: (cx, cy) => withP(cx, cy + 6, -2.2, false, drawPrincess) },
+    'princess-dance': { w: 40, h: 48, paint: (cx, cy) => withP(cx, cy + 6, -2.2, true, drawPrincess) },
+    'guest-cheer':    { w: 26, h: 30, paint: (cx, cy) => drawGuest({ x: cx, y: cy + 2, hue: '#f2a2c4', role: 'cheer', bob: 0.6 }) },
+    'guest-shield':   { w: 26, h: 30, paint: (cx, cy) => drawGuest({ x: cx, y: cy + 2, hue: '#a2c8f2', role: 'shield', bob: 0.6 }) },
+    'guest-sparkle':  { w: 26, h: 30, paint: (cx, cy) => drawGuest({ x: cx, y: cy + 2, hue: '#f2d3a2', role: 'sparkle', bob: 0.6 }) },
+    'guest-vigor':    { w: 26, h: 30, paint: (cx, cy) => drawGuest({ x: cx, y: cy + 2, hue: '#b8f2a2', role: 'vigor', bob: 0.6 }) },
+    'frog-bubble':    { w: 30, h: 30, paint: (cx, cy) => drawFrog({ x: cx, y: cy, bob: 0.9 }) },
+    'goon':   { w: 30, h: 30, paint: (cx, cy) => drawEnemy(mkEnemy('goon', cx, cy)) },
+    'archer': { w: 30, h: 34, paint: (cx, cy) => withP(cx - 120, cy, 0, false, () => drawEnemy(mkEnemy('archer', cx, cy + 2))) },
+    'brute':  { w: 42, h: 42, paint: (cx, cy) => drawEnemy(Object.assign(mkEnemy('brute', cx, cy), { hp: 1 })) },
+    'fly':  { w: 14, h: 12, paint: (cx, cy) => drawFly({ x: cx, y: cy + 1, wob: 0.05 }) },
+    'bolt': { w: 18, h: 18, paint: (cx, cy) => drawBubble(cx, cy, 6.5, 1) },
+    'door':       { w: 32, h: 32, paint: tilePaint('door', false) },
+    'door-open':  { w: 32, h: 32, paint: tilePaint('door', true) },
+    'exit':       { w: 32, h: 32, paint: tilePaint('exit', false) },
+    'chest':      { w: 32, h: 32, paint: tilePaint('chest', false) },
+    'chest-open': { w: 32, h: 32, paint: tilePaint('chest', true) },
+    'cage':       { w: 32, h: 32, paint: tilePaint('cage', false) },
+    'cage-open':  { w: 32, h: 32, paint: tilePaint('cage', true) },
+    'tile-floor':     { w: 32, h: 32, paint: (cx, cy) => drawFloorTile(cx - 16, cy - 16, false) },
+    'tile-floor-alt': { w: 32, h: 32, paint: (cx, cy) => drawFloorTile(cx - 16, cy - 16, true) },
+    'tile-carpet':    { w: 32, h: 32, paint: (cx, cy) => { drawFloorTile(cx - 16, cy - 16, false); drawCarpetTile(cx - 16, cy - 16); } },
+    'tile-wall':      { w: 32, h: 32, paint: (cx, cy) => drawWallTile(cx - 16, cy - 16, true) },
+    'heart-full':  { w: 22, h: 20, paint: (cx, cy) => drawHeart(cx, cy + 2, true) },
+    'heart-empty': { w: 22, h: 20, paint: (cx, cy) => drawHeart(cx, cy + 2, false) },
+    'key': { w: 24, h: 16, paint: (cx, cy) => drawKeyGlyph(cx - 2, cy - 2) }
+  };
+  function renderAssetPNG(name, scale) {
+    const def = EXPORT_RENDER[name];
+    if (!def) return null;
+    const k = Math.max(1, scale || 1);
+    const oc = document.createElement('canvas');
+    oc.width = Math.round(def.w * k); oc.height = Math.round(def.h * k);
+    const keep = ctx;
+    ctx = oc.getContext('2d');
+    ctx.scale(k, k);
+    try { def.paint(def.w / 2, def.h / 2); } finally { ctx = keep; }
+    return oc.toDataURL('image/png');
   }
 
   // ===================== boot =====================
@@ -1178,7 +1331,9 @@
     get unlock() { return mg ? { bubbles: mg.bubbles.map(b => ({ x: b.x, y: b.y, r: b.r, popped: b.popped })) } : null; },
     get guestXY() { return party.length ? { x: party[0].x, y: party[0].y } : null; },
     get partyXY() { return party.map(m => ({ kind: m.kind, x: m.x, y: m.y })); },
-    warp(n) { if (n >= 1 && n <= MAPS.length) { mg = null; loadFloor(n, true); } }
+    warp(n) { if (n >= 1 && n <= MAPS.length) { mg = null; loadFloor(n, true); } },
+    renderAsset: renderAssetPNG,
+    get exportList() { return Object.keys(EXPORT_RENDER).map(n => ({ name: n, w: EXPORT_RENDER[n].w, h: EXPORT_RENDER[n].h })); }
   };
 })();
 </script>
