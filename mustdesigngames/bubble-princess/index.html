@@ -117,7 +117,7 @@
     bolt: [18, 18], door: [32, 32], 'door-open': [32, 32], exit: [32, 32],
     chest: [32, 32], 'chest-open': [32, 32], cage: [32, 32], 'cage-open': [32, 32],
     'tile-floor': [32, 32], 'tile-floor-alt': [32, 32], 'tile-carpet': [32, 32], 'tile-wall': [32, 32],
-    heart: [22, 20], key: [24, 16]
+    heart: [22, 20], key: [24, 16], lock: [22, 26]
   };
   const ART = {};
   function sprite(name) { const a = ART[name]; return a && a.ok ? a.img : null; }
@@ -428,8 +428,67 @@
   }
 
   // --- opening locks (the wand is the Master Key): touching one starts the
-  //     kid-friendly unlock mini-game — pop the key-bubbles, no fail, no timer ---
-  const MG_COUNT = { door: 3, chest: 4, cage: 4, exit: 5 };
+  //     kid-friendly unlock mini-game — an ice-slide key puzzle: arrows/swipe send
+  //     the key gliding until a bubble or the edge stops it; reach the lock to open.
+  //     No fail, no timer, always solvable (generator BFS-verifies) ---
+  const MG_DIFF = { door: [1, 2, 3], chest: [2, 3, 4], cage: [2, 3, 4], exit: [2, 3, 6] }; // [minSlides, maxSlides, bubbles]
+  const MG_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  function slideDest(g, from, dir) {   // glide until edge/bubble; entering the lock wins
+    let c = from.c, r = from.r;
+    for (;;) {
+      const nc = c + dir[0], nr = r + dir[1];
+      if (nc < 0 || nr < 0 || nc >= g.cols || nr >= g.rows) break;
+      if (g.blocks.has(nc + ',' + nr)) break;
+      c = nc; r = nr;
+      if (c === g.lock.c && r === g.lock.r) return { c, r, hitLock: true };
+    }
+    return { c, r, hitLock: false };
+  }
+  function solveSlide(g) {             // BFS over slides; shortest dir list into the lock
+    const prev = {}; prev[g.key.c + ',' + g.key.r] = null;
+    const q = [{ c: g.key.c, r: g.key.r }];
+    while (q.length) {
+      const cur = q.shift();
+      for (const dir of MG_DIRS) {
+        const d = slideDest(g, cur, dir);
+        if (d.hitLock) {
+          const path = [dir];
+          let k = cur.c + ',' + cur.r;
+          while (prev[k]) { path.unshift(prev[k].dir); k = prev[k].from; }
+          return path;
+        }
+        const dk = d.c + ',' + d.r;
+        if ((d.c !== cur.c || d.r !== cur.r) && !(dk in prev)) {
+          prev[dk] = { from: cur.c + ',' + cur.r, dir };
+          q.push({ c: d.c, r: d.r });
+        }
+      }
+    }
+    return null;
+  }
+  function genSlide(type) {
+    const [minD, maxD, nBlocks] = MG_DIFF[type] || MG_DIFF.door;
+    const cols = 7, rows = 4;
+    let best = null;
+    for (let t = 0; t < 80; t++) {
+      const g = { cols, rows, blocks: new Set() };
+      const cells = [];
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) cells.push({ c, r });
+      cells.sort(() => Math.random() - 0.5);
+      g.key = { c: cells[0].c, r: cells[0].r };
+      g.lock = { c: cells[1].c, r: cells[1].r };
+      for (let b = 0; b < nBlocks; b++) g.blocks.add(cells[2 + b].c + ',' + cells[2 + b].r);
+      const sol = solveSlide(g);
+      if (!sol) continue;
+      g.solution = sol;
+      if (sol.length >= minD && sol.length <= maxD) return g;
+      if (!best || Math.abs(sol.length - minD) < Math.abs(best.solution.length - minD)) best = g;
+    }
+    if (best) return best;
+    // ultimate fallback: a straight lane
+    const g = { cols, rows, blocks: new Set(), key: { c: 0, r: 1 }, lock: { c: cols - 1, r: 1 }, solution: [[1, 0]] };
+    return g;
+  }
   const REACH = 16;                        // generous interact reach beyond the princess
   function tryOpenSpecials() {
     const pad = P.r + REACH + 2;
@@ -446,33 +505,52 @@
   }
   function startUnlock(s) {
     state = 'unlock';
-    const pw = Math.min(W - 30, 430), ph = Math.min(H - 90, 300);
+    const pw = Math.min(W - 30, 430), ph = Math.min(H - 90, 310);
     const px = (W - pw) / 2, py = (H - ph) / 2 + 10;
-    const bubbles = [];
-    const n = MG_COUNT[s.type] || 3;
-    for (let i = 0; i < n; i++) bubbles.push({
-      x: px + 50 + Math.random() * (pw - 100),
-      y: py + 76 + Math.random() * (ph - 116),
-      vx: (Math.random() - 0.5) * 90, vy: (Math.random() - 0.5) * 90,
-      r: 29, popped: false
-    });
-    mg = { s, bubbles, panel: { x: px, y: py, w: pw, h: ph }, doneT: 0, sparks: [] };
+    const g = genSlide(s.type);
+    const cell = Math.floor(Math.min((pw - 36) / g.cols, (ph - 104) / g.rows));
+    const gx = Math.round(px + (pw - cell * g.cols) / 2);
+    const gy = Math.round(py + 58 + (ph - 104 - cell * g.rows) / 2);
+    mg = { s, g, cell, gx, gy, panel: { x: px, y: py, w: pw, h: ph },
+           kx: g.key.c, ky: g.key.r, anim: null, moves: 0, done: false, doneT: 0, sparks: [], swipe: null };
     tone(523, 0.1, 'triangle', 0.05, 784);
   }
+  function mgSlide(dir) {
+    if (!mg || mg.done || mg.anim) return;
+    const d = slideDest(mg.g, mg.g.key, dir);
+    if (d.c === mg.g.key.c && d.r === mg.g.key.r && !d.hitLock) { tone(160, 0.06, 'square', 0.04); return; }
+    const dist = Math.abs(d.c - mg.g.key.c) + Math.abs(d.r - mg.g.key.r);
+    mg.anim = { fc: mg.g.key.c, fr: mg.g.key.r, tc: d.c, tr: d.r, t: 0, dur: 0.06 + dist * 0.04, hitLock: d.hitLock };
+    mg.g.key = { c: d.c, r: d.r };
+    mg.moves++;
+    tone(340, 0.1, 'sine', 0.045, 620);
+  }
   function updateUnlock(dt) {
-    const p = mg.panel;
-    mg.bubbles.forEach(b => {
-      if (b.popped) return;
-      b.x += b.vx * dt; b.y += b.vy * dt;
-      if (b.x - b.r < p.x + 10) { b.x = p.x + 10 + b.r; b.vx = Math.abs(b.vx); }
-      if (b.x + b.r > p.x + p.w - 10) { b.x = p.x + p.w - 10 - b.r; b.vx = -Math.abs(b.vx); }
-      if (b.y - b.r < p.y + 52) { b.y = p.y + 52 + b.r; b.vy = Math.abs(b.vy); }
-      if (b.y + b.r > p.y + p.h - 10) { b.y = p.y + p.h - 10 - b.r; b.vy = -Math.abs(b.vy); }
-    });
+    if (mg.anim) {
+      const a = mg.anim;
+      a.t += dt;
+      const p = Math.min(1, a.t / a.dur);
+      mg.kx = a.fc + (a.tc - a.fc) * p;
+      mg.ky = a.fr + (a.tr - a.fr) * p;
+      if (Math.random() < dt * 30) mg.sparks.push({ x: mg.gx + (mg.kx + 0.5) * mg.cell, y: mg.gy + (mg.ky + 0.5) * mg.cell, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40, life: 0.35 });
+      if (p >= 1) {
+        const hit = a.hitLock;
+        mg.anim = null;
+        if (hit) {
+          mg.done = true;
+          const lx = mg.gx + (mg.g.lock.c + 0.5) * mg.cell, ly = mg.gy + (mg.g.lock.r + 0.5) * mg.cell;
+          for (let i = 0; i < 18; i++) {
+            const an = Math.random() * 6.28, sp = 110 * (0.4 + Math.random());
+            mg.sparks.push({ x: lx, y: ly, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, life: 0.6 });
+          }
+          tone(700, 0.08, 'triangle', 0.06, 1100);
+        } else tone(180, 0.05, 'square', 0.05);   // thunk against a bubble/wall
+      }
+    }
     mg.sparks = mg.sparks.filter(sp => { sp.life -= dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; return sp.life > 0; });
-    if (mg.bubbles.every(b => b.popped)) {
+    if (mg.done) {
       mg.doneT += dt;
-      if (mg.doneT > 0.45) { const s = mg.s; mg = null; state = 'play'; finishUnlock(s); }
+      if (mg.doneT > 0.5) { const s = mg.s; mg = null; state = 'play'; finishUnlock(s); }
     }
   }
   function finishUnlock(s) {
@@ -519,9 +597,12 @@
 
   // ===================== input =====================
   const keys = new Set();
+  const DIR_KEYS = { ArrowRight: [1, 0], d: [1, 0], ArrowLeft: [-1, 0], a: [-1, 0], ArrowDown: [0, 1], s: [0, 1], ArrowUp: [0, -1], w: [0, -1] };
   window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
-    keys.add(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (state === 'unlock' && mg && !e.repeat && DIR_KEYS[k]) { mgSlide(DIR_KEYS[k]); ac(); return; }
+    keys.add(k);
     ac();
   });
   window.addEventListener('keyup', (e) => keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key));
@@ -537,19 +618,9 @@
     ac();
     const [sx, sy] = stagePos(e);
     if (e.pointerType === 'touch' && !touchMode) { touchMode = true; document.body.classList.add('touch'); }
-    if (state === 'unlock' && mg) {          // taps/clicks go to the unlock mini-game
-      for (const b of mg.bubbles) {
-        if (!b.popped && Math.hypot(sx - b.x, sy - b.y) <= b.r + 8) {
-          b.popped = true;
-          const nPopped = mg.bubbles.filter(x => x.popped).length;
-          tone(480 + nPopped * 130, 0.09, 'triangle', 0.06, 900);
-          for (let i = 0; i < 10; i++) {
-            const a = Math.random() * 6.28, sp = 90 * (0.4 + Math.random());
-            mg.sparks.push({ x: b.x, y: b.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5 });
-          }
-          break;
-        }
-      }
+    if (state === 'unlock' && mg) {          // any pointer swipes the key (touch or mouse-drag)
+      mg.swipe = { id: e.pointerId, x: sx, y: sy };
+      cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
       return;
     }
     if (e.pointerType === 'touch' && stickId === null) {
@@ -569,6 +640,12 @@
   });
   function endPointer(e) {
     if (e.pointerId === stickId) { stickId = null; stickDx = 0; stickDy = 0; }
+    if (state === 'unlock' && mg && mg.swipe && e.pointerId === mg.swipe.id) {
+      const [sx, sy] = stagePos(e);
+      const dx = sx - mg.swipe.x, dy = sy - mg.swipe.y;
+      mg.swipe = null;
+      if (Math.hypot(dx, dy) > 24) mgSlide(Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]);
+    }
   }
   cv.addEventListener('pointerup', endPointer);
   cv.addEventListener('pointercancel', endPointer);
@@ -1000,23 +1077,41 @@
     ctx.beginPath(); ctx.moveTo(x + 5, y); ctx.lineTo(x + 5, y + 5); ctx.moveTo(x + 10, y); ctx.lineTo(x + 10, y + 5); ctx.stroke();
     ctx.lineCap = 'butt';
   }
+  function drawPadlock(cx, cy) {
+    if (spr('lock', cx, cy)) return;
+    ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy - 4, 6, Math.PI, 0); ctx.stroke();
+    ctx.fillStyle = '#ffd34d';
+    ctx.fillRect(cx - 8, cy - 3, 16, 14);
+    ctx.fillStyle = '#12384e'; ctx.fillRect(cx - 1.5, cy + 1, 3, 6);
+  }
   function drawUnlock() {
-    const p = mg.panel;
+    const p = mg.panel, g = mg.g;
     ctx.fillStyle = 'rgba(8,24,38,.6)'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#12384e'; ctx.strokeStyle = '#2e7196'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, p.h, 16); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#ffd34d'; ctx.textAlign = 'center';
-    ctx.font = '700 ' + (p.w < 380 ? 16 : 19) + 'px system-ui';
-    ctx.fillText('✨ Pop the bubbles to unlock! ✨', p.x + p.w / 2, p.y + 32);
-    const left = mg.bubbles.filter(b => !b.popped).length;
-    ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.font = '600 13px system-ui';
-    ctx.fillText(left ? left + ' to go' : 'Open!', p.x + p.w / 2, p.y + p.h - 16);
+    ctx.font = '700 ' + (p.w < 380 ? 15 : 18) + 'px system-ui';
+    ctx.fillText('🔑 Slide the key to the lock!', p.x + p.w / 2, p.y + 30);
+    ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.font = '600 12px system-ui';
+    ctx.fillText(mg.done ? 'Open!' : (touchMode ? 'swipe to slide' : 'arrow keys / WASD to slide'), p.x + p.w / 2, p.y + 48);
     ctx.textAlign = 'left';
-    mg.bubbles.forEach(b => {
-      if (b.popped) return;
-      drawBubble(b.x, b.y, b.r);
-      drawKeyGlyph(b.x - 2, b.y);
+    for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) {
+      ctx.strokeStyle = 'rgba(191,234,255,.14)'; ctx.lineWidth = 1;
+      ctx.strokeRect(mg.gx + c * mg.cell + 1, mg.gy + r * mg.cell + 1, mg.cell - 2, mg.cell - 2);
+    }
+    const t = performance.now() / 400;
+    g.blocks.forEach(b => {
+      const cr = b.split(',');
+      drawBubble(mg.gx + (+cr[0] + 0.5) * mg.cell, mg.gy + (+cr[1] + 0.5) * mg.cell + Math.sin(t + +cr[0] + +cr[1]) * 1.5, mg.cell * 0.36);
     });
+    drawPadlock(mg.gx + (g.lock.c + 0.5) * mg.cell, mg.gy + (g.lock.r + 0.5) * mg.cell);
+    if (!mg.done) {
+      ctx.save();
+      ctx.translate(mg.gx + (mg.kx + 0.5) * mg.cell, mg.gy + (mg.ky + 0.5) * mg.cell);
+      drawKeyGlyph(-2, 0);
+      ctx.restore();
+    }
     mg.sparks.forEach(sp => {
       ctx.globalAlpha = Math.max(0, sp.life * 2);
       ctx.fillStyle = '#dff6ff';
@@ -1282,7 +1377,8 @@
     'tile-wall':      { w: 32, h: 32, paint: (cx, cy) => drawWallTile(cx - 16, cy - 16, true) },
     'heart-full':  { w: 22, h: 20, paint: (cx, cy) => drawHeart(cx, cy + 2, true) },
     'heart-empty': { w: 22, h: 20, paint: (cx, cy) => drawHeart(cx, cy + 2, false) },
-    'key': { w: 24, h: 16, paint: (cx, cy) => drawKeyGlyph(cx - 2, cy - 2) }
+    'key': { w: 24, h: 16, paint: (cx, cy) => drawKeyGlyph(cx - 2, cy - 2) },
+    'lock': { w: 22, h: 26, paint: (cx, cy) => drawPadlock(cx, cy + 1) }
   };
   function renderAssetPNG(name, scale) {
     const def = EXPORT_RENDER[name];
@@ -1328,7 +1424,7 @@
     get enemies() { return enemies.length; },
     get enemyXY() { let best = null, bd = 1e9; enemies.forEach(en => { const d = Math.hypot(en.x - P.x, en.y - P.y); if (d < bd) { bd = d; best = en; } }); return best ? { x: best.x, y: best.y, d: bd } : null; },
     get zoom() { return zoom; },
-    get unlock() { return mg ? { bubbles: mg.bubbles.map(b => ({ x: b.x, y: b.y, r: b.r, popped: b.popped })) } : null; },
+    get unlock() { return mg ? { cols: mg.g.cols, rows: mg.g.rows, key: { c: mg.g.key.c, r: mg.g.key.r }, lock: { c: mg.g.lock.c, r: mg.g.lock.r }, solution: mg.g.solution, moves: mg.moves, animating: !!mg.anim, done: mg.done } : null; },
     get guestXY() { return party.length ? { x: party[0].x, y: party[0].y } : null; },
     get partyXY() { return party.map(m => ({ kind: m.kind, x: m.x, y: m.y })); },
     warp(n) { if (n >= 1 && n <= MAPS.length) { mg = null; loadFloor(n, true); } },
