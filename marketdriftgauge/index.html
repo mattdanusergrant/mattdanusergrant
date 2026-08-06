@@ -4,13 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Market Drift Gauge · majors vs the 200-day mean</title>
-<meta name="description" content="The four major US indexes — S&P 500, NASDAQ 100, Dow Jones, Russell 2000 — charted against their 200-day simple moving averages over the last 200 trading days." />
+<meta name="description" content="The four major US indexes — S&P 500, NASDAQ 100, Dow Jones, Russell 2000 — charted against their 200-day simple moving averages, over 200, 2,000 or 20,000 trading days." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#13110E" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Market Drift Gauge" />
 <meta property="og:title" content="Market Drift Gauge · majors vs the 200-day mean" />
-<meta property="og:description" content="S&P 500, NASDAQ 100, Dow Jones and Russell 2000 vs their 200-day simple moving averages, over the last 200 trading days." />
+<meta property="og:description" content="S&P 500, NASDAQ 100, Dow Jones and Russell 2000 vs their 200-day simple moving averages — 200, 2,000 or 20,000 trading days." />
 <meta property="og:url" content="https://mattdanusergrant.com/marketdriftgauge/" />
 <meta name="twitter:card" content="summary" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -37,12 +37,18 @@ header.top{display:flex;justify-content:space-between;align-items:baseline;gap:1
 .home:hover{color:var(--ink-2)}
 h1{font-family:var(--display);font-weight:500;font-size:clamp(30px,5.4vw,44px);letter-spacing:-0.015em;margin:6px 0 4px}
 h1 em{font-style:italic;color:var(--ink-2)}
-.lede{color:var(--ink-2);font-size:15px;margin:0 0 26px;max-width:62ch}
+.lede{color:var(--ink-2);font-size:15px;margin:0 0 20px;max-width:66ch}
 .lede .asof{color:var(--muted)}
 
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 20px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 16px}
 @media(max-width:840px){.tiles{grid-template-columns:repeat(2,1fr)}}
-.tile{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+button.tile{appearance:none;font:inherit;text-align:left;cursor:pointer;color:var(--ink);
+  background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);
+  transition:opacity .15s,border-color .15s}
+button.tile:hover{border-color:var(--line-2)}
+button.tile:focus-visible{outline:2px solid var(--ink-2);outline-offset:2px}
+button.tile[aria-pressed="false"]{opacity:.38}
+button.tile[aria-pressed="false"] .drift{visibility:hidden}
 .tile .name{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:.01em}
 .chip{width:10px;height:10px;border-radius:3px;flex:none}
 .tile .lvl{font-family:var(--display);font-size:26px;font-weight:500;margin:4px 0 2px}
@@ -50,10 +56,21 @@ h1 em{font-style:italic;color:var(--ink-2)}
 .tile .drift{font-size:13px;font-weight:600;margin-top:6px}
 .drift.up{color:var(--good)} .drift.down{color:var(--bad)}
 .drift .word{font-weight:500}
+.hint{font-size:12.5px;color:var(--muted);margin:0 0 16px}
 
 .panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 18px 12px;box-shadow:var(--shadow)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:0 4px 12px}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:10px;overflow:hidden}
+.seg button{appearance:none;font:inherit;font-size:13px;font-weight:600;color:var(--muted);
+  background:transparent;border:0;padding:7px 14px;cursor:pointer}
+.seg button + button{border-left:1px solid var(--line-2)}
+.seg button:hover{color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--code-bg);color:var(--ink)}
+.seg button:focus-visible{outline:2px solid var(--ink-2);outline-offset:-2px}
+.span-note{font-size:12.5px;color:var(--muted)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;padding:0 4px 10px;font-size:13px;color:var(--ink-2)}
 .legend .item{display:flex;align-items:center;gap:7px}
+.legend .item.off{opacity:.38}
 .legend .key{color:var(--muted);margin-left:auto}
 .legend svg{flex:none}
 .chartscroll{overflow-x:auto;overscroll-behavior-x:contain}
@@ -89,17 +106,24 @@ footer a{color:var(--muted)}
     <a class="home" href="https://mattdanusergrant.com/">← mattdanusergrant.com</a>
   </header>
   <h1>Market <em>Drift</em> Gauge</h1>
-  <p class="lede">The four majors against their 200-day simple moving averages, over the last
-    200 trading days. Solid is the index, dashed is its mean; both are indexed to the index’s
-    close 200 sessions ago. <span class="asof" id="asof"></span></p>
+  <p class="lede">The four majors against their 200-day simple moving averages. Solid is the
+    index, dashed is its mean; each line is indexed to that index’s close at the start of the
+    window. <span class="asof" id="asof"></span></p>
 
   <div class="tiles" id="tiles"></div>
+  <p class="hint">Tap a card to hide or show that index.</p>
 
   <div class="panel">
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Window length" id="ranges"></div>
+      <span class="span-note" id="spannote"></span>
+    </div>
     <div class="legend" id="legend"></div>
-    <div class="chartscroll"><div class="chartbox" id="chartbox"><div id="tip"></div></div></div>
+    <div class="chartscroll"><div class="chartbox" id="chartbox">
+      <svg id="chart"></svg><div id="tip"></div>
+    </div></div>
     <details class="tbl" id="tbl">
-      <summary>Data table (all 200 sessions)</summary>
+      <summary id="tblsummary">Data table</summary>
       <div class="tblscroll" id="tblscroll"></div>
     </details>
   </div>
@@ -110,9 +134,16 @@ footer a{color:var(--muted)}
 
 <script>
 (async function(){
-  const WINDOW = 200, SMA = 200;
+  const SMA = 200;
+  const RANGES = [
+    {n: 200,   label: '200d',    log: false},
+    {n: 2000,  label: '2,000d',  log: true},
+    {n: 20000, label: '20,000d', log: true},
+  ];
   const COLORS = {spx:'var(--spx)', ndx:'var(--ndx)', dji:'var(--dji)', rut:'var(--rut)'};
   const HEXES  = {spx:'#3987e5', ndx:'#d95926', dji:'#199e70', rut:'#c98500'};
+  const MAXPTS = 640;        // decimate windows longer than this
+  const MAXROWS = 2000;      // data-table row cap
 
   let data;
   try{
@@ -122,178 +153,293 @@ footer a{color:var(--muted)}
     return;
   }
 
-  const dates = data.dates;
-  const n = dates.length;
-  const start = n - WINDOW;               // first displayed session
-  if (start < SMA - 1){
-    document.getElementById('chartbox').innerHTML = '<p class="err">Not enough history for a 200-day SMA over a 200-day window.</p>';
-    return;
-  }
+  const dates = data.dates, n = dates.length;
 
-  // ---- derive per-series: display closes, SMA, pct versions (base = close 200 sessions ago)
+  // per-series: value at global date-index i (null before its start), and SMA of its own closes
   const S = data.series.map(s => {
-    const c = s.closes;
-    const sma = new Array(n).fill(null);
+    const sma = new Array(s.closes.length).fill(null);
     let run = 0;
-    for (let i = 0; i < n; i++){
-      run += c[i];
-      if (i >= SMA) run -= c[i - SMA];
-      if (i >= SMA - 1) sma[i] = run / SMA;
+    for (let j = 0; j < s.closes.length; j++){
+      run += s.closes[j];
+      if (j >= SMA) run -= s.closes[j - SMA];
+      if (j >= SMA - 1) sma[j] = run / SMA;
     }
-    const base = c[start];
-    const pct  = i => (c[i] / base - 1) * 100;
-    const pctS = i => (sma[i] / base - 1) * 100;
-    return {...s, c, sma, base, pct, pctS};
+    return {...s,
+      at:    i => (i >= s.offset && i < s.offset + s.closes.length) ? s.closes[i - s.offset] : null,
+      smaAt: i => (i >= s.offset && i < s.offset + s.closes.length) ? sma[i - s.offset] : null,
+    };
   });
 
+  // ---- state (persisted)
+  let state = {range: 0, hidden: {}};
+  try{ Object.assign(state, JSON.parse(localStorage.getItem('mdg-state') || '{}')); }catch(e){}
+  if (typeof state.range !== 'number' || !RANGES[state.range]) state.range = 0;
+  const save = () => { try{ localStorage.setItem('mdg-state', JSON.stringify(state)); }catch(e){} };
+  const visible = () => S.filter(s => !state.hidden[s.key]);
+
+  // ---- formatting
   const fmtLvl = (v, key) => v.toLocaleString('en-US', key === 'dji'
     ? {maximumFractionDigits:0}
     : {minimumFractionDigits:2, maximumFractionDigits:2});
   const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  const fmtX = v => '×' + (v >= 10 ? Math.round(v).toLocaleString('en-US') : v >= 3 ? v.toFixed(1).replace(/\.0$/, '') : v.toFixed(2).replace(/0$/, '').replace(/\.$/, ''));
   const fmtDate = iso => { const [y,m,d] = iso.split('-').map(Number);
     return new Date(Date.UTC(y, m-1, d)).toLocaleDateString('en-US', {timeZone:'UTC', month:'short', day:'numeric', year:'numeric'}); };
 
   document.getElementById('asof').textContent = 'Data through ' + fmtDate(data.updated) + '.';
 
-  // ---- stat tiles
-  document.getElementById('tiles').innerHTML = S.map(s => {
-    const last = n - 1;
-    const gap = (s.c[last] / s.sma[last] - 1) * 100;
-    const ret = (s.c[last] / s.base - 1) * 100;
-    const up = gap >= 0;
-    return `<div class="tile">
+  // ---- static tiles (click = toggle)
+  const tilesEl = document.getElementById('tiles');
+  tilesEl.innerHTML = S.map(s => {
+    const last = s.offset + s.closes.length - 1;
+    const c = s.at(last), m = s.smaAt(last);
+    const gap = (c / m - 1) * 100, up = gap >= 0;
+    const win = Math.min(200, s.closes.length);
+    const ret = (c / s.closes[s.closes.length - win] - 1) * 100;
+    return `<button class="tile" type="button" data-key="${s.key}" aria-pressed="${!state.hidden[s.key]}">
       <div class="name"><span class="chip" style="background:${COLORS[s.key]}"></span>${s.label}</div>
-      <div class="lvl">${fmtLvl(s.c[last], s.key)}</div>
+      <div class="lvl">${fmtLvl(c, s.key)}</div>
       <div class="sub">200d return ${fmtPct(ret)}</div>
       <div class="drift ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${fmtPct(gap)} <span class="word">${up ? 'above' : 'below'} its 200-day mean</span></div>
-    </div>`;
+    </button>`;
   }).join('');
+  tilesEl.addEventListener('click', ev => {
+    const btn = ev.target.closest('button.tile');
+    if (!btn) return;
+    const key = btn.dataset.key;
+    state.hidden[key] = !state.hidden[key];
+    if (!visible().length){ state.hidden[key] = false; return; }   // never allow an empty chart
+    btn.setAttribute('aria-pressed', String(!state.hidden[key]));
+    save(); render();
+  });
 
-  // ---- legend
-  document.getElementById('legend').innerHTML = S.map(s =>
-    `<span class="item"><svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="${HEXES[s.key]}" stroke-width="2.5"/></svg>${s.label}</span>`
-  ).join('') + `<span class="key"><svg width="26" height="10"><line x1="1" y1="5" x2="25" y2="5" stroke="#8A857B" stroke-width="2" stroke-dasharray="5 4"/></svg> = its 200-day SMA</span>`;
+  // ---- range control
+  const rangesEl = document.getElementById('ranges');
+  rangesEl.innerHTML = RANGES.map((r, k) =>
+    `<button type="button" data-r="${k}" aria-pressed="${k === state.range}">${r.label}</button>`).join('');
+  rangesEl.addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-r]');
+    if (!btn) return;
+    state.range = Number(btn.dataset.r);
+    [...rangesEl.children].forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    save(); render();
+  });
 
-  // ---- chart geometry
-  const W = 1000, H = 540, M = {t:14, r:122, b:34, l:52};
+  // ---- legend (static; dims with hidden state)
+  const legendEl = document.getElementById('legend');
+  function drawLegend(){
+    legendEl.innerHTML = S.map(s =>
+      `<span class="item${state.hidden[s.key] ? ' off' : ''}"><svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="${HEXES[s.key]}" stroke-width="2.5"/></svg>${s.label}</span>`
+    ).join('') + `<span class="key"><svg width="26" height="10"><line x1="1" y1="5" x2="25" y2="5" stroke="#8A857B" stroke-width="2" stroke-dasharray="5 4"/></svg> = its 200-day SMA</span>`;
+  }
+
+  // ---- chart
+  const W = 1000, H = 540, M = {t:14, r:122, b:34, l:58};
   const iw = W - M.l - M.r, ih = H - M.t - M.b;
-  const xs = i => M.l + iw * (i - start) / (WINDOW - 1);
+  const svg = document.getElementById('chart');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'Line chart of the selected indexes and their 200-day simple moving averages. Full values are in the data table below.');
+  const box = document.getElementById('chartbox'), tip = document.getElementById('tip');
+  let view = null;   // geometry of the current render, for the tooltip
 
-  let lo = Infinity, hi = -Infinity;
-  for (const s of S) for (let i = start; i < n; i++){
-    lo = Math.min(lo, s.pct(i), s.pctS(i));
-    hi = Math.max(hi, s.pct(i), s.pctS(i));
+  function render(){
+    drawLegend();
+    const R = RANGES[state.range];
+    const len = Math.min(R.n, n);
+    const start = n - len;
+    const vis = visible();
+
+    document.getElementById('spannote').textContent =
+      `${fmtDate(dates[start])} → ${fmtDate(dates[n-1])} · ${len.toLocaleString('en-US')} sessions` +
+      (R.n > len ? ` (all available)` : '');
+
+    // per-series window entry + base
+    const meta = {};
+    for (const s of S){
+      const first = Math.max(start, s.offset);
+      meta[s.key] = {first, base: s.at(first)};
+    }
+    // y transform: linear → percent; log → log10 ratio
+    const tf = R.log ? (r => Math.log10(r)) : (r => (r - 1) * 100);
+    const val  = (s, i) => { const c = s.at(i);    return c == null ? null : tf(c / meta[s.key].base); };
+    const valS = (s, i) => { const m = s.smaAt(i); return m == null ? null : tf(m / meta[s.key].base); };
+
+    // sampled global indexes
+    const stride = Math.max(1, Math.ceil(len / MAXPTS));
+    const idx = [];
+    for (let i = start; i < n; i += stride) idx.push(i);
+    if (idx[idx.length - 1] !== n - 1) idx.push(n - 1);
+
+    // y domain over visible series
+    let lo = Infinity, hi = -Infinity;
+    for (const s of vis) for (const i of idx){
+      const a = val(s, i), b = valS(s, i);
+      if (a != null){ lo = Math.min(lo, a); hi = Math.max(hi, a); }
+      if (b != null){ lo = Math.min(lo, b); hi = Math.max(hi, b); }
+    }
+    if (!isFinite(lo)){ lo = 0; hi = 1; }
+    const pad = (hi - lo) * 0.06 || 1; lo -= pad; hi += pad;
+    const xs = i => M.l + iw * (i - start) / Math.max(1, len - 1);
+    const ys = v => M.t + ih * (1 - (v - lo) / (hi - lo));
+
+    // y ticks
+    let g = '';
+    const yticks = [];
+    if (R.log){
+      for (const m of [-2,-1,0,1,2,3]) for (const k of [1,2,5]){
+        const r = k * Math.pow(10, m), v = Math.log10(r);
+        if (v >= lo && v <= hi) yticks.push({v, label: fmtX(r), zero: r === 1});
+      }
+      if (yticks.length < 3) for (const r of [0.5,0.75,1,1.5,2,3,4,6,8]){
+        const v = Math.log10(r);
+        if (v >= lo && v <= hi && !yticks.some(t => t.v === v)) yticks.push({v, label: fmtX(r), zero: r === 1});
+      }
+    }else{
+      const rawStep = (hi - lo) / 6;
+      const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const step = [1,2,2.5,5,10].map(k => k * mag).find(k => k >= rawStep) || 10 * mag;
+      for (let v = Math.ceil(lo / step) * step; v <= hi; v += step)
+        yticks.push({v, label: fmtPct(v).replace('.0',''), zero: Math.abs(v) < 1e-9});
+    }
+    for (const t of yticks){
+      const y = ys(t.v).toFixed(1);
+      g += `<line x1="${M.l}" x2="${W - M.r}" y1="${y}" y2="${y}" stroke="${t.zero ? 'var(--line-2)' : 'var(--grid)'}" stroke-width="1"/>`;
+      g += `<text x="${M.l - 8}" y="${y}" dy="4" text-anchor="end" fill="var(--muted)" font-size="12" style="font-variant-numeric:tabular-nums">${t.label}</text>`;
+    }
+
+    // x ticks: months / Januaries / every-5-years by window size
+    const xticks = [];
+    for (let k = 1; k < idx.length; k++){
+      const a = dates[idx[k-1]], b = dates[idx[k]];
+      if (len <= 320){ if (b.slice(0,7) !== a.slice(0,7)) xticks.push(idx[k]); }
+      else if (b.slice(0,4) !== a.slice(0,4)){
+        const yr = Number(b.slice(0,4));
+        if (len <= 3000 || yr % 5 === 0) xticks.push(idx[k]);
+      }
+    }
+    const every = Math.ceil(xticks.length / 8);
+    const shown = xticks.filter((_, k) => k % every === 0);
+    const mlabel = iso => { const [y,m] = iso.split('-').map(Number);
+      if (len > 320) return String(y);
+      const name = new Date(Date.UTC(y, m-1, 1)).toLocaleDateString('en-US', {timeZone:'UTC', month:'short'});
+      return m === 1 ? name + ' ’' + String(y).slice(2) : name; };
+    for (const i of shown){
+      const x = xs(i).toFixed(1);
+      g += `<line x1="${x}" x2="${x}" y1="${M.t}" y2="${H - M.b}" stroke="var(--grid)" stroke-width="1"/>`;
+      g += `<text x="${x}" y="${H - M.b + 20}" text-anchor="middle" fill="var(--muted)" font-size="12">${mlabel(dates[i])}</text>`;
+    }
+
+    // paths (null-safe: gaps restart with M)
+    const path = f => { let d = '', pen = false;
+      for (const i of idx){
+        const v = f(i);
+        if (v == null){ pen = false; continue; }
+        d += (pen ? 'L' : 'M') + xs(i).toFixed(1) + ' ' + ys(v).toFixed(1);
+        pen = true;
+      }
+      return d; };
+    let lines = '';
+    for (const s of vis){
+      lines += `<path d="${path(i => valS(s, i))}" fill="none" stroke="${HEXES[s.key]}" stroke-width="2" stroke-dasharray="5 4" opacity="0.55" stroke-linejoin="round"/>`;
+      lines += `<path d="${path(i => val(s, i))}"  fill="none" stroke="${HEXES[s.key]}" stroke-width="2" stroke-linejoin="round"/>`;
+    }
+
+    // direct labels at line ends, nudged apart
+    const ends = vis.map(s => ({label: s.label, y: ys(val(s, n-1))})).sort((a,b) => a.y - b.y);
+    for (let k = 1; k < ends.length; k++)
+      if (ends[k].y - ends[k-1].y < 16) ends[k].y = ends[k-1].y + 16;
+    let labels = '';
+    for (const e of ends)
+      labels += `<text x="${W - M.r + 10}" y="${e.y.toFixed(1)}" dy="4" fill="var(--ink-2)" font-size="12.5" font-weight="600">${e.label}</text>`;
+
+    svg.innerHTML = g + lines + labels +
+      `<line id="xhair" x1="0" x2="0" y1="${M.t}" y2="${H - M.b}" stroke="var(--line-2)" stroke-width="1" opacity="0"/>
+       <g id="dots">${vis.map(s => `<circle r="4.5" fill="${HEXES[s.key]}" stroke="var(--paper)" stroke-width="2" opacity="0"/>`).join('')}</g>
+       <rect id="hit" x="${M.l}" y="${M.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
+
+    view = {start, len, idx, vis, xs, ys, val};
+    hide();
+
+    // data table for this window (newest first, capped)
+    const tblEl = document.getElementById('tbl');
+    const rows = Math.min(len, MAXROWS);
+    document.getElementById('tblsummary').textContent =
+      `Data table (${rows.toLocaleString('en-US')}${rows < len ? ' most recent' : ''} sessions)`;
+    delete document.getElementById('tblscroll').dataset.done;
+    if (tblEl.open) buildTable();
   }
-  const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
-  const ys = v => M.t + ih * (1 - (v - lo) / (hi - lo));
 
-  // y ticks on a nice step
-  const rawStep = (hi - lo) / 6;
-  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const step = [1,2,2.5,5,10].map(k => k * mag).find(k => k >= rawStep) || 10 * mag;
-  const ticks = [];
-  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push(Math.round(v * 100) / 100);
-
-  // x ticks: first session of each month, thinned to fit
-  let mticks = [];
-  for (let i = start + 1; i < n; i++)
-    if (dates[i].slice(0,7) !== dates[i-1].slice(0,7)) mticks.push(i);
-  const every = Math.ceil(mticks.length / 7);
-  mticks = mticks.filter((_, k) => k % every === 0);
-  const mlabel = iso => { const [y,m] = iso.split('-').map(Number);
-    const name = new Date(Date.UTC(y, m-1, 1)).toLocaleDateString('en-US', {timeZone:'UTC', month:'short'});
-    return m === 1 ? name + ' ’' + String(y).slice(2) : name; };
-
-  const path = f => { let d = '';
-    for (let i = start; i < n; i++) d += (i === start ? 'M' : 'L') + xs(i).toFixed(1) + ' ' + ys(f(i)).toFixed(1);
-    return d; };
-
-  let g = '';
-  for (const v of ticks){
-    const y = ys(v).toFixed(1);
-    const zero = Math.abs(v) < 1e-9;
-    g += `<line x1="${M.l}" x2="${W - M.r}" y1="${y}" y2="${y}" stroke="${zero ? 'var(--line-2)' : 'var(--grid)'}" stroke-width="1"/>`;
-    g += `<text x="${M.l - 8}" y="${y}" dy="4" text-anchor="end" fill="var(--muted)" font-size="12" style="font-variant-numeric:tabular-nums">${fmtPct(v).replace('.0','')}</text>`;
+  function buildTable(){
+    const holder = document.getElementById('tblscroll');
+    if (holder.dataset.done) return;
+    holder.dataset.done = 1;
+    const vis = view.vis;
+    let h = '<table><thead><tr><th>Date</th>' +
+      vis.map(s => `<th>${s.label}</th><th>SMA</th>`).join('') + '</tr></thead><tbody>';
+    const stop = Math.max(view.start, n - MAXROWS);
+    for (let i = n - 1; i >= stop; i--){
+      h += `<tr><td>${dates[i]}</td>` + vis.map(s => {
+        const c = s.at(i), m = s.smaAt(i);
+        return `<td>${c == null ? '—' : fmtLvl(c, s.key)}</td><td>${m == null ? '—' : fmtLvl(m, s.key)}</td>`;
+      }).join('') + '</tr>';
+    }
+    holder.innerHTML = h + '</tbody></table>';
   }
-  for (const i of mticks){
-    const x = xs(i).toFixed(1);
-    g += `<line x1="${x}" x2="${x}" y1="${M.t}" y2="${H - M.b}" stroke="var(--grid)" stroke-width="1"/>`;
-    g += `<text x="${x}" y="${H - M.b + 20}" text-anchor="middle" fill="var(--muted)" font-size="12">${mlabel(dates[i])}</text>`;
-  }
-
-  let lines = '';
-  for (const s of S){
-    lines += `<path d="${path(s.pctS)}" fill="none" stroke="${HEXES[s.key]}" stroke-width="2" stroke-dasharray="5 4" opacity="0.55" stroke-linejoin="round"/>`;
-    lines += `<path d="${path(s.pct)}"  fill="none" stroke="${HEXES[s.key]}" stroke-width="2" stroke-linejoin="round"/>`;
-  }
-
-  // direct labels at line ends, nudged apart
-  const ends = S.map(s => ({label:s.label, key:s.key, y: ys(s.pct(n-1))}))
-                .sort((a,b) => a.y - b.y);
-  for (let k = 1; k < ends.length; k++)
-    if (ends[k].y - ends[k-1].y < 16) ends[k].y = ends[k-1].y + 16;
-  let labels = '';
-  for (const e of ends)
-    labels += `<text x="${W - M.r + 10}" y="${e.y.toFixed(1)}" dy="4" fill="var(--ink-2)" font-size="12.5" font-weight="600">${e.label}</text>`;
-
-  const box = document.getElementById('chartbox');
-  box.insertAdjacentHTML('afterbegin',
-    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart: four major US indexes and their 200-day simple moving averages, indexed to 200 sessions ago. Full values are in the data table below.">
-      ${g}${lines}${labels}
-      <line id="xhair" x1="0" x2="0" y1="${M.t}" y2="${H - M.b}" stroke="var(--line-2)" stroke-width="1" opacity="0"/>
-      <g id="dots"></g>
-      <rect id="hit" x="${M.l}" y="${M.t}" width="${iw}" height="${ih}" fill="transparent"/>
-    </svg>`);
+  document.getElementById('tbl').addEventListener('toggle', function(){ if (this.open) buildTable(); });
 
   // ---- crosshair + tooltip
-  const svg = box.querySelector('svg'), hit = svg.querySelector('#hit'),
-        xhair = svg.querySelector('#xhair'), dots = svg.querySelector('#dots'),
-        tip = document.getElementById('tip');
-  dots.innerHTML = S.map(s => `<circle r="4.5" fill="${HEXES[s.key]}" stroke="var(--paper)" stroke-width="2" opacity="0"/>`).join('');
-  const dotEls = [...dots.children];
-
   function show(ev){
+    if (!view) return;
     const r = svg.getBoundingClientRect();
     const px = (ev.clientX - r.left) * W / r.width;
-    const i = Math.max(start, Math.min(n - 1, start + Math.round((px - M.l) / iw * (WINDOW - 1))));
-    const x = xs(i);
+    const frac = (px - M.l) / iw;
+    let i = view.start + Math.round(frac * Math.max(1, view.len - 1));
+    i = Math.max(view.start, Math.min(n - 1, i));
+    // snap to a sampled index so dots sit on the drawn line
+    let best = view.idx[0];
+    for (const j of view.idx) if (Math.abs(j - i) < Math.abs(best - i)) best = j;
+    i = best;
+    const x = view.xs(i);
+    const xhair = svg.querySelector('#xhair'), dotEls = [...svg.querySelector('#dots').children];
     xhair.setAttribute('x1', x); xhair.setAttribute('x2', x); xhair.setAttribute('opacity', 1);
-    S.forEach((s, k) => { dotEls[k].setAttribute('cx', x); dotEls[k].setAttribute('cy', ys(s.pct(i))); dotEls[k].setAttribute('opacity', 1); });
+    view.vis.forEach((s, k) => {
+      const v = view.val(s, i);
+      if (v == null){ dotEls[k].setAttribute('opacity', 0); return; }
+      dotEls[k].setAttribute('cx', x); dotEls[k].setAttribute('cy', view.ys(v)); dotEls[k].setAttribute('opacity', 1);
+    });
     tip.innerHTML = `<div class="d">${fmtDate(dates[i])}</div><table>
       <tr class="hd"><td></td><td>close</td><td>200d SMA</td><td>drift</td></tr>` +
-      S.map(s => { const gap = (s.c[i] / s.sma[i] - 1) * 100;
+      view.vis.map(s => { const c = s.at(i), m = s.smaAt(i);
+        if (c == null) return `<tr><td><span class="chip" style="background:${COLORS[s.key]}"></span>${s.label}</td><td>—</td><td>—</td><td>—</td></tr>`;
         return `<tr><td><span class="chip" style="background:${COLORS[s.key]}"></span>${s.label}</td>
-          <td>${fmtLvl(s.c[i], s.key)}</td><td>${fmtLvl(s.sma[i], s.key)}</td><td>${fmtPct(gap)}</td></tr>`; }).join('') + '</table>';
+          <td>${fmtLvl(c, s.key)}</td><td>${m == null ? '—' : fmtLvl(m, s.key)}</td><td>${m == null ? '—' : fmtPct((c/m - 1) * 100)}</td></tr>`; }).join('') + '</table>';
     tip.style.opacity = 1;
     const bw = box.clientWidth, tw = tip.offsetWidth;
     const cx = (ev.clientX - r.left);
     tip.style.left = (cx + tw + 28 > bw ? cx - tw - 14 : cx + 14) + 'px';
     tip.style.top = Math.max(4, (ev.clientY - r.top) - tip.offsetHeight - 12) + 'px';
   }
-  function hide(){ tip.style.opacity = 0; xhair.setAttribute('opacity', 0); dotEls.forEach(d => d.setAttribute('opacity', 0)); }
-  hit.addEventListener('pointermove', show);
-  hit.addEventListener('pointerdown', show);
-  hit.addEventListener('pointerleave', hide);
-
-  // ---- data table (built on first open)
-  document.getElementById('tbl').addEventListener('toggle', function(){
-    const holder = document.getElementById('tblscroll');
-    if (!this.open || holder.dataset.done) return;
-    holder.dataset.done = 1;
-    let h = '<table><thead><tr><th>Date</th>' +
-      S.map(s => `<th>${s.label}</th><th>SMA</th>`).join('') + '</tr></thead><tbody>';
-    for (let i = n - 1; i >= start; i--){
-      h += `<tr><td>${dates[i]}</td>` +
-        S.map(s => `<td>${fmtLvl(s.c[i], s.key)}</td><td>${fmtLvl(s.sma[i], s.key)}</td>`).join('') + '</tr>';
-    }
-    holder.innerHTML = h + '</tbody></table>';
-  });
+  function hide(){
+    tip.style.opacity = 0;
+    const xhair = svg.querySelector('#xhair');
+    if (xhair) xhair.setAttribute('opacity', 0);
+    const dots = svg.querySelector('#dots');
+    if (dots) [...dots.children].forEach(d => d.setAttribute('opacity', 0));
+  }
+  svg.addEventListener('pointermove', ev => { if (ev.target.id === 'hit') show(ev); });
+  svg.addEventListener('pointerdown', ev => { if (ev.target.id === 'hit') show(ev); });
+  svg.addEventListener('pointerleave', hide);
 
   document.getElementById('foot').innerHTML =
     `Closes only, regular sessions. S&amp;P 500 and NASDAQ 100 are index levels; Dow Jones via the
      DJX index ×100; Russell 2000 tracked via the IWM ETF (its price, not the index level — the
-     shape and drift are what matter here). SMA is the simple 200-session average of closes.
-     Refreshed each weekday evening after the close.`;
+     shape and drift are what matter here). SMA is the simple 200-session average of each series’
+     own closes. Longer windows show each series as far back as its data reaches (S&amp;P 500 to
+     1990, NASDAQ 100 to 1993, Dow to 1997, Russell to 2000) on a log scale, each line indexed to
+     ×1 where it enters the window. Refreshed each weekday evening after the close.`;
+
+  render();
 })();
 </script>
 </body>
