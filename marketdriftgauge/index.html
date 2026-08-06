@@ -4,13 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Market Drift Gauge · majors vs the 200-day mean</title>
-<meta name="description" content="The four major US indexes — S&P 500, NASDAQ 100, Dow Jones, Russell 2000 — charted against their 200-day simple moving averages, over 200, 2,000 or 20,000 trading days." />
+<meta name="description" content="The four major US indexes — S&P 500, NASDAQ 100, Dow Jones, Russell 2000 — charted against their 200-day simple moving averages, over 200, 1,000 or 10,000 trading days." />
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#13110E" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Market Drift Gauge" />
 <meta property="og:title" content="Market Drift Gauge · majors vs the 200-day mean" />
-<meta property="og:description" content="S&P 500, NASDAQ 100, Dow Jones and Russell 2000 vs their 200-day simple moving averages — 200, 2,000 or 20,000 trading days." />
+<meta property="og:description" content="S&P 500, NASDAQ 100, Dow Jones and Russell 2000 vs their 200-day simple moving averages — 200, 1,000 or 10,000 trading days." />
 <meta property="og:url" content="https://mattdanusergrant.com/marketdriftgauge/" />
 <meta name="twitter:card" content="summary" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -137,8 +137,8 @@ footer a{color:var(--muted)}
   const SMA = 200;
   const RANGES = [
     {n: 200,   label: '200d',    log: false},
-    {n: 2000,  label: '2,000d',  log: true},
-    {n: 20000, label: '20,000d', log: true},
+    {n: 1000,  label: '1,000d',  log: true},
+    {n: 10000, label: '10,000d', log: true},
   ];
   const COLORS = {spx:'var(--spx)', ndx:'var(--ndx)', dji:'var(--dji)', rut:'var(--rut)'};
   const HEXES  = {spx:'#3987e5', ndx:'#d95926', dji:'#199e70', rut:'#c98500'};
