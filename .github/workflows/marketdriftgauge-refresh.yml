@@ -1,0 +1,29 @@
+name: Market Drift Gauge — refresh data
+
+on:
+  schedule:
+    # Weekdays 22:30 UTC — after the US close (4pm ET) year-round
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild data.json
+        run: node marketdriftgauge/refresh.mjs
+      - name: Commit if changed
+        run: |
+          if git diff --quiet marketdriftgauge/data.json; then
+            echo "No change (holiday or already current)."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add marketdriftgauge/data.json
+          git commit -m "marketdriftgauge: refresh index data"
+          git push

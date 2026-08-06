@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Market Drift Gauge · majors vs the 200-day mean</title>
+<meta name="description" content="The four major US indexes — S&P 500, NASDAQ 100, Dow Jones, Russell 2000 — charted against their 200-day simple moving averages over the last 200 trading days." />
+<meta name="referrer" content="no-referrer" />
+<meta name="theme-color" content="#13110E" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Market Drift Gauge" />
+<meta property="og:title" content="Market Drift Gauge · majors vs the 200-day mean" />
+<meta property="og:description" content="S&P 500, NASDAQ 100, Dow Jones and Russell 2000 vs their 200-day simple moving averages, over the last 200 trading days." />
+<meta property="og:url" content="https://mattdanusergrant.com/marketdriftgauge/" />
+<meta name="twitter:card" content="summary" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  color-scheme:dark;
+  --bg:#13110E; --paper:#1D1A16; --ink:#EDE8DF; --ink-2:#CAC5BC; --muted:#8A857B;
+  --line:#2C2924; --line-2:#3C3830; --grid:#26231F; --code-bg:#252219;
+  --spx:#3987e5; --ndx:#d95926; --dji:#199e70; --rut:#c98500;
+  --good:#0ca30c; --bad:#d03b3b;
+  --display:'Fraunces','Hoefler Text',Georgia,serif;
+  --body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 0 rgba(0,0,0,.2),0 14px 36px rgba(0,0,0,.35);
+}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh}
+a{color:var(--ink-2)}
+.wrap{max-width:1060px;margin:0 auto;padding:28px 20px 64px}
+header.top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.home{font-size:13px;color:var(--muted);text-decoration:none;letter-spacing:.02em}
+.home:hover{color:var(--ink-2)}
+h1{font-family:var(--display);font-weight:500;font-size:clamp(30px,5.4vw,44px);letter-spacing:-0.015em;margin:6px 0 4px}
+h1 em{font-style:italic;color:var(--ink-2)}
+.lede{color:var(--ink-2);font-size:15px;margin:0 0 26px;max-width:62ch}
+.lede .asof{color:var(--muted)}
+
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 20px}
+@media(max-width:840px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+.tile .name{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:.01em}
+.chip{width:10px;height:10px;border-radius:3px;flex:none}
+.tile .lvl{font-family:var(--display);font-size:26px;font-weight:500;margin:4px 0 2px}
+.tile .sub{font-size:12.5px;color:var(--muted)}
+.tile .drift{font-size:13px;font-weight:600;margin-top:6px}
+.drift.up{color:var(--good)} .drift.down{color:var(--bad)}
+.drift .word{font-weight:500}
+
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 18px 12px;box-shadow:var(--shadow)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;padding:0 4px 10px;font-size:13px;color:var(--ink-2)}
+.legend .item{display:flex;align-items:center;gap:7px}
+.legend .key{color:var(--muted);margin-left:auto}
+.legend svg{flex:none}
+.chartscroll{overflow-x:auto;overscroll-behavior-x:contain}
+.chartbox{position:relative}
+.chartbox svg{display:block;width:100%;height:auto}
+@media(max-width:700px){.chartbox{min-width:720px}}
+#tip{position:absolute;pointer-events:none;background:var(--code-bg);border:1px solid var(--line-2);
+  border-radius:10px;padding:8px 11px;font-size:12.5px;line-height:1.45;box-shadow:var(--shadow);
+  opacity:0;transition:opacity .08s;white-space:nowrap;z-index:3}
+#tip .d{color:var(--muted);font-weight:600;margin-bottom:3px}
+#tip table{border-collapse:collapse}
+#tip td{padding:1px 0 1px 10px;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-2)}
+#tip td:first-child{padding-left:0;text-align:left;color:var(--ink)}
+#tip td .chip{display:inline-block;margin-right:6px;vertical-align:-1px}
+#tip .hd td{color:var(--muted);font-weight:500;font-size:11px}
+
+details.tbl{margin-top:18px;color:var(--ink-2)}
+details.tbl summary{cursor:pointer;font-size:14px;color:var(--muted)}
+details.tbl summary:hover{color:var(--ink-2)}
+.tblscroll{overflow-x:auto;max-height:420px;overflow-y:auto;margin-top:10px;border:1px solid var(--line);border-radius:10px}
+.tblscroll table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+.tblscroll th,.tblscroll td{padding:5px 10px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+.tblscroll th:first-child,.tblscroll td:first-child{text-align:left;position:sticky;left:0;background:var(--paper)}
+.tblscroll thead th{position:sticky;top:0;background:var(--code-bg);color:var(--muted);font-weight:600;z-index:1}
+footer{margin-top:26px;font-size:12.5px;color:var(--muted);line-height:1.7}
+footer a{color:var(--muted)}
+.err{padding:40px 10px;color:var(--muted);text-align:center;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="home" href="https://mattdanusergrant.com/">← mattdanusergrant.com</a>
+  </header>
+  <h1>Market <em>Drift</em> Gauge</h1>
+  <p class="lede">The four majors against their 200-day simple moving averages, over the last
+    200 trading days. Solid is the index, dashed is its mean; both are indexed to the index’s
+    close 200 sessions ago. <span class="asof" id="asof"></span></p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="panel">
+    <div class="legend" id="legend"></div>
+    <div class="chartscroll"><div class="chartbox" id="chartbox"><div id="tip"></div></div></div>
+    <details class="tbl" id="tbl">
+      <summary>Data table (all 200 sessions)</summary>
+      <div class="tblscroll" id="tblscroll"></div>
+    </details>
+  </div>
+
+  <footer id="foot"></footer>
+  <noscript><p class="err">This page needs JavaScript to draw the chart.</p></noscript>
+</div>
+
+<script>
+(async function(){
+  const WINDOW = 200, SMA = 200;
+  const COLORS = {spx:'var(--spx)', ndx:'var(--ndx)', dji:'var(--dji)', rut:'var(--rut)'};
+  const HEXES  = {spx:'#3987e5', ndx:'#d95926', dji:'#199e70', rut:'#c98500'};
+
+  let data;
+  try{
+    data = await (await fetch('./data.json', {cache:'no-cache'})).json();
+  }catch(e){
+    document.getElementById('chartbox').innerHTML = '<p class="err">Couldn’t load data.json.</p>';
+    return;
+  }
+
+  const dates = data.dates;
+  const n = dates.length;
+  const start = n - WINDOW;               // first displayed session
+  if (start < SMA - 1){
+    document.getElementById('chartbox').innerHTML = '<p class="err">Not enough history for a 200-day SMA over a 200-day window.</p>';
+    return;
+  }
+
+  // ---- derive per-series: display closes, SMA, pct versions (base = close 200 sessions ago)
+  const S = data.series.map(s => {
+    const c = s.closes;
+    const sma = new Array(n).fill(null);
+    let run = 0;
+    for (let i = 0; i < n; i++){
+      run += c[i];
+      if (i >= SMA) run -= c[i - SMA];
+      if (i >= SMA - 1) sma[i] = run / SMA;
+    }
+    const base = c[start];
+    const pct  = i => (c[i] / base - 1) * 100;
+    const pctS = i => (sma[i] / base - 1) * 100;
+    return {...s, c, sma, base, pct, pctS};
+  });
+
+  const fmtLvl = (v, key) => v.toLocaleString('en-US', key === 'dji'
+    ? {maximumFractionDigits:0}
+    : {minimumFractionDigits:2, maximumFractionDigits:2});
+  const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+  const fmtDate = iso => { const [y,m,d] = iso.split('-').map(Number);
+    return new Date(Date.UTC(y, m-1, d)).toLocaleDateString('en-US', {timeZone:'UTC', month:'short', day:'numeric', year:'numeric'}); };
+
+  document.getElementById('asof').textContent = 'Data through ' + fmtDate(data.updated) + '.';
+
+  // ---- stat tiles
+  document.getElementById('tiles').innerHTML = S.map(s => {
+    const last = n - 1;
+    const gap = (s.c[last] / s.sma[last] - 1) * 100;
+    const ret = (s.c[last] / s.base - 1) * 100;
+    const up = gap >= 0;
+    return `<div class="tile">
+      <div class="name"><span class="chip" style="background:${COLORS[s.key]}"></span>${s.label}</div>
+      <div class="lvl">${fmtLvl(s.c[last], s.key)}</div>
+      <div class="sub">200d return ${fmtPct(ret)}</div>
+      <div class="drift ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${fmtPct(gap)} <span class="word">${up ? 'above' : 'below'} its 200-day mean</span></div>
+    </div>`;
+  }).join('');
+
+  // ---- legend
+  document.getElementById('legend').innerHTML = S.map(s =>
+    `<span class="item"><svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="${HEXES[s.key]}" stroke-width="2.5"/></svg>${s.label}</span>`
+  ).join('') + `<span class="key"><svg width="26" height="10"><line x1="1" y1="5" x2="25" y2="5" stroke="#8A857B" stroke-width="2" stroke-dasharray="5 4"/></svg> = its 200-day SMA</span>`;
+
+  // ---- chart geometry
+  const W = 1000, H = 540, M = {t:14, r:122, b:34, l:52};
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const xs = i => M.l + iw * (i - start) / (WINDOW - 1);
+
+  let lo = Infinity, hi = -Infinity;
+  for (const s of S) for (let i = start; i < n; i++){
+    lo = Math.min(lo, s.pct(i), s.pctS(i));
+    hi = Math.max(hi, s.pct(i), s.pctS(i));
+  }
+  const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const ys = v => M.t + ih * (1 - (v - lo) / (hi - lo));
+
+  // y ticks on a nice step
+  const rawStep = (hi - lo) / 6;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const step = [1,2,2.5,5,10].map(k => k * mag).find(k => k >= rawStep) || 10 * mag;
+  const ticks = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push(Math.round(v * 100) / 100);
+
+  // x ticks: first session of each month, thinned to fit
+  let mticks = [];
+  for (let i = start + 1; i < n; i++)
+    if (dates[i].slice(0,7) !== dates[i-1].slice(0,7)) mticks.push(i);
+  const every = Math.ceil(mticks.length / 7);
+  mticks = mticks.filter((_, k) => k % every === 0);
+  const mlabel = iso => { const [y,m] = iso.split('-').map(Number);
+    const name = new Date(Date.UTC(y, m-1, 1)).toLocaleDateString('en-US', {timeZone:'UTC', month:'short'});
+    return m === 1 ? name + ' ’' + String(y).slice(2) : name; };
+
+  const path = f => { let d = '';
+    for (let i = start; i < n; i++) d += (i === start ? 'M' : 'L') + xs(i).toFixed(1) + ' ' + ys(f(i)).toFixed(1);
+    return d; };
+
+  let g = '';
+  for (const v of ticks){
+    const y = ys(v).toFixed(1);
+    const zero = Math.abs(v) < 1e-9;
+    g += `<line x1="${M.l}" x2="${W - M.r}" y1="${y}" y2="${y}" stroke="${zero ? 'var(--line-2)' : 'var(--grid)'}" stroke-width="1"/>`;
+    g += `<text x="${M.l - 8}" y="${y}" dy="4" text-anchor="end" fill="var(--muted)" font-size="12" style="font-variant-numeric:tabular-nums">${fmtPct(v).replace('.0','')}</text>`;
+  }
+  for (const i of mticks){
+    const x = xs(i).toFixed(1);
+    g += `<line x1="${x}" x2="${x}" y1="${M.t}" y2="${H - M.b}" stroke="var(--grid)" stroke-width="1"/>`;
+    g += `<text x="${x}" y="${H - M.b + 20}" text-anchor="middle" fill="var(--muted)" font-size="12">${mlabel(dates[i])}</text>`;
+  }
+
+  let lines = '';
+  for (const s of S){
+    lines += `<path d="${path(s.pctS)}" fill="none" stroke="${HEXES[s.key]}" stroke-width="2" stroke-dasharray="5 4" opacity="0.55" stroke-linejoin="round"/>`;
+    lines += `<path d="${path(s.pct)}"  fill="none" stroke="${HEXES[s.key]}" stroke-width="2" stroke-linejoin="round"/>`;
+  }
+
+  // direct labels at line ends, nudged apart
+  const ends = S.map(s => ({label:s.label, key:s.key, y: ys(s.pct(n-1))}))
+                .sort((a,b) => a.y - b.y);
+  for (let k = 1; k < ends.length; k++)
+    if (ends[k].y - ends[k-1].y < 16) ends[k].y = ends[k-1].y + 16;
+  let labels = '';
+  for (const e of ends)
+    labels += `<text x="${W - M.r + 10}" y="${e.y.toFixed(1)}" dy="4" fill="var(--ink-2)" font-size="12.5" font-weight="600">${e.label}</text>`;
+
+  const box = document.getElementById('chartbox');
+  box.insertAdjacentHTML('afterbegin',
+    `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart: four major US indexes and their 200-day simple moving averages, indexed to 200 sessions ago. Full values are in the data table below.">
+      ${g}${lines}${labels}
+      <line id="xhair" x1="0" x2="0" y1="${M.t}" y2="${H - M.b}" stroke="var(--line-2)" stroke-width="1" opacity="0"/>
+      <g id="dots"></g>
+      <rect id="hit" x="${M.l}" y="${M.t}" width="${iw}" height="${ih}" fill="transparent"/>
+    </svg>`);
+
+  // ---- crosshair + tooltip
+  const svg = box.querySelector('svg'), hit = svg.querySelector('#hit'),
+        xhair = svg.querySelector('#xhair'), dots = svg.querySelector('#dots'),
+        tip = document.getElementById('tip');
+  dots.innerHTML = S.map(s => `<circle r="4.5" fill="${HEXES[s.key]}" stroke="var(--paper)" stroke-width="2" opacity="0"/>`).join('');
+  const dotEls = [...dots.children];
+
+  function show(ev){
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * W / r.width;
+    const i = Math.max(start, Math.min(n - 1, start + Math.round((px - M.l) / iw * (WINDOW - 1))));
+    const x = xs(i);
+    xhair.setAttribute('x1', x); xhair.setAttribute('x2', x); xhair.setAttribute('opacity', 1);
+    S.forEach((s, k) => { dotEls[k].setAttribute('cx', x); dotEls[k].setAttribute('cy', ys(s.pct(i))); dotEls[k].setAttribute('opacity', 1); });
+    tip.innerHTML = `<div class="d">${fmtDate(dates[i])}</div><table>
+      <tr class="hd"><td></td><td>close</td><td>200d SMA</td><td>drift</td></tr>` +
+      S.map(s => { const gap = (s.c[i] / s.sma[i] - 1) * 100;
+        return `<tr><td><span class="chip" style="background:${COLORS[s.key]}"></span>${s.label}</td>
+          <td>${fmtLvl(s.c[i], s.key)}</td><td>${fmtLvl(s.sma[i], s.key)}</td><td>${fmtPct(gap)}</td></tr>`; }).join('') + '</table>';
+    tip.style.opacity = 1;
+    const bw = box.clientWidth, tw = tip.offsetWidth;
+    const cx = (ev.clientX - r.left);
+    tip.style.left = (cx + tw + 28 > bw ? cx - tw - 14 : cx + 14) + 'px';
+    tip.style.top = Math.max(4, (ev.clientY - r.top) - tip.offsetHeight - 12) + 'px';
+  }
+  function hide(){ tip.style.opacity = 0; xhair.setAttribute('opacity', 0); dotEls.forEach(d => d.setAttribute('opacity', 0)); }
+  hit.addEventListener('pointermove', show);
+  hit.addEventListener('pointerdown', show);
+  hit.addEventListener('pointerleave', hide);
+
+  // ---- data table (built on first open)
+  document.getElementById('tbl').addEventListener('toggle', function(){
+    const holder = document.getElementById('tblscroll');
+    if (!this.open || holder.dataset.done) return;
+    holder.dataset.done = 1;
+    let h = '<table><thead><tr><th>Date</th>' +
+      S.map(s => `<th>${s.label}</th><th>SMA</th>`).join('') + '</tr></thead><tbody>';
+    for (let i = n - 1; i >= start; i--){
+      h += `<tr><td>${dates[i]}</td>` +
+        S.map(s => `<td>${fmtLvl(s.c[i], s.key)}</td><td>${fmtLvl(s.sma[i], s.key)}</td>`).join('') + '</tr>';
+    }
+    holder.innerHTML = h + '</tbody></table>';
+  });
+
+  document.getElementById('foot').innerHTML =
+    `Closes only, regular sessions. S&amp;P 500 and NASDAQ 100 are index levels; Dow Jones via the
+     DJX index ×100; Russell 2000 tracked via the IWM ETF (its price, not the index level — the
+     shape and drift are what matter here). SMA is the simple 200-session average of closes.
+     Refreshed each weekday evening after the close.`;
+})();
+</script>
+</body>
+</html>
