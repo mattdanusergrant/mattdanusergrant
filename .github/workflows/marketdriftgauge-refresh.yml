@@ -1,4 +1,4 @@
-name: Mean Drift Gauge — refresh data
+name: Market Drift Gauge — refresh data
 
 on:
   schedule:
@@ -15,15 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Rebuild data.json
-        run: node meandriftgauge/refresh.mjs
+        run: node marketdriftgauge/refresh.mjs
       - name: Commit if changed
         run: |
-          if git diff --quiet meandriftgauge/data.json; then
+          if git diff --quiet marketdriftgauge/data.json; then
             echo "No change (holiday or already current)."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add meandriftgauge/data.json
-          git commit -m "meandriftgauge: refresh index data"
+          git add marketdriftgauge/data.json
+          git commit -m "marketdriftgauge: refresh index data"
           git push

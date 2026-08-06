@@ -1,5 +1,5 @@
-// Rebuilds meandriftgauge/data.json from free daily-close sources.
-// Run: node meandriftgauge/refresh.mjs   (Node 18+, no dependencies)
+// Rebuilds marketdriftgauge/data.json from free daily-close sources.
+// Run: node marketdriftgauge/refresh.mjs   (Node 18+, no dependencies)
 // Stooq is the primary source; Yahoo Finance's chart API is the fallback.
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
